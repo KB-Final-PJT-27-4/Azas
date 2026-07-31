@@ -2,7 +2,7 @@
 import { ChartNoAxesColumn, ChartSpline, ClipboardCheck, Clock3, Home } from 'lucide-vue-next'
 
 const navigationItems = [
-  { label: '홈', path: '/', icon: Home },
+  { label: '홈', path: '/home', icon: Home },
   { label: '자산 관리', path: '/assets', icon: ChartSpline },
   { label: '타임 캡슐', path: '/time-capsules', icon: Clock3 },
   { label: '체크리스트', path: '/checklists', icon: ClipboardCheck },
