@@ -1,7 +1,7 @@
 <template>
   <main class="home-view">
     <section class="home-view__hero">
-      <p class="home-view__eyebrow">우리 아이 금융일기</p>
+      <p class="home-view__eyebrow">우리아이자산서비스</p>
       <h1>아이의 금융 준비를 한눈에 관리해요</h1>
       <p>목표, 자산, 체크리스트를 모바일 기준 화면에서 확인할 수 있습니다.</p>
     </section>
