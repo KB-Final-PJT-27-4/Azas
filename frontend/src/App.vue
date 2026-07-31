@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import { RouterView, useRoute } from 'vue-router'
-
-const route = useRoute()
+import { RouterView } from 'vue-router'
 </script>
 
 <template>
-  <RouterView v-if="route.meta.hideDefaultLayout" />
-
-  <DefaultLayout v-else>
+  <DefaultLayout>
     <RouterView />
   </DefaultLayout>
 </template>
