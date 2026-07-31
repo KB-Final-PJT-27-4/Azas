@@ -12,19 +12,19 @@ const routes: RouteRecordRaw[] = [
     path: '/login',
     name: 'Login',
     component: () => import('@/views/auth/LoginView.vue'),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: false, hideDefaultLayout: true },
   },
   {
     path: '/register',
     name: 'Register',
     component: () => import('@/views/auth/RegisterView.vue'),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: false, hideDefaultLayout: true },
   },
   {
     path: '/onboarding',
     name: 'Onboarding',
     component: () => import('@/views/auth/OnboardingView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, hideDefaultLayout: true },
   },
 
   // 홈
