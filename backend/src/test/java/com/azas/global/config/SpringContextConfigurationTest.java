@@ -38,10 +38,13 @@ class SpringContextConfigurationTest {
     private ClassPathXmlApplicationContext createRootContext() {
         ClassPathXmlApplicationContext rootContext = new ClassPathXmlApplicationContext();
         rootContext.getEnvironment().getPropertySources().addFirst(
-                new MapPropertySource("testDatabaseProperties", Map.of(
+                new MapPropertySource("testProperties", Map.of(
                         "DB_URL", "jdbc:mysql://localhost:3306/azas",
                         "DB_USERNAME", "test_user",
-                        "DB_PASSWORD", "test_password"
+                        "DB_PASSWORD", "test_password",
+                        "KAKAO_CLIENT_ID", "test-kakao-client-id",
+                        "GOOGLE_CLIENT_ID", "test-google-client-id",
+                        "GOOGLE_CLIENT_SECRET", "test-google-client-secret"
                 ))
         );
         rootContext.setConfigLocation("spring/root-context.xml");
