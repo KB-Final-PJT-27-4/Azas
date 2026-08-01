@@ -15,6 +15,17 @@
   --color-unselected-text: #6e7a8a;
   --color-disabled-background: rgb(227 235 240 / 30%);
   --color-disabled-border: #e3ebf0;
+  --color-login-background: #eaf7ff;
+  --color-login-text: #102b50;
+  --color-login-heading: #10213c;
+  --color-login-button-text: #132239;
+  --color-login-accent: #438be7;
+  --color-login-accent-muted: #77b9f4;
+  --color-login-focus: rgb(67 139 231 / 35%);
+  --color-kakao-background: #fee500;
+  --color-kakao-text: #171600;
+  --shadow-login-button: 0 4px 10px rgb(31 48 69 / 12%);
+  --shadow-login-button-muted: 0 4px 10px rgb(31 48 69 / 10%);
 
   --font-size-xs: 12px;
   --font-size-sm: 14px;
