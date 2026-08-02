@@ -63,10 +63,19 @@ public class OAuthMemberService {
         );
 
         memberMapper.insert(newMember);
-        linkSocialAccount(newMember.getMemberId(), profile);
+
+        Member savedMember =
+                findActiveMember(
+                        newMember.getMemberId()
+                );
+
+        linkSocialAccount(
+                savedMember.getMemberId(),
+                profile
+        );
 
         return new OAuthMemberResult(
-                newMember,
+                savedMember,
                 true
         );
     }
