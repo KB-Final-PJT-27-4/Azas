@@ -14,6 +14,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class JwtAccessTokenProviderTest {
 
@@ -63,8 +64,9 @@ class JwtAccessTokenProviderTest {
         assertEquals("1", claims.getSubject());
         assertEquals(
                 MemberType.PARENT.name(),
-                claims.get("role", String.class)
+                claims.get("member_type", String.class)
         );
+        assertNull(claims.get("role"));
         assertEquals(
                 "access",
                 claims.get("token_type", String.class)

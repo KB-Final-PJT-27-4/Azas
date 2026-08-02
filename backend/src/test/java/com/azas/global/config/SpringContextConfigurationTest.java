@@ -26,12 +26,26 @@ class SpringContextConfigurationTest {
 
     @Test
     void servletContextLoads() {
-        try (XmlWebApplicationContext servletContext = new XmlWebApplicationContext()) {
-            servletContext.setServletContext(new MockServletContext());
-            servletContext.setConfigLocation("classpath:spring/servlet-context.xml");
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext();
+                XmlWebApplicationContext servletContext =
+                        new XmlWebApplicationContext()
+        ) {
+            servletContext.setParent(rootContext);
+            servletContext.setServletContext(
+                    new MockServletContext()
+            );
+            servletContext.setConfigLocation(
+                    "classpath:spring/servlet-context.xml"
+            );
             servletContext.refresh();
 
-            assertNotNull(servletContext.getBean(RequestMappingHandlerMapping.class));
+            assertNotNull(
+                    servletContext.getBean(
+                            RequestMappingHandlerMapping.class
+                    )
+            );
         }
     }
 

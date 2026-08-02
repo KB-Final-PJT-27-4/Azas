@@ -47,7 +47,7 @@ public class JwtAccessTokenProvider {
                         String.valueOf(member.getMemberId())
                 )
                 .claim(
-                        "role",
+                        "member_type",
                         member.getMemberType().name()
                 )
                 .claim(
