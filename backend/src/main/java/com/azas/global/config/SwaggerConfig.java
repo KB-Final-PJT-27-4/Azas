@@ -28,6 +28,7 @@ public class SwaggerConfig {
                 )
                 .paths(PathSelectors.ant("/api/v1/**"))
                 .build()
+                .useDefaultResponseMessages(false)
                 .apiInfo(apiInfo());
     }
 
