@@ -5,14 +5,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.mock.web.MockServletContext;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.XmlWebApplicationContext;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import springfox.documentation.spring.web.plugins.Docket;
 
 import javax.sql.DataSource;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class SpringContextConfigurationTest {
 
@@ -25,7 +31,7 @@ class SpringContextConfigurationTest {
     }
 
     @Test
-    void servletContextLoads() {
+    void servletContextLoads() throws Exception {
         try (
                 ClassPathXmlApplicationContext rootContext =
                         createRootContext();
@@ -46,6 +52,28 @@ class SpringContextConfigurationTest {
                             RequestMappingHandlerMapping.class
                     )
             );
+            assertNotNull(
+                    servletContext.getBean(Docket.class)
+            );
+
+            MockMvc mockMvc =
+                    MockMvcBuilders
+                            .webAppContextSetup(servletContext)
+                            .build();
+
+            mockMvc.perform(get("/v2/api-docs"))
+                    .andExpect(status().isOk())
+                    .andExpect(
+                            jsonPath("$.swagger")
+                                    .value("2.0")
+                    )
+                    .andExpect(
+                            jsonPath("$.info.title")
+                                    .value("Azas Backend API")
+                    );
+
+            mockMvc.perform(get("/swagger-ui/index.html"))
+                    .andExpect(status().isOk());
         }
     }
 
