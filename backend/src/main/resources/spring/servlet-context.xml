@@ -14,5 +14,14 @@
         <context:include-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
     </context:component-scan>
 
+    <!-- Swagger는 Controller가 등록된 DispatcherServlet Context에서 API를 탐색한다. -->
+    <bean class="com.azas.global.config.SwaggerConfig"/>
+
     <mvc:annotation-driven/>
+
+    <!-- Spring Legacy에서는 Swagger UI WebJar 리소스를 명시적으로 연결해야 한다. -->
+    <mvc:resources mapping="/swagger-ui/**"
+                   location="classpath:/META-INF/resources/webjars/springfox-swagger-ui/"/>
+    <mvc:view-controller path="/swagger-ui/"
+                         view-name="forward:/swagger-ui/index.html"/>
 </beans>
