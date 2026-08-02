@@ -29,7 +29,6 @@
         <property name="dataSource" ref="dataSource"/>
         <property name="configLocation" value="classpath:mybatis/mybatis-config.xml"/>
         <property name="mapperLocations" value="classpath*:mapper/**/*.xml"/>
-        <property name="typeAliasesPackage" value="com.azas.domain"/>
     </bean>
 
     <mybatis:scan base-package="com.azas.domain" annotation="org.apache.ibatis.annotations.Mapper"/>
