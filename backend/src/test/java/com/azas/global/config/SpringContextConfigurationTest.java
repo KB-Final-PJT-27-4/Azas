@@ -44,7 +44,9 @@ class SpringContextConfigurationTest {
                         "DB_PASSWORD", "test_password",
                         "KAKAO_CLIENT_ID", "test-kakao-client-id",
                         "GOOGLE_CLIENT_ID", "test-google-client-id",
-                        "GOOGLE_CLIENT_SECRET", "test-google-client-secret"
+                        "GOOGLE_CLIENT_SECRET", "test-google-client-secret",
+                        "JWT_SECRET_BASE64",
+                        "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
                 ))
         );
         rootContext.setConfigLocation("spring/root-context.xml");
