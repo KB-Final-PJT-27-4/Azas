@@ -15,6 +15,6 @@ public class OAuthLoginRequest {
     private String authorizationCode;
 
     @NotBlank
-    @JsonProperty("refresh_token")
-    private String refreshToken;
+    @JsonProperty("redirect_uri")
+    private String redirectUri;
 }
