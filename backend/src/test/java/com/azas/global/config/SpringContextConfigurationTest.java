@@ -26,22 +26,41 @@ class SpringContextConfigurationTest {
 
     @Test
     void servletContextLoads() {
-        try (XmlWebApplicationContext servletContext = new XmlWebApplicationContext()) {
-            servletContext.setServletContext(new MockServletContext());
-            servletContext.setConfigLocation("classpath:spring/servlet-context.xml");
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext();
+                XmlWebApplicationContext servletContext =
+                        new XmlWebApplicationContext()
+        ) {
+            servletContext.setParent(rootContext);
+            servletContext.setServletContext(
+                    new MockServletContext()
+            );
+            servletContext.setConfigLocation(
+                    "classpath:spring/servlet-context.xml"
+            );
             servletContext.refresh();
 
-            assertNotNull(servletContext.getBean(RequestMappingHandlerMapping.class));
+            assertNotNull(
+                    servletContext.getBean(
+                            RequestMappingHandlerMapping.class
+                    )
+            );
         }
     }
 
     private ClassPathXmlApplicationContext createRootContext() {
         ClassPathXmlApplicationContext rootContext = new ClassPathXmlApplicationContext();
         rootContext.getEnvironment().getPropertySources().addFirst(
-                new MapPropertySource("testDatabaseProperties", Map.of(
+                new MapPropertySource("testProperties", Map.of(
                         "DB_URL", "jdbc:mysql://localhost:3306/azas",
                         "DB_USERNAME", "test_user",
-                        "DB_PASSWORD", "test_password"
+                        "DB_PASSWORD", "test_password",
+                        "KAKAO_CLIENT_ID", "test-kakao-client-id",
+                        "GOOGLE_CLIENT_ID", "test-google-client-id",
+                        "GOOGLE_CLIENT_SECRET", "test-google-client-secret",
+                        "JWT_SECRET_BASE64",
+                        "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
                 ))
         );
         rootContext.setConfigLocation("spring/root-context.xml");

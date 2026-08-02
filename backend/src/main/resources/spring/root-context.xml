@@ -11,5 +11,12 @@
         <context:exclude-filter type="annotation" expression="org.springframework.web.bind.annotation.RestController"/>
     </context:component-scan>
 
+    <!-- OAuth 제공자 REST API 통신 -->
+    <bean id="oauthRestTemplate"
+          class="org.springframework.web.client.RestTemplate"/>
+
+    <bean id="oauthObjectMapper"
+          class="com.fasterxml.jackson.databind.ObjectMapper"/>
+
     <import resource="database-context.xml"/>
 </beans>
