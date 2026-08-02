@@ -19,6 +19,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -192,10 +194,32 @@ class OAuthMemberServiceTest {
         }).when(memberMapper)
                 .insert(any(Member.class));
 
+        Member savedMember = Member.createParent(
+                "new-parent@example.com",
+                "김신규",
+                "https://example.com/profile.jpg"
+        );
+
+        ReflectionTestUtils.setField(
+                savedMember,
+                "memberId",
+                10L
+        );
+        ReflectionTestUtils.setField(
+                savedMember,
+                "createdAt",
+                LocalDateTime.of(2026, 8, 2, 6, 0)
+        );
+
+        when(memberMapper.findById(10L))
+                .thenReturn(savedMember);
+
         OAuthMemberResult result =
                 oauthMemberService.findOrCreate(profile);
 
         assertTrue(result.isNewMember());
+        assertSame(savedMember, result.getMember());
+
         assertEquals(
                 10L,
                 result.getMember().getMemberId()
@@ -212,9 +236,16 @@ class OAuthMemberServiceTest {
                 MemberStatus.ACTIVE,
                 result.getMember().getStatus()
         );
+        assertEquals(
+                LocalDateTime.of(2026, 8, 2, 6, 0),
+                result.getMember().getCreatedAt()
+        );
 
         verify(memberMapper)
-                .insert(result.getMember());
+                .insert(any(Member.class));
+
+        verify(memberMapper)
+                .findById(10L);
 
         ArgumentCaptor<SocialAccount> socialAccountCaptor =
                 ArgumentCaptor.forClass(SocialAccount.class);
