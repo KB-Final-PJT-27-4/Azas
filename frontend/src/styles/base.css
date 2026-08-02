@@ -1,4 +1,6 @@
+@import "tailwindcss";
 @import './tokens.css';
+@import "tailwindcss";
 
 * {
   box-sizing: border-box;
@@ -6,6 +8,7 @@
 
 html {
   font-family:
+    'Pretendard',
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
