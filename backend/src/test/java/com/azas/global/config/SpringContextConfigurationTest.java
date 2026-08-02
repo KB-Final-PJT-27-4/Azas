@@ -70,6 +70,67 @@ class SpringContextConfigurationTest {
                     .andExpect(
                             jsonPath("$.info.title")
                                     .value("Azas Backend API")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/oauth/{provider}']"
+                                            + ".post.tags[0]"
+                            ).value("인증")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/oauth/{provider}']"
+                                            + ".post.summary"
+                            ).value("소셜 로그인/회원가입")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/oauth/{provider}']"
+                                            + ".post.responses['200'].description"
+                            ).value("로그인 또는 회원가입 성공")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/oauth/{provider}']"
+                                            + ".post.responses['400'].description"
+                            ).value("요청값 오류 또는 지원하지 않는 제공자")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/oauth/{provider}']"
+                                            + ".post.responses['401'].description"
+                            ).value("만료되었거나 유효하지 않은 인가 코드")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/oauth/{provider}']"
+                                            + ".post.responses['502'].description"
+                            ).value("소셜 제공자 통신 실패")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/oauth/{provider}']"
+                                            + ".post.responses['201']"
+                            ).doesNotExist()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.OAuthLoginRequest"
+                                            + ".properties.authorization_code"
+                                            + ".description"
+                            ).value("소셜 제공자가 발급한 일회용 인가 코드")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.OAuthLoginResponse"
+                                            + ".properties.is_new_member"
+                            ).exists()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.OAuthLoginMemberResponse"
+                                            + ".properties.member_type"
+                            ).exists()
                     );
 
             mockMvc.perform(get("/swagger-ui/index.html"))
