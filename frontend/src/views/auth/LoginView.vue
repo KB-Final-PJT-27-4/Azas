@@ -32,13 +32,13 @@ const moveToRegister = (invited = false) => {
 
       <div class="relative z-1">
         <p class="mb-[30px] grid gap-1 text-lg leading-[1.35] font-[650] max-[360px]:mb-[22px]">
-          <strong class="text-[25px] font-extrabold">우리 아이</strong>
+          <strong class="text-[25px] font-bold">우리 아이</strong>
           <span>자산 관리 서비스</span>
         </p>
 
         <h1
           id="login-title"
-          class="grid gap-0.5 text-[clamp(29px,8.2vw,38px)] leading-[1.35] font-extrabold tracking-[-0.045em]"
+          class="grid gap-0.5 text-[clamp(29px,8.2vw,38px)] leading-[1.35] font-bold tracking-[-0.045em]"
         >
           아이의 오늘을 기록하고
           <div class="text-[var(--color-selected-text)]">내일의 자산을 키워요</div>
