@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper">
+
+    <resultMap id="timeCapsuleEntryResultMap"
+               type="com.azas.domain.timecapsule.entity.TimeCapsuleEntry">
+        <id property="timeCapsuleEntryId" column="time_capsule_entry_id"/>
+        <result property="timeCapsuleId" column="time_capsule_id"/>
+        <result property="authorMemberId" column="author_member_id"/>
+        <result property="accountTransactionId" column="account_transaction_id"/>
+        <result property="title" column="title"/>
+        <result property="message" column="message"/>
+        <result property="contributionAmount" column="contribution_amount"/>
+        <result property="contributedAt" column="contributed_at"/>
+        <result property="mediaMode" column="media_mode"/>
+        <result property="thumbnailObjectKey" column="thumbnail_object_key"/>
+        <result property="blurredThumbnailObjectKey" column="blurred_thumbnail_object_key"/>
+        <result property="status" column="status"/>
+        <result property="editCount" column="edit_count"/>
+        <result property="sealedAt" column="sealed_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="mediaCount" column="media_count"/>
+    </resultMap>
+
+    <resultMap id="timeCapsuleEntryTransactionResultMap"
+               type="com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction">
+        <id property="accountTransactionId" column="account_transaction_id"/>
+        <result property="direction" column="direction"/>
+        <result property="amount" column="amount"/>
+        <result property="occurredAt" column="occurred_at"/>
+    </resultMap>
+
+    <select id="findVisibleEntriesByTimeCapsuleId"
+            resultMap="timeCapsuleEntryResultMap">
+        SELECT
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.blurred_thumbnail_object_key,
+            tce.status,
+            tce.edit_count,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at,
+            COUNT(tcm.time_capsule_media_id) AS media_count
+        FROM time_capsule_entry tce
+        LEFT JOIN time_capsule_media tcm
+            ON tcm.time_capsule_entry_id = tce.time_capsule_entry_id
+           AND tcm.status = 'ACTIVE'
+        WHERE tce.time_capsule_id = #{timeCapsuleId}
+          AND tce.status != 'DELETED'
+        GROUP BY
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.blurred_thumbnail_object_key,
+            tce.status,
+            tce.edit_count,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at
+        ORDER BY tce.contributed_at DESC, tce.time_capsule_entry_id DESC
+    </select>
+
+    <select id="findTransactionByTimeCapsuleAndId"
+            resultMap="timeCapsuleEntryTransactionResultMap">
+        SELECT
+            at.account_transaction_id,
+            at.direction,
+            at.amount,
+            at.occurred_at
+        FROM account_transaction at
+        INNER JOIN time_capsule tc
+            ON tc.financial_account_id = at.financial_account_id
+        WHERE tc.time_capsule_id = #{timeCapsuleId}
+          AND at.account_transaction_id = #{accountTransactionId}
+    </select>
+
+    <insert id="insert"
+            parameterType="com.azas.domain.timecapsule.entity.TimeCapsuleEntry"
+            useGeneratedKeys="true"
+            keyProperty="timeCapsuleEntryId"
+            keyColumn="time_capsule_entry_id">
+        INSERT INTO time_capsule_entry (
+            time_capsule_id,
+            author_member_id,
+            account_transaction_id,
+            title,
+            message,
+            contribution_amount,
+            contributed_at,
+            media_mode,
+            status
+        ) VALUES (
+            #{timeCapsuleId},
+            #{authorMemberId},
+            #{accountTransactionId},
+            #{title},
+            #{message},
+            #{contributionAmount},
+            #{contributedAt},
+            #{mediaMode},
+            #{status}
+        )
+    </insert>
+
+    <update id="increaseEntryCountAndRefreshLatestEntry"
+            parameterType="com.azas.domain.timecapsule.entity.TimeCapsuleEntry">
+        UPDATE time_capsule
+        SET entry_count = entry_count + 1,
+            latest_entry_at = CASE
+                WHEN latest_entry_at IS NULL
+                  OR latest_entry_at &lt; #{contributedAt}
+                    THEN #{contributedAt}
+                ELSE latest_entry_at
+            END
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND status = 'COLLECTING'
+    </update>
+
+</mapper>

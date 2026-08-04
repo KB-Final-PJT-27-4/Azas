@@ -135,6 +135,21 @@
         WHERE tc.time_capsule_id = #{timeCapsuleId}
     </select>
 
+    <select id="findAccessibleByIdForUpdate"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE tc.time_capsule_id = #{timeCapsuleId}
+        FOR UPDATE
+    </select>
+
     <select id="findCardSummaries"
             resultMap="timeCapsuleResultMap">
         SELECT

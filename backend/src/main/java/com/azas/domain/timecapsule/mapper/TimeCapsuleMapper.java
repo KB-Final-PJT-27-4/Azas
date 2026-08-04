@@ -37,6 +37,12 @@ public interface TimeCapsuleMapper {
             @Param("memberId") long memberId
     );
 
+    // [JMG] CAPSULE-5 기록 생성 중 공개 상태 변경과 집계값 경합을 막기 위해 보관함 행을 잠근다.
+    TimeCapsule findAccessibleByIdForUpdate(
+            @Param("timeCapsuleId") long timeCapsuleId,
+            @Param("memberId") long memberId
+    );
+
     // [JMG] CAPSULE-2 카드형 보관함 목록을 keyset pagination으로 조회한다.
     List<TimeCapsule> findCardSummaries(
             TimeCapsuleSearchCondition condition

@@ -52,13 +52,29 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "타임캡슐을 찾을 수 없습니다."
     ),
+    ACCOUNT_TRANSACTION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "계좌 거래내역을 찾을 수 없습니다."
+    ),
     DUPLICATE_TIME_CAPSULE(
             HttpStatus.CONFLICT,
             "해당 적금 계좌에는 이미 타임캡슐이 존재합니다."
     ),
+    DUPLICATE_TIME_CAPSULE_ENTRY(
+            HttpStatus.CONFLICT,
+            "해당 거래는 이미 타임캡슐 기록으로 등록되어 있습니다."
+    ),
+    TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "공개되었거나 보관 처리된 타임캡슐에는 기록을 생성할 수 없습니다."
+    ),
     INELIGIBLE_TIME_CAPSULE_ACCOUNT(
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자녀 명의의 활성 적금 계좌만 타임캡슐로 등록할 수 있습니다."
+    ),
+    INELIGIBLE_TIME_CAPSULE_TRANSACTION(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "타임캡슐 기록에는 적금 계좌의 입금 거래만 연결할 수 있습니다."
     ),
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
