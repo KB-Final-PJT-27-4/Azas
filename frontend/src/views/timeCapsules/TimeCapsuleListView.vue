@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 import capsulePigImage from '@/assets/images/timeCapsules/archive/capsule-pig.png'
 import { getTimeCapsuleAccount } from '@/data/timeCapsuleDummyData'
 
