@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronDown, ImagePlus, PiggyBank, Sparkles, X } from 'lucide-vue-next'
+import { ChevronDown, ImagePlus, PiggyBank, X } from 'lucide-vue-next'
 import previewCloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
 
 const router = useRouter()
