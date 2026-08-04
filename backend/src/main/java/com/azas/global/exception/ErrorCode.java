@@ -40,10 +40,7 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "해당 타임캡슐에 접근할 권한이 없습니다."
     ),
-    CHILD_NOT_FOUND(
-            HttpStatus.NOT_FOUND,
-            "자녀 정보를 찾을 수 없습니다."
-    ),
+
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 계좌를 찾을 수 없습니다."
