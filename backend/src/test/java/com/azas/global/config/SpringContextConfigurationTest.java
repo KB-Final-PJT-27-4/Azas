@@ -137,6 +137,51 @@ class SpringContextConfigurationTest {
                             ).exists()
                     );
 
+            mockMvc.perform(get("/v2/api-docs"))
+                    .andExpect(status().isOk())
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/token/refresh']"
+                                            + ".post.tags[0]"
+                            ).value("인증")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/token/refresh']"
+                                            + ".post.summary"
+                            ).value("Access Token 재발급")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/token/refresh']"
+                                            + ".post.responses['200'].description"
+                            ).value("토큰 재발급 성공")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/token/refresh']"
+                                            + ".post.responses['400'].description"
+                            ).value("Refresh Token 누락 또는 빈 값")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.paths['/api/v1/auth/token/refresh']"
+                                            + ".post.responses['401'].description"
+                            ).value("유효하지 않거나 만료·폐기된 Refresh Token")
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.TokenRefreshRequest"
+                                            + ".properties.refresh_token"
+                            ).exists()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.TokenRefreshResponse"
+                                            + ".properties.access_token"
+                            ).exists()
+                    );
+
             mockMvc.perform(get("/swagger-ui/index.html"))
                     .andExpect(status().isOk());
         }
