@@ -101,6 +101,8 @@ CREATE TABLE child (
   last_allowance_requested_at DATETIME(6) NULL COMMENT '최근 용돈 요청 시각',
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, DELETED',
+  deleted_at DATETIME(6) NULL COMMENT '삭제일',
   PRIMARY KEY (child_id),
   UNIQUE KEY uk_child_member_id (member_id),
   CONSTRAINT fk_child_member
