@@ -1,5 +1,189 @@
+<script setup lang="ts">
+import { ChevronLeft } from 'lucide-vue-next'
+import { computed, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
+import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
+import GoalPlanStep from '@/components/goals/GoalPlanStep.vue'
+import GoalSelectionStep from '@/components/goals/GoalSelectionStep.vue'
+
+type GoalSetting = { amount: number; targetDate: string }
+
+const router = useRouter()
+const currentStep = ref(1)
+const currentGoalIndex = ref(0)
+const selectedGoals = ref<string[]>(['education'])
+const customGoal = ref('')
+const isRecommendationOpen = ref(false)
+const goalSettings = reactive<Record<string, GoalSetting>>({
+  education: { amount: 30_000_000, targetDate: '2045-03' },
+})
+
+const goalNames: Record<string, string> = {
+  education: '대학자금',
+  independence: '독립자금',
+  housing: '주거자금',
+  marriage: '결혼자금',
+  investment: '투자자금',
+}
+
+const getGoalName = (goalId: string) =>
+  goalId === 'custom' ? customGoal.value.trim() || '직접 설정' : (goalNames[goalId] ?? '목표')
+
+const currentGoalId = computed(() => selectedGoals.value[currentGoalIndex.value] ?? '')
+const currentGoalName = computed(() => getGoalName(currentGoalId.value))
+const currentSetting = computed(() =>
+  currentGoalId.value ? goalSettings[currentGoalId.value] : undefined,
+)
+const canContinue = computed(
+  () =>
+    selectedGoals.value.length > 0 &&
+    (!selectedGoals.value.includes('custom') || customGoal.value.trim().length > 0),
+)
+const progressStep = computed(() =>
+  currentStep.value === 1
+    ? 1
+    : currentStep.value === 2
+      ? currentGoalIndex.value + 2
+      : selectedGoals.value.length + 2,
+)
+const progressTotal = computed(() => selectedGoals.value.length + 2)
+const plans = computed(() =>
+  selectedGoals.value.map((id) => ({
+    id,
+    name: getGoalName(id),
+    amount: goalSettings[id]?.amount ?? 30_000_000,
+    targetDate: goalSettings[id]?.targetDate ?? '2045-03',
+  })),
+)
+
+const ensureSetting = (goalId: string) => {
+  if (!goalSettings[goalId]) {
+    goalSettings[goalId] = { amount: 30_000_000, targetDate: '2045-03' }
+  }
+}
+
+const toggleGoal = (goalId: string) => {
+  const index = selectedGoals.value.indexOf(goalId)
+  if (index >= 0) {
+    selectedGoals.value.splice(index, 1)
+    return
+  }
+  selectedGoals.value.push(goalId)
+  ensureSetting(goalId)
+}
+
+const goBack = () => {
+  if (currentStep.value === 3) {
+    currentStep.value = 2
+    currentGoalIndex.value = selectedGoals.value.length - 1
+  } else if (currentStep.value === 2 && currentGoalIndex.value > 0) {
+    currentGoalIndex.value -= 1
+  } else if (currentStep.value === 2) {
+    currentStep.value = 1
+  } else {
+    router.back()
+  }
+}
+
+const goNext = () => {
+  if (!canContinue.value) return
+  if (currentStep.value === 1) {
+    selectedGoals.value.forEach(ensureSetting)
+    currentGoalIndex.value = 0
+    currentStep.value = 2
+  } else if (currentGoalIndex.value < selectedGoals.value.length - 1) {
+    currentGoalIndex.value += 1
+  } else {
+    currentStep.value = 3
+  }
+}
+
+const updateAmount = (value: number) => {
+  if (currentSetting.value) currentSetting.value.amount = value
+}
+const updateTargetDate = (value: string) => {
+  if (currentSetting.value) currentSetting.value.targetDate = value
+}
+const selectRecommendation = (value: number) => {
+  updateAmount(value)
+  isRecommendationOpen.value = false
+}
+</script>
+
 <template>
-  <main>
-    <h1>목표</h1>
+  <main class="flex min-h-dvh flex-col bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+    <header class="relative flex h-16 items-center justify-center border-b border-[var(--color-border)]">
+      <button
+        class="absolute left-4 grid size-10 place-items-center text-[var(--color-text-secondary)]"
+        type="button"
+        aria-label="이전"
+        @click="goBack"
+      >
+        <ChevronLeft :size="28" />
+      </button>
+      <strong>목표</strong>
+    </header>
+
+    <div v-if="currentStep < 3" class="flex gap-2 px-6 pt-7" aria-hidden="true">
+      <span
+        v-for="step in progressTotal"
+        :key="step"
+        class="h-1 flex-1 rounded-full"
+        :class="step === progressStep ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
+      ></span>
+    </div>
+
+    <div class="flex-1 px-6 pt-7 pb-6">
+      <GoalSelectionStep
+        v-if="currentStep === 1"
+        :selected-goals="selectedGoals"
+        :custom-goal="customGoal"
+        @toggle="toggleGoal"
+        @update:custom-goal="customGoal = $event"
+      />
+
+      <GoalAmountStep
+        v-else-if="currentStep === 2 && currentSetting"
+        :goal-name="currentGoalName"
+        :amount="currentSetting.amount"
+        :target-date="currentSetting.targetDate"
+        @update:amount="updateAmount"
+        @update:target-date="updateTargetDate"
+        @open-recommendation="isRecommendationOpen = true"
+      />
+
+      <GoalPlanStep v-else :plans="plans" />
+    </div>
+
+    <footer
+      class="bg-[var(--color-surface)] px-6 pt-3 pb-8"
+      :class="currentStep === 1 ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-4'"
+    >
+      <button
+        v-if="currentStep > 1"
+        class="h-14 rounded-xl border border-[var(--color-border)] font-bold text-[var(--color-selected-text)]"
+        type="button"
+        @click="goBack"
+      >
+        이전
+      </button>
+
+      <button
+        class="h-14 rounded-xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
+        type="button"
+        :disabled="!canContinue"
+        @click="currentStep === 3 ? router.push({ name: 'Home' }) : goNext()"
+      >
+        {{ currentStep === 3 ? '시작하기' : '다음' }}
+      </button>
+    </footer>
+
+    <AiRecommendationModal
+      v-if="isRecommendationOpen"
+      @close="isRecommendationOpen = false"
+      @select="selectRecommendation"
+    />
   </main>
 </template>
