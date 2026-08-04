@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import './tokens.css';
-@import "tailwindcss";
 
 * {
   box-sizing: border-box;
@@ -27,7 +26,7 @@ button,
 input,
 textarea,
 select {
-  font: inherit;
+  font-family: inherit;
 }
 
 a {
