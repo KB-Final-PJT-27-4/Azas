@@ -3,22 +3,7 @@ import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import capsulePigImage from '@/assets/images/timeCapsules/archive/capsule-pig.png'
-import memoryCafe1 from '@/assets/images/timeCapsules/thumbnails/light.PNG'
-import memoryCafe2 from '@/assets/images/timeCapsules/thumbnails/v.PNG'
-
-type CapsuleRecord = {
-  id: number
-  title: string
-  date: string
-  amount: number
-  thumbnail: string
-}
-
-type CapsuleAccount = {
-  name: string
-  description: string
-  records: CapsuleRecord[]
-}
+import { getTimeCapsuleAccount } from '@/data/timeCapsuleDummyData'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,41 +13,8 @@ const currentYear = today.getFullYear()
 const currentMonth = today.getMonth() + 1
 const selectedYear = ref(currentYear)
 
-const capsuleAccounts: Record<string, CapsuleAccount> = {
-  '1': {
-    name: '아이사랑적금',
-    description: '깨비의 성장 순간과 금융 기록을 모아보세요.',
-    records: [
-      { id: 101, title: '첫 생일 축하', date: '2026-05-04', amount: 150000, thumbnail: memoryCafe1 },
-      { id: 102, title: '가족 여행', date: '2026-05-09', amount: 80000, thumbnail: memoryCafe2 },
-      { id: 103, title: '첫 어린이집', date: '2026-05-23', amount: 100000, thumbnail: memoryCafe1 },
-      { id: 104, title: '첫 놀이터', date: '2026-05-30', amount: 100000, thumbnail: memoryCafe2 },
-      { id: 105, title: '첫 걸음마', date: '2026-05-31', amount: 150000, thumbnail: memoryCafe1 },
-      { id: 106, title: '바닷가 나들이', date: '2026-06-07', amount: 80000, thumbnail: memoryCafe2 },
-      { id: 107, title: '동물원에 간 날', date: '2026-06-11', amount: 70000, thumbnail: memoryCafe1 },
-      { id: 108, title: '즐거운 물놀이', date: '2026-06-14', amount: 50000, thumbnail: memoryCafe2 },
-      { id: 109, title: '할머니와의 하루', date: '2026-06-28', amount: 90000, thumbnail: memoryCafe1 },
-      { id: 110, title: '크리스마스 선물', date: '2025-12-25', amount: 100000, thumbnail: memoryCafe2 },
-      { id: 111, title: '새해 첫 저축', date: '2027-01-02', amount: 120000, thumbnail: memoryCafe1 },
-    ],
-  },
-  '2': {
-    name: '우리사랑적금',
-    description: '우리 가족의 행복한 추억과 저축 기록이에요.',
-    records: [
-      { id: 201, title: '가족 캠핑', date: '2026-05-03', amount: 120000, thumbnail: memoryCafe2 },
-      { id: 202, title: '엄마와 쿠키 만들기', date: '2026-05-17', amount: 50000, thumbnail: memoryCafe1 },
-      { id: 203, title: '아빠와 자전거', date: '2026-05-24', amount: 70000, thumbnail: memoryCafe2 },
-      { id: 204, title: '우리 가족 사진', date: '2026-06-06', amount: 100000, thumbnail: memoryCafe1 },
-      { id: 205, title: '첫 수영 수업', date: '2026-06-20', amount: 60000, thumbnail: memoryCafe2 },
-      { id: 206, title: '겨울 가족 여행', date: '2025-12-14', amount: 110000, thumbnail: memoryCafe1 },
-      { id: 207, title: '새해 가족 저축', date: '2027-01-10', amount: 150000, thumbnail: memoryCafe2 },
-    ],
-  },
-}
-
 const accountId = computed(() => String(route.params.capsuleListId ?? '1'))
-const account = computed(() => capsuleAccounts[accountId.value] ?? capsuleAccounts['1']!)
+const account = computed(() => getTimeCapsuleAccount(accountId.value))
 const totalAmount = computed(() => account.value.records.reduce((sum, record) => sum + record.amount, 0))
 const listRecords = computed(() => [...account.value.records].sort((a, b) => b.date.localeCompare(a.date)))
 const availableYears = computed(() =>
