@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 type GuardianRole = 'father' | 'mother' | 'guardian'
 type ChildGender = 'male' | 'female' | 'unknown'
 
 const route = useRoute()
+const router = useRouter()
 
 // 기본: /register, 공동 보호자 초대: /register?invited=true
 const isGuardianInvitation = computed(() => route.query.invited === 'true')
@@ -31,6 +32,7 @@ const form = reactive({
 
 const submitRegistration = () => {
   // TODO: 회원가입 또는 공동 보호자 초대 수락 API 연결
+  router.push({ name: 'Onboarding' })
 }
 </script>
 
