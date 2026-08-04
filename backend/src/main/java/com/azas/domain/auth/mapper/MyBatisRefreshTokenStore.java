@@ -5,6 +5,9 @@ import com.azas.domain.auth.service.RefreshTokenStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 @Repository
 @RequiredArgsConstructor
 public class MyBatisRefreshTokenStore implements RefreshTokenStore {
@@ -14,5 +17,25 @@ public class MyBatisRefreshTokenStore implements RefreshTokenStore {
     @Override
     public void save(RefreshToken refreshToken) {
         refreshTokenMapper.insert(refreshToken);
+    }
+
+    @Override
+    public Optional<RefreshToken> findByTokenHash(
+            String tokenHash
+    ) {
+        return Optional.ofNullable(
+                refreshTokenMapper.findByTokenHash(tokenHash)
+        );
+    }
+
+    @Override
+    public boolean revokeIfActive(
+            String tokenHash,
+            LocalDateTime revokedAt
+    ) {
+        return refreshTokenMapper.revokeIfActive(
+                tokenHash,
+                revokedAt
+        ) == 1;
     }
 }

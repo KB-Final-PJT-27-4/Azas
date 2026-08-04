@@ -28,4 +28,16 @@ public class RefreshToken {
         refreshToken.expiresAt = expiresAt;
         return refreshToken;
     }
+
+    public boolean isRevoked() {
+        return revokedAt != null;
+    }
+
+    public boolean isExpiredAt(LocalDateTime now) {
+        return !expiresAt.isAfter(now);
+    }
+
+    public boolean isActiveAt(LocalDateTime now) {
+        return !isRevoked() && !isExpiredAt(now);
+    }
 }

@@ -8,10 +8,17 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum ErrorCode {
 
+    // Common
     BADREQUEST(
             HttpStatus.BAD_REQUEST,
             "요청 값이 올바르지 않습니다."
     ),
+    INTERNAL_SERVER_ERROR(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "서버 오류가 발생했습니다."
+    ),
+
+    // Auth
     UNSUPPORTED_OAUTH_PROVIDER(
             HttpStatus.BAD_REQUEST,
             "지원하지 않는 소셜 로그인 제공자입니다."
@@ -19,6 +26,10 @@ public enum ErrorCode {
     INVALID_AUTHORIZATION_CODE(
             HttpStatus.UNAUTHORIZED,
             "인가 코드가 만료되었거나 유효하지 않습니다."
+    ),
+    INVALID_REFRESH_TOKEN(
+            HttpStatus.UNAUTHORIZED,
+            "유효하지 않거나 만료된 Refresh Token입니다."
     ),
     WITHDRAWN_MEMBER(
             HttpStatus.UNAUTHORIZED,
@@ -36,17 +47,17 @@ public enum ErrorCode {
             HttpStatus.UNAUTHORIZED,
             "Access Token이 유효하지 않거나 만료되었습니다."
     ),
-    TIME_CAPSULE_ACCESS_DENIED(
-            HttpStatus.FORBIDDEN,
-            "해당 타임캡슐에 접근할 권한이 없습니다."
-    ),
-    CHILD_NOT_FOUND(
-            HttpStatus.NOT_FOUND,
-            "자녀 정보를 찾을 수 없습니다."
-    ),
+
+    // Finance
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 계좌를 찾을 수 없습니다."
+    ),
+
+    // Time Capsule
+    TIME_CAPSULE_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 타임캡슐에 접근할 권한이 없습니다."
     ),
     TIME_CAPSULE_NOT_FOUND(
             HttpStatus.NOT_FOUND,
@@ -79,6 +90,35 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "서버 오류가 발생했습니다."
+
+    // Child
+    CHILD_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+        "자녀 정보를 찾을 수 없습니다."
+    ),
+    CHILD_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+        "해당 자녀 정보에 접근할 권한이 없습니다."
+    ),
+    CHILD_HAS_FINANCIAL_HISTORY(
+            HttpStatus.CONFLICT,
+        "금융 기록이 있는 자녀는 삭제할 수 없습니다."
+    ),
+    CHILD_INVALID_NAME(
+            HttpStatus.BAD_REQUEST,
+        "자녀 이름은 필수입니다."
+    ),
+    CHILD_INVALID_BIRTH_STATUS(
+            HttpStatus.BAD_REQUEST,
+        "출생 상태는 필수입니다."
+    ),
+    CHILD_EXPECTED_BIRTH_DATE_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+        "출생 예정일은 필수입니다."
+    ),
+    CHILD_BIRTH_DATE_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+        "생년월일은 필수입니다."
     );
 
     private final HttpStatus httpStatus;
