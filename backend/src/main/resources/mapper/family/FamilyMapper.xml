@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.family.mapper.FamilyMapper">
+
+    <select id="countChildAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN child_parent cp ON c.child_id = cp.child_id
+        WHERE c.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="findFamilyMembers"
+            resultType="com.azas.domain.family.dto.FamilyGuardianResponse">
+        SELECT
+            m.member_id AS memberId,
+            m.name AS name,
+            m.email AS email,
+            m.profile_image_url AS profileImageUrl,
+            cp.relation_type AS relationType,
+            CASE
+                WHEN cp.relation_type IN ('MOTHER', 'FATHER') THEN 'PARENT'
+                WHEN cp.relation_type = 'GUARDIAN' THEN 'GUARDIAN'
+                END AS familyRole,
+            cp.created_at AS linkedAt
+        FROM child_parent cp
+                 INNER JOIN member m ON cp.member_id = m.member_id
+                 INNER JOIN child c ON cp.child_id = c.child_id
+        WHERE cp.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND cp.relation_type IN ('MOTHER', 'FATHER', 'GUARDIAN')
+        ORDER BY cp.created_at ASC
+    </select>
+
+</mapper>
