@@ -189,25 +189,43 @@ const routes: RouteRecordRaw[] = [
     path: '/child/home',
     name: 'ChildHome',
     component: () => import('@/views/child/ChildHomeView.vue'),
-    meta: { requiresAuth: true, roles: ['CHILD'] },
+    meta: { requiresAuth: true, roles: ['CHILD'], hideBottomNavigation: true, headerTitle: '홈' },
   },
   {
     path: '/child/assets',
     name: 'ChildAssets',
     component: () => import('@/views/child/ChildAssetsView.vue'),
-    meta: { requiresAuth: true, roles: ['CHILD'] },
+    meta: {
+      requiresAuth: true,
+      roles: ['CHILD'],
+      hideBottomNavigation: true,
+      headerTitle: '최근 돈 기록',
+      showHeaderBack: true,
+    },
   },
   {
     path: '/child/allowance',
     name: 'ChildAllowance',
     component: () => import('@/views/child/ChildAllowanceView.vue'),
-    meta: { requiresAuth: true, roles: ['CHILD'] },
+    meta: {
+      requiresAuth: true,
+      roles: ['CHILD'],
+      hideBottomNavigation: true,
+      headerTitle: '용돈 조르기',
+      showHeaderBack: true,
+    },
   },
   {
     path: '/child/allowance-done',
     name: 'ChildAllowanceDone',
     component: () => import('@/views/child/ChildAllowanceDoneView.vue'),
-    meta: { requiresAuth: true, roles: ['CHILD'] },
+    meta: {
+      requiresAuth: true,
+      roles: ['CHILD'],
+      hideBottomNavigation: true,
+      headerTitle: '용돈 조르기',
+      showHeaderBack: true,
+    },
   },
 
   // 자산 리포트
