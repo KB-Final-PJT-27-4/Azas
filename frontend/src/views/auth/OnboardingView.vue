@@ -28,7 +28,7 @@ const startService = () => {
       class="absolute top-[39%] right-6 left-6 -translate-y-1/2 text-center"
       aria-labelledby="onboarding-title"
     >
-      <h1 id="onboarding-title" class="text-[32px] leading-[1.3] font-extrabold tracking-[-0.04em]">
+      <h1 id="onboarding-title" class="text-[32px] leading-[1.3] font-bold tracking-[-0.04em]">
         준비가 모두 끝났어요!
       </h1>
       <p class="mt-2 text-base text-[var(--color-text-secondary)]">
