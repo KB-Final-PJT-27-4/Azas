@@ -28,7 +28,6 @@ TRUNCATE TABLE family_invitation;
 TRUNCATE TABLE child_parent;
 TRUNCATE TABLE child;
 TRUNCATE TABLE financial_goal_template;
-TRUNCATE TABLE refresh_token;
 TRUNCATE TABLE social_account;
 TRUNCATE TABLE member;
 
@@ -45,7 +44,7 @@ INSERT INTO member (
   phone_number_hash,
   phone_verified_at
 ) VALUES
-  (1, 'parent@test.com', '김하나', NULL, 'PARENT', 'ACTIVE', '1994-04-12', SHA2('01012345678', 256), NOW(6)),
+  (1, 'parent@test.com', '김하나', NULL, 'ADULT', 'ACTIVE', '1994-04-12', SHA2('01012345678', 256), NOW(6)),
   (2, 'child@test.com', '깨비', NULL, 'CHILD', 'ACTIVE', '2016-01-12', NULL, NULL),
   (3, 'admin@test.com', '관리자', NULL, 'ADMIN', 'ACTIVE', NULL, NULL, NULL);
 

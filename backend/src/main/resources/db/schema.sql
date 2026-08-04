@@ -32,7 +32,6 @@ DROP TABLE IF EXISTS family_invitation;
 DROP TABLE IF EXISTS child_parent;
 DROP TABLE IF EXISTS child;
 DROP TABLE IF EXISTS financial_goal_template;
-DROP TABLE IF EXISTS refresh_token;
 DROP TABLE IF EXISTS social_account;
 DROP TABLE IF EXISTS member;
 
@@ -43,7 +42,7 @@ CREATE TABLE member (
   email VARCHAR(100) NOT NULL COMMENT '소셜 로그인 이메일',
   name VARCHAR(50) NOT NULL COMMENT '소셜 로그인 이름',
   profile_image_url VARCHAR(1000) NULL COMMENT '프로필 이미지 URL',
-  member_type VARCHAR(20) NOT NULL COMMENT 'PARENT, CHILD, ADMIN',
+  member_type VARCHAR(20) NOT NULL COMMENT 'ADULT, CHILD, ADMIN',
   status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, WITHDRAWN',
   birth_date DATE NULL COMMENT '회원 생년월일',
   phone_number_ciphertext VARBINARY(500) NULL COMMENT '휴대폰번호 암호문',
@@ -54,7 +53,7 @@ CREATE TABLE member (
   PRIMARY KEY (member_id),
   UNIQUE KEY uk_member_email (email),
   UNIQUE KEY uk_member_phone_number_hash (phone_number_hash),
-  CONSTRAINT ck_member_type CHECK (member_type IN ('PARENT', 'CHILD', 'ADMIN')),
+  CONSTRAINT ck_member_type CHECK (member_type IN ('ADULT', 'CHILD', 'ADMIN')),
   CONSTRAINT ck_member_status CHECK (status IN ('ACTIVE', 'WITHDRAWN'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='로그인 가능한 회원';
 
@@ -71,21 +70,6 @@ CREATE TABLE social_account (
   CONSTRAINT fk_social_account_member
     FOREIGN KEY (member_id) REFERENCES member (member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='회원 소셜 계정';
-
-CREATE TABLE refresh_token (
-  refresh_token_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Refresh Token ID',
-  member_id BIGINT UNSIGNED NOT NULL COMMENT '회원 ID',
-  token_hash CHAR(64) NOT NULL COMMENT 'Refresh Token SHA-256 해시',
-  expires_at DATETIME(6) NOT NULL COMMENT '만료 시각',
-  revoked_at DATETIME(6) NULL COMMENT '폐기 시각',
-  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 시각',
-  PRIMARY KEY (refresh_token_id),
-  UNIQUE KEY uk_refresh_token_hash (token_hash),
-  KEY idx_refresh_token_member_id (member_id),
-  KEY idx_refresh_token_expires_at (expires_at),
-  CONSTRAINT fk_refresh_token_member
-    FOREIGN KEY (member_id) REFERENCES member (member_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Refresh Token 저장소';
 
 CREATE TABLE financial_goal_template (
   financial_goal_template_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '목표 템플릿 ID',

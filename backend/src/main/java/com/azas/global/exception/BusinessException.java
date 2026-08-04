@@ -1,5 +1,8 @@
 package com.azas.global.exception;
 
+import lombok.Getter;
+
+@Getter
 public class BusinessException extends RuntimeException {
 
     private final ErrorCode errorCode;
@@ -9,7 +12,11 @@ public class BusinessException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
-    public ErrorCode getErrorCode() {
-        return errorCode;
+    public BusinessException(
+            ErrorCode errorCode,
+            Throwable cause
+    ) {
+        super(errorCode.getMessage(), cause);
+        this.errorCode = errorCode;
     }
 }
