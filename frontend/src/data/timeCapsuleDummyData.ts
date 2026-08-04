@@ -4,6 +4,7 @@ import memoryPhoto2 from '@/assets/images/timeCapsules/thumbnails/v.png'
 export type TimeCapsulePhoto = {
   src: string
   orientation: 'landscape' | 'portrait'
+  type?: 'image' | 'video'
 }
 
 export type TimeCapsuleRecord = {
@@ -14,11 +15,15 @@ export type TimeCapsuleRecord = {
   thumbnail: string
   letter: string
   photos: TimeCapsulePhoto[]
+  transferName: string
+  remainingEdits: number
 }
 
 export type TimeCapsuleAccount = {
   id: number
   name: string
+  bankName: string
+  accountNumber: string
   description: string
   records: TimeCapsuleRecord[]
 }
@@ -40,6 +45,7 @@ const createRecord = (
   amount: number,
   letter: string,
   photos: TimeCapsulePhoto[],
+  transferName = title,
 ): TimeCapsuleRecord => ({
   id,
   title,
@@ -48,12 +54,16 @@ const createRecord = (
   letter,
   photos,
   thumbnail: photos[0]!.src,
+  transferName,
+  remainingEdits: 1,
 })
 
 export const timeCapsuleAccounts: Record<string, TimeCapsuleAccount> = {
   '1': {
     id: 1,
     name: '아이사랑적금',
+    bankName: 'KB국민은행',
+    accountNumber: '123-456-789',
     description: '깨비의 성장 순간과 금융 기록을 모아보세요.',
     records: [
       createRecord(101, '첫 생일 축하', '2026-05-04', 150000, '우리 깨비의 첫 생일을 진심으로 축하해!\n하루하루 건강하게 자라는 모습을 볼 수 있어서 정말 행복해.\n\n앞으로도 지금처럼 밝고 씩씩하게 자라렴. 언제나 사랑해!', photosA),
@@ -72,6 +82,8 @@ export const timeCapsuleAccounts: Record<string, TimeCapsuleAccount> = {
   '2': {
     id: 2,
     name: '우리사랑적금',
+    bankName: '우리은행',
+    accountNumber: '1002-345-678901',
     description: '우리 가족의 행복한 추억과 저축 기록이에요.',
     records: [
       createRecord(201, '가족 캠핑', '2026-05-03', 120000, '별이 가득한 하늘 아래에서 우리 가족이 함께한 첫 캠핑이야.\n오늘의 웃음과 이야기를 오래 기억하자.', photosB),
@@ -91,4 +103,14 @@ export const getTimeCapsuleAccount = (accountId: string) =>
 export const getTimeCapsuleRecord = (accountId: string, recordId: string) => {
   const account = getTimeCapsuleAccount(accountId)
   return account.records.find(({ id }) => String(id) === recordId) ?? account.records[0]!
+}
+
+export const findTimeCapsuleRecord = (recordId: string) => {
+  for (const account of Object.values(timeCapsuleAccounts)) {
+    const record = account.records.find(({ id }) => String(id) === recordId)
+    if (record) return { account, record }
+  }
+
+  const account = timeCapsuleAccounts['1']!
+  return { account, record: account.records[0]! }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft } from 'lucide-vue-next'
+import { ChevronLeft, PiggyBank } from 'lucide-vue-next'
 import { getTimeCapsuleRecord } from '@/data/timeCapsuleDummyData'
 
 const route = useRoute()
@@ -51,14 +51,30 @@ const editRecord = () => router.push(`/time-capsules/${recordId.value}/edit`)
         class="mt-6 flex aspect-[6/7] snap-x snap-mandatory overflow-x-auto rounded-2xl bg-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         @scroll.passive="updateActivePhoto"
       >
-        <img
-          v-for="(photo, index) in record.photos"
-          :key="`${photo.src}-${index}`"
-          class="h-full w-full shrink-0 snap-center bg-white"
-          :class="photo.orientation === 'landscape' ? 'object-contain' : 'object-cover'"
-          :src="photo.src"
-          :alt="`${record.title} 사진 ${index + 1}`"
-        />
+        <template v-if="record.photos.length">
+          <template v-for="(photo, index) in record.photos" :key="`${photo.src}-${index}`">
+            <video
+              v-if="photo.type === 'video'"
+              class="h-full w-full shrink-0 snap-center bg-white"
+              :class="photo.orientation === 'landscape' ? 'object-contain' : 'object-cover'"
+              :src="photo.src"
+              controls
+            ></video>
+            <img
+              v-else
+              class="h-full w-full shrink-0 snap-center bg-white"
+              :class="photo.orientation === 'landscape' ? 'object-contain' : 'object-cover'"
+              :src="photo.src"
+              :alt="`${record.title} 사진 ${index + 1}`"
+            />
+          </template>
+        </template>
+        <div v-else class="grid h-full w-full shrink-0 place-items-center bg-gradient-to-br from-[#fff9dc] to-[#eaf7ff]">
+          <div class="text-center text-[var(--color-brand-primary)]">
+            <PiggyBank :size="52" class="mx-auto" />
+            <p class="mt-3 text-sm font-semibold text-[var(--color-text-secondary)]">소중한 오늘을 저장했어요</p>
+          </div>
+        </div>
       </div>
 
       <div v-if="record.photos.length > 1" class="mt-3 flex justify-center gap-1.5">
@@ -87,11 +103,12 @@ const editRecord = () => router.push(`/time-capsules/${recordId.value}/edit`)
           목록으로 이동
         </button>
         <button
-          class="min-h-13 rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+          class="min-h-13 rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#c9d5dc]"
           type="button"
+          :disabled="record.remainingEdits === 0"
           @click="editRecord"
         >
-          수정하기 ({{ activePhotoIndex + 1 }}/{{ record.photos.length }})
+          수정하기 ({{ record.remainingEdits }}/1)
         </button>
       </div>
     </article>
