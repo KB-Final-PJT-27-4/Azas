@@ -17,12 +17,15 @@ export interface HomeProduct {
 }
 
 export interface HomeGoal {
+  id: string
   title: string
   tag: string
   currentAmount: number
   targetAmount: number
   progress: number
   targetDate: string
+  checklistStatus: string
+  timeCapsuleStatus: string
 }
 
 export interface HomeData {
@@ -37,7 +40,7 @@ export interface HomeData {
   productsMoreTo: string
   quickMenus: HomeQuickMenu[]
   products: HomeProduct[]
-  goal?: HomeGoal
+  goals?: HomeGoal[]
 }
 
 export const currentHomeMemberType: HomeMemberType = 'existing'
@@ -92,14 +95,30 @@ export const homeDataByMemberType: Record<HomeMemberType, HomeData> = {
       { title: '타임캡슐', subtitle: 'D - 23', icon: 'timeCapsule', to: '/time-capsules' },
       { title: '목표', subtitle: '9,600,000원', icon: 'goal', to: '/goals' },
     ],
-    goal: {
-      title: '목표',
-      tag: '대학자금',
-      currentAmount: 9_600_000,
-      targetAmount: 30_000_000,
-      progress: 32,
-      targetDate: '2034년 6월',
-    },
+    goals: [
+      {
+        id: 'college-fund',
+        title: '목표',
+        tag: '대학자금',
+        currentAmount: 9_600_000,
+        targetAmount: 30_000_000,
+        progress: 32,
+        targetDate: '2034년 6월',
+        checklistStatus: '3 / 6 완료',
+        timeCapsuleStatus: 'D - 23',
+      },
+      {
+        id: 'housing-fund',
+        title: '목표',
+        tag: '주거자금',
+        currentAmount: 4_200_000,
+        targetAmount: 80_000_000,
+        progress: 5,
+        targetDate: '2042년 12월',
+        checklistStatus: '1 / 5 완료',
+        timeCapsuleStatus: 'D - 68',
+      },
+    ],
     products: [
       {
         id: 'kb-child-love-saving-1',
