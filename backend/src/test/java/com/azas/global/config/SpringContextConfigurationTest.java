@@ -8,13 +8,17 @@ import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.XmlWebApplicationContext;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import springfox.documentation.spring.web.plugins.Docket;
 
 import javax.sql.DataSource;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -135,6 +139,64 @@ class SpringContextConfigurationTest {
 
             mockMvc.perform(get("/swagger-ui/index.html"))
                     .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    // [JMG] CAPSULE-1~3 API 응답의 날짜·시간이 ISO-8601 문자열로 변환되는지 검증한다.
+    void servletContextSerializesJavaTimeAsIso8601() throws Exception {
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext();
+                XmlWebApplicationContext servletContext =
+                        new XmlWebApplicationContext()
+        ) {
+            servletContext.setParent(rootContext);
+            servletContext.setServletContext(
+                    new MockServletContext()
+            );
+            servletContext.setConfigLocation(
+                    "classpath:spring/servlet-context.xml"
+            );
+            servletContext.refresh();
+
+            RequestMappingHandlerAdapter handlerAdapter =
+                    servletContext.getBean(
+                            RequestMappingHandlerAdapter.class
+                    );
+
+            MappingJackson2HttpMessageConverter jacksonConverter =
+                    handlerAdapter.getMessageConverters().stream()
+                            .filter(
+                                    MappingJackson2HttpMessageConverter.class
+                                            ::isInstance
+                            )
+                            .map(
+                                    MappingJackson2HttpMessageConverter.class
+                                            ::cast
+                            )
+                            .findFirst()
+                            .orElseThrow();
+
+            String responseBody = jacksonConverter.getObjectMapper()
+                    .writeValueAsString(
+                            Map.of(
+                                    "created_at",
+                                    LocalDateTime.of(
+                                            2026,
+                                            8,
+                                            4,
+                                            13,
+                                            24,
+                                            10
+                                    )
+                            )
+                    );
+
+            assertEquals(
+                    "{\"created_at\":\"2026-08-04T13:24:10\"}",
+                    responseBody
+            );
         }
     }
 
