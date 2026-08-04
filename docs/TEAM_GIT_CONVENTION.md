@@ -1,14 +1,14 @@
 # 아자스(Azas) Git · GitHub 협업 컨벤션
 
 > 적용 대상: `Azas` 단일 저장소  
-> 마지막 정리: 2026-07-30
+> 마지막 정리: 2026-08-04
 
 ## 1. 기본 원칙
 
-- 모든 기능 작업은 **Issue 생성 → feature 브랜치 생성 → PR → dev 병합** 순서로 진행한다.
-- `main`, `dev` 브랜치에는 직접 push하지 않는다.
+- 모든 기능 작업은 **Issue 생성 → 파트별 feature 브랜치 생성 → 파트 통합 브랜치 PR → `dev` 통합 PR → `main` 릴리스 PR** 순서로 진행한다.
+- `main`, `dev`, `dev-fe`, `dev-be` 브랜치에는 직접 push하지 않는다.
 - 브랜치는 **개인 이니셜이 아닌 기능 단위**로 만든다. 그래야 나중에 기능별 작업 이력을 찾기 쉽다.
-- 프론트엔드와 백엔드는 하나의 저장소를 함께 사용하며, 각자 필요한 폴더에서 작업한다.
+- 프론트엔드와 백엔드는 하나의 저장소를 함께 사용하되, 각 팀은 자신의 통합 브랜치와 담당 폴더를 중심으로 작업한다.
 
 ```text
 Azas/
@@ -21,90 +21,92 @@ Azas/
 ## 2. 브랜치 전략
 
 ```mermaid
-gitGraph
-   commit id: "초기 설정"
-   branch dev
-   checkout dev
-   commit id: "통합 개발"
-   branch feature/12-child-registration
-   checkout feature/12-child-registration
-   commit id: "자녀 등록 구현"
-   checkout dev
-   merge feature/12-child-registration id: "PR 병합"
-   checkout main
-   merge dev id: "릴리스"
+flowchart LR
+  ISSUE[Issue] --> BEF[BE/feature/*]
+  ISSUE --> FEF[FE/feature/*]
+  BEF --> DB[dev-be]
+  FEF --> DF[dev-fe]
+  DB --> DEV[dev]
+  DF --> DEV
+  DEV --> MAIN[main]
 ```
 
 | 브랜치 | 역할 | 생성 기준 | 병합 대상 |
 |---|---|---|---|
 | `main` | 배포·발표 가능한 안정 버전 | 직접 작업 금지 | `dev → main` PR |
-| `dev` | 팀 통합 개발 브랜치 | 직접 작업 금지 | `feature/* → dev` PR |
-| `FE(or BE)/feature/*` | 개별 기능 개발 | Issue 또는 기능 단위 | `dev` |
-| `fix/*` | 긴급하지 않은 일반 버그 수정 | 버그 Issue 또는 수정 단위 | `dev` |
+| `dev` | FE·BE를 합치는 팀 통합 브랜치 | 직접 작업 금지 | `dev-fe → dev`, `dev-be → dev` PR |
+| `dev-fe` | 프론트엔드 통합 브랜치 | `dev`에서 분기, 직접 작업 금지 | `FE/feature/* → dev-fe` PR |
+| `dev-be` | 백엔드 통합 브랜치 | `dev`에서 분기, 직접 작업 금지 | `BE/feature/* → dev-be` PR |
+| `FE/feature/*` | 프론트엔드 개별 기능 개발 | Issue 또는 기능 단위 | `dev-fe` |
+| `BE/feature/*` | 백엔드 개별 기능 개발 | Issue 또는 기능 단위 | `dev-be` |
+| `FE/BE/fix/*` | 일반 버그 수정 | 버그 Issue 또는 수정 단위 | 해당 파트 통합 브랜치 |
 | `hotfix/*` | 배포 후 즉시 수정이 필요한 버그 | 예외 상황에만 사용 | `main`, 이후 `dev` 동기화 |
 
 ### 브랜치 이름 규칙
 
-형식은 아래처럼 작성한다.
-
 ```text
-FE(or BE)/feature/이슈번호-기능-이름
-fix/이슈번호-수정-내용
+FE/feature/이슈번호-기능-이름
+BE/feature/이슈번호-기능-이름
+FE/fix/이슈번호-수정-내용
+BE/fix/이슈번호-수정-내용
 hotfix/이슈번호-수정-내용
 ```
 
 예시:
 
 ```text
-FE(or BE)/feature/12-child-registration
-FE(or BE)/feature/18-time-capsule-create
-FE(or BE)/feature/25-goal-api
-FE(or BE)/fix/31-login-token-expiry
+FE/feature/12-child-registration
+BE/feature/18-time-capsule-create
+BE/feature/25-product-api
+FE/fix/31-login-token-expiry
 ```
 
-- 이슈가 아직 없으면 번호 없이 `feature/child-registration`처럼 작성해도 된다. 다만 작업 시작 전 Issue 연결을 권장한다.
+- 이슈가 아직 없으면 번호 없이 작성할 수 있지만, 작업 시작 전 Issue 연결을 권장한다.
 - 하나의 브랜치에는 가능한 한 **하나의 기능 또는 하나의 목적**만 담는다.
 - 다른 사람의 feature 브랜치에 직접 push하지 않는다.
+- `dev-fe`, `dev-be`는 오래 유지되는 팀 통합 브랜치이며 feature 브랜치를 병합한 뒤 삭제하지 않는다.
 
 ## 3. 작업 흐름
 
+### 개별 기능 개발
+
 1. GitHub Project에서 할 일을 확인하거나 Issue를 생성한다.
-2. 최신 `dev`를 기준으로 기능 브랜치를 만든다.
+2. 담당 파트의 최신 통합 브랜치를 기준으로 기능 브랜치를 만든다.
 
    ```bash
-   git switch dev
-   git pull origin dev
-   git switch -c feature/12-child-registration
+   # 백엔드 예시
+   git switch dev-be
+   git pull origin dev-be
+   git switch -c BE/feature/18-time-capsule-create
+
+   # 프론트엔드 예시
+   git switch dev-fe
+   git pull origin dev-fe
+   git switch -c FE/feature/18-time-capsule-create
    ```
 
-3. 작업 후 작은 단위로 커밋한다.
-4. 원격 브랜치에 push한다.
+3. 작업 후 작은 단위로 커밋하고 원격 feature 브랜치에 push한다.
 
    ```bash
-   git push -u origin feature/12-child-registration
+   git push -u origin BE/feature/18-time-capsule-create
    ```
 
-5. GitHub에서 `feature/* → dev` Pull Request를 생성한다.
-6. 충돌·테스트 실패가 없는지 확인한 뒤 PR을 병합한다.
-7. 병합된 브랜치는 GitHub에서 삭제한다.
+4. PR의 대상 브랜치를 정확히 지정한다.
 
-### dev 최신화가 필요한 경우
+   ```text
+   BE/feature/* 또는 BE/fix/* → dev-be
+   FE/feature/* 또는 FE/fix/* → dev-fe
+   ```
 
-다른 기능이 먼저 `dev`에 병합됐다면, 내 브랜치에서 `dev`를 반영한 뒤 PR을 갱신한다.
+5. 담당 파트의 승인 1명을 받고, 충돌·테스트 실패가 없는지 확인한 뒤 병합한다.
+6. 병합된 feature 브랜치는 GitHub에서 삭제한다.
 
-```bash
-git switch feature/12-child-registration
-git fetch origin
-git merge origin/dev
-```
+### 파트 통합과 릴리스
 
-충돌을 해결하고 테스트한 뒤 push한다.
-
-```bash
-git add .
-git commit
-git push
-```
+- 백엔드와 프론트엔드는 작업이 쌓이면 각각 `dev-be → dev`, `dev-fe → dev` PR을 만든다.
+- `dev` 통합 PR은 팀 통합 담당자의 확인 후 병합한다.
+- 배포·발표 전에는 `dev → main` PR을 만들고 전체 동작을 확인한 뒤 병합한다.
+- `dev`에 반영된 최신 변경을 파트 통합 브랜치에 다시 반영해야 하면, 직접 push 대신 PR로 동기화한다.
 
 ## 4. Pull Request 규칙
 
@@ -112,7 +114,7 @@ git push
 
 - PR은 **기능 하나가 동작 가능한 단위**로 올린다.
 - 화면만 먼저 올려도 되지만, 아직 서버 연동 전이라면 PR 본문에 명확히 적는다.
-- 관련 Issue가 있으면 PR 본문에 `Closes #12` 형식으로 연결한다. 병합 시 해당 Issue가 자동으로 닫힌다.
+- 관련 Issue가 있으면 PR 본문에 `Closes #12` 형식으로 연결한다. 기능 PR이 파트 통합 브랜치에 병합되면 해당 Issue는 닫힌다.
 - 큰 기능은 너무 오래 한 PR에 쌓지 말고, 화면/UI · API · 연동처럼 의미 있는 단위로 나눈다.
 
 ### PR 제목 형식
@@ -144,21 +146,31 @@ Closes #이슈번호
 
 ### 병합 방식과 승인
 
-- `feature/* → dev` PR은 **승인 필수 없이** 작성자가 직접 병합할 수 있다.
-- 다만 다른 사람의 작업과 충돌할 가능성이 있거나 DB/API 규격이 바뀌는 경우에는, 관련 파트 팀원에게 PR 링크를 공유하고 확인을 받는다.
-- `dev → main`은 발표·배포 직전의 통합 PR이다. 최소한 전체 동작 확인 후 병합한다.
+- `BE/feature/* → dev-be` PR은 **backend 코드오너를 포함한 승인 1명 이상**이 필요하다.
+- `FE/feature/* → dev-fe` PR은 **frontend 코드오너를 포함한 승인 1명 이상**이 필요하다.
+- `dev-be → dev`, `dev-fe → dev` PR은 변경된 `backend/` 또는 `frontend/` 폴더의 코드오너 팀 승인 1명 이상과 통합 동작 확인 후 병합한다.
+- `dev → main` PR은 발표·배포 전 통합 PR이며, 승인 1명 이상과 전체 동작 확인 후 병합한다.
 - 병합 방식은 기본적으로 **Squash and merge**를 사용한다. 여러 중간 커밋을 하나의 기능 단위 이력으로 정리하기 위함이다.
 - 병합 후에는 원격 feature 브랜치를 삭제한다.
 
 ### GitHub Ruleset 설정 기준
 
-| 대상 브랜치 | 권장 설정 |
+| 대상 브랜치 | 필수 설정 |
 |---|---|
-| `main` | PR 병합만 허용, 직접 push 금지, 배포 전 통합 확인 |
-| `dev` | PR 병합만 허용, 직접 push 금지, Required approvals `0` |
-| 공통 | force push 및 브랜치 삭제 금지 |
+| `dev-fe` | PR 병합만 허용, 직접 push 금지, frontend 코드오너 승인, Required approvals `1` |
+| `dev-be` | PR 병합만 허용, 직접 push 금지, backend 코드오너 승인, Required approvals `1` |
+| `dev` | PR 병합만 허용, 직접 push 금지, 변경 경로별 frontend/backend 팀 승인, 코드오너 승인, Required approvals `1` |
+| `main` | PR 병합만 허용, 직접 push 금지, Required approvals `1` |
+| 공통 | force push 및 브랜치 삭제 금지, 새 push 시 기존 승인 무효화, 리뷰 대화 해결 필수 |
 
-> `dev`에서 PR은 유지하되 승인을 강제하지 않는다. 따라서 팀원은 본인 PR도 조건 충족 후 병합할 수 있다.
+> Ruleset만으로 PR의 출발 브랜치까지 제한할 수는 없으므로, GitHub Actions 상태 검사로 아래 병합 경로를 검증한다.
+>
+> ```text
+> BE/feature/* 또는 BE/fix/* → dev-be
+> FE/feature/* 또는 FE/fix/* → dev-fe
+> dev-be 또는 dev-fe → dev
+> dev → main
+> ```
 
 ## 5. 커밋 메시지 규칙
 
@@ -195,7 +207,7 @@ type: 작업 내용
 [FE] 자녀 등록 화면 구현
 [BE] 자녀 등록 API 구현
 [Bug] 타임캡슐 열람일 계산 오류
-[Docs] 목표 도메인 API 명세 보완
+[Docs] 타임캡슐 API 명세 보완
 ```
 
 - Issue에는 담당자(Assignee), 파트 라벨, 우선순위, 완료 조건을 적는다.
@@ -203,14 +215,14 @@ type: 작업 내용
 
 ### Project 보드 사용
 
-경로: `You-Got-Talent 조직 → Projects`
+경로: `KB-Final-PJT-27-4 조직 → Projects`
 
 | 상태 | 의미 |
 |---|---|
 | `Todo` | 할 일은 정해졌지만 아직 시작하지 않음 |
-| `In Progress` | 담당자가 작업 중 |
-| `In Review` | PR 생성 후 병합·확인 대기 |
-| `Done` | dev 병합 및 기능 확인 완료 |
+| `In Progress` | 담당자가 feature 브랜치에서 작업 중 |
+| `In Review` | feature PR이 `dev-fe` 또는 `dev-be` 병합을 기다리는 중 |
+| `Done` | feature PR이 담당 파트 통합 브랜치에 병합되고 기능 확인이 끝남 |
 
 권장 라벨:
 
@@ -229,7 +241,7 @@ priority: high / priority: medium / priority: low
 
 ## 8. 금지 사항
 
-- `main`, `dev`에 직접 push
+- `main`, `dev`, `dev-fe`, `dev-be`에 직접 push
 - 다른 사람 브랜치에 허가 없이 push
 - 빌드 에러·실행 불가 상태를 설명 없이 병합
 - `.env`, API 키, DB 비밀번호, 개인 토큰 커밋
@@ -240,8 +252,9 @@ priority: high / priority: medium / priority: low
 
 PR 생성 전 아래를 확인한다.
 
-- [ ] 최신 `dev` 기준으로 작업했는가?
-- [ ] 브랜치가 기능 단위인가?
+- [ ] 최신 `dev-fe` 또는 `dev-be` 기준으로 작업했는가?
+- [ ] 브랜치가 기능 단위이고 올바른 파트 접두어를 사용하는가?
+- [ ] PR의 대상 브랜치가 `dev-fe` 또는 `dev-be`로 올바른가?
 - [ ] 커밋 메시지가 작업 내용을 설명하는가?
 - [ ] 로컬에서 화면/API가 동작하는가?
 - [ ] 관련 Issue와 PR을 연결했는가?
