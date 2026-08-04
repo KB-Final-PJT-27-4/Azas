@@ -8,10 +8,17 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum ErrorCode {
 
+    // Common
     BADREQUEST(
             HttpStatus.BAD_REQUEST,
             "요청 값이 올바르지 않습니다."
     ),
+    INTERNAL_SERVER_ERROR(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "서버 오류가 발생했습니다."
+    ),
+
+    // Auth
     UNSUPPORTED_OAUTH_PROVIDER(
             HttpStatus.BAD_REQUEST,
             "지원하지 않는 소셜 로그인 제공자입니다."
@@ -40,14 +47,17 @@ public enum ErrorCode {
             HttpStatus.UNAUTHORIZED,
             "Access Token이 유효하지 않거나 만료되었습니다."
     ),
-    TIME_CAPSULE_ACCESS_DENIED(
-            HttpStatus.FORBIDDEN,
-            "해당 타임캡슐에 접근할 권한이 없습니다."
-    ),
 
+    // Finance
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 계좌를 찾을 수 없습니다."
+    ),
+
+    // Time Capsule
+    TIME_CAPSULE_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 타임캡슐에 접근할 권한이 없습니다."
     ),
     TIME_CAPSULE_NOT_FOUND(
             HttpStatus.NOT_FOUND,
@@ -60,10 +70,6 @@ public enum ErrorCode {
     INELIGIBLE_TIME_CAPSULE_ACCOUNT(
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자녀 명의의 활성 적금 계좌만 타임캡슐로 등록할 수 있습니다."
-    ),
-    INTERNAL_SERVER_ERROR(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            "서버 오류가 발생했습니다."
     ),
 
     // Child
