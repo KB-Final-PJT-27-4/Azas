@@ -3,17 +3,20 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ChevronDown, ImagePlus, PiggyBank, X } from 'lucide-vue-next'
 import previewCloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
+import capsulePigImage from '@/assets/images/timeCapsules/archive/capsule-pig.png'
+import { timeCapsuleAccounts, type TimeCapsuleRecord } from '@/data/timeCapsuleDummyData'
 
 const router = useRouter()
 const step = ref<'form' | 'preview'>('form')
 const isAccountMenuOpen = ref(false)
 const isTransferMenuOpen = ref(false)
 
-const accounts = [
-  { id: 1, bank: 'KB국민은행', name: 'KB 아이사랑적금', number: '123-456-789' },
-  { id: 2, bank: '카카오뱅크', name: '깨비 저금통', number: '3333-16-888867' },
-  { id: 3, bank: '신한은행', name: '아이행복적금', number: '110-542-938124' },
-]
+const accounts = Object.values(timeCapsuleAccounts).map((account) => ({
+  id: account.id,
+  bank: account.bankName,
+  name: account.bankName === 'KB국민은행' ? `KB ${account.name}` : account.name,
+  number: account.accountNumber,
+}))
 
 const transfers = [
   { id: 1, date: '2026.07.21', name: '대학자금', amount: 100000 },
@@ -37,6 +40,7 @@ type MediaItem = {
 const mediaItems = ref<MediaItem[]>([])
 const previewCarousel = ref<HTMLElement | null>(null)
 const activeMediaIndex = ref(0)
+const hasCreated = ref(false)
 
 const canPreview = computed(() => Boolean(selectedAccount.value && title.value.trim() && letter.value.trim()))
 const formattedAmount = computed(() => `${selectedTransfer.value.amount.toLocaleString('ko-KR')}원`)
@@ -49,6 +53,16 @@ const selectAccount = (id: number) => {
 const selectTransfer = (id: number) => {
   selectedTransferId.value = id
   isTransferMenuOpen.value = false
+}
+
+const toggleAccountMenu = () => {
+  isAccountMenuOpen.value = !isAccountMenuOpen.value
+  isTransferMenuOpen.value = false
+}
+
+const toggleTransferMenu = () => {
+  isTransferMenuOpen.value = !isTransferMenuOpen.value
+  isAccountMenuOpen.value = false
 }
 
 const selectMedia = (event: Event) => {
@@ -109,10 +123,32 @@ const showPreview = () => {
 }
 
 const createTimeCapsule = () => {
-  router.push('/time-capsules')
+  const account = timeCapsuleAccounts[String(selectedAccountId.value)] ?? timeCapsuleAccounts['1']!
+  const recordId = Date.now()
+  const photos = mediaItems.value.map(({ url, type, orientation }) => ({
+    src: url,
+    type,
+    orientation,
+  }))
+  const newRecord: TimeCapsuleRecord = {
+    id: recordId,
+    title: title.value.trim(),
+    date: selectedTransfer.value.date.replaceAll('.', '-'),
+    amount: selectedTransfer.value.amount,
+    transferName: selectedTransfer.value.name,
+    letter: letter.value.trim(),
+    photos,
+    thumbnail: photos[0]?.src ?? capsulePigImage,
+    remainingEdits: 1,
+  }
+
+  account.records.push(newRecord)
+  hasCreated.value = true
+  router.push(`/time-capsules/${account.id}/${recordId}`)
 }
 
 onBeforeUnmount(() => {
+  if (hasCreated.value) return
   mediaItems.value.forEach(({ url }) => URL.revokeObjectURL(url))
 })
 </script>
@@ -134,7 +170,7 @@ onBeforeUnmount(() => {
             type="button"
             aria-haspopup="listbox"
             :aria-expanded="isAccountMenuOpen"
-            @click="isAccountMenuOpen = !isAccountMenuOpen"
+            @click="toggleAccountMenu"
           >
             <span
               class="mr-3 grid size-8 shrink-0 place-items-center rounded-full bg-[#fff7dc] text-[#f5a300]"
@@ -195,7 +231,7 @@ onBeforeUnmount(() => {
             type="button"
             aria-haspopup="listbox"
             :aria-expanded="isTransferMenuOpen"
-            @click="isTransferMenuOpen = !isTransferMenuOpen"
+            @click="toggleTransferMenu"
           >
             <span class="text-xs text-[var(--color-text-secondary)]">{{ selectedTransfer.date }}</span>
             <strong class="min-w-0 flex-1 truncate text-sm">{{ selectedTransfer.name }}</strong>
