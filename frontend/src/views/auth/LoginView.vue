@@ -1,8 +1,19 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+
 import backgroundDefaultImage from '@/assets/images/login/bg-default.png'
 import backgroundHeroImage from '@/assets/images/login/bg-hero.png'
 import googleLoginImage from '@/assets/images/login/google-login.png'
 import kakaoLoginImage from '@/assets/images/login/kakao_login.png'
+
+const router = useRouter()
+
+const moveToRegister = (invited = false) => {
+  router.push({
+    name: 'Register',
+    query: invited ? { invited: 'true' } : undefined,
+  })
+}
 </script>
 
 <template>
@@ -68,6 +79,7 @@ import kakaoLoginImage from '@/assets/images/login/kakao_login.png'
         <button
           class="grid h-16 w-full cursor-pointer grid-cols-[42px_1fr_42px] items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-5 text-lg font-bold text-[var(--color-text-primary)] shadow-md transition-transform duration-120 outline-none active:scale-[0.985] focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[var(--color-brand-primary)] max-[360px]:text-base"
           type="button"
+          @click="moveToRegister()"
         >
           <img class="size-9" :src="googleLoginImage" alt="" />
           <span>Google로 시작하기</span>
@@ -76,6 +88,7 @@ import kakaoLoginImage from '@/assets/images/login/kakao_login.png'
         <button
           class="grid h-16 w-full cursor-pointer grid-cols-[42px_1fr_42px] items-center overflow-hidden rounded-full border-0 bg-[#fee500] px-5 text-lg font-bold text-[#171600] shadow-md transition-transform duration-120 outline-none active:scale-[0.985] focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[var(--color-brand-primary)] max-[360px]:text-base"
           type="button"
+          @click="moveToRegister(true)"
         >
           <img class="size-9" :src="kakaoLoginImage" alt="" />
           <span>카카오로 시작하기</span>
