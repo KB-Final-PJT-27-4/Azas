@@ -1,5 +1,5 @@
 ﻿## 관련 Issue
-Closes #
+- Closes #
 
 ## 작업 내용
 -
