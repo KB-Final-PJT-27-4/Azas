@@ -6,19 +6,33 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const hideNavigation = computed(() => route.meta.hideNavigation === true)
+const hideBottomNavigation = computed(
+  () => hideNavigation.value || route.meta.hideBottomNavigation === true,
+)
+const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
+const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
 </script>
 
 <template>
   <div class="default-layout">
     <div class="default-layout__shell">
-      <AppHeader v-if="!hideNavigation" title="Azas" />
+      <AppHeader
+        v-if="!hideNavigation"
+        title="깨비"
+        profile-name="깨비"
+        :center-title="headerTitle"
+        :show-back="showHeaderBack"
+      />
       <div
         class="default-layout__content"
-        :class="{ 'default-layout__content--without-navigation': hideNavigation }"
+        :class="{
+          'default-layout__content--without-navigation': hideNavigation,
+          'default-layout__content--without-bottom-navigation': hideBottomNavigation,
+        }"
       >
         <slot />
       </div>
-      <AppBottomNavigation v-if="!hideNavigation" />
+      <AppBottomNavigation v-if="!hideBottomNavigation" />
     </div>
   </div>
 </template>
@@ -48,6 +62,10 @@ const hideNavigation = computed(() => route.meta.hideNavigation === true)
 .default-layout__content--without-navigation {
   padding-top: 0;
   padding-bottom: 0;
+}
+
+.default-layout__content--without-bottom-navigation {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .default-layout__content--without-navigation :deep(main > :first-child) {
