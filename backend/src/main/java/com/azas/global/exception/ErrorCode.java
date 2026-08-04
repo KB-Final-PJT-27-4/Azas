@@ -28,6 +28,38 @@ public enum ErrorCode {
             HttpStatus.BAD_GATEWAY,
             "소셜 제공자와 통신하는 중 오류가 발생했습니다."
     ),
+    ACCESS_TOKEN_REQUIRED(
+            HttpStatus.UNAUTHORIZED,
+            "Access Token이 필요합니다."
+    ),
+    INVALID_ACCESS_TOKEN(
+            HttpStatus.UNAUTHORIZED,
+            "Access Token이 유효하지 않거나 만료되었습니다."
+    ),
+    TIME_CAPSULE_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 타임캡슐에 접근할 권한이 없습니다."
+    ),
+    CHILD_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "자녀 정보를 찾을 수 없습니다."
+    ),
+    FINANCIAL_ACCOUNT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 계좌를 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "타임캡슐을 찾을 수 없습니다."
+    ),
+    DUPLICATE_TIME_CAPSULE(
+            HttpStatus.CONFLICT,
+            "해당 적금 계좌에는 이미 타임캡슐이 존재합니다."
+    ),
+    INELIGIBLE_TIME_CAPSULE_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "자녀 명의의 활성 적금 계좌만 타임캡슐로 등록할 수 있습니다."
+    ),
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "서버 오류가 발생했습니다."
