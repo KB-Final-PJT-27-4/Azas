@@ -77,9 +77,9 @@ const moveTo = (index: number) => {
 
 <template>
   <section>
-    <h1 class="text-[26px] font-bold tracking-[-0.04em]">깨비 맞춤 플랜이 완성됐어요!</h1>
+    <h1 class="text-[26px] font-bold tracking-[-0.04em]">목표가 설정되었어요!</h1>
     <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
-      현재 깨비의 나이에 맞춰 목표별 플랜을 확인해보세요.
+      목표 금액과 달성 시기를 확인하고 준비를 시작해보세요.
     </p>
 
     <div
