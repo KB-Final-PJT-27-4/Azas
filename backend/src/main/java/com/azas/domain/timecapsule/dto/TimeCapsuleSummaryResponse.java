@@ -1,0 +1,71 @@
+package com.azas.domain.timecapsule.dto;
+
+import com.azas.domain.timecapsule.entity.TimeCapsule;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+
+@Getter
+public class TimeCapsuleSummaryResponse {
+
+    @JsonProperty("time_capsule_id")
+    private final Long timeCapsuleId;
+
+    private final String title;
+    private final String status;
+
+    @JsonProperty("expected_release_at")
+    private final LocalDateTime expectedReleaseAt;
+
+    @JsonProperty("d_day")
+    private final Long dDay;
+
+    @JsonProperty("entry_count")
+    private final int entryCount;
+
+    @JsonProperty("latest_entry_at")
+    private final LocalDateTime latestEntryAt;
+
+    @JsonProperty("created_at")
+    private final LocalDateTime createdAt;
+
+    private TimeCapsuleSummaryResponse(
+            TimeCapsule timeCapsule,
+            LocalDate today
+    ) {
+        this.timeCapsuleId = timeCapsule.getTimeCapsuleId();
+        this.title = timeCapsule.getTitle();
+        this.status = timeCapsule.getStatus().name();
+        this.expectedReleaseAt = timeCapsule.getExpectedReleaseAt();
+        this.dDay = calculateDDay(timeCapsule, today);
+        this.entryCount = timeCapsule.getEntryCount();
+        this.latestEntryAt = timeCapsule.getLatestEntryAt();
+        this.createdAt = timeCapsule.getCreatedAt();
+    }
+
+    // [JMG] CAPSULE-2 보관함 목록 항목을 카드·캘린더 화면 공용 응답으로 변환한다.
+    public static TimeCapsuleSummaryResponse from(
+            TimeCapsule timeCapsule,
+            LocalDate today
+    ) {
+        return new TimeCapsuleSummaryResponse(timeCapsule, today);
+    }
+
+    // [JMG] CAPSULE-2 예상 공개일까지 남은 일수를 계산한다.
+    private static Long calculateDDay(
+            TimeCapsule timeCapsule,
+            LocalDate today
+    ) {
+        if (timeCapsule.getExpectedReleaseAt() == null) {
+            return null;
+        }
+
+        return ChronoUnit.DAYS.between(
+                today,
+                timeCapsule.getExpectedReleaseAt().toLocalDate()
+        );
+    }
+}
