@@ -20,6 +20,10 @@ public enum ErrorCode {
             HttpStatus.UNAUTHORIZED,
             "인가 코드가 만료되었거나 유효하지 않습니다."
     ),
+    INVALID_REFRESH_TOKEN(
+            HttpStatus.UNAUTHORIZED,
+            "유효하지 않거나 만료된 Refresh Token입니다."
+    ),
     WITHDRAWN_MEMBER(
             HttpStatus.UNAUTHORIZED,
             "탈퇴한 회원은 로그인할 수 없습니다."
