@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 
 import { BaseCard } from '@/components/common'
@@ -15,6 +15,54 @@ const homeData = computed(() => homeDataByMemberType[currentHomeMemberType])
 const isExistingMember = computed(() => homeData.value.memberType === 'existing')
 
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+
+const selectedGoalIndex = ref(0)
+const goalCarouselRef = ref<HTMLElement | null>(null)
+const goalSlides = computed(() => homeData.value.goals ?? [])
+const selectedGoal = computed(() => goalSlides.value[selectedGoalIndex.value])
+const hasGoalSlides = computed(() => isExistingMember.value && goalSlides.value.length > 0)
+const quickMenus = computed(() => {
+  const goal = selectedGoal.value
+
+  if (!goal) {
+    return homeData.value.quickMenus
+  }
+
+  return homeData.value.quickMenus.map((menu) => {
+    if (menu.icon === 'checklist') {
+      return { ...menu, subtitle: goal.checklistStatus }
+    }
+
+    if (menu.icon === 'timeCapsule') {
+      return { ...menu, subtitle: goal.timeCapsuleStatus }
+    }
+
+    if (menu.icon === 'goal') {
+      return { ...menu, subtitle: formatCurrency(goal.currentAmount) }
+    }
+
+    return menu
+  })
+})
+
+const updateSelectedGoalByScroll = (event: Event) => {
+  const target = event.currentTarget as HTMLElement
+
+  if (!target.clientWidth) {
+    return
+  }
+
+  const nextIndex = Math.round(target.scrollLeft / target.clientWidth)
+  selectedGoalIndex.value = Math.min(Math.max(nextIndex, 0), goalSlides.value.length - 1)
+}
+
+const selectGoal = (index: number) => {
+  selectedGoalIndex.value = index
+  goalCarouselRef.value?.scrollTo({
+    left: goalCarouselRef.value.clientWidth * index,
+    behavior: 'smooth',
+  })
+}
 
 const quickMenuIconUrls = {
   checklist: checklistIconUrl,
@@ -39,7 +87,7 @@ const homeBackgroundStyle = {
       class="grid min-h-[216px] grid-cols-[minmax(0,1fr)_156px] items-center overflow-hidden rounded-[var(--radius-lg)] px-4 pt-2 max-[360px]:grid-cols-[minmax(0,1fr)_128px] max-[360px]:px-[14px]"
       aria-label="홈 상단 요약"
     >
-      <div class="relative z-10 grid min-w-0 gap-[6px]">
+      <div class="relative z-[1] grid min-w-0 gap-[6px]">
         <p
           class="m-0 text-[clamp(12px,3.4vw,var(--font-size-sm))] leading-[1.45] text-[var(--color-text-secondary)]"
         >
@@ -57,7 +105,7 @@ const homeBackgroundStyle = {
         </p>
       </div>
       <img
-        class="pointer-events-none z-0 w-[156px] max-w-full select-none justify-self-end object-contain max-[360px]:w-[128px]"
+        class="pointer-events-none relative z-0 w-[156px] max-w-full select-none justify-self-end object-contain max-[360px]:w-[128px]"
         :src="homeBabyNuttiUrl"
         alt=""
         aria-hidden="true"
@@ -66,7 +114,7 @@ const homeBackgroundStyle = {
 
     <section class="grid grid-cols-3 gap-[var(--space-3)]" aria-label="홈 빠른 메뉴">
       <RouterLink
-        v-for="menu in homeData.quickMenus"
+        v-for="menu in quickMenus"
         :key="menu.title"
         class="grid min-h-[98px] place-items-center gap-[6px] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-2)] py-[10px] text-center shadow-[0_8px_20px_rgb(85_192_244_/_10%)]"
         :to="menu.to"
@@ -86,29 +134,62 @@ const homeBackgroundStyle = {
       </RouterLink>
     </section>
 
-    <BaseCard v-if="isExistingMember && homeData.goal" class="home-goal-card">
-      <template #header>
-        <div class="flex items-center justify-between">
-          <h2 class="m-0 text-[length:var(--font-size-md)]">{{ homeData.goal.title }}</h2>
-          <span
-            class="rounded-full bg-[var(--color-selected-background)] px-[var(--space-3)] py-[var(--space-1)] text-[length:var(--font-size-xs)] font-bold text-[var(--color-selected-text)]"
-          >
-            {{ homeData.goal.tag }}
-          </span>
-        </div>
-      </template>
+    <section v-if="hasGoalSlides" class="grid gap-[10px]" aria-label="목표 카드 슬라이드">
+      <div
+        ref="goalCarouselRef"
+        class="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        @scroll.passive="updateSelectedGoalByScroll"
+      >
+        <BaseCard
+          v-for="goal in goalSlides"
+          :key="goal.id"
+          class="home-goal-card w-full flex-none snap-center"
+        >
+          <template #header>
+            <div class="flex items-center justify-between">
+              <h2 class="m-0 text-[length:var(--font-size-md)]">{{ goal.title }}</h2>
+              <span
+                class="rounded-full bg-[var(--color-selected-background)] px-[var(--space-3)] py-[var(--space-1)] text-[length:var(--font-size-xs)] font-bold text-[var(--color-selected-text)]"
+              >
+                {{ goal.tag }}
+              </span>
+            </div>
+          </template>
 
-      <div class="grid gap-[var(--space-2)]">
-        <strong class="text-[length:var(--font-size-xl)] text-[var(--color-text-primary)]">
-          {{ formatCurrency(homeData.goal.currentAmount) }}
-        </strong>
-        <p class="m-0 text-[var(--color-text-secondary)]">
-          목표 금액 {{ formatCurrency(homeData.goal.targetAmount) }} · 달성률
-          {{ homeData.goal.progress }}% · 달성 시기 {{ homeData.goal.targetDate }}
-        </p>
-        <BaseProgressBar :value="homeData.goal.progress" />
+          <div class="grid gap-[var(--space-2)]">
+            <strong class="text-[length:var(--font-size-xl)] text-[var(--color-text-primary)]">
+              {{ formatCurrency(goal.currentAmount) }}
+            </strong>
+            <p class="m-0 text-[var(--color-text-secondary)]">
+              목표 금액 {{ formatCurrency(goal.targetAmount) }} · 달성률 {{ goal.progress }}% ·
+              달성 시기 {{ goal.targetDate }}
+            </p>
+            <BaseProgressBar :value="goal.progress" />
+          </div>
+        </BaseCard>
       </div>
-    </BaseCard>
+
+      <div
+        v-if="goalSlides.length > 1"
+        class="flex items-center justify-center gap-[7px] pt-[2px] pb-[var(--space-3)]"
+        aria-label="목표 카드 위치"
+      >
+        <button
+          v-for="(_, index) in goalSlides"
+          :key="index"
+          class="size-[9px] cursor-pointer rounded-full border-0 p-0 transition-colors"
+          :class="
+            selectedGoalIndex === index
+              ? 'bg-[var(--color-brand-primary)]'
+              : 'bg-[var(--color-disabled-border)]'
+          "
+          type="button"
+          :aria-label="`${index + 1}번째 목표 보기`"
+          :aria-current="selectedGoalIndex === index ? 'true' : undefined"
+          @click="selectGoal(index)"
+        />
+      </div>
+    </section>
 
     <BaseCard v-else class="home-goal-empty-card">
       <RouterLink
