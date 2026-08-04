@@ -35,6 +35,8 @@ public class Child {
         child.setGender(request.getGender());
         child.setProfileImageUrl(request.getProfileImageUrl());
         child.setChildStatus(ChildStatus.ACTIVE);
+        child.setExpectedBirthDate(request.getExpectedBirthDate());
+        child.setBirthDate(request.getBirthDate());
         return child;
     }
 

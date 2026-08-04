@@ -31,7 +31,7 @@ public class ChildCreateRequest {
     @JsonProperty("profile_image_url")
     private String profileImageUrl;
 
-    @JsonProperty("retlation_type")
+    @JsonProperty("relation_type")
     private RelationType relationType;
 
 

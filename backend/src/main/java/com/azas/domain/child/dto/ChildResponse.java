@@ -23,7 +23,7 @@ public class ChildResponse {
     @JsonProperty("birth_status")
     private BirthStatus birthStatus;
 
-    @JsonProperty("expeceted_birth_date")
+    @JsonProperty("expected_birth_date")
     private LocalDate expectedBirthDate;
 
     @JsonProperty("birth_date")

@@ -9,6 +9,8 @@ import com.azas.domain.child.entity.BirthStatus;
 import com.azas.domain.child.entity.Child;
 import com.azas.domain.child.entity.RelationType;
 import com.azas.domain.child.mapper.ChildMapper;
+import com.azas.global.exception.BusinessException;
+import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,7 +77,7 @@ public class ChildServiceImpl implements ChildService {
 
         int financialHistoryCount = childMapper.countFinancialHistory(childId);
         if (financialHistoryCount > 0) {
-            throw new IllegalArgumentException("CHILD_HAS_FINANCIAL_HISTORY");
+            throw new BusinessException(ErrorCode.CHILD_HAS_FINANCIAL_HISTORY);
         }
 
         childMapper.softDeleteChild(childId);
@@ -93,30 +95,27 @@ public class ChildServiceImpl implements ChildService {
         int count = childMapper.countChildAccess(childId, memberId);
 
         if (count == 0) {
-            // TODO: 공통 예외 처리 구현 후 BusinessException으로 교체
-            throw new IllegalArgumentException("자녀 정보에 접근할 권한이 없습니다.");
+            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
         }
     }
 
     private void validateCreateRequest(ChildCreateRequest request) {
         if (request.getName() == null || request.getName().trim().isEmpty()) {
-            // TODO: 공통 예외 처리 구현 후 BusinessException으로 교체
-            throw new IllegalArgumentException("자녀 이름은 필수입니다.");
+            throw new BusinessException(ErrorCode.CHILD_INVALID_NAME);
         }
 
         if (request.getBirthStatus() == null) {
-            // TODO: 공통 예외 처리 구현 후 BusinessException으로 교체
-            throw new IllegalArgumentException("출생 상태는 필수입니다.");
+            throw new BusinessException(ErrorCode.CHILD_INVALID_BIRTH_STATUS);
         }
 
         if (request.getBirthStatus() == BirthStatus.EXPECTED
                 && request.getExpectedBirthDate() == null) {
-            throw new IllegalArgumentException("출생 예정일은 필수입니다.");
+            throw new BusinessException(ErrorCode.CHILD_EXPECTED_BIRTH_DATE_REQUIRED);
         }
 
         if (request.getBirthStatus() == BirthStatus.BORN
                 && request.getBirthDate() == null) {
-            throw new IllegalArgumentException("생년월일은 필수입니다.");
+            throw new BusinessException(ErrorCode.CHILD_BIRTH_DATE_REQUIRED);
         }
     }
 }

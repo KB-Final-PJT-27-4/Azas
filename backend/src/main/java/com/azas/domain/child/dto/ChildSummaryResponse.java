@@ -32,7 +32,7 @@ public class ChildSummaryResponse {
     @JsonProperty("profile_image_url")
     private String profileImageUrl;
 
-    @JsonProperty("relateion_type")
+    @JsonProperty("relation_type")
     private RelationType relationType;
 
 }
