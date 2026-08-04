@@ -7,18 +7,17 @@ import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
 import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import GoalPlanStep from '@/components/goals/GoalPlanStep.vue'
 import GoalSelectionStep from '@/components/goals/GoalSelectionStep.vue'
+import goalFooterImage from '@/assets/images/login/bg-default.png'
 
 type GoalSetting = { amount: number; targetDate: string }
 
 const router = useRouter()
 const currentStep = ref(1)
 const currentGoalIndex = ref(0)
-const selectedGoals = ref<string[]>(['education'])
+const selectedGoals = ref<string[]>([])
 const customGoal = ref('')
 const isRecommendationOpen = ref(false)
-const goalSettings = reactive<Record<string, GoalSetting>>({
-  education: { amount: 30_000_000, targetDate: '2045-03' },
-})
+const goalSettings = reactive<Record<string, GoalSetting>>({})
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
@@ -114,7 +113,9 @@ const selectRecommendation = (value: number) => {
 
 <template>
   <main class="flex min-h-dvh flex-col bg-[var(--color-surface)] text-[var(--color-text-primary)]">
-    <header class="relative flex h-16 items-center justify-center border-b border-[var(--color-border)]">
+    <header
+      class="relative flex h-16 items-center justify-center border-b border-[var(--color-border)]"
+    >
       <button
         class="absolute left-4 grid size-10 place-items-center text-[var(--color-text-secondary)]"
         type="button"
@@ -131,7 +132,9 @@ const selectRecommendation = (value: number) => {
         v-for="step in progressTotal"
         :key="step"
         class="h-1 flex-1 rounded-full"
-        :class="step === progressStep ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
+        :class="
+          step === progressStep ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'
+        "
       ></span>
     </div>
 
@@ -158,12 +161,22 @@ const selectRecommendation = (value: number) => {
     </div>
 
     <footer
-      class="bg-[var(--color-surface)] px-6 pt-3 pb-8"
-      :class="currentStep === 1 ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-4'"
+      class="bg-[var(--color-surface)] px-6 pt-3"
+      :class="[
+        currentStep === 1 ? 'grid grid-cols-1 pb-8' : 'grid grid-cols-2 gap-4',
+        currentStep === 3 ? 'relative min-h-[220px] overflow-hidden pb-[140px]' : 'pb-8',
+      ]"
     >
+      <img
+        v-if="currentStep === 3"
+        class="pointer-events-none absolute bottom-0 left-3/4 h-70 w-[150%] max-w-none -translate-x-1/2 object-cover object-top"
+        :src="goalFooterImage"
+        alt=""
+      />
+
       <button
         v-if="currentStep > 1"
-        class="h-14 rounded-xl border border-[var(--color-border)] font-bold text-[var(--color-selected-text)]"
+        class="relative z-1 h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] font-bold text-[var(--color-selected-text)]"
         type="button"
         @click="goBack"
       >
@@ -171,7 +184,7 @@ const selectRecommendation = (value: number) => {
       </button>
 
       <button
-        class="h-14 rounded-xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
+        class="relative z-1 h-14 rounded-xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
         type="button"
         :disabled="!canContinue"
         @click="currentStep === 3 ? router.push({ name: 'Home' }) : goNext()"

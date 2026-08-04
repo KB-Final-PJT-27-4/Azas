@@ -58,7 +58,7 @@ const goals: GoalOption[] = [
     id: 'custom',
     icon: goalCustomIcon,
     title: '직접 설정',
-    description: '이름을 직접 입력해주세요',
+    description: '목표를 직접 입력해주세요',
   },
 ]
 </script>

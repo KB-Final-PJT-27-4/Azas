@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { ref } from 'vue'
 
 import goalEducationIcon from '@/assets/images/goals/goals_1.png'
 import goalIndependenceIcon from '@/assets/images/goals/goals_2.png'
@@ -29,6 +29,12 @@ const icons: Record<string, string> = {
   investment: goalInvestmentIcon,
   custom: goalCustomIcon,
 }
+const cardStyles = [
+  'border-[var(--color-brand-primary)] bg-linear-to-b from-sky-100 to-sky-50',
+  'border-amber-300 bg-linear-to-b from-amber-100 to-amber-50',
+  'border-lime-400 bg-linear-to-b from-lime-100 to-lime-50',
+  'border-pink-300 bg-linear-to-b from-pink-100 to-pink-50',
+]
 
 const formatTargetDate = (targetDate: string) => {
   const [year, month] = targetDate.split('-')
@@ -38,12 +44,15 @@ const formatTargetDate = (targetDate: string) => {
 const updateActiveIndex = () => {
   if (!carousel.value) return
   const cards = Array.from(carousel.value.children) as HTMLElement[]
-  const center = carousel.value.scrollLeft + carousel.value.clientWidth / 2
+  const carouselRect = carousel.value.getBoundingClientRect()
+  const scrollLeft = carousel.value.scrollLeft
+  const center = scrollLeft + carousel.value.clientWidth / 2
   let closestIndex = 0
   let closestDistance = Number.POSITIVE_INFINITY
 
   cards.forEach((card, index) => {
-    const cardCenter = card.offsetLeft + card.offsetWidth / 2
+    const cardRect = card.getBoundingClientRect()
+    const cardCenter = cardRect.left - carouselRect.left + scrollLeft + cardRect.width / 2
     const distance = Math.abs(center - cardCenter)
     if (distance < closestDistance) {
       closestDistance = distance
@@ -53,10 +62,16 @@ const updateActiveIndex = () => {
   activeIndex.value = closestIndex
 }
 
-const moveTo = async (index: number) => {
-  await nextTick()
+const moveTo = (index: number) => {
   const card = carousel.value?.children[index] as HTMLElement | undefined
-  card?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  if (!carousel.value || !card) return
+
+  const carouselRect = carousel.value.getBoundingClientRect()
+  const cardRect = card.getBoundingClientRect()
+  const cardCenterInScroll =
+    cardRect.left - carouselRect.left + carousel.value.scrollLeft + cardRect.width / 2
+  const centeredPosition = cardCenterInScroll - carousel.value.clientWidth / 2
+  carousel.value.scrollTo({ left: centeredPosition, behavior: 'smooth' })
 }
 </script>
 
@@ -69,15 +84,16 @@ const moveTo = async (index: number) => {
 
     <div
       ref="carousel"
-      class="-mx-6 mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-[8%] pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="-mx-6 mt-12 flex snap-x snap-mandatory scroll-px-[12%] gap-7 overflow-x-auto pb-3 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       @scroll="updateActiveIndex"
     >
       <article
-        v-for="plan in plans"
+        v-for="(plan, index) in plans"
         :key="plan.id"
-        class="flex min-h-[410px] w-[84%] shrink-0 snap-center flex-col items-center justify-center rounded-3xl border-2 border-[var(--color-brand-primary)] bg-[var(--color-selected-background)] px-6 text-center"
+        class="flex min-h-[470px] w-[76%] shrink-0 snap-center snap-always flex-col items-center justify-center rounded-3xl border-2 px-6 text-center first:ml-[12%] last:mr-[12%]"
+        :class="cardStyles[index % cardStyles.length]"
       >
-        <img class="size-28 object-contain" :src="icons[plan.id]" alt="" />
+        <img class="size-40 object-contain" :src="icons[plan.id]" alt="" />
         <h2 class="mt-8 text-3xl font-bold">{{ plan.name }}</h2>
         <strong class="mt-6 text-2xl">{{ plan.amount.toLocaleString('ko-KR') }}원</strong>
         <p class="mt-5 text-sm text-[var(--color-text-secondary)]">
