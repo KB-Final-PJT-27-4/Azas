@@ -40,7 +40,7 @@ const routes: RouteRecordRaw[] = [
     path: '/goals',
     name: 'Goals',
     component: () => import('@/views/goals/GoalsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, hideNavigation: true },
   },
 
   // 계좌
