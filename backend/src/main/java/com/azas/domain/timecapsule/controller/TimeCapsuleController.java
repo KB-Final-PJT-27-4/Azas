@@ -50,8 +50,8 @@ public class TimeCapsuleController {
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
-                    code = 403,
-                    message = "자녀 접근 권한 없음",
+                    code = 404,
+                    message = "금융 계좌를 찾을 수 없음",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
@@ -111,13 +111,8 @@ public class TimeCapsuleController {
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
-                    code = 403,
-                    message = "자녀 접근 권한 없음",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
                     code = 404,
-                    message = "자녀를 찾을 수 없음",
+                    message = "조회 가능한 자녀를 찾을 수 없음",
                     response = ApiErrorResponse.class
             )
     })
@@ -200,13 +195,8 @@ public class TimeCapsuleController {
                     response = TimeCapsuleResponse.class
             ),
             @ApiResponse(
-                    code = 403,
-                    message = "자녀 접근 권한 없음",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
                     code = 404,
-                    message = "보관함을 찾을 수 없음",
+                    message = "보관함을 찾을 수 없거나 접근 권한이 없음",
                     response = ApiErrorResponse.class
             )
     })

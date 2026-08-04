@@ -42,18 +42,16 @@ public class TimeCapsuleService {
             CreateTimeCapsuleRequest request
     ) {
         TimeCapsuleAccount account =
-                getTimeCapsuleAccountOrThrow(financialAccountId);
+                getAccessibleTimeCapsuleAccountOrThrow(
+                        requesterMemberId,
+                        financialAccountId
+                );
 
         if (!account.isEligibleSavingsAccount()) {
             throw new BusinessException(
                     ErrorCode.INELIGIBLE_TIME_CAPSULE_ACCOUNT
             );
         }
-
-        assertParentAccess(
-                requesterMemberId,
-                account.getChildId()
-        );
 
         if (timeCapsuleMapper.findByFinancialAccountId(
                 financialAccountId
@@ -80,7 +78,8 @@ public class TimeCapsuleService {
         }
 
         return TimeCapsuleResponse.from(
-                getTimeCapsuleOrThrow(
+                getAccessibleTimeCapsuleOrThrow(
+                        requesterMemberId,
                         timeCapsule.getTimeCapsuleId()
                 )
         );
@@ -98,7 +97,6 @@ public class TimeCapsuleService {
             Integer year,
             Integer month
     ) {
-        assertChildExists(childId);
         assertParentAccess(requesterMemberId, childId);
 
         TimeCapsuleView view = TimeCapsuleView.from(viewValue);
@@ -150,22 +148,24 @@ public class TimeCapsuleService {
             long timeCapsuleId
     ) {
         TimeCapsule timeCapsule =
-                getTimeCapsuleOrThrow(timeCapsuleId);
-
-        assertParentAccess(
-                requesterMemberId,
-                timeCapsule.getChildId()
-        );
+                getAccessibleTimeCapsuleOrThrow(
+                        requesterMemberId,
+                        timeCapsuleId
+                );
 
         return TimeCapsuleResponse.from(timeCapsule);
     }
 
-    // [JMG] CAPSULE-1 대상 금융 계좌의 타임캡슐 생성 가능 정보를 조회한다.
-    private TimeCapsuleAccount getTimeCapsuleAccountOrThrow(
+    // [JMG] CAPSULE-1 요청 부모가 접근 가능한 금융 계좌의 생성 가능 정보를 조회한다.
+    private TimeCapsuleAccount getAccessibleTimeCapsuleAccountOrThrow(
+            long requesterMemberId,
             long financialAccountId
     ) {
         TimeCapsuleAccount account =
-                timeCapsuleMapper.findAccountById(financialAccountId);
+                timeCapsuleMapper.findAccessibleAccountById(
+                        financialAccountId,
+                        requesterMemberId
+                );
 
         if (account == null) {
             throw new BusinessException(
@@ -176,10 +176,16 @@ public class TimeCapsuleService {
         return account;
     }
 
-    // [JMG] CAPSULE-1~3 타임캡슐 보관함을 조회하고 존재하지 않으면 예외를 발생시킨다.
-    private TimeCapsule getTimeCapsuleOrThrow(long timeCapsuleId) {
+    // [JMG] CAPSULE-3 요청 부모가 접근 가능한 보관함을 조회하고 없으면 예외를 발생시킨다.
+    private TimeCapsule getAccessibleTimeCapsuleOrThrow(
+            long requesterMemberId,
+            long timeCapsuleId
+    ) {
         TimeCapsule timeCapsule =
-                timeCapsuleMapper.findById(timeCapsuleId);
+                timeCapsuleMapper.findAccessibleById(
+                        timeCapsuleId,
+                        requesterMemberId
+                );
 
         if (timeCapsule == null) {
             throw new BusinessException(
@@ -190,25 +196,17 @@ public class TimeCapsuleService {
         return timeCapsule;
     }
 
-    // [JMG] CAPSULE-2 목록 대상 자녀의 존재 여부를 검증한다.
-    private void assertChildExists(long childId) {
-        if (!timeCapsuleMapper.existsChildById(childId)) {
-            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
-        }
-    }
-
-    // [JMG] CAPSULE-1~3 요청 회원이 대상 자녀와 활성 부모 관계인지 검증한다.
+    // [JMG] CAPSULE-2 요청 회원의 자녀 접근 권한을 검증하고 존재 여부 노출을 막는다.
     private void assertParentAccess(
             long requesterMemberId,
-            Long childId
+            long childId
     ) {
-        if (childId == null
-                || !timeCapsuleMapper.existsActiveParentRelation(
+        if (!timeCapsuleMapper.existsActiveParentRelation(
                 requesterMemberId,
                 childId
         )) {
             throw new BusinessException(
-                    ErrorCode.TIME_CAPSULE_ACCESS_DENIED
+                    ErrorCode.CHILD_NOT_FOUND
             );
         }
     }

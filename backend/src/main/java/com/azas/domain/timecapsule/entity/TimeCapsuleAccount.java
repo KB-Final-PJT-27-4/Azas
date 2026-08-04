@@ -13,12 +13,14 @@ public class TimeCapsuleAccount {
     private Long childId;
     private String accountProductType;
     private String accountStatus;
+    private String linkStatus;
     private LocalDate maturityDate;
 
     // [JMG] CAPSULE-1 자녀 명의의 활성 적금 계좌인지 판단한다.
     public boolean isEligibleSavingsAccount() {
         return childId != null
                 && "SAVINGS".equals(accountProductType)
-                && "ACTIVE".equals(accountStatus);
+                && "ACTIVE".equals(accountStatus)
+                && "ACTIVE".equals(linkStatus);
     }
 }

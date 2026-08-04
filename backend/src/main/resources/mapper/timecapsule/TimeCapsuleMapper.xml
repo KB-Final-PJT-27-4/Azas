@@ -27,6 +27,7 @@
         <result property="childId" column="child_id"/>
         <result property="accountProductType" column="account_product_type"/>
         <result property="accountStatus" column="account_status"/>
+        <result property="linkStatus" column="link_status"/>
         <result property="maturityDate" column="maturity_date"/>
     </resultMap>
 
@@ -45,25 +46,38 @@
         updated_at
     </sql>
 
-    <select id="findAccountById"
+    <sql id="timeCapsuleColumnsWithAlias">
+        tc.time_capsule_id,
+        tc.child_id,
+        tc.financial_account_id,
+        tc.title,
+        tc.status,
+        tc.expected_release_at,
+        tc.release_reason,
+        tc.released_at,
+        tc.entry_count,
+        tc.latest_entry_at,
+        tc.created_at,
+        tc.updated_at
+    </sql>
+
+    <select id="findAccessibleAccountById"
             resultMap="timeCapsuleAccountResultMap">
         SELECT
-            financial_account_id,
-            child_id,
-            account_product_type,
-            account_status,
-            maturity_date
-        FROM financial_account
-        WHERE financial_account_id = #{financialAccountId}
-    </select>
-
-    <select id="existsChildById"
-            resultType="boolean">
-        SELECT EXISTS(
-            SELECT 1
-            FROM child
-            WHERE child_id = #{childId}
-        )
+            fa.financial_account_id,
+            fa.child_id,
+            fa.account_product_type,
+            fa.account_status,
+            fa.link_status,
+            fa.maturity_date
+        FROM financial_account fa
+        INNER JOIN child_parent cp
+            ON cp.child_id = fa.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE fa.financial_account_id = #{financialAccountId}
     </select>
 
     <select id="existsActiveParentRelation"
@@ -107,12 +121,18 @@
         )
     </insert>
 
-    <select id="findById"
+    <select id="findAccessibleById"
             resultMap="timeCapsuleResultMap">
         SELECT
-            <include refid="timeCapsuleColumns"/>
-        FROM time_capsule
-        WHERE time_capsule_id = #{timeCapsuleId}
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE tc.time_capsule_id = #{timeCapsuleId}
     </select>
 
     <select id="findCardSummaries"

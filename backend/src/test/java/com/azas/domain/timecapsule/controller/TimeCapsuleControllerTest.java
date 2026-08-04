@@ -162,6 +162,48 @@ class TimeCapsuleControllerTest {
                 );
     }
 
+    @Test
+    // [JMG] CAPSULE-1 접근할 수 없는 계좌는 존재 여부를 숨긴 404 오류를 반환한다.
+    void createTimeCapsuleReturnsNotFoundForInaccessibleAccount()
+            throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+        given(timeCapsuleService.createTimeCapsule(
+                eq(7L),
+                eq(1L),
+                any()
+        )).willThrow(
+                new BusinessException(
+                        ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND
+                )
+        );
+
+        mockMvc.perform(
+                        post(
+                                "/api/v1/accounts/{accountId}/time-capsule",
+                                1L
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                        {
+                                          "title": "대학자금"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(
+                        jsonPath("$.error.code")
+                                .value("FINANCIAL_ACCOUNT_NOT_FOUND")
+                );
+    }
+
     // [JMG] CAPSULE-1 테스트용 ERD 타임캡슐 응답 엔티티를 구성한다.
     private TimeCapsule createTimeCapsule(
             long timeCapsuleId,
