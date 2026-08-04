@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { Bell } from 'lucide-vue-next'
 
+import defaultProfileImageUrl from '@/assets/images/home/home-profile-baby.png'
+
 withDefaults(
   defineProps<{
     title?: string
     profileName?: string
+    profileImage?: string
     profileEmoji?: string
   }>(),
   {
     title: '깨비',
     profileName: '깨비',
+    profileImage: defaultProfileImageUrl,
     profileEmoji: '👶',
   },
 )
@@ -24,10 +28,16 @@ withDefaults(
     >
       <div class="flex min-w-0 items-center gap-[var(--space-3)]">
         <div
-          class="grid size-[42px] flex-[0_0_42px] place-items-center rounded-full bg-[var(--color-selected-background)] text-2xl"
+          class="grid size-[42px] flex-[0_0_42px] place-items-center overflow-hidden rounded-full bg-[var(--color-selected-background)] text-2xl"
           aria-hidden="true"
         >
-          {{ profileEmoji }}
+          <img
+            v-if="profileImage"
+            class="size-full object-cover"
+            :src="profileImage"
+            alt=""
+          />
+          <span v-else>{{ profileEmoji }}</span>
         </div>
         <strong class="text-[length:var(--font-size-lg)] leading-none">{{
           profileName || title
