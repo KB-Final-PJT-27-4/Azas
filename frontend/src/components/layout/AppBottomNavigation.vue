@@ -12,16 +12,16 @@ const navigationItems = [
 
 <template>
   <nav
-    class="fixed bottom-0 left-1/2 z-[var(--z-index-bottom-nav)] grid min-h-[calc(var(--app-bottom-nav-height)+env(safe-area-inset-bottom))] w-full max-w-[var(--app-max-width)] -translate-x-1/2 grid-cols-5 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-2)] pt-[var(--space-3)] pb-[calc(var(--space-3)+env(safe-area-inset-bottom))]"
+    class="fixed bottom-0 left-1/2 z-[var(--z-index-bottom-nav)] grid h-[calc(var(--app-bottom-nav-height)+env(safe-area-inset-bottom))] w-full max-w-[var(--app-max-width)] -translate-x-1/2 grid-cols-5 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-2)] pt-[6px] pb-[calc(5px+env(safe-area-inset-bottom))]"
     aria-label="주요 메뉴"
   >
     <RouterLink
       v-for="item in navigationItems"
       :key="item.path"
-      class="grid min-w-0 place-items-center gap-[var(--space-2)] text-[length:var(--font-size-xs)] leading-none font-bold !text-[var(--color-unselected-text)] [&.router-link-active]:!text-[var(--color-selected-text)]"
+      class="grid min-w-0 place-items-center gap-[3px] text-[10px] leading-none font-bold !text-[var(--color-unselected-text)] [&.router-link-active]:!text-[var(--color-selected-text)]"
       :to="item.path"
     >
-      <component :is="item.icon" class="block" :size="28" :stroke-width="2.5" />
+      <component :is="item.icon" class="block" :size="20" :stroke-width="2.5" />
       <span>{{ item.label }}</span>
     </RouterLink>
   </nav>
