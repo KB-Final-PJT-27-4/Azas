@@ -1,17 +1,46 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import allowanceRequestPigUrl from '@/assets/images/child/child-allowance-request-pig.png'
+import { BaseToast } from '@/components/feedback'
 import { allowanceOptions } from '@/mocks/childHome'
 
 const router = useRouter()
 const selectedAmount = ref(10_000)
 const customAmount = ref('')
 const reason = ref('')
+const toastMessage = ref('')
+const toastVariant = ref<'success' | 'error'>('error')
+let toastTimer: ReturnType<typeof window.setTimeout> | null = null
 
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const requestAmount = computed(() => Number(customAmount.value) || selectedAmount.value)
+const allowanceValidationMessage = computed(() => {
+  if (requestAmount.value <= 0) {
+    return '필요한 금액을 입력해주세요.'
+  }
+
+  if (!reason.value.trim()) {
+    return '용돈이 필요한 이유를 입력해주세요.'
+  }
+
+  return ''
+})
+const canSubmitAllowanceRequest = computed(() => allowanceValidationMessage.value === '')
+
+const showToast = (message: string, variant: 'success' | 'error') => {
+  if (toastTimer) {
+    window.clearTimeout(toastTimer)
+  }
+
+  toastMessage.value = message
+  toastVariant.value = variant
+  toastTimer = window.setTimeout(() => {
+    toastMessage.value = ''
+    toastTimer = null
+  }, 1800)
+}
 
 const selectAmount = (amount: number) => {
   selectedAmount.value = amount
@@ -19,10 +48,22 @@ const selectAmount = (amount: number) => {
 }
 
 const submitAllowanceRequest = () => {
-  void requestAmount.value
-  void reason.value
-  router.push('/child/allowance-done')
+  if (!canSubmitAllowanceRequest.value) {
+    showToast(allowanceValidationMessage.value, 'error')
+    return
+  }
+
+  showToast('용돈 요청을 보냈어요.', 'success')
+  window.setTimeout(() => {
+    router.push('/child/allowance-done')
+  }, 450)
 }
+
+onBeforeUnmount(() => {
+  if (toastTimer) {
+    window.clearTimeout(toastTimer)
+  }
+})
 </script>
 
 <template>
@@ -86,11 +127,18 @@ const submitAllowanceRequest = () => {
     </section>
 
     <button
-      class="mt-5 h-14 w-full rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[length:var(--font-size-md)] font-extrabold text-white"
+      class="mt-5 h-14 w-full rounded-[14px] border-0 text-[length:var(--font-size-md)] font-extrabold text-white"
+      :class="canSubmitAllowanceRequest ? 'bg-[var(--color-brand-primary)]' : 'bg-[#c8d2da]'"
       type="button"
       @click="submitAllowanceRequest"
     >
       요청 보내기
     </button>
+
+    <BaseToast
+      v-if="toastMessage"
+      :message="toastMessage"
+      :variant="toastVariant"
+    />
   </main>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { ChevronDown, ChevronRight, X } from 'lucide-vue-next'
 
 import allowanceCardPigUrl from '@/assets/images/child/child-allowance-card-pig.png'
@@ -15,11 +15,15 @@ import {
 } from '@/mocks/childHome'
 
 const isTransferSheetOpen = ref(false)
-const isTransferCompleteModalOpen = ref(false)
 const transferAccountNumber = ref('')
 const transferAmount = ref(10_000)
 const completedTransferAmount = ref(0)
+<<<<<<< HEAD
+const transferNotice = ref<{ type: 'success' | 'error'; message: string } | null>(null)
+let transferCloseTimer: ReturnType<typeof window.setTimeout> | null = null
+=======
 const hasTriedTransfer = ref(false)
+>>>>>>> origin/dev-fe
 const recentTransactions = computed(() => childTransactions.slice(0, 3))
 const transferAmountValue = computed(() => Number(transferAmount.value) || 0)
 const transferValidationMessage = computed(() => {
@@ -47,29 +51,52 @@ const formatSignedCurrency = (transaction: ChildTransaction) => {
 }
 
 const closeTransferSheet = () => {
+  if (transferCloseTimer) {
+    window.clearTimeout(transferCloseTimer)
+    transferCloseTimer = null
+  }
+
   isTransferSheetOpen.value = false
   transferAccountNumber.value = ''
   transferAmount.value = 10_000
-  hasTriedTransfer.value = false
+  transferNotice.value = null
 }
 
 const submitTransfer = () => {
   if (!canSubmitTransfer.value) {
-    hasTriedTransfer.value = true
+    transferNotice.value = {
+      type: 'error',
+      message: transferValidationMessage.value,
+    }
     return
   }
 
-  hasTriedTransfer.value = false
   completedTransferAmount.value = transferAmountValue.value
   recordChildTransfer({
     amount: transferAmountValue.value,
     bankName: transferDefaults.bankName,
   })
+<<<<<<< HEAD
+  transferNotice.value = {
+    type: 'success',
+    message: `${formatCurrency(completedTransferAmount.value)} 이체가 완료되었어요.`,
+  }
+=======
   isTransferSheetOpen.value = false
   isTransferCompleteModalOpen.value = true
+>>>>>>> origin/dev-fe
   transferAccountNumber.value = ''
   transferAmount.value = 10_000
+  transferCloseTimer = window.setTimeout(() => {
+    closeTransferSheet()
+  }, 900)
 }
+
+onBeforeUnmount(() => {
+  if (transferCloseTimer) {
+    window.clearTimeout(transferCloseTimer)
+  }
+})
 </script>
 
 <template>
@@ -302,11 +329,16 @@ const submitTransfer = () => {
             </div>
 
             <p
-              v-if="hasTriedTransfer && transferValidationMessage"
-              class="m-0 rounded-[12px] bg-[#fff2f2] px-4 py-3 text-[length:var(--font-size-xs)] font-bold text-[#d64545]"
+              v-if="transferNotice"
+              class="m-0 rounded-[12px] px-4 py-3 text-[length:var(--font-size-xs)] font-bold"
+              :class="
+                transferNotice.type === 'success'
+                  ? 'bg-[#e9fbf1] text-[#177245]'
+                  : 'bg-[#fff2f2] text-[#d64545]'
+              "
               role="alert"
             >
-              {{ transferValidationMessage }}
+              {{ transferNotice.message }}
             </p>
 
             <button
@@ -325,6 +357,8 @@ const submitTransfer = () => {
           </div>
         </section>
       </div>
+<<<<<<< HEAD
+=======
 
       <div
         v-if="isTransferCompleteModalOpen"
@@ -360,6 +394,7 @@ const submitTransfer = () => {
           </button>
         </section>
       </div>
+>>>>>>> origin/dev-fe
     </Teleport>
   </main>
 </template>
