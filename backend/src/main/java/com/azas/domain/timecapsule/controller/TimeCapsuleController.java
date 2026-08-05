@@ -6,6 +6,7 @@ import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
@@ -149,6 +150,32 @@ public class TimeCapsuleController {
                 timeCapsuleEntryService.getTimeCapsuleEntries(
                         memberId,
                         timeCapsuleId
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 엔트리 상세 조회",
+            notes = "부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다."
+    )
+    @GetMapping("/time-capsule-entries/{entry_id}")
+    // [JMG] CAPSULE-14 부모·보호자 권한을 확인한 뒤 타임캡슐 엔트리 상세를 조회한다.
+    public ResponseEntity<TimeCapsuleEntryDetailResponse>
+    getTimeCapsuleEntry(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
+            @PathVariable("entry_id")
+            long timeCapsuleEntryId
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.ok(
+                timeCapsuleEntryService.getTimeCapsuleEntry(
+                        memberId,
+                        timeCapsuleEntryId
                 )
         );
     }

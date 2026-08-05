@@ -74,6 +74,25 @@
         FOR UPDATE
     </select>
 
+    <select id="findActiveByEntryId"
+            resultMap="timeCapsuleMediaResultMap">
+        SELECT
+            time_capsule_media_id,
+            time_capsule_entry_id,
+            media_type,
+            object_key,
+            mime_type,
+            file_size,
+            slot_no,
+            status,
+            created_at,
+            updated_at
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'ACTIVE'
+        ORDER BY slot_no ASC
+    </select>
+
     <update id="activatePendingMedia">
         UPDATE time_capsule_media
         SET status = 'ACTIVE'

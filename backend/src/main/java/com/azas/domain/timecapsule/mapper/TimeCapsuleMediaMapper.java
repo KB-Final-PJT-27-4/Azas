@@ -24,6 +24,11 @@ public interface TimeCapsuleMediaMapper {
             @Param("mediaIds") List<Long> mediaIds
     );
 
+    // [JMG] CAPSULE-14 엔트리 상세 화면에 노출할 활성 미디어를 슬롯 순서로 조회한다.
+    List<TimeCapsuleMedia> findActiveByEntryId(
+            @Param("timeCapsuleEntryId") long timeCapsuleEntryId
+    );
+
     // [JMG] CAPSULE-8 업로드 검증을 통과한 대기 미디어를 활성 상태로 전환한다.
     int activatePendingMedia(@Param("mediaIds") List<Long> mediaIds);
 

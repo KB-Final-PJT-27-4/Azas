@@ -16,6 +16,12 @@ public interface TimeCapsuleEntryMapper {
             @Param("timeCapsuleId") long timeCapsuleId
     );
 
+    // [JMG] CAPSULE-14 부모·보호자가 접근 가능한 삭제되지 않은 엔트리 하나를 조회한다.
+    TimeCapsuleEntry findAccessibleById(
+            @Param("timeCapsuleEntryId") long timeCapsuleEntryId,
+            @Param("memberId") long memberId
+    );
+
     // [JMG] CAPSULE-12 작성자 본인에게만 노출되는 엔트리를 잠금 없이 조회한다.
     TimeCapsuleEntry findOwnedById(
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId,

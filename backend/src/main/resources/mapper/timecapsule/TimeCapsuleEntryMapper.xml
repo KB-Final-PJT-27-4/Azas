@@ -80,6 +80,44 @@
         ORDER BY tce.contributed_at DESC, tce.time_capsule_entry_id DESC
     </select>
 
+    <select id="findAccessibleById"
+            resultMap="timeCapsuleEntryResultMap">
+        SELECT
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.blurred_thumbnail_object_key,
+            tce.status,
+            tce.edit_count,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at,
+            (
+                SELECT COUNT(*)
+                FROM time_capsule_media tcm
+                WHERE tcm.time_capsule_entry_id = tce.time_capsule_entry_id
+                  AND tcm.status = 'ACTIVE'
+            ) AS media_count
+        FROM time_capsule_entry tce
+        INNER JOIN time_capsule tc
+            ON tc.time_capsule_id = tce.time_capsule_id
+        INNER JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE tce.time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND tce.status != 'DELETED'
+    </select>
+
     <select id="findOwnedById"
             resultMap="timeCapsuleEntryResultMap">
         SELECT

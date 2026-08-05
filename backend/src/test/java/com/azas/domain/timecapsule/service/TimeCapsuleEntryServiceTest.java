@@ -1,6 +1,7 @@
 package com.azas.domain.timecapsule.service;
 
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryAutoCreationResult;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
@@ -145,6 +146,57 @@ class TimeCapsuleEntryServiceTest {
         );
         assertTrue(response.getEntries().get(0).getThumbnailExpiresAt()
                 .isAfter(LocalDateTime.now()));
+    }
+
+    @Test
+    // [JMG] CAPSULE-14 엔트리 상세는 활성 미디어만 객체 키 없이 Presigned GET URL로 반환한다.
+    void getTimeCapsuleEntryReturnsActiveMediaWithPresignedUrl() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("100000.00"),
+                TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        ReflectionTestUtils.setField(
+                entry,
+                "message",
+                "오늘부터 꿈을 위해 함께 모으기 시작했어."
+        );
+        TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
+                1000L,
+                TimeCapsuleMediaType.IMAGE,
+                "time-capsules/100/entries/1000/slot-1.jpg",
+                "image/jpeg",
+                1024L,
+                1
+        );
+        ReflectionTestUtils.setField(media, "timeCapsuleMediaId", 2001L);
+        media.activate();
+
+        given(timeCapsuleEntryMapper.findAccessibleById(1000L, 7L))
+                .willReturn(entry);
+        given(timeCapsuleMediaMapper.findActiveByEntryId(1000L))
+                .willReturn(List.of(media));
+        given(timeCapsuleObjectStorage.createDownloadUrl(
+                media.getObjectKey(),
+                Duration.ofMinutes(10)
+        )).willReturn(new TimeCapsuleObjectStorage.PresignedUrl(
+                "https://s3.example.test/presigned-media-get"
+        ));
+
+        TimeCapsuleEntryDetailResponse response =
+                timeCapsuleEntryService.getTimeCapsuleEntry(7L, 1000L);
+
+        assertEquals(1000L, response.getTimeCapsuleEntryId());
+        assertEquals("오늘부터 꿈을 위해 함께 모으기 시작했어.",
+                response.getMessage());
+        assertEquals(1, response.getMedia().size());
+        assertEquals("https://s3.example.test/presigned-media-get",
+                response.getMedia().get(0).getDownloadUrl());
+        assertEquals("ACTIVE", media.getStatus().name());
     }
 
     @Test

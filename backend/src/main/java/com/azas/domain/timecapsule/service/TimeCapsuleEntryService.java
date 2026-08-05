@@ -1,6 +1,7 @@
 package com.azas.domain.timecapsule.service;
 
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryAutoCreationResult;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySummaryResponse;
@@ -70,6 +71,33 @@ public class TimeCapsuleEntryService {
                         .collect(Collectors.toList());
 
         return new TimeCapsuleEntryListResponse(entries);
+    }
+
+    @Transactional(readOnly = true)
+    // [JMG] CAPSULE-14 부모·보호자 권한을 확인한 뒤 엔트리와 활성 미디어의 임시 조회 URL을 반환한다.
+    public TimeCapsuleEntryDetailResponse getTimeCapsuleEntry(
+            long requesterMemberId,
+            long timeCapsuleEntryId
+    ) {
+        TimeCapsuleEntry entry = getAccessibleTimeCapsuleEntryOrThrow(
+                requesterMemberId,
+                timeCapsuleEntryId
+        );
+        LocalDateTime expiresAt = LocalDateTime.now()
+                .plus(DOWNLOAD_URL_VALIDITY);
+        List<TimeCapsuleEntryDetailResponse.MediaResponse> media =
+                timeCapsuleMediaMapper
+                        .findActiveByEntryId(timeCapsuleEntryId)
+                        .stream()
+                        .map(currentMedia ->
+                                toEntryDetailMediaResponse(
+                                        currentMedia,
+                                        expiresAt
+                                )
+                        )
+                        .collect(Collectors.toList());
+
+        return new TimeCapsuleEntryDetailResponse(entry, media);
     }
 
     @Transactional
@@ -347,6 +375,22 @@ public class TimeCapsuleEntryService {
         return timeCapsule;
     }
 
+    // [JMG] CAPSULE-14 부모·보호자 관계가 있고 삭제되지 않은 엔트리만 상세 조회 대상으로 반환한다.
+    private TimeCapsuleEntry getAccessibleTimeCapsuleEntryOrThrow(
+            long requesterMemberId,
+            long timeCapsuleEntryId
+    ) {
+        TimeCapsuleEntry entry = timeCapsuleEntryMapper.findAccessibleById(
+                timeCapsuleEntryId,
+                requesterMemberId
+        );
+        if (entry == null) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_ENTRY_NOT_FOUND);
+        }
+
+        return entry;
+    }
+
     // [JMG] CAPSULE-12 작성자이면서 자녀와 연결된 부모에게만 엔트리를 노출한다.
     private TimeCapsuleEntry getOwnedTimeCapsuleEntryOrThrow(
             long requesterMemberId,
@@ -438,6 +482,24 @@ public class TimeCapsuleEntryService {
                 entry,
                 presignedUrl.url(),
                 LocalDateTime.now().plus(DOWNLOAD_URL_VALIDITY)
+        );
+    }
+
+    // [JMG] CAPSULE-14 활성 미디어 하나를 객체 키 없이 Presigned GET URL이 포함된 상세 응답 항목으로 변환한다.
+    private TimeCapsuleEntryDetailResponse.MediaResponse
+    toEntryDetailMediaResponse(
+            TimeCapsuleMedia media,
+            LocalDateTime expiresAt
+    ) {
+        TimeCapsuleObjectStorage.PresignedUrl presignedUrl =
+                timeCapsuleObjectStorage.createDownloadUrl(
+                        media.getObjectKey(),
+                        DOWNLOAD_URL_VALIDITY
+                );
+        return new TimeCapsuleEntryDetailResponse.MediaResponse(
+                media,
+                presignedUrl.url(),
+                expiresAt
         );
     }
 
