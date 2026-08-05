@@ -24,6 +24,9 @@ const completedTransferAmount = ref(0)
 const transferErrorMessage = ref('')
 const recentTransactions = computed(() => childTransactions.slice(0, 3))
 const transferAmountValue = computed(() => Number(transferAmount.value) || 0)
+const formattedTransferAmount = computed(() =>
+  transferAmountValue.value > 0 ? transferAmountValue.value.toLocaleString('ko-KR') : '',
+)
 const transferValidationMessage = computed(() => {
   if (!transferAccountNumber.value.trim()) {
     return '계좌번호를 입력해주세요.'
@@ -52,6 +55,13 @@ const resetTransferForm = () => {
   transferAccountNumber.value = ''
   transferAmount.value = 10_000
   transferErrorMessage.value = ''
+}
+
+const updateTransferAmount = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const numericValue = input.value.replace(/\D/g, '')
+
+  transferAmount.value = numericValue ? Number(numericValue) : 0
 }
 
 const openTransferSheet = () => {
@@ -318,11 +328,21 @@ const submitTransfer = () => {
 
             <label class="grid gap-2 text-[length:var(--font-size-sm)] font-bold">
               얼마를 보낼까요?
-              <input
-                v-model.number="transferAmount"
-                class="h-12 rounded-[12px] border border-[var(--color-border)] px-4 text-[length:var(--font-size-xl)] font-extrabold outline-none focus:border-[var(--color-brand-primary)]"
-                type="number"
-              />
+              <div class="relative">
+                <input
+                  :value="formattedTransferAmount"
+                  class="h-12 w-full rounded-[12px] border border-[var(--color-border)] px-4 pr-10 text-[length:var(--font-size-xl)] font-extrabold outline-none focus:border-[var(--color-brand-primary)]"
+                  inputmode="numeric"
+                  placeholder="0"
+                  type="text"
+                  @input="updateTransferAmount"
+                />
+                <span
+                  class="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
+                >
+                  원
+                </span>
+              </div>
               <span
                 class="text-[length:var(--font-size-xs)] font-normal text-[var(--color-text-secondary)]"
               >
