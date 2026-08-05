@@ -155,6 +155,8 @@ public class TimeCapsuleEntryService {
             return Optional.empty();
         }
 
+        assertActiveParentRelation(requesterMemberId, timeCapsule);
+
         TimeCapsuleEntry existingEntry =
                 timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
                         timeCapsule.getTimeCapsuleId(),
@@ -460,6 +462,19 @@ public class TimeCapsuleEntryService {
         }
 
         return entry;
+    }
+
+    // [JMG] CAPSULE-5 내부 이체 이벤트도 실제 부모·보호자만 작성자로 기록되도록 관계를 다시 검증한다.
+    private void assertActiveParentRelation(
+            long requesterMemberId,
+            TimeCapsule timeCapsule
+    ) {
+        if (!timeCapsuleMapper.existsActiveParentRelation(
+                requesterMemberId,
+                timeCapsule.getChildId()
+        )) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_ACCESS_DENIED);
+        }
     }
 
     // [JMG] CAPSULE-5 대상 적금 계좌에 실제로 기록된 거래만 조회해 임의 거래 연결을 차단한다.

@@ -313,6 +313,8 @@ class TimeCapsuleEntryServiceTest {
 
         given(timeCapsuleMapper.findByFinancialAccountIdForUpdate(4L))
                 .willReturn(timeCapsule);
+        given(timeCapsuleMapper.existsActiveParentRelation(7L, 10L))
+                .willReturn(true);
         given(timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
                 100L,
                 901L
@@ -377,6 +379,8 @@ class TimeCapsuleEntryServiceTest {
 
         given(timeCapsuleMapper.findByFinancialAccountIdForUpdate(4L))
                 .willReturn(timeCapsule);
+        given(timeCapsuleMapper.existsActiveParentRelation(7L, 10L))
+                .willReturn(true);
         given(timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
                 100L,
                 901L
@@ -424,6 +428,8 @@ class TimeCapsuleEntryServiceTest {
         );
         given(timeCapsuleMapper.findByFinancialAccountIdForUpdate(4L))
                 .willReturn(timeCapsule);
+        given(timeCapsuleMapper.existsActiveParentRelation(7L, 10L))
+                .willReturn(true);
         given(timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
                 100L,
                 901L
@@ -446,6 +452,32 @@ class TimeCapsuleEntryServiceTest {
 
         assertEquals(ErrorCode.INELIGIBLE_TIME_CAPSULE_TRANSACTION,
                 exception.getErrorCode());
+        verify(timeCapsuleEntryMapper, never()).insert(any());
+    }
+
+    @Test
+    // [JMG] CAPSULE-5 이체 이벤트의 요청자가 자녀의 활성 부모·보호자가 아니면 엔트리를 만들지 않는다.
+    void createDraftForSuccessfulSavingsTransferRejectsNonParentRequester() {
+        TimeCapsule timeCapsule = createTimeCapsule(
+                100L,
+                4L,
+                TimeCapsuleStatus.COLLECTING
+        );
+        given(timeCapsuleMapper.findByFinancialAccountIdForUpdate(4L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleMapper.existsActiveParentRelation(7L, 10L))
+                .willReturn(false);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService
+                        .createDraftForSuccessfulSavingsTransfer(7L, 4L, 901L)
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_ACCESS_DENIED,
+                exception.getErrorCode());
+        verify(timeCapsuleEntryMapper, never())
+                .findByTimeCapsuleAndTransactionId(anyLong(), anyLong());
         verify(timeCapsuleEntryMapper, never()).insert(any());
     }
 
