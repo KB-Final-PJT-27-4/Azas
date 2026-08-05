@@ -29,6 +29,11 @@ public interface TimeCapsuleMediaMapper {
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId
     );
 
+    // [JMG] CAPSULE-13 S3 삭제 대상인 활성·대기 미디어를 행 잠금과 함께 조회한다.
+    List<TimeCapsuleMedia> findNotDeletedByEntryIdForUpdate(
+            @Param("timeCapsuleEntryId") long timeCapsuleEntryId
+    );
+
     // [JMG] CAPSULE-8 업로드 검증을 통과한 대기 미디어를 활성 상태로 전환한다.
     int activatePendingMedia(@Param("mediaIds") List<Long> mediaIds);
 
@@ -36,6 +41,11 @@ public interface TimeCapsuleMediaMapper {
     int setThumbnailIfAbsent(
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId,
             @Param("thumbnailObjectKey") String thumbnailObjectKey
+    );
+
+    // [JMG] CAPSULE-13 엔트리 삭제가 확정된 미디어를 삭제 상태로 변경한다.
+    int markNotDeletedMediaAsDeleted(
+            @Param("timeCapsuleEntryId") long timeCapsuleEntryId
     );
 
     // [JMG] CAPSULE-8 엔트리의 현재 활성 미디어 개수를 응답과 봉인 검증에 사용한다.

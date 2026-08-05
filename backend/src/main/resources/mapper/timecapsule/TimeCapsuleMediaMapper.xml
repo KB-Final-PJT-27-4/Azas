@@ -93,6 +93,26 @@
         ORDER BY slot_no ASC
     </select>
 
+    <select id="findNotDeletedByEntryIdForUpdate"
+            resultMap="timeCapsuleMediaResultMap">
+        SELECT
+            time_capsule_media_id,
+            time_capsule_entry_id,
+            media_type,
+            object_key,
+            mime_type,
+            file_size,
+            slot_no,
+            status,
+            created_at,
+            updated_at
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status != 'DELETED'
+        ORDER BY slot_no ASC
+        FOR UPDATE
+    </select>
+
     <update id="activatePendingMedia">
         UPDATE time_capsule_media
         SET status = 'ACTIVE'
@@ -108,6 +128,13 @@
         SET thumbnail_object_key = #{thumbnailObjectKey}
         WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
           AND thumbnail_object_key IS NULL
+    </update>
+
+    <update id="markNotDeletedMediaAsDeleted">
+        UPDATE time_capsule_media
+        SET status = 'DELETED'
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status != 'DELETED'
     </update>
 
     <select id="countActiveByEntryId"

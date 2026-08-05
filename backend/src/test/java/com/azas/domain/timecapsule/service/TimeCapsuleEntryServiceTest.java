@@ -48,6 +48,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -197,6 +198,102 @@ class TimeCapsuleEntryServiceTest {
         assertEquals("https://s3.example.test/presigned-media-get",
                 response.getMedia().get(0).getDownloadUrl());
         assertEquals("ACTIVE", media.getStatus().name());
+    }
+
+    @Test
+    // [JMG] CAPSULE-13 작성자 초안을 삭제할 때 모든 연결 객체를 먼저 삭제하고 엔트리·미디어 집계를 갱신한다.
+    void deleteTimeCapsuleEntryDeletesMediaAndMarksDraftAsDeleted() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("100000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsuleMedia firstMedia = TimeCapsuleMedia.createPendingUpload(
+                1000L,
+                TimeCapsuleMediaType.IMAGE,
+                "time-capsules/100/entries/1000/slot-1.jpg",
+                "image/jpeg",
+                1024L,
+                1
+        );
+        TimeCapsuleMedia secondMedia = TimeCapsuleMedia.createPendingUpload(
+                1000L,
+                TimeCapsuleMediaType.IMAGE,
+                "time-capsules/100/entries/1000/slot-2.jpg",
+                "image/jpeg",
+                2048L,
+                2
+        );
+
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(entry);
+        given(timeCapsuleMediaMapper.findNotDeletedByEntryIdForUpdate(1000L))
+                .willReturn(List.of(firstMedia, secondMedia));
+        given(timeCapsuleMediaMapper.markNotDeletedMediaAsDeleted(1000L))
+                .willReturn(2);
+        given(timeCapsuleEntryMapper.markDraftEntryAsDeleted(1000L))
+                .willReturn(1);
+        given(timeCapsuleMapper.decreaseEntryCountAndRefreshLatestEntry(100L))
+                .willReturn(1);
+
+        timeCapsuleEntryService.deleteTimeCapsuleEntry(7L, 1000L);
+
+        verify(timeCapsuleObjectStorage).deleteObject(
+                firstMedia.getObjectKey()
+        );
+        verify(timeCapsuleObjectStorage).deleteObject(
+                secondMedia.getObjectKey()
+        );
+        verify(timeCapsuleMediaMapper).markNotDeletedMediaAsDeleted(1000L);
+        verify(timeCapsuleEntryMapper).markDraftEntryAsDeleted(1000L);
+        verify(timeCapsuleMapper).decreaseEntryCountAndRefreshLatestEntry(100L);
+    }
+
+    @Test
+    // [JMG] CAPSULE-13 S3 객체 삭제가 실패하면 DB 상태와 보관함 집계를 변경하지 않는다.
+    void deleteTimeCapsuleEntryLeavesDatabaseUntouchedWhenStorageDeletionFails() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("100000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
+                1000L,
+                TimeCapsuleMediaType.IMAGE,
+                "time-capsules/100/entries/1000/slot-1.jpg",
+                "image/jpeg",
+                1024L,
+                1
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(entry);
+        given(timeCapsuleMediaMapper.findNotDeletedByEntryIdForUpdate(1000L))
+                .willReturn(List.of(media));
+        doThrow(new BusinessException(ErrorCode.TIME_CAPSULE_STORAGE_UNAVAILABLE))
+                .when(timeCapsuleObjectStorage)
+                .deleteObject(media.getObjectKey());
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.deleteTimeCapsuleEntry(7L, 1000L)
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_STORAGE_UNAVAILABLE,
+                exception.getErrorCode());
+        verify(timeCapsuleMediaMapper, never())
+                .markNotDeletedMediaAsDeleted(anyLong());
+        verify(timeCapsuleEntryMapper, never())
+                .markDraftEntryAsDeleted(anyLong());
+        verify(timeCapsuleMapper, never())
+                .decreaseEntryCountAndRefreshLatestEntry(anyLong());
     }
 
     @Test

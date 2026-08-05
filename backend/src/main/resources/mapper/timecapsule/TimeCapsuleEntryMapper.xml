@@ -283,6 +283,13 @@
           AND status = 'DRAFT'
     </update>
 
+    <update id="markDraftEntryAsDeleted">
+        UPDATE time_capsule_entry
+        SET status = 'DELETED'
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'DRAFT'
+    </update>
+
     <select id="countPendingMediaByEntryId"
             resultType="int">
         SELECT COUNT(*)

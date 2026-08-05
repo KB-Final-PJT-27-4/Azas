@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -178,6 +179,30 @@ public class TimeCapsuleController {
                         timeCapsuleEntryId
                 )
         );
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 엔트리 삭제",
+            notes = "작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다."
+    )
+    @DeleteMapping("/time-capsule-entries/{entry_id}")
+    // [JMG] CAPSULE-13 작성자 본인의 DRAFT 타임캡슐 엔트리 삭제 요청을 처리한다.
+    public ResponseEntity<Void> deleteTimeCapsuleEntry(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
+            @PathVariable("entry_id")
+            long timeCapsuleEntryId
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+        timeCapsuleEntryService.deleteTimeCapsuleEntry(
+                memberId,
+                timeCapsuleEntryId
+        );
+
+        return ResponseEntity.noContent().build();
     }
 
     @ApiOperation(

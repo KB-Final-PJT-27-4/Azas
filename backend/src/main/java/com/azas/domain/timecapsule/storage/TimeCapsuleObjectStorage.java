@@ -17,6 +17,9 @@ public interface TimeCapsuleObjectStorage {
     // [JMG] CAPSULE-8 업로드 완료 객체의 실제 MIME 타입과 파일 크기를 조회한다.
     StoredObjectMetadata getObjectMetadata(String objectKey);
 
+    // [JMG] CAPSULE-13 연결이 해제된 미디어의 비공개 저장소 객체를 삭제한다.
+    void deleteObject(String objectKey);
+
     record PresignedUrl(String url) {
     }
 

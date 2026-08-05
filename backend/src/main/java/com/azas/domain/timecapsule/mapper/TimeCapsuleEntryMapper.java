@@ -34,6 +34,11 @@ public interface TimeCapsuleEntryMapper {
             @Param("memberId") long memberId
     );
 
+    // [JMG] CAPSULE-13 작성자 초안 엔트리만 삭제 상태로 변경한다.
+    int markDraftEntryAsDeleted(
+            @Param("timeCapsuleEntryId") long timeCapsuleEntryId
+    );
+
     // [JMG] CAPSULE-5 해당 보관함의 적금 계좌에 실제로 속한 거래만 조회한다.
     TimeCapsuleEntry findByTimeCapsuleAndTransactionId(
             @Param("timeCapsuleId") long timeCapsuleId,

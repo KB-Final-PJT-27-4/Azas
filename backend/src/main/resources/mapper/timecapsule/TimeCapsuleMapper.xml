@@ -183,6 +183,21 @@
         FOR UPDATE
     </select>
 
+    <update id="decreaseEntryCountAndRefreshLatestEntry">
+        UPDATE time_capsule tc
+        SET entry_count = CASE
+                WHEN tc.entry_count &gt; 0 THEN tc.entry_count - 1
+                ELSE 0
+            END,
+            latest_entry_at = (
+                SELECT MAX(tce.contributed_at)
+                FROM time_capsule_entry tce
+                WHERE tce.time_capsule_id = tc.time_capsule_id
+                  AND tce.status != 'DELETED'
+            )
+        WHERE tc.time_capsule_id = #{timeCapsuleId}
+    </update>
+
     <select id="findCardSummaries"
             resultMap="timeCapsuleResultMap">
         SELECT

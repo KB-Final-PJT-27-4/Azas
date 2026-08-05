@@ -48,6 +48,11 @@ public interface TimeCapsuleMapper {
             @Param("financialAccountId") long financialAccountId
     );
 
+    // [JMG] CAPSULE-13 삭제된 엔트리를 보관함 집계에서 제외하고 최신 기록 시각을 다시 계산한다.
+    int decreaseEntryCountAndRefreshLatestEntry(
+            @Param("timeCapsuleId") long timeCapsuleId
+    );
+
     // [JMG] CAPSULE-2 카드형 보관함 목록을 keyset pagination으로 조회한다.
     List<TimeCapsule> findCardSummaries(
             TimeCapsuleSearchCondition condition

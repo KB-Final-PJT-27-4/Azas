@@ -10,6 +10,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -112,6 +113,22 @@ public class S3TimeCapsuleObjectStorage
                     ErrorCode.TIME_CAPSULE_STORAGE_UNAVAILABLE,
                     exception
             );
+        } catch (SdkException exception) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_STORAGE_UNAVAILABLE,
+                    exception
+            );
+        }
+    }
+
+    @Override
+    // [JMG] CAPSULE-13 DB 삭제 전에 S3 객체부터 삭제해 저장소 삭제 실패 시 엔트리 상태 변경을 막는다.
+    public void deleteObject(String objectKey) {
+        try {
+            getS3Client().deleteObject(DeleteObjectRequest.builder()
+                    .bucket(getBucketName())
+                    .key(objectKey)
+                    .build());
         } catch (SdkException exception) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_STORAGE_UNAVAILABLE,

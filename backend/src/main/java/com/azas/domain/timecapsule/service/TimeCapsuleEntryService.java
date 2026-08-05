@@ -101,6 +101,43 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional
+    // [JMG] CAPSULE-13 작성자 본인의 DRAFT 엔트리와 연결 미디어를 S3·DB에서 삭제 상태로 처리한다.
+    public void deleteTimeCapsuleEntry(
+            long requesterMemberId,
+            long timeCapsuleEntryId
+    ) {
+        TimeCapsuleEntry entry = getOwnedTimeCapsuleEntryForUpdateOrThrow(
+                requesterMemberId,
+                timeCapsuleEntryId
+        );
+        assertDraftEntry(entry);
+
+        List<TimeCapsuleMedia> media =
+                timeCapsuleMediaMapper.findNotDeletedByEntryIdForUpdate(
+                        timeCapsuleEntryId
+                );
+        for (TimeCapsuleMedia currentMedia : media) {
+            timeCapsuleObjectStorage.deleteObject(
+                    currentMedia.getObjectKey()
+            );
+        }
+
+        if (timeCapsuleMediaMapper.markNotDeletedMediaAsDeleted(
+                timeCapsuleEntryId
+        ) != media.size()
+                || timeCapsuleEntryMapper.markDraftEntryAsDeleted(
+                timeCapsuleEntryId
+        ) != 1
+                || timeCapsuleMapper.decreaseEntryCountAndRefreshLatestEntry(
+                entry.getTimeCapsuleId()
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
+            );
+        }
+    }
+
+    @Transactional
     // [JMG] CAPSULE-5 성공한 적금 이체의 CREDIT 거래를 기준으로 엔트리 초안을 멱등하게 자동 생성한다.
     public Optional<TimeCapsuleEntryAutoCreationResult>
     createDraftForSuccessfulSavingsTransfer(
