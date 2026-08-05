@@ -137,6 +137,26 @@
           AND status != 'DELETED'
     </update>
 
+    <select id="findObjectKeysByTimeCapsuleIdForUpdate"
+            resultType="string">
+        SELECT tcm.object_key
+        FROM time_capsule_media tcm
+        INNER JOIN time_capsule_entry tce
+            ON tce.time_capsule_entry_id = tcm.time_capsule_entry_id
+        WHERE tce.time_capsule_id = #{timeCapsuleId}
+          AND tcm.object_key IS NOT NULL
+          AND tcm.object_key != ''
+        FOR UPDATE
+    </select>
+
+    <delete id="deleteByTimeCapsuleId">
+        DELETE tcm
+        FROM time_capsule_media tcm
+        INNER JOIN time_capsule_entry tce
+            ON tce.time_capsule_entry_id = tcm.time_capsule_entry_id
+        WHERE tce.time_capsule_id = #{timeCapsuleId}
+    </delete>
+
     <select id="countActiveByEntryId"
             resultType="int">
         SELECT COUNT(*)

@@ -130,6 +130,27 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
+            value = "타임캡슐 삭제",
+            notes = "부모 또는 보호자가 보관함과 내부 엔트리·미디어·결과물을 영구 삭제합니다."
+    )
+    @DeleteMapping("/time-capsules/{time_capsule_id}")
+    // [JMG] CAPSULE-6 부모·보호자 권한을 확인한 뒤 타임캡슐 보관함을 영구 삭제한다.
+    public ResponseEntity<Void> deleteTimeCapsule(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 보관함 ID", required = true)
+            @PathVariable("time_capsule_id")
+            long timeCapsuleId
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+        timeCapsuleService.deleteTimeCapsule(memberId, timeCapsuleId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @ApiOperation(
             value = "타임캡슐 엔트리 목록 조회",
             notes = "부모 또는 보호자가 삭제되지 않은 기록 목록을 조회합니다."
     )

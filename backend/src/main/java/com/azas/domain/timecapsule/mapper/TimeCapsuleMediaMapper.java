@@ -48,6 +48,14 @@ public interface TimeCapsuleMediaMapper {
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId
     );
 
+    // [JMG] CAPSULE-6 보관함 하위 미디어 객체 키를 잠금과 함께 조회해 S3 삭제 대상을 고정한다.
+    List<String> findObjectKeysByTimeCapsuleIdForUpdate(
+            @Param("timeCapsuleId") long timeCapsuleId
+    );
+
+    // [JMG] CAPSULE-6 보관함 영구 삭제 전 모든 하위 미디어 행을 삭제한다.
+    int deleteByTimeCapsuleId(@Param("timeCapsuleId") long timeCapsuleId);
+
     // [JMG] CAPSULE-8 엔트리의 현재 활성 미디어 개수를 응답과 봉인 검증에 사용한다.
     int countActiveByEntryId(@Param("timeCapsuleEntryId") long timeCapsuleEntryId);
 }

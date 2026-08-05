@@ -21,6 +21,9 @@ class TimeCapsuleMapperXmlTest {
         assertDoesNotThrow(
                 () -> parse("mapper/timecapsule/TimeCapsuleMediaMapper.xml")
         );
+        assertDoesNotThrow(
+                () -> parse("mapper/timecapsule/TimeCapsuleExportMapper.xml")
+        );
     }
 
     // [JMG] CAPSULE-1~8 매퍼 XML 하나를 독립 MyBatis 설정으로 파싱해 SQL·결과 매핑 오류를 조기에 찾는다.

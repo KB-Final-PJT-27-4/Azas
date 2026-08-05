@@ -198,6 +198,11 @@
         WHERE tc.time_capsule_id = #{timeCapsuleId}
     </update>
 
+    <delete id="deleteById">
+        DELETE FROM time_capsule
+        WHERE time_capsule_id = #{timeCapsuleId}
+    </delete>
+
     <select id="findCardSummaries"
             resultMap="timeCapsuleResultMap">
         SELECT

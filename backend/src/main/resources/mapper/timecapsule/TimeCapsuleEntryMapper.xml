@@ -291,6 +291,19 @@
           AND status = 'DRAFT'
     </update>
 
+    <select id="lockByTimeCapsuleId"
+            resultType="long">
+        SELECT time_capsule_entry_id
+        FROM time_capsule_entry
+        WHERE time_capsule_id = #{timeCapsuleId}
+        FOR UPDATE
+    </select>
+
+    <delete id="deleteByTimeCapsuleId">
+        DELETE FROM time_capsule_entry
+        WHERE time_capsule_id = #{timeCapsuleId}
+    </delete>
+
     <select id="countPendingMediaByEntryId"
             resultType="int">
         SELECT COUNT(*)

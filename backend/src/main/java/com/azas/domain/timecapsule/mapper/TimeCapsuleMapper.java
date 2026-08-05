@@ -53,6 +53,9 @@ public interface TimeCapsuleMapper {
             @Param("timeCapsuleId") long timeCapsuleId
     );
 
+    // [JMG] CAPSULE-6 하위 데이터를 정리한 뒤 타임캡슐 보관함 행을 영구 삭제한다.
+    int deleteById(@Param("timeCapsuleId") long timeCapsuleId);
+
     // [JMG] CAPSULE-2 카드형 보관함 목록을 keyset pagination으로 조회한다.
     List<TimeCapsule> findCardSummaries(
             TimeCapsuleSearchCondition condition
