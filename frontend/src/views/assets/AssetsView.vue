@@ -11,6 +11,8 @@ const activeGoalIndex = ref(0)
 const activeAccountId = ref<number | null>(null)
 const isTransferFilterOpen = ref(false)
 const transferFilterRoot = ref<HTMLElement | null>(null)
+const swipeStart = ref({ x: 0, y: 0 })
+const goalSlideDirection = ref<'left' | 'right'>('left')
 const isTransferSheetOpen = ref(false)
 const transferResult = ref<'success' | 'failure' | null>(null)
 const activeGoal = computed(() => assetGoals[activeGoalIndex.value]!)
@@ -32,9 +34,31 @@ const percentage = (current: number, target: number) =>
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
 const selectGoal = (index: number) => {
+  goalSlideDirection.value = index >= activeGoalIndex.value ? 'left' : 'right'
   activeGoalIndex.value = index
   activeAccountId.value = null
   isTransferFilterOpen.value = false
+}
+
+const startGoalSwipe = (event: TouchEvent) => {
+  const touch = event.touches[0]
+  if (!touch) return
+  swipeStart.value = { x: touch.clientX, y: touch.clientY }
+}
+
+const finishGoalSwipe = (event: TouchEvent) => {
+  const touch = event.changedTouches[0]
+  if (!touch) return
+
+  const deltaX = touch.clientX - swipeStart.value.x
+  const deltaY = touch.clientY - swipeStart.value.y
+  if (Math.abs(deltaX) < 45 || Math.abs(deltaX) <= Math.abs(deltaY)) return
+
+  if (deltaX < 0 && activeGoalIndex.value < assetGoals.length - 1) {
+    selectGoal(activeGoalIndex.value + 1)
+  } else if (deltaX > 0 && activeGoalIndex.value > 0) {
+    selectGoal(activeGoalIndex.value - 1)
+  }
 }
 
 const selectAccountFilter = (accountId: number | null) => {
@@ -107,7 +131,19 @@ const retryTransfer = () => {
     <section class="mt-[19px]">
       <h2 class="m-0 text-[18px] font-extrabold">목표별 자산 현황</h2>
 
-      <article class="mx-[5px] mt-[18px] rounded-[18px] border border-[#dce8ee] bg-white px-[15px] py-4 shadow-sm">
+      <div
+        class="overflow-hidden touch-pan-y"
+        @touchstart.passive="startGoalSwipe"
+        @touchend.passive="finishGoalSwipe"
+      >
+        <Transition
+          :name="goalSlideDirection === 'left' ? 'goal-slide-left' : 'goal-slide-right'"
+          mode="out-in"
+        >
+          <article
+            :key="activeGoal.id"
+            class="mx-[5px] mt-[18px] rounded-[18px] border border-[#dce8ee] bg-white px-[15px] py-4 shadow-sm"
+          >
         <div class="flex items-center justify-between gap-3">
           <h3 class="m-0 truncate text-[20px] font-extrabold">{{ activeGoal.title }}</h3>
           <span
@@ -162,7 +198,9 @@ const retryTransfer = () => {
         <p v-else class="m-0 rounded-xl bg-[#f6f9fb] px-4 py-5 text-center text-sm text-[#8c98a7]">
           연결된 계좌가 없어요.
         </p>
-      </article>
+          </article>
+        </Transition>
+      </div>
 
       <div class="mt-2.5 flex justify-center gap-1.5" aria-label="목표 선택">
         <button
@@ -288,9 +326,8 @@ const retryTransfer = () => {
       @transfer="completeTransfer"
     />
     <AssetTransferResultSheet
-      v-if="transferResult"
-      :open="true"
-      :status="transferResult"
+      :open="transferResult !== null"
+      :status="transferResult ?? 'success'"
       @close="transferResult = null"
       @retry="retryTransfer"
     />
@@ -301,5 +338,26 @@ const retryTransfer = () => {
 .asset-transfer-button {
   top: calc(var(--app-header-height) + env(safe-area-inset-top) + 18px);
   right: max(18px, calc((100vw - var(--app-max-width)) / 2 + 18px));
+}
+
+.goal-slide-left-enter-active,
+.goal-slide-left-leave-active,
+.goal-slide-right-enter-active,
+.goal-slide-right-leave-active {
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
+}
+
+.goal-slide-left-enter-from,
+.goal-slide-right-leave-to {
+  opacity: 0;
+  transform: translateX(28px);
+}
+
+.goal-slide-left-leave-to,
+.goal-slide-right-enter-from {
+  opacity: 0;
+  transform: translateX(-28px);
 }
 </style>
