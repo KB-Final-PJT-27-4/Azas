@@ -183,7 +183,7 @@ const routes: RouteRecordRaw[] = [
     path: '/child/accounts',
     name: 'ChildAccountCreate',
     component: () => import('@/views/child/ChildAccountCreateView.vue'),
-    meta: { requiresAuth: true, roles: ['CHILD'] },
+    meta: { requiresAuth: true, roles: ['CHILD'], hideNavigation: true },
   },
   {
     path: '/child/home',
