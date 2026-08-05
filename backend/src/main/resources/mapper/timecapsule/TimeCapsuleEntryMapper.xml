@@ -304,6 +304,14 @@
         WHERE time_capsule_id = #{timeCapsuleId}
     </delete>
 
+    <select id="countSealedByTimeCapsuleId"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM time_capsule_entry
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND status = 'SEALED'
+    </select>
+
     <select id="countPendingMediaByEntryId"
             resultType="int">
         SELECT COUNT(*)

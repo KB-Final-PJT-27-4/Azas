@@ -1,6 +1,7 @@
 package com.azas.domain.timecapsule.controller;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleExportRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
@@ -11,9 +12,12 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleExportDownloadUrlResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleExportResponse;
 import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
+import com.azas.domain.timecapsule.service.TimeCapsuleExportService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -43,6 +47,7 @@ public class TimeCapsuleController {
     private final AccessTokenMemberResolver accessTokenMemberResolver;
     private final TimeCapsuleService timeCapsuleService;
     private final TimeCapsuleEntryService timeCapsuleEntryService;
+    private final TimeCapsuleExportService timeCapsuleExportService;
 
     @ApiOperation(
             value = "타임캡슐 보관함 생성",
@@ -148,6 +153,84 @@ public class TimeCapsuleController {
         timeCapsuleService.deleteTimeCapsule(memberId, timeCapsuleId);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 결과물 생성 요청",
+            notes = "공개된 타임캡슐의 봉인 엔트리를 비동기 VIDEO 또는 ARCHIVE 결과물 작업으로 등록합니다."
+    )
+    @PostMapping("/time-capsules/{time_capsule_id}/exports")
+    // [JMG] CAPSULE-11 공개 타임캡슐 결과물 생성 작업 등록 요청을 처리한다.
+    public ResponseEntity<TimeCapsuleExportResponse>
+    createTimeCapsuleExport(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 보관함 ID", required = true)
+            @PathVariable("time_capsule_id")
+            long timeCapsuleId,
+            @Valid @RequestBody CreateTimeCapsuleExportRequest request
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(
+                timeCapsuleExportService.createTimeCapsuleExport(
+                        memberId,
+                        timeCapsuleId,
+                        request
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 결과물 생성 상태 조회",
+            notes = "부모 또는 보호자가 비동기 결과물 생성 작업의 상태와 결과 메타데이터를 조회합니다."
+    )
+    @GetMapping("/time-capsule-exports/{export_id}")
+    // [JMG] CAPSULE-9 부모·보호자 권한을 확인한 뒤 결과물 생성 상태를 조회한다.
+    public ResponseEntity<TimeCapsuleExportResponse>
+    getTimeCapsuleExport(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 결과물 생성 ID", required = true)
+            @PathVariable("export_id")
+            long timeCapsuleExportId
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.ok(timeCapsuleExportService.getTimeCapsuleExport(
+                memberId,
+                timeCapsuleExportId
+        ));
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 결과물 다운로드 URL 발급",
+            notes = "생성이 완료되고 보관 기간이 남은 결과물의 임시 다운로드 URL을 발급합니다."
+    )
+    @GetMapping("/time-capsule-exports/{export_id}/download-url")
+    // [JMG] CAPSULE-10 완료·미만료 결과물의 임시 다운로드 URL을 발급한다.
+    public ResponseEntity<TimeCapsuleExportDownloadUrlResponse>
+    createTimeCapsuleExportDownloadUrl(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 결과물 생성 ID", required = true)
+            @PathVariable("export_id")
+            long timeCapsuleExportId
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.ok(
+                timeCapsuleExportService.createTimeCapsuleExportDownloadUrl(
+                        memberId,
+                        timeCapsuleExportId
+                )
+        );
     }
 
     @ApiOperation(

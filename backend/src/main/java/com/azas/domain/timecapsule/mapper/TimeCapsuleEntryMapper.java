@@ -47,6 +47,11 @@ public interface TimeCapsuleEntryMapper {
     // [JMG] CAPSULE-6 보관함 영구 삭제 전 내부 엔트리 행을 모두 삭제한다.
     int deleteByTimeCapsuleId(@Param("timeCapsuleId") long timeCapsuleId);
 
+    // [JMG] CAPSULE-11 결과물 생성 가능한 봉인 엔트리가 하나 이상 존재하는지 확인한다.
+    int countSealedByTimeCapsuleId(
+            @Param("timeCapsuleId") long timeCapsuleId
+    );
+
     // [JMG] CAPSULE-5 해당 보관함의 적금 계좌에 실제로 속한 거래만 조회한다.
     TimeCapsuleEntry findByTimeCapsuleAndTransactionId(
             @Param("timeCapsuleId") long timeCapsuleId,
