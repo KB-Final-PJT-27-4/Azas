@@ -142,6 +142,69 @@ public class OAuthMemberService {
         );
     }
 
+    @Transactional
+    public OAuthMemberResult findOrCreateParent(
+            OAuthProfile profile
+    ) {
+        SocialAccount socialAccount =
+                socialAccountMapper.findByProviderAndSubject(
+                        profile.getProvider(),
+                        profile.getProviderSubject()
+                );
+
+        if (socialAccount != null) {
+            Member member = findActiveMember(
+                    socialAccount.getMemberId()
+            );
+
+            validateParentMember(member);
+
+            return new OAuthMemberResult(
+                    member,
+                    false
+            );
+        }
+
+        Member member =
+                memberMapper.findByEmail(profile.getEmail());
+
+        if (member != null) {
+            validateActive(member);
+            validateParentMember(member);
+
+            linkSocialAccount(
+                    member.getMemberId(),
+                    profile
+            );
+
+            return new OAuthMemberResult(
+                    member,
+                    false
+            );
+        }
+
+        Member newMember = Member.createParent(
+                profile.getEmail(),
+                profile.getName(),
+                profile.getProfileImageUrl()
+        );
+
+        memberMapper.insert(newMember);
+
+        Member savedMember =
+                findActiveMember(newMember.getMemberId());
+
+        linkSocialAccount(
+                savedMember.getMemberId(),
+                profile
+        );
+
+        return new OAuthMemberResult(
+                savedMember,
+                true
+        );
+    }
+
     private Member findActiveMember(long memberId) {
         Member member = memberMapper.findById(memberId);
 
@@ -165,6 +228,14 @@ public class OAuthMemberService {
 
     private void validateChildMember(Member member) {
         if (member.getMemberType() != MemberType.CHILD) {
+            throw new BusinessException(
+                    ErrorCode.MEMBER_TYPE_CONFLICT
+            );
+        }
+    }
+
+    private void validateParentMember(Member member) {
+        if (member.getMemberType() != MemberType.PARENT) {
             throw new BusinessException(
                     ErrorCode.MEMBER_TYPE_CONFLICT
             );
