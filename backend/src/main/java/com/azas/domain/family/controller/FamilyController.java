@@ -1,5 +1,7 @@
 package com.azas.domain.family.controller;
 
+import com.azas.domain.family.dto.AllowanceRequestResponse;
+import com.azas.domain.family.dto.ChildMemberLinkResponse;
 import com.azas.domain.family.dto.FamilyGuardianListResponse;
 import com.azas.domain.family.service.FamilyService;
 import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
@@ -62,6 +64,38 @@ public class FamilyController {
                 memberId,
                 childId
         );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/children/{child_id}/member-link")
+    public ResponseEntity<ChildMemberLinkResponse> getChildMemberLink(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "자녀 ID", required = true, example = "1")
+            @PathVariable("child_id")
+            Long childId
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(authorizationHeader);
+
+        ChildMemberLinkResponse response =
+                familyService.getChildMemberLink(memberId, childId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/children/{child_id}/allowance-requests")
+    public ResponseEntity<AllowanceRequestResponse> requestAllowance(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "자녀 ID", required = true, example = "1")
+            @PathVariable("child_id")
+            Long childId
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(authorizationHeader);
+
+        AllowanceRequestResponse response =
+                familyService.requestAllowance(memberId, childId);
 
         return ResponseEntity.ok(response);
     }
