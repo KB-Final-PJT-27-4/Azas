@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
-import { Check, Pencil } from 'lucide-vue-next'
+import { Pencil } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import { getAssetTransaction } from '@/data/assetDummyData'
@@ -12,7 +12,7 @@ const transaction = computed(() => getAssetTransaction(String(route.params.asset
 const memo = ref(transaction.value.memo)
 const memoDraft = ref(memo.value)
 const isEditingMemo = ref(false)
-const memoInput = ref<HTMLInputElement | null>(null)
+const memoInput = ref<HTMLTextAreaElement | null>(null)
 
 const startMemoEdit = async () => {
   memoDraft.value = memo.value
@@ -45,26 +45,34 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
 
       <form
         v-if="isEditingMemo"
-        class="mt-3 flex min-w-0 items-center gap-2"
+        class="mt-3"
         aria-label="메모 수정"
         @submit.prevent="saveMemo"
       >
-        <input
-          ref="memoInput"
-          v-model="memoDraft"
-          class="h-10 min-w-0 flex-1 rounded-lg border border-[var(--color-brand-primary)] px-3 text-[15px] text-[var(--color-text-secondary)] outline-none focus:ring-2 focus:ring-[var(--color-selected-background)]"
-          type="text"
-          aria-label="메모"
-          maxlength="100"
-          @keydown.esc="cancelMemoEdit"
-        />
-        <button
-          class="grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--color-brand-primary)] text-white active:bg-[var(--color-brand-primary-pressed)]"
-          type="submit"
-          aria-label="메모 저장"
-        >
-          <Check :size="21" :stroke-width="2.7" />
-        </button>
+        <div class="relative">
+          <textarea
+            ref="memoInput"
+            v-model="memoDraft"
+            class="block h-24 w-full resize-none rounded-lg border border-[var(--color-brand-primary)] px-3 pt-2.5 pb-7 text-[15px] leading-6 text-[var(--color-text-secondary)] outline-none focus:ring-2 focus:ring-[var(--color-selected-background)]"
+            aria-label="메모"
+            maxlength="50"
+            @keydown.esc="cancelMemoEdit"
+          ></textarea>
+          <span
+            class="pointer-events-none absolute right-3 bottom-2 text-[12px] tabular-nums text-[var(--color-text-secondary)]"
+          >
+            {{ memoDraft.length }}/50
+          </span>
+        </div>
+        <div class="mt-1.5 flex justify-end">
+          <button
+            class="h-9 shrink-0 rounded-lg bg-[var(--color-brand-primary)] px-4 text-[14px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+            type="submit"
+            aria-label="메모 저장"
+          >
+            완료
+          </button>
+        </div>
       </form>
 
       <div v-else-if="memo" class="mt-3 flex min-w-0 items-start gap-1.5">
