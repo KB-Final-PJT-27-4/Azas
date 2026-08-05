@@ -6,6 +6,7 @@
 }
 
 html {
+  scrollbar-gutter: stable;
   font-family:
     'Pretendard',
     system-ui,
