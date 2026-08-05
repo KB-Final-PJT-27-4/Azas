@@ -18,8 +18,12 @@ const isTransferSheetOpen = ref(false)
 const transferAccountNumber = ref('')
 const transferAmount = ref(10_000)
 const completedTransferAmount = ref(0)
+<<<<<<< HEAD
 const transferNotice = ref<{ type: 'success' | 'error'; message: string } | null>(null)
 let transferCloseTimer: ReturnType<typeof window.setTimeout> | null = null
+=======
+const hasTriedTransfer = ref(false)
+>>>>>>> origin/dev-fe
 const recentTransactions = computed(() => childTransactions.slice(0, 3))
 const transferAmountValue = computed(() => Number(transferAmount.value) || 0)
 const transferValidationMessage = computed(() => {
@@ -72,10 +76,15 @@ const submitTransfer = () => {
     amount: transferAmountValue.value,
     bankName: transferDefaults.bankName,
   })
+<<<<<<< HEAD
   transferNotice.value = {
     type: 'success',
     message: `${formatCurrency(completedTransferAmount.value)} 이체가 완료되었어요.`,
   }
+=======
+  isTransferSheetOpen.value = false
+  isTransferCompleteModalOpen.value = true
+>>>>>>> origin/dev-fe
   transferAccountNumber.value = ''
   transferAmount.value = 10_000
   transferCloseTimer = window.setTimeout(() => {
@@ -348,6 +357,44 @@ onBeforeUnmount(() => {
           </div>
         </section>
       </div>
+<<<<<<< HEAD
+=======
+
+      <div
+        v-if="isTransferCompleteModalOpen"
+        class="fixed inset-0 z-[var(--z-index-overlay)] grid place-items-center bg-black/35 px-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="transfer-complete-title"
+      >
+        <section
+          class="w-full max-w-[320px] rounded-[24px] bg-white px-6 py-7 text-center shadow-[0_18px_44px_rgb(51_51_51_/_20%)]"
+        >
+          <div
+            class="mx-auto grid size-16 place-items-center rounded-full bg-[var(--color-selected-background)] text-[28px]"
+            aria-hidden="true"
+          >
+            ✓
+          </div>
+          <h2
+            id="transfer-complete-title"
+            class="mt-5 mb-2 text-[length:var(--font-size-lg)] font-black text-[var(--color-text-primary)]"
+          >
+            이체가 완료되었어요!
+          </h2>
+          <p class="m-0 text-[length:var(--font-size-sm)] text-[var(--color-text-secondary)]">
+            {{ formatCurrency(completedTransferAmount) }}을 보냈어요.
+          </p>
+          <button
+            class="mt-6 h-12 w-full rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[length:var(--font-size-md)] font-extrabold text-white"
+            type="button"
+            @click="isTransferCompleteModalOpen = false"
+          >
+            확인
+          </button>
+        </section>
+      </div>
+>>>>>>> origin/dev-fe
     </Teleport>
   </main>
 </template>
