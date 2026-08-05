@@ -1,5 +1,185 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { Landmark } from 'lucide-vue-next'
+
+import cloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
+import { assetGoals, assetSummary, assetTransactions } from '@/data/assetDummyData'
+
+const activeGoalIndex = ref(0)
+const activeAccountId = ref<number | null>(null)
+const activeGoal = computed(() => assetGoals[activeGoalIndex.value]!)
+const filteredTransactions = computed(() =>
+  assetTransactions.filter(
+    ({ goalId, accountId }) =>
+      goalId === activeGoal.value.id &&
+      (activeAccountId.value === null || accountId === activeAccountId.value),
+  ),
+)
+
+const percentage = (current: number, target: number) =>
+  target === 0 ? 0 : Math.min((current / target) * 100, 100)
+
+const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+
+const selectGoal = (index: number) => {
+  activeGoalIndex.value = index
+  activeAccountId.value = null
+}
+
+const toggleAccount = (accountId: number) => {
+  activeAccountId.value = activeAccountId.value === accountId ? null : accountId
+}
+</script>
+
 <template>
-  <main>
-    <h1>자산</h1>
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[#eef9ff] bg-cover bg-top bg-no-repeat px-[18px] pt-[18px] pb-6 text-[var(--color-text-primary)]"
+    :style="{ backgroundImage: `url(${cloudBackground})` }"
+  >
+    <section class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="m-0 text-[21px] leading-tight font-extrabold tracking-[-0.025em]">자산 관리</h1>
+        <p class="mt-1.5 mb-0 text-[12px] text-[var(--color-text-secondary)]">
+          목표별 자산과 연결된 계좌를 함께 관리해요.
+        </p>
+      </div>
+      <button
+        class="grid size-[42px] shrink-0 place-items-center rounded-full bg-[#2babe8] text-[12px] font-bold text-white shadow-sm active:bg-[#159bd8]"
+        type="button"
+      >
+        이체
+      </button>
+    </section>
+
+    <section class="mt-[18px] rounded-[20px] bg-white px-4 py-[18px] shadow-[0_5px_20px_rgba(80,140,170,0.06)]">
+      <h2 class="m-0 text-[14px] font-bold text-[var(--color-text-secondary)]">전체 목표 현황</h2>
+      <p class="mt-2 mb-0 text-[21px] leading-tight font-extrabold">
+        총 목표
+        <strong class="text-[#2babe8]">{{ formatWon(assetSummary.totalTargetAmount) }}</strong>
+      </p>
+      <p class="mt-2.5 mb-0 text-[12px] text-[var(--color-text-secondary)]">
+        현재 {{ formatWon(assetSummary.totalCurrentAmount) }} · 전체 달성률
+        {{ percentage(assetSummary.totalCurrentAmount, assetSummary.totalTargetAmount).toFixed(1) }}%
+      </p>
+      <div class="mt-2 h-2 overflow-hidden rounded-full bg-[#edf1f4]" role="progressbar">
+        <div
+          class="h-full rounded-full bg-[#2babe8]"
+          :style="{
+            width: `${percentage(assetSummary.totalCurrentAmount, assetSummary.totalTargetAmount)}%`,
+          }"
+        ></div>
+      </div>
+    </section>
+
+    <section class="mt-[19px]">
+      <h2 class="m-0 text-[18px] font-extrabold">목표별 자산 현황</h2>
+
+      <article class="mx-[5px] mt-[18px] rounded-[18px] border border-[#dce8ee] bg-white px-[15px] py-4 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="m-0 truncate text-[20px] font-extrabold">{{ activeGoal.title }}</h3>
+          <span
+            class="shrink-0 rounded-full bg-[#e9f8ff] px-[18px] py-1.5 text-[11px] font-bold text-[#2babe8]"
+          >
+            {{ activeGoal.status }}
+          </span>
+        </div>
+        <p class="mt-2.5 mb-0 text-[14px] font-extrabold">
+          {{ formatWon(activeGoal.currentAmount) }}
+          <span class="font-normal text-[var(--color-text-secondary)]">
+            / 목표 {{ formatWon(activeGoal.targetAmount) }}
+          </span>
+        </p>
+        <div class="mt-3 flex items-center gap-4">
+          <div class="h-2 flex-1 overflow-hidden rounded-full bg-[#e4edf2]">
+            <div
+              class="h-full rounded-full bg-[#2babe8]"
+              :style="{ width: `${percentage(activeGoal.currentAmount, activeGoal.targetAmount)}%` }"
+            ></div>
+          </div>
+          <strong class="w-12 text-right text-[15px] text-[#2babe8]">
+            {{ percentage(activeGoal.currentAmount, activeGoal.targetAmount).toFixed(1) }}%
+          </strong>
+        </div>
+
+        <p class="mt-5 mb-2.5 text-[12px] font-medium">연결된 계좌 {{ activeGoal.accounts.length }}개</p>
+        <ul
+          v-if="activeGoal.accounts.length"
+          class="m-0 overflow-hidden rounded-[16px] border border-[#dce8ee] p-0"
+        >
+          <li
+            v-for="account in activeGoal.accounts"
+            :key="account.id"
+            class="[&+&]:border-t [&+&]:border-[#dce8ee]"
+          >
+            <button
+              class="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors"
+              :class="activeAccountId === account.id ? 'bg-[#effaff]' : 'bg-white active:bg-[#f6f9fb]'"
+              type="button"
+              :aria-pressed="activeAccountId === account.id"
+              @click="toggleAccount(account.id)"
+            >
+              <span
+                class="grid size-6 shrink-0 place-items-center rounded-full border border-[#ffad20] text-[#ff9f00]"
+                aria-hidden="true"
+              >
+                <Landmark :size="14" :stroke-width="2" />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-[10px] font-bold text-[#8c98a7]">{{ account.name }}</span>
+                <strong class="block truncate text-[14px]">{{ account.accountNumber }}</strong>
+              </span>
+              <strong class="shrink-0 text-[12px] text-[#20a8eb]">{{ formatWon(account.balance) }}</strong>
+            </button>
+          </li>
+        </ul>
+        <p v-else class="m-0 rounded-xl bg-[#f6f9fb] px-4 py-5 text-center text-sm text-[#8c98a7]">
+          연결된 계좌가 없어요.
+        </p>
+      </article>
+
+      <div class="mt-2.5 flex justify-center gap-1.5" aria-label="목표 선택">
+        <button
+          v-for="(goal, index) in assetGoals"
+          :key="goal.id"
+          class="size-2 rounded-full"
+          :class="index === activeGoalIndex ? 'bg-[#2babe8]' : 'bg-[#dce8ee]'"
+          type="button"
+          :aria-label="`${goal.title} 보기`"
+          :aria-current="index === activeGoalIndex ? 'true' : undefined"
+          @click="selectGoal(index)"
+        ></button>
+      </div>
+    </section>
+
+    <section class="mt-[18px]">
+      <h2 class="m-0 text-[18px] font-extrabold">최근 이체 내역</h2>
+      <ul class="mt-[18px] mb-0 grid list-none gap-2.5 p-0">
+        <li v-for="transaction in filteredTransactions" :key="transaction.id">
+          <RouterLink
+            class="flex h-[55px] items-center justify-between gap-4 rounded-[16px] border border-[#dce8ee] bg-white px-4 py-2 !text-[var(--color-text-primary)] shadow-sm"
+            :to="{ name: 'AssetDetail', params: { assetId: transaction.id } }"
+          >
+            <div class="min-w-0">
+              <strong class="block truncate text-[12px]">{{ transaction.accountLabel }}</strong>
+              <time class="mt-1 block text-[10px] text-[var(--color-text-secondary)]">
+                {{ transaction.transactedAt }}
+              </time>
+            </div>
+            <div class="min-w-0 text-right">
+              <strong class="block text-[15px] text-[#20a8eb]">+{{ formatWon(transaction.amount) }}</strong>
+              <span class="mt-0.5 block truncate text-[10px] text-[var(--color-text-secondary)]">
+                {{ transaction.depositName }}
+              </span>
+            </div>
+          </RouterLink>
+        </li>
+        <li
+          v-if="filteredTransactions.length === 0"
+          class="rounded-[16px] border border-[#dce8ee] bg-white px-4 py-6 text-center text-[12px] text-[var(--color-text-secondary)]"
+        >
+          이체 내역이 없어요.
+        </li>
+      </ul>
+    </section>
   </main>
 </template>

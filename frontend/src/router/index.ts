@@ -56,7 +56,7 @@ const routes: RouteRecordRaw[] = [
     path: '/assets',
     name: 'Assets',
     component: () => import('@/views/assets/AssetsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, headerTitle: '자산관리' },
   },
   {
     path: '/assets/:assetId',
