@@ -9,6 +9,7 @@ import childHomePigUrl from '@/assets/images/child/child-home-pig.png'
 import {
   childAccountSummary,
   childTransactions,
+  recordChildTransfer,
   transferDefaults,
   type ChildTransaction,
 } from '@/mocks/childHome'
@@ -19,7 +20,7 @@ const transferAccountNumber = ref('')
 const transferAmount = ref(10_000)
 const completedTransferAmount = ref(0)
 const hasTriedTransfer = ref(false)
-const recentTransactions = childTransactions.slice(0, 3)
+const recentTransactions = computed(() => childTransactions.slice(0, 3))
 const transferAmountValue = computed(() => Number(transferAmount.value) || 0)
 const transferValidationMessage = computed(() => {
   if (!transferAccountNumber.value.trim()) {
@@ -60,6 +61,10 @@ const submitTransfer = () => {
 
   hasTriedTransfer.value = false
   completedTransferAmount.value = transferAmountValue.value
+  recordChildTransfer({
+    amount: transferAmountValue.value,
+    bankName: transferDefaults.bankName,
+  })
   isTransferSheetOpen.value = false
   isTransferCompleteModalOpen.value = true
   transferAccountNumber.value = ''
@@ -87,10 +92,14 @@ const submitTransfer = () => {
         <p class="mt-5 mb-2 text-[length:var(--font-size-sm)] text-[var(--color-text-secondary)]">
           현재 잔액
         </p>
-        <strong class="block whitespace-nowrap text-[clamp(34px,9vw,40px)] leading-none font-black text-[var(--color-text-primary)]">
+        <strong
+          class="block whitespace-nowrap text-[clamp(34px,9vw,40px)] leading-none font-black text-[var(--color-text-primary)]"
+        >
           {{ formatCurrency(childAccountSummary.balance) }}
         </strong>
-        <p class="mt-5 mb-3 text-[length:var(--font-size-xs)] leading-[1.6] text-[var(--color-text-secondary)]">
+        <p
+          class="mt-5 mb-3 text-[length:var(--font-size-xs)] leading-[1.6] text-[var(--color-text-secondary)]"
+        >
           이번 달 사용 {{ formatCurrency(childAccountSummary.monthlySpent) }}<br />
           하루 한도 {{ formatCurrency(childAccountSummary.dailyLimit) }}
         </p>
@@ -102,17 +111,22 @@ const submitTransfer = () => {
         </div>
 
         <button
-          class="mt-6 flex h-12 w-[124px] items-center justify-center rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[length:var(--font-size-sm)] font-extrabold text-white"
+          class="child-balance-button child-balance-button--primary"
           type="button"
           @click="isTransferSheetOpen = true"
         >
           이체하기
         </button>
         <RouterLink
-          class="mt-3 flex h-11 w-[124px] items-center justify-center gap-2 rounded-[14px] bg-white text-[length:var(--font-size-sm)] font-extrabold text-[var(--color-selected-text)]"
+          class="child-balance-button child-balance-button--allowance"
           to="/child/allowance"
         >
-          <img class="size-6 object-contain" :src="allowanceIconUrl" alt="" aria-hidden="true" />
+          <img
+            class="child-allowance-icon"
+            :src="allowanceIconUrl"
+            alt=""
+            aria-hidden="true"
+          />
           용돈 조르기
         </RouterLink>
       </div>
@@ -127,7 +141,9 @@ const submitTransfer = () => {
 
     <section class="mt-8">
       <div class="mb-4 flex items-center justify-between">
-        <h1 class="m-0 text-[length:var(--font-size-lg)] font-extrabold text-[var(--color-text-primary)]">
+        <h1
+          class="m-0 text-[length:var(--font-size-lg)] font-extrabold text-[var(--color-text-primary)]"
+        >
           최근 돈 기록
         </h1>
         <RouterLink
@@ -139,7 +155,9 @@ const submitTransfer = () => {
         </RouterLink>
       </div>
 
-      <div class="overflow-hidden rounded-[24px] bg-white shadow-[0_14px_32px_rgb(110_122_138_/_10%)]">
+      <div
+        class="overflow-hidden rounded-[24px] bg-white shadow-[0_14px_32px_rgb(110_122_138_/_10%)]"
+      >
         <article
           v-for="transaction in recentTransactions"
           :key="transaction.id"
@@ -151,7 +169,9 @@ const submitTransfer = () => {
             aria-hidden="true"
           />
           <div class="min-w-0">
-            <strong class="block truncate text-[length:var(--font-size-sm)] text-[var(--color-text-primary)]">
+            <strong
+              class="block truncate text-[length:var(--font-size-sm)] text-[var(--color-text-primary)]"
+            >
               {{ transaction.title }}
             </strong>
             <span class="text-[length:var(--font-size-xs)] text-[var(--color-text-secondary)]">
@@ -160,7 +180,11 @@ const submitTransfer = () => {
           </div>
           <strong
             class="text-[length:var(--font-size-sm)]"
-            :class="transaction.type === 'income' ? 'text-[var(--color-selected-text)]' : 'text-[var(--color-text-primary)]'"
+            :class="
+              transaction.type === 'income'
+                ? 'text-[var(--color-selected-text)]'
+                : 'text-[var(--color-text-primary)]'
+            "
           >
             {{ formatSignedCurrency(transaction) }}
           </strong>
@@ -169,25 +193,32 @@ const submitTransfer = () => {
     </section>
 
     <section
-      class="relative mt-4 overflow-hidden rounded-[24px] bg-white px-5 py-5 shadow-[0_14px_32px_rgb(110_122_138_/_10%)]"
+      class="relative mt-4 min-h-[158px] overflow-hidden rounded-[24px] bg-white px-6 py-6 shadow-[0_14px_32px_rgb(110_122_138_/_10%)]"
     >
-      <div class="relative z-[1]">
-        <h2 class="m-0 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]">
+      <div class="relative z-[1] max-w-[188px]">
+        <h2
+          class="m-0 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
+        >
           필요한 게 있나요?
         </h2>
         <p class="mt-2 mb-4 text-[length:var(--font-size-sm)] text-[var(--color-text-secondary)]">
           부모님께 용돈을 요청해보세요!
         </p>
         <RouterLink
-          class="inline-flex h-10 items-center gap-2 rounded-[12px] bg-[var(--color-selected-background)] px-4 text-[length:var(--font-size-sm)] font-extrabold text-[var(--color-selected-text)]"
+          class="child-request-button"
           to="/child/allowance"
         >
-          <img class="size-6 object-contain" :src="allowanceIconUrl" alt="" aria-hidden="true" />
+          <img
+            class="child-allowance-icon"
+            :src="allowanceIconUrl"
+            alt=""
+            aria-hidden="true"
+          />
           용돈 조르기
         </RouterLink>
       </div>
       <img
-        class="pointer-events-none absolute right-4 bottom-3 w-[92px] select-none object-contain"
+        class="pointer-events-none absolute right-3 bottom-4 w-[166px] select-none object-contain"
         :src="allowanceCardPigUrl"
         alt=""
         aria-hidden="true"
@@ -207,7 +238,10 @@ const submitTransfer = () => {
           aria-labelledby="transfer-sheet-title"
         >
           <div class="mb-4 flex items-center justify-between">
-            <h2 id="transfer-sheet-title" class="m-0 text-[length:var(--font-size-lg)] font-extrabold">
+            <h2
+              id="transfer-sheet-title"
+              class="m-0 text-[length:var(--font-size-lg)] font-extrabold"
+            >
               이체하기
             </h2>
             <button
@@ -248,7 +282,9 @@ const submitTransfer = () => {
                 class="h-12 rounded-[12px] border border-[var(--color-border)] px-4 text-[length:var(--font-size-xl)] font-extrabold outline-none focus:border-[var(--color-brand-primary)]"
                 type="number"
               />
-              <span class="text-[length:var(--font-size-xs)] font-normal text-[var(--color-text-secondary)]">
+              <span
+                class="text-[length:var(--font-size-xs)] font-normal text-[var(--color-text-secondary)]"
+              >
                 내 잔액 {{ formatCurrency(transferDefaults.balance) }}
               </span>
             </label>
@@ -280,7 +316,11 @@ const submitTransfer = () => {
               :aria-disabled="!canSubmitTransfer"
               @click="submitTransfer"
             >
-              {{ canSubmitTransfer ? `${formatCurrency(transferAmountValue)} 보내기` : '입력 내용을 확인해주세요' }}
+              {{
+                canSubmitTransfer
+                  ? `${formatCurrency(transferAmountValue)} 보내기`
+                  : '입력 내용을 확인해주세요'
+              }}
             </button>
           </div>
         </section>
@@ -293,7 +333,9 @@ const submitTransfer = () => {
         aria-modal="true"
         aria-labelledby="transfer-complete-title"
       >
-        <section class="w-full max-w-[320px] rounded-[24px] bg-white px-6 py-7 text-center shadow-[0_18px_44px_rgb(51_51_51_/_20%)]">
+        <section
+          class="w-full max-w-[320px] rounded-[24px] bg-white px-6 py-7 text-center shadow-[0_18px_44px_rgb(51_51_51_/_20%)]"
+        >
           <div
             class="mx-auto grid size-16 place-items-center rounded-full bg-[var(--color-selected-background)] text-[28px]"
             aria-hidden="true"
@@ -321,3 +363,67 @@ const submitTransfer = () => {
     </Teleport>
   </main>
 </template>
+
+<style scoped>
+.child-balance-button {
+  --button-width: 150px;
+  --button-height: 48px;
+  --button-gap: 4px;
+  --icon-width: 38px;
+  --icon-height: 26px;
+
+  display: inline-flex;
+  width: var(--button-width);
+  height: var(--button-height);
+  align-items: center;
+  justify-content: center;
+  gap: var(--button-gap);
+  border: 0;
+  border-radius: 14px;
+  padding: 0 12px;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.child-balance-button--primary {
+  margin-top: 24px;
+  background: var(--color-brand-primary);
+  color: #fff;
+}
+
+.child-balance-button--allowance {
+  margin-top: 12px;
+  background: #fff;
+  color: var(--color-selected-text);
+}
+
+.child-request-button {
+  --button-width: 150px;
+  --button-height: 44px;
+  --button-gap: 4px;
+  --icon-width: 38px;
+  --icon-height: 26px;
+
+  display: inline-flex;
+  width: var(--button-width);
+  height: var(--button-height);
+  align-items: center;
+  justify-content: center;
+  gap: var(--button-gap);
+  border-radius: 12px;
+  padding: 0 12px;
+  background: var(--color-selected-background);
+  color: var(--color-selected-text);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.child-allowance-icon {
+  width: var(--icon-width);
+  height: var(--icon-height);
+  flex-shrink: 0;
+  object-fit: contain;
+}
+</style>
