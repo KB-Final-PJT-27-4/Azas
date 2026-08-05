@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Landmark } from 'lucide-vue-next'
+import { Check, ChevronDown, Funnel, Landmark } from 'lucide-vue-next'
 
 import cloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
 import AssetTransferResultSheet from '@/components/assets/AssetTransferResultSheet.vue'
@@ -9,6 +9,8 @@ import { assetGoals, assetSummary, assetTransactions } from '@/data/assetDummyDa
 
 const activeGoalIndex = ref(0)
 const activeAccountId = ref<number | null>(null)
+const isTransferFilterOpen = ref(false)
+const transferFilterRoot = ref<HTMLElement | null>(null)
 const isTransferSheetOpen = ref(false)
 const transferResult = ref<'success' | 'failure' | null>(null)
 const activeGoal = computed(() => assetGoals[activeGoalIndex.value]!)
@@ -19,6 +21,10 @@ const filteredTransactions = computed(() =>
       (activeAccountId.value === null || accountId === activeAccountId.value),
   ),
 )
+const activeAccountFilterLabel = computed(
+  () =>
+    activeGoal.value.accounts.find(({ id }) => id === activeAccountId.value)?.name ?? '전체 계좌',
+)
 
 const percentage = (current: number, target: number) =>
   target === 0 ? 0 : Math.min((current / target) * 100, 100)
@@ -28,10 +34,19 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const selectGoal = (index: number) => {
   activeGoalIndex.value = index
   activeAccountId.value = null
+  isTransferFilterOpen.value = false
 }
 
-const toggleAccount = (accountId: number) => {
-  activeAccountId.value = activeAccountId.value === accountId ? null : accountId
+const selectAccountFilter = (accountId: number | null) => {
+  activeAccountId.value = accountId
+  isTransferFilterOpen.value = false
+}
+
+const closeTransferFilterOnFocusOut = (event: FocusEvent) => {
+  const nextTarget = event.relatedTarget as Node | null
+  if (!nextTarget || !transferFilterRoot.value?.contains(nextTarget)) {
+    isTransferFilterOpen.value = false
+  }
 }
 
 const completeTransfer = ({ success }: { success: boolean }) => {
@@ -47,8 +62,11 @@ const retryTransfer = () => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[#eef9ff] bg-cover bg-top bg-no-repeat px-[18px] pt-[18px] pb-6 text-[var(--color-text-primary)]"
-    :style="{ backgroundImage: `url(${cloudBackground})` }"
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[#eef9ff] bg-top bg-no-repeat px-[18px] pt-[18px] pb-6 text-[var(--color-text-primary)]"
+    :style="{
+      backgroundImage: `url(${cloudBackground})`,
+      backgroundSize: 'auto 100dvh',
+    }"
   >
     <section class="flex items-start justify-between gap-4">
       <div>
@@ -58,7 +76,7 @@ const retryTransfer = () => {
         </p>
       </div>
       <button
-        class="grid size-[42px] shrink-0 place-items-center rounded-full bg-[#2babe8] text-[12px] font-bold text-white shadow-sm active:bg-[#159bd8]"
+        class="asset-transfer-button fixed z-40 grid size-[42px] place-items-center rounded-full bg-[#2babe8] text-[12px] font-bold text-white shadow-sm active:bg-[#159bd8]"
         type="button"
         @click="isTransferSheetOpen = true"
       >
@@ -126,13 +144,7 @@ const retryTransfer = () => {
             :key="account.id"
             class="[&+&]:border-t [&+&]:border-[#dce8ee]"
           >
-            <button
-              class="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors"
-              :class="activeAccountId === account.id ? 'bg-[#effaff]' : 'bg-white active:bg-[#f6f9fb]'"
-              type="button"
-              :aria-pressed="activeAccountId === account.id"
-              @click="toggleAccount(account.id)"
-            >
+            <div class="flex w-full items-center gap-2.5 bg-white px-3 py-2 text-left">
               <span
                 class="grid size-6 shrink-0 place-items-center rounded-full border border-[#ffad20] text-[#ff9f00]"
                 aria-hidden="true"
@@ -144,7 +156,7 @@ const retryTransfer = () => {
                 <strong class="block truncate text-[14px]">{{ account.accountNumber }}</strong>
               </span>
               <strong class="shrink-0 text-[12px] text-[#20a8eb]">{{ formatWon(account.balance) }}</strong>
-            </button>
+            </div>
           </li>
         </ul>
         <p v-else class="m-0 rounded-xl bg-[#f6f9fb] px-4 py-5 text-center text-sm text-[#8c98a7]">
@@ -167,7 +179,78 @@ const retryTransfer = () => {
     </section>
 
     <section class="mt-[18px]">
-      <h2 class="m-0 text-[18px] font-extrabold">최근 이체 내역</h2>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="m-0 text-[18px] font-extrabold">최근 이체 내역</h2>
+        <div
+          ref="transferFilterRoot"
+          class="relative"
+          @focusout="closeTransferFilterOnFocusOut"
+        >
+          <button
+            class="flex h-8 max-w-[145px] items-center gap-1.5 rounded-full border border-[#dce8ee] bg-white px-3 text-[11px] font-bold text-[var(--color-text-secondary)] shadow-sm active:bg-[#f6f9fb]"
+            type="button"
+            aria-label="이체 내역 계좌 필터"
+            :aria-expanded="isTransferFilterOpen"
+            aria-haspopup="listbox"
+            @click="isTransferFilterOpen = !isTransferFilterOpen"
+          >
+            <Funnel :size="13" :stroke-width="2.2" class="shrink-0" />
+            <span class="truncate">{{ activeAccountFilterLabel }}</span>
+            <ChevronDown
+              :size="13"
+              class="shrink-0 transition-transform"
+              :class="isTransferFilterOpen ? 'rotate-180' : ''"
+            />
+          </button>
+
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="-translate-y-1 opacity-0"
+            leave-active-class="transition duration-100 ease-in"
+            leave-to-class="-translate-y-1 opacity-0"
+          >
+            <ul
+              v-if="isTransferFilterOpen"
+              class="absolute top-[calc(100%+6px)] right-0 z-20 m-0 w-44 list-none rounded-[12px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_25px_rgba(45,77,94,0.16)]"
+              role="listbox"
+              aria-label="이체 내역 계좌 선택"
+            >
+              <li role="option" :aria-selected="activeAccountId === null">
+                <button
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[12px] font-bold"
+                  :class="activeAccountId === null ? 'bg-[#effaff] text-[#20a8eb]' : 'active:bg-[#f6f9fb]'"
+                  type="button"
+                  @click="selectAccountFilter(null)"
+                >
+                  전체 계좌
+                  <Check v-if="activeAccountId === null" :size="14" :stroke-width="2.7" />
+                </button>
+              </li>
+              <li
+                v-for="account in activeGoal.accounts"
+                :key="account.id"
+                role="option"
+                :aria-selected="activeAccountId === account.id"
+              >
+                <button
+                  class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-[12px] font-bold"
+                  :class="activeAccountId === account.id ? 'bg-[#effaff] text-[#20a8eb]' : 'active:bg-[#f6f9fb]'"
+                  type="button"
+                  @click="selectAccountFilter(account.id)"
+                >
+                  <span class="truncate">{{ account.name }}</span>
+                  <Check
+                    v-if="activeAccountId === account.id"
+                    :size="14"
+                    :stroke-width="2.7"
+                    class="shrink-0"
+                  />
+                </button>
+              </li>
+            </ul>
+          </Transition>
+        </div>
+      </div>
       <ul class="mt-[18px] mb-0 grid list-none gap-2.5 p-0">
         <li v-for="transaction in filteredTransactions" :key="transaction.id">
           <RouterLink
@@ -213,3 +296,10 @@ const retryTransfer = () => {
     />
   </main>
 </template>
+
+<style scoped>
+.asset-transfer-button {
+  top: calc(var(--app-header-height) + env(safe-area-inset-top) + 18px);
+  right: max(18px, calc((100vw - var(--app-max-width)) / 2 + 18px));
+}
+</style>
