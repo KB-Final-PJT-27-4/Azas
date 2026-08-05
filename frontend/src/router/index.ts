@@ -249,7 +249,13 @@ const routes: RouteRecordRaw[] = [
     path: '/products',
     name: 'Products',
     component: () => import('@/views/products/ProductsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '금융상품 추천',
+      showHeaderBack: true,
+      notificationCount: 3,
+    },
   },
   {
     path: '/products/:productId',
