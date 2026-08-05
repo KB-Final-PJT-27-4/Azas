@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Check, ChevronDown, Funnel, Landmark } from 'lucide-vue-next'
 
 import cloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
@@ -15,6 +15,9 @@ const swipeStart = ref({ x: 0, y: 0 })
 const goalSlideDirection = ref<'left' | 'right'>('left')
 const isTransferSheetOpen = ref(false)
 const transferResult = ref<'success' | 'failure' | null>(null)
+const isAnyTransferSheetOpen = computed(
+  () => isTransferSheetOpen.value || transferResult.value !== null,
+)
 const activeGoal = computed(() => assetGoals[activeGoalIndex.value]!)
 const filteredTransactions = computed(() =>
   assetTransactions.filter(
@@ -27,6 +30,22 @@ const activeAccountFilterLabel = computed(
   () =>
     activeGoal.value.accounts.find(({ id }) => id === activeAccountId.value)?.name ?? '전체 계좌',
 )
+
+let previousBodyOverflow = ''
+
+watch(isAnyTransferSheetOpen, (isOpen) => {
+  if (isOpen) {
+    previousBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return
+  }
+
+  document.body.style.overflow = previousBodyOverflow
+})
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = previousBodyOverflow
+})
 
 const percentage = (current: number, target: number) =>
   target === 0 ? 0 : Math.min((current / target) * 100, 100)
