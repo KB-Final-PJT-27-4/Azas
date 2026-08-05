@@ -1,11 +1,10 @@
 package com.azas.domain.auth.controller;
 
-import com.azas.domain.auth.dto.AuthTokenPair;
-import com.azas.domain.auth.dto.ChildInviteOAuthResult;
-import com.azas.domain.auth.dto.OAuthLoginRequest;
-import com.azas.domain.auth.dto.OAuthLoginResult;
+import com.azas.domain.auth.dto.*;
 import com.azas.domain.auth.service.ChildInviteOAuthService;
 import com.azas.domain.auth.service.OAuthLoginService;
+import com.azas.domain.auth.service.ParentInviteOAuthService;
+import com.azas.domain.child.entity.RelationType;
 import com.azas.domain.member.entity.Member;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
@@ -53,6 +52,9 @@ class OAuthControllerTest {
 
     @Mock
     private ChildInviteOAuthService childInviteOAuthService;
+
+    @Mock
+    private ParentInviteOAuthService parentInviteOAuthService;
 
     @InjectMocks
     private OAuthController oauthController;
@@ -505,6 +507,252 @@ class OAuthControllerTest {
     }
 
     private static Stream<Arguments> childInviteFailures() {
+        return Stream.of(
+                Arguments.of(
+                        ErrorCode.INVALID_FAMILY_INVITATION
+                ),
+                Arguments.of(
+                        ErrorCode.FAMILY_MEMBER_ALREADY_LINKED
+                ),
+                Arguments.of(
+                        ErrorCode.MEMBER_TYPE_CONFLICT
+                )
+        );
+    }
+
+    @Test
+    void returnsParentInviteOAuthResponseForValidRequest()
+            throws Exception {
+        Member member = Member.createParent(
+                "parent@example.com",
+                "김부모",
+                null
+        );
+
+        ReflectionTestUtils.setField(
+                member,
+                "memberId",
+                40L
+        );
+        ReflectionTestUtils.setField(
+                member,
+                "createdAt",
+                LocalDateTime.of(2026, 8, 5, 2, 0)
+        );
+
+        ParentInviteOAuthResult result =
+                new ParentInviteOAuthResult(
+                        new AuthTokenPair(
+                                "parent-access-token",
+                                "parent-refresh-token",
+                                3600L
+                        ),
+                        member,
+                        true,
+                        10L,
+                        "김자녀",
+                        RelationType.GUARDIAN,
+                        50L,
+                        LocalDateTime.of(
+                                2026,
+                                8,
+                                5,
+                                3,
+                                0
+                        )
+                );
+
+        when(
+                parentInviteOAuthService.login(
+                        "google",
+                        "oauth-code",
+                        "http://localhost:5173/auth/google/parent-invite/callback",
+                        "raw-parent-invite-token",
+                        RelationType.GUARDIAN
+                )
+        ).thenReturn(result);
+
+        mockMvc.perform(
+                        post(
+                                "/api/v1/auth/oauth/google/parent-invite"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                    {
+                                      "authorization_code": "oauth-code",
+                                      "redirect_uri": "http://localhost:5173/auth/google/parent-invite/callback",
+                                      "invite_token": "raw-parent-invite-token",
+                                      "relation_type": "GUARDIAN"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.access_token")
+                                .value("parent-access-token")
+                )
+                .andExpect(
+                        jsonPath("$.refresh_token")
+                                .value("parent-refresh-token")
+                )
+                .andExpect(
+                        jsonPath("$.token_type")
+                                .value("Bearer")
+                )
+                .andExpect(
+                        jsonPath("$.is_new_member")
+                                .value(true)
+                )
+                .andExpect(
+                        jsonPath("$.member.member_id")
+                                .value(40)
+                )
+                .andExpect(
+                        jsonPath("$.member.member_type")
+                                .value("PARENT")
+                )
+                .andExpect(
+                        jsonPath("$.child.child_id")
+                                .value(10)
+                )
+                .andExpect(
+                        jsonPath("$.child.relation_type")
+                                .value("GUARDIAN")
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.invitation.family_invitation_id"
+                        ).value(50)
+                )
+                .andExpect(
+                        jsonPath("$.invitation.invitee_type")
+                                .value("PARENT")
+                )
+                .andExpect(
+                        jsonPath("$.invitation.status")
+                                .value("ACCEPTED")
+                )
+                .andExpect(
+                        jsonPath("$.invitation.accepted_at")
+                                .value("2026-08-05T03:00:00Z")
+                );
+
+        verify(parentInviteOAuthService)
+                .login(
+                        "google",
+                        "oauth-code",
+                        "http://localhost:5173/auth/google/parent-invite/callback",
+                        "raw-parent-invite-token",
+                        RelationType.GUARDIAN
+                );
+    }
+
+    @Test
+    void returnsBadRequestWhenParentRelationTypeIsMissing()
+            throws Exception {
+        mockMvc.perform(
+                        post(
+                                "/api/v1/auth/oauth/google/parent-invite"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                    {
+                                      "authorization_code": "oauth-code",
+                                      "redirect_uri": "http://localhost:5173/auth/google/parent-invite/callback",
+                                      "invite_token": "raw-parent-invite-token"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.error.code")
+                                .value("BADREQUEST")
+                );
+
+        verifyNoInteractions(parentInviteOAuthService);
+    }
+
+    @Test
+    void returnsBadRequestForInvalidParentRelationType()
+            throws Exception {
+        mockMvc.perform(
+                        post(
+                                "/api/v1/auth/oauth/google/parent-invite"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                    {
+                                      "authorization_code": "oauth-code",
+                                      "redirect_uri": "http://localhost:5173/auth/google/parent-invite/callback",
+                                      "invite_token": "raw-parent-invite-token",
+                                      "relation_type": "SIBLING"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.error.code")
+                                .value("BADREQUEST")
+                );
+
+        verifyNoInteractions(parentInviteOAuthService);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parentInviteFailures")
+    void returnsExpectedErrorForParentInviteFailure(
+            ErrorCode errorCode
+    ) throws Exception {
+        when(
+                parentInviteOAuthService.login(
+                        "google",
+                        "oauth-code",
+                        "http://localhost:5173/auth/google/parent-invite/callback",
+                        "raw-parent-invite-token",
+                        RelationType.GUARDIAN
+                )
+        ).thenThrow(
+                new BusinessException(errorCode)
+        );
+
+        mockMvc.perform(
+                        post(
+                                "/api/v1/auth/oauth/google/parent-invite"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                    {
+                                      "authorization_code": "oauth-code",
+                                      "redirect_uri": "http://localhost:5173/auth/google/parent-invite/callback",
+                                      "invite_token": "raw-parent-invite-token",
+                                      "relation_type": "GUARDIAN"
+                                    }
+                                    """)
+                )
+                .andExpect(
+                        status().is(
+                                errorCode.getHttpStatus().value()
+                        )
+                )
+                .andExpect(
+                        jsonPath("$.error.code")
+                                .value(errorCode.name())
+                )
+                .andExpect(
+                        jsonPath("$.error.message")
+                                .value(errorCode.getMessage())
+                );
+    }
+
+    private static Stream<Arguments> parentInviteFailures() {
         return Stream.of(
                 Arguments.of(
                         ErrorCode.INVALID_FAMILY_INVITATION
