@@ -6,6 +6,7 @@ import com.azas.domain.auth.entity.SocialAccount;
 import com.azas.domain.auth.mapper.SocialAccountMapper;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.entity.MemberStatus;
+import com.azas.domain.member.entity.MemberType;
 import com.azas.domain.member.mapper.MemberMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
@@ -65,9 +66,70 @@ public class OAuthMemberService {
         memberMapper.insert(newMember);
 
         Member savedMember =
-                findActiveMember(
-                        newMember.getMemberId()
+                findActiveMember(newMember.getMemberId());
+
+        linkSocialAccount(
+                savedMember.getMemberId(),
+                profile
+        );
+
+        return new OAuthMemberResult(
+                savedMember,
+                true
+        );
+    }
+
+    @Transactional
+    public OAuthMemberResult findOrCreateChild(
+            OAuthProfile profile
+    ) {
+        SocialAccount socialAccount =
+                socialAccountMapper.findByProviderAndSubject(
+                        profile.getProvider(),
+                        profile.getProviderSubject()
                 );
+
+        if (socialAccount != null) {
+            Member member = findActiveMember(
+                    socialAccount.getMemberId()
+            );
+
+            validateChildMember(member);
+
+            return new OAuthMemberResult(
+                    member,
+                    false
+            );
+        }
+
+        Member member =
+                memberMapper.findByEmail(profile.getEmail());
+
+        if (member != null) {
+            validateActive(member);
+            validateChildMember(member);
+
+            linkSocialAccount(
+                    member.getMemberId(),
+                    profile
+            );
+
+            return new OAuthMemberResult(
+                    member,
+                    false
+            );
+        }
+
+        Member newMember = Member.createChild(
+                profile.getEmail(),
+                profile.getName(),
+                profile.getProfileImageUrl()
+        );
+
+        memberMapper.insert(newMember);
+
+        Member savedMember =
+                findActiveMember(newMember.getMemberId());
 
         linkSocialAccount(
                 savedMember.getMemberId(),
@@ -97,6 +159,14 @@ public class OAuthMemberService {
         if (member.getStatus() == MemberStatus.WITHDRAWN) {
             throw new BusinessException(
                     ErrorCode.WITHDRAWN_MEMBER
+            );
+        }
+    }
+
+    private void validateChildMember(Member member) {
+        if (member.getMemberType() != MemberType.CHILD) {
+            throw new BusinessException(
+                    ErrorCode.MEMBER_TYPE_CONFLICT
             );
         }
     }

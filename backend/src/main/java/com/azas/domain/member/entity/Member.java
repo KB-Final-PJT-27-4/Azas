@@ -36,4 +36,18 @@ public class Member {
         member.status = MemberStatus.ACTIVE;
         return member;
     }
+
+    public static Member createChild(
+            String email,
+            String name,
+            String profileImageUrl
+    ) {
+        Member member = new Member();
+        member.email = email;
+        member.name = name;
+        member.profileImageUrl = profileImageUrl;
+        member.memberType = MemberType.CHILD;
+        member.status = MemberStatus.ACTIVE;
+        return member;
+    }
 }

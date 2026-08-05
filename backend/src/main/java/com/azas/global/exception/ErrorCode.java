@@ -47,6 +47,18 @@ public enum ErrorCode {
             HttpStatus.UNAUTHORIZED,
             "Access Token이 유효하지 않거나 만료되었습니다."
     ),
+    INVALID_FAMILY_INVITATION(
+            HttpStatus.BAD_REQUEST,
+            "유효하지 않거나 사용할 수 없는 가족 초대입니다."
+    ),
+    FAMILY_MEMBER_ALREADY_LINKED(
+            HttpStatus.CONFLICT,
+            "이미 다른 회원 또는 자녀 정보와 연결되어 있습니다."
+    ),
+    MEMBER_TYPE_CONFLICT(
+            HttpStatus.CONFLICT,
+            "초대 유형과 회원 유형이 일치하지 않습니다."
+    ),
 
     // Finance
     FINANCIAL_ACCOUNT_NOT_FOUND(
