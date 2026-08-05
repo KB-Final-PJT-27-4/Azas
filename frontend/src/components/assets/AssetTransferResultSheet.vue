@@ -23,12 +23,13 @@ const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="open"
-      class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
-      role="presentation"
-      @click.self="emit('close')"
-    >
+    <Transition name="asset-result-sheet">
+      <div
+        v-if="open"
+        class="asset-result-sheet-overlay fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
+        role="presentation"
+        @click.self="emit('close')"
+      >
       <section
         class="relative flex h-[min(655px,calc(100dvh-120px))] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[20px] bg-white px-6 pt-5 pb-[calc(var(--app-bottom-nav-height)+18px)] text-[var(--color-text-primary)]"
         role="dialog"
@@ -115,6 +116,32 @@ const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
 
         <AppBottomNavigation />
       </section>
-    </div>
+      </div>
+    </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.asset-result-sheet-overlay {
+  transition: background-color 260ms ease;
+}
+
+.asset-result-sheet-overlay > section {
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.asset-result-sheet-enter-from,
+.asset-result-sheet-leave-to {
+  background-color: transparent;
+}
+
+.asset-result-sheet-enter-from > section,
+.asset-result-sheet-leave-to > section {
+  transform: translateY(100%);
+}
+
+.asset-result-sheet-leave-active > section {
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  transition-duration: 240ms;
+}
+</style>

@@ -99,12 +99,13 @@ const submitTransfer = () => {
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="open"
-      class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
-      role="presentation"
-      @click.self="emit('close')"
-    >
+    <Transition name="asset-sheet">
+      <div
+        v-if="open"
+        class="asset-sheet-overlay fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
+        role="presentation"
+        @click.self="emit('close')"
+      >
       <section
         class="flex max-h-[calc(100dvh-120px)] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[20px] bg-white text-[var(--color-text-primary)]"
         role="dialog"
@@ -218,6 +219,32 @@ const submitTransfer = () => {
 
         <AppBottomNavigation />
       </section>
-    </div>
+      </div>
+    </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.asset-sheet-overlay {
+  transition: background-color 260ms ease;
+}
+
+.asset-sheet-overlay > section {
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.asset-sheet-enter-from,
+.asset-sheet-leave-to {
+  background-color: transparent;
+}
+
+.asset-sheet-enter-from > section,
+.asset-sheet-leave-to > section {
+  transform: translateY(100%);
+}
+
+.asset-sheet-leave-active > section {
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  transition-duration: 240ms;
+}
+</style>
