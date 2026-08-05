@@ -3,10 +3,12 @@ import { computed, ref } from 'vue'
 import { Landmark } from 'lucide-vue-next'
 
 import cloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
+import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
 import { assetGoals, assetSummary, assetTransactions } from '@/data/assetDummyData'
 
 const activeGoalIndex = ref(0)
 const activeAccountId = ref<number | null>(null)
+const isTransferSheetOpen = ref(false)
 const activeGoal = computed(() => assetGoals[activeGoalIndex.value]!)
 const filteredTransactions = computed(() =>
   assetTransactions.filter(
@@ -29,6 +31,10 @@ const selectGoal = (index: number) => {
 const toggleAccount = (accountId: number) => {
   activeAccountId.value = activeAccountId.value === accountId ? null : accountId
 }
+
+const completeTransfer = () => {
+  isTransferSheetOpen.value = false
+}
 </script>
 
 <template>
@@ -46,6 +52,7 @@ const toggleAccount = (accountId: number) => {
       <button
         class="grid size-[42px] shrink-0 place-items-center rounded-full bg-[#2babe8] text-[12px] font-bold text-white shadow-sm active:bg-[#159bd8]"
         type="button"
+        @click="isTransferSheetOpen = true"
       >
         이체
       </button>
@@ -181,5 +188,13 @@ const toggleAccount = (accountId: number) => {
         </li>
       </ul>
     </section>
+
+    <AssetTransferSheet
+      :open="isTransferSheetOpen"
+      :target-account-name="activeGoal.accounts[0]?.name"
+      :target-account-number="activeGoal.accounts[0]?.accountNumber"
+      @close="isTransferSheetOpen = false"
+      @transfer="completeTransfer"
+    />
   </main>
 </template>

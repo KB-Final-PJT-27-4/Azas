@@ -1,0 +1,194 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { X } from 'lucide-vue-next'
+
+import AssetAccountSelect from '@/components/assets/AssetAccountSelect.vue'
+import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
+
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    targetAccountName?: string
+    targetAccountNumber?: string
+  }>(),
+  {
+    targetAccountName: 'KB 아이사랑적금',
+    targetAccountNumber: '123-456-789',
+  },
+)
+
+const emit = defineEmits<{
+  close: []
+  transfer: [payload: { amount: number; memo: string }]
+}>()
+
+const amount = ref(0)
+const memo = ref('')
+const sourceAccountId = ref('kb-789')
+const targetAccountId = ref('goal-primary')
+const quickAmounts = [10000, 50000, 100000, 500000]
+
+const sourceAccounts = [
+  { id: 'kb-789', name: 'KB국민은행', number: '123-456-789', balance: 9600000 },
+  { id: 'woori-222', name: '우리은행', number: '1002-111-222222', balance: 7200000 },
+  { id: 'shinhan-789', name: '신한은행', number: '110-123-456789', balance: 4850000 },
+]
+
+const targetAccounts = computed(() => [
+  {
+    id: 'goal-primary',
+    name: props.targetAccountName,
+    number: props.targetAccountNumber,
+  },
+  { id: 'goal-secondary', name: 'KB 아이사랑적금 2', number: '952-17362605-44' },
+  { id: 'dream', name: '신한 꿈나무적금', number: '110-456-789012' },
+])
+
+const formattedAmount = computed(() => `${amount.value.toLocaleString('ko-KR')}원`)
+
+watch(
+  () => props.open,
+  (open) => {
+    if (!open) return
+    amount.value = 0
+    memo.value = ''
+    sourceAccountId.value = 'kb-789'
+    targetAccountId.value = 'goal-primary'
+  },
+)
+
+const updateAmount = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const digits = input.value.replace(/\D/g, '')
+  amount.value = digits ? Number(digits) : 0
+  input.value = amount.value ? `${amount.value.toLocaleString('ko-KR')}원` : ''
+}
+
+const addAmount = (value: number) => {
+  amount.value += value
+}
+
+const clearAmount = () => {
+  amount.value = 0
+}
+
+const submitTransfer = () => {
+  if (amount.value <= 0) return
+  emit('transfer', { amount: amount.value, memo: memo.value.trim() })
+}
+</script>
+
+<template>
+  <Teleport to="body">
+    <div
+      v-if="open"
+      class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
+      role="presentation"
+      @click.self="emit('close')"
+    >
+      <section
+        class="flex max-h-[calc(100dvh-120px)] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[20px] bg-white text-[var(--color-text-primary)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="asset-transfer-title"
+      >
+        <div class="min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-[calc(var(--app-bottom-nav-height)+18px)]">
+          <header class="flex items-center justify-between">
+            <h2 id="asset-transfer-title" class="m-0 text-[20px] font-extrabold">이체하기</h2>
+            <button
+              class="grid size-8 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[var(--color-unselected-background)]"
+              type="button"
+              aria-label="이체 창 닫기"
+              @click="emit('close')"
+            >
+              <X :size="19" :stroke-width="2.5" />
+            </button>
+          </header>
+
+          <form class="mt-5" @submit.prevent="submitTransfer">
+            <label class="block text-[12px] font-bold">
+              출금 계좌 <span class="text-[#f04444]">*</span>
+            </label>
+            <AssetAccountSelect
+              v-model="sourceAccountId"
+              class="mt-2"
+              :options="sourceAccounts"
+              label="출금 계좌 선택"
+              show-balance
+            />
+
+            <label class="mt-4 block text-[12px] font-bold">
+              받는 계좌 <span class="text-[#f04444]">*</span>
+            </label>
+            <AssetAccountSelect
+              v-model="targetAccountId"
+              class="mt-2"
+              :options="targetAccounts"
+              label="받는 계좌 선택"
+            />
+
+            <label for="transfer-amount" class="mt-4 block text-[12px] font-bold">
+              이체 금액 <span class="text-[#f04444]">*</span>
+            </label>
+            <div class="relative mt-2">
+              <input
+                id="transfer-amount"
+                :value="formattedAmount"
+                class="h-10 w-full rounded-[12px] border border-[#dce8ee] pr-10 pl-3 text-[15px] outline-none focus:border-[var(--color-brand-primary)]"
+                type="text"
+                inputmode="numeric"
+                @input="updateAmount"
+              />
+              <button
+                v-if="amount > 0"
+                class="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-full text-[#9aa6b2] active:bg-[#eef3f6]"
+                type="button"
+                aria-label="이체 금액 지우기"
+                @click="clearAmount"
+              >
+                <X :size="16" :stroke-width="2.5" />
+              </button>
+            </div>
+            <div class="mt-2.5 grid grid-cols-4 gap-2">
+              <button
+                v-for="quickAmount in quickAmounts"
+                :key="quickAmount"
+                class="h-[22px] rounded-full bg-[#e6eef3] text-[10px] text-[var(--color-text-secondary)] active:bg-[#d7e4eb]"
+                type="button"
+                @click="addAmount(quickAmount)"
+              >
+                +{{ quickAmount / 10000 }}만
+              </button>
+            </div>
+
+            <label for="transfer-memo" class="mt-4 block text-[12px] font-bold">메모</label>
+            <div class="relative mt-2">
+              <textarea
+                id="transfer-memo"
+                v-model="memo"
+                class="block h-[114px] w-full resize-none rounded-[12px] border border-[#dce8ee] px-3 pt-2.5 pb-7 text-[13px] leading-[1.35] outline-none focus:border-[var(--color-brand-primary)]"
+                maxlength="50"
+                placeholder="메모를 입력해 주세요."
+              ></textarea>
+              <span
+                class="pointer-events-none absolute right-3 bottom-2 text-[10px] tabular-nums text-[var(--color-text-secondary)]"
+              >
+                {{ memo.length }}/50
+              </span>
+            </div>
+
+            <button
+              class="mt-5 h-12 w-full rounded-[13px] bg-[var(--color-brand-primary)] text-[15px] font-extrabold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:bg-[#cbd8df]"
+              type="submit"
+              :disabled="amount <= 0"
+            >
+              이체하기
+            </button>
+          </form>
+        </div>
+
+        <AppBottomNavigation />
+      </section>
+    </div>
+  </Teleport>
+</template>
