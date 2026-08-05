@@ -15,6 +15,7 @@ withDefaults(
     profileEmoji?: string
     showBack?: boolean
     showNotification?: boolean
+    notificationCount?: number
   }>(),
   {
     title: '깨비',
@@ -24,6 +25,7 @@ withDefaults(
     profileEmoji: '👶',
     showBack: false,
     showNotification: true,
+    notificationCount: 0,
   },
 )
 
@@ -76,11 +78,17 @@ const goBack = () => {
 
       <button
         v-if="showNotification"
-        class="grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
+        class="relative grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
         type="button"
         aria-label="알림 보기"
       >
         <Bell :size="28" :stroke-width="2.5" />
+        <span
+          v-if="notificationCount > 0"
+          class="absolute top-1 right-0 grid size-[18px] place-items-center rounded-full bg-[#f04c5d] text-[10px] font-bold text-white"
+        >
+          {{ notificationCount > 9 ? '9+' : notificationCount }}
+        </span>
       </button>
       <div v-else class="size-11 flex-[0_0_44px]" aria-hidden="true" />
     </div>
