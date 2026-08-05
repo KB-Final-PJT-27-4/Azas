@@ -13,6 +13,7 @@ import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
 import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
+import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMediaType;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMedia;
@@ -273,13 +274,16 @@ public class TimeCapsuleEntryService {
                 timeCapsuleEntryId
         );
         assertDraftEntry(entry);
-        assertValidUploadRequest(entry, request);
+        TimeCapsuleMediaType mediaType = resolveRequestedMediaTypeOrThrow(
+                request
+        );
+        assertEntryMediaModeForUpload(entry, mediaType);
+        assertValidUploadRequest(entry, mediaType, request);
 
         List<CreateTimeCapsuleMediaUploadUrlsResponse.UploadResponse> uploads =
                 new ArrayList<>();
         for (CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file
                 : request.getFiles()) {
-            TimeCapsuleMediaType mediaType = getMediaType(entry);
             String mimeType = file.normalizedMimeType();
             TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
                     timeCapsuleEntryId,
@@ -620,16 +624,81 @@ public class TimeCapsuleEntryService {
         };
     }
 
-    // [JMG] CAPSULE-7 파일 개수·슬롯·MIME 타입·파일 크기와 DB 슬롯 중복을 업로드 전에 검증한다.
-    private void assertValidUploadRequest(
+    // [JMG] CAPSULE-7 NONE 초안은 첫 업로드의 MIME 유형으로 IMAGE 또는 VIDEO 모드를 한 번만 선택한다.
+    private void assertEntryMediaModeForUpload(
             TimeCapsuleEntry entry,
+            TimeCapsuleMediaType requestedMediaType
+    ) {
+        if (entry.getMediaMode() == TimeCapsuleEntryMediaMode.NONE) {
+            TimeCapsuleEntryMediaMode selectedMediaMode =
+                    TimeCapsuleEntryMediaMode.valueOf(
+                            requestedMediaType.name()
+                    );
+            if (timeCapsuleEntryMapper.updateDraftMediaModeIfNone(
+                    entry.getTimeCapsuleEntryId(),
+                    selectedMediaMode
+            ) != 1) {
+                throw new BusinessException(
+                        ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
+                );
+            }
+            return;
+        }
+
+        if (getMediaType(entry) != requestedMediaType) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
+            );
+        }
+    }
+
+    // [JMG] CAPSULE-7 한 번의 업로드 요청에는 이미지 또는 영상 중 하나의 MIME 유형만 허용한다.
+    private TimeCapsuleMediaType resolveRequestedMediaTypeOrThrow(
             CreateTimeCapsuleMediaUploadUrlsRequest request
     ) {
-        TimeCapsuleMediaType mediaType = getMediaType(entry);
         if (request.getFiles() == null || request.getFiles().isEmpty()) {
             throw new BusinessException(ErrorCode.BADREQUEST);
         }
 
+        TimeCapsuleMediaType requestedMediaType = null;
+        for (CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file
+                : request.getFiles()) {
+            if (!file.hasRequiredValue()) {
+                throw new BusinessException(ErrorCode.BADREQUEST);
+            }
+
+            TimeCapsuleMediaType fileMediaType = getMediaTypeByMimeType(
+                    file.normalizedMimeType()
+            );
+            if (requestedMediaType != null
+                    && requestedMediaType != fileMediaType) {
+                throw new BusinessException(
+                        ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
+                );
+            }
+            requestedMediaType = fileMediaType;
+        }
+
+        return requestedMediaType;
+    }
+
+    // [JMG] CAPSULE-7 허용 MIME 타입을 저장 가능한 이미지·영상 유형으로 분류한다.
+    private TimeCapsuleMediaType getMediaTypeByMimeType(String mimeType) {
+        return switch (mimeType) {
+            case "image/jpeg", "image/png", "image/webp" ->
+                    TimeCapsuleMediaType.IMAGE;
+            case "video/mp4", "video/webm" ->
+                    TimeCapsuleMediaType.VIDEO;
+            default -> throw new BusinessException(ErrorCode.BADREQUEST);
+        };
+    }
+
+    // [JMG] CAPSULE-7 파일 개수·슬롯·MIME 타입·파일 크기와 DB 슬롯 중복을 업로드 전에 검증한다.
+    private void assertValidUploadRequest(
+            TimeCapsuleEntry entry,
+            TimeCapsuleMediaType mediaType,
+            CreateTimeCapsuleMediaUploadUrlsRequest request
+    ) {
         Set<Integer> requestSlots = new HashSet<>();
         for (CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file
                 : request.getFiles()) {

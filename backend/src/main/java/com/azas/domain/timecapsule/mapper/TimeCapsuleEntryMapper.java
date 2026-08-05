@@ -2,6 +2,7 @@ package com.azas.domain.timecapsule.mapper;
 
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
+import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMediaType;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -72,6 +73,12 @@ public interface TimeCapsuleEntryMapper {
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId,
             @Param("title") String title,
             @Param("message") String message
+    );
+
+    // [JMG] CAPSULE-7 첫 미디어 업로드 요청에서만 NONE 초안의 미디어 모드를 고정한다.
+    int updateDraftMediaModeIfNone(
+            @Param("timeCapsuleEntryId") long timeCapsuleEntryId,
+            @Param("mediaMode") TimeCapsuleEntryMediaMode mediaMode
     );
 
     // [JMG] CAPSULE-15 DRAFT 엔트리를 봉인 상태로 바꾸고 봉인 시각을 기록한다.

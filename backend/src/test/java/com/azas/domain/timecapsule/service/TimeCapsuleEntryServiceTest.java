@@ -740,6 +740,92 @@ class TimeCapsuleEntryServiceTest {
     }
 
     @Test
+    // [JMG] CAPSULE-7 자동 생성된 NONE 초안은 첫 이미지 업로드 요청에서 IMAGE 모드로 고정된다.
+    void createMediaUploadUrlsSelectsImageModeForNoneDraft() {
+        TimeCapsuleEntry noneEntry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(noneEntry);
+        given(timeCapsuleEntryMapper.updateDraftMediaModeIfNone(
+                1000L,
+                TimeCapsuleEntryMediaMode.IMAGE
+        )).willReturn(1);
+        given(timeCapsuleMediaMapper.countByEntryIdAndSlotNo(1000L, 1))
+                .willReturn(0);
+        doAnswer(invocation -> {
+            TimeCapsuleMedia media = invocation.getArgument(0);
+            ReflectionTestUtils.setField(media, "timeCapsuleMediaId", 2001L);
+            return 1;
+        }).when(timeCapsuleMediaMapper).insert(any(TimeCapsuleMedia.class));
+        given(timeCapsuleObjectStorage.createUploadUrl(
+                org.mockito.ArgumentMatchers.startsWith(
+                        "time-capsules/100/entries/1000/"
+                ),
+                eq("image/jpeg"),
+                any()
+        )).willReturn(new TimeCapsuleObjectStorage.PresignedUrl(
+                "https://s3.example.test/presigned-put"
+        ));
+
+        timeCapsuleEntryService.createMediaUploadUrls(
+                7L,
+                1000L,
+                createUploadUrlsRequest("image/jpeg", 1024L, 1)
+        );
+
+        verify(timeCapsuleEntryMapper).updateDraftMediaModeIfNone(
+                1000L,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+    }
+
+    @Test
+    // [JMG] CAPSULE-7 이미지와 영상 MIME을 한 업로드 요청에 섞으면 NONE 초안도 선택되지 않는다.
+    void createMediaUploadUrlsRejectsMixedMediaTypesForNoneDraft() {
+        TimeCapsuleEntry noneEntry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(noneEntry);
+
+        CreateTimeCapsuleMediaUploadUrlsRequest request =
+                createUploadUrlsRequest(
+                        createFileRequest("image/jpeg", 1024L, 1),
+                        createFileRequest("video/mp4", 1024L, 2)
+                );
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.createMediaUploadUrls(
+                        7L,
+                        1000L,
+                        request
+                )
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED,
+                exception.getErrorCode());
+        verify(timeCapsuleEntryMapper, never()).updateDraftMediaModeIfNone(
+                anyLong(),
+                any(TimeCapsuleEntryMediaMode.class)
+        );
+        verify(timeCapsuleMediaMapper, never()).insert(any());
+    }
+
+    @Test
     // [JMG] CAPSULE-8 S3 메타데이터와 요청값이 일치하면 대기 미디어를 ACTIVE로 전환한다.
     void completeMediaUploadActivatesVerifiedPendingMedia() {
         TimeCapsuleEntry imageEntry = createEntry(
@@ -879,15 +965,29 @@ class TimeCapsuleEntryServiceTest {
             long fileSize,
             int slotNo
     ) {
+        return createUploadUrlsRequest(
+                createFileRequest(mimeType, fileSize, slotNo)
+        );
+    }
+
+    // [JMG] CAPSULE-7 테스트용 파일 요청을 MIME 타입·파일 크기·슬롯 번호로 구성한다.
+    private CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest
+    createFileRequest(String mimeType, long fileSize, int slotNo) {
         CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file =
                 new CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest();
         ReflectionTestUtils.setField(file, "mimeType", mimeType);
         ReflectionTestUtils.setField(file, "fileSize", fileSize);
         ReflectionTestUtils.setField(file, "slotNo", slotNo);
+        return file;
+    }
 
+    // [JMG] CAPSULE-7 테스트용 업로드 URL 요청에 하나 이상의 파일을 담는다.
+    private CreateTimeCapsuleMediaUploadUrlsRequest createUploadUrlsRequest(
+            CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest... files
+    ) {
         CreateTimeCapsuleMediaUploadUrlsRequest request =
                 new CreateTimeCapsuleMediaUploadUrlsRequest();
-        ReflectionTestUtils.setField(request, "files", List.of(file));
+        ReflectionTestUtils.setField(request, "files", List.of(files));
         return request;
     }
 

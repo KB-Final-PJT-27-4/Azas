@@ -276,6 +276,14 @@
           AND edit_count &lt; 1
     </update>
 
+    <update id="updateDraftMediaModeIfNone">
+        UPDATE time_capsule_entry
+        SET media_mode = #{mediaMode}
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'DRAFT'
+          AND media_mode = 'NONE'
+    </update>
+
     <update id="sealDraftEntry">
         UPDATE time_capsule_entry
         SET status = 'SEALED',
