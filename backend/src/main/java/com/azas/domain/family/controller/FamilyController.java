@@ -2,6 +2,7 @@ package com.azas.domain.family.controller;
 
 import com.azas.domain.family.dto.FamilyGuardianListResponse;
 import com.azas.domain.family.service.FamilyService;
+import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
 import com.azas.global.response.ApiErrorResponse;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class FamilyController {
 
     private final FamilyService familyService;
+    private final AccessTokenMemberResolver accessTokenMemberResolver;
 
     @ApiOperation(
             value = "함께 관리하는 보호자 목록 조회",
@@ -31,6 +33,11 @@ public class FamilyController {
                     response = FamilyGuardianListResponse.class
             ),
             @ApiResponse(
+                    code = 401,
+                    message = "Access Token 누락 또는 오류",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
                     code = 404,
                     message = "자녀 정보를 찾을 수 없음",
                     response = ApiErrorResponse.class
@@ -38,11 +45,18 @@ public class FamilyController {
     })
     @GetMapping("/children/{child_id}/family-members")
     public ResponseEntity<FamilyGuardianListResponse> getFamilyMembers(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader,
             @ApiParam(value = "자녀 ID", required = true, example = "1")
             @PathVariable("child_id")
             Long childId
     ) {
-        Long memberId = 1L;
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
 
         FamilyGuardianListResponse response = familyService.getFamilyMembers(
                 memberId,
