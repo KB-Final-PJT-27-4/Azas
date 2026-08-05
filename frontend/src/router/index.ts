@@ -56,14 +56,14 @@ const routes: RouteRecordRaw[] = [
     path: '/assets',
     name: 'Assets',
     component: () => import('@/views/assets/AssetsView.vue'),
-    meta: { requiresAuth: true, headerTitle: '자산관리' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/assets/:assetId',
     name: 'AssetDetail',
     component: () => import('@/views/assets/AssetDetailView.vue'),
     props: true,
-    meta: { requiresAuth: true, headerTitle: '자산관리' },
+    meta: { requiresAuth: true },
   },
 
   // 타임캡슐
