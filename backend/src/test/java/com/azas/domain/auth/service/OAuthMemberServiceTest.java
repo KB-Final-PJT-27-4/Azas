@@ -538,4 +538,121 @@ class OAuthMemberServiceTest {
         verify(socialAccountMapper)
                 .insert(any(SocialAccount.class));
     }
+
+    @Test
+    void createsParentMemberForNewParentInvitation() {
+        OAuthProfile profile = new OAuthProfile(
+                OAuthProvider.GOOGLE,
+                "new-parent-invite-subject",
+                "invited-parent@example.com",
+                "김부모",
+                null
+        );
+
+        when(
+                socialAccountMapper.findByProviderAndSubject(
+                        OAuthProvider.GOOGLE,
+                        "new-parent-invite-subject"
+                )
+        ).thenReturn(null);
+
+        when(
+                memberMapper.findByEmail(
+                        "invited-parent@example.com"
+                )
+        ).thenReturn(null);
+
+        doAnswer(invocation -> {
+            Member insertedMember =
+                    invocation.getArgument(0);
+
+            ReflectionTestUtils.setField(
+                    insertedMember,
+                    "memberId",
+                    70L
+            );
+
+            return 1;
+        }).when(memberMapper)
+                .insert(any(Member.class));
+
+        Member savedMember = Member.createParent(
+                "invited-parent@example.com",
+                "김부모",
+                null
+        );
+
+        ReflectionTestUtils.setField(
+                savedMember,
+                "memberId",
+                70L
+        );
+
+        when(memberMapper.findById(70L))
+                .thenReturn(savedMember);
+
+        OAuthMemberResult result =
+                oauthMemberService.findOrCreateParent(profile);
+
+        assertTrue(result.isNewMember());
+        assertSame(savedMember, result.getMember());
+        assertEquals(
+                MemberType.PARENT,
+                result.getMember().getMemberType()
+        );
+
+        verify(memberMapper)
+                .insert(any(Member.class));
+
+        verify(socialAccountMapper)
+                .insert(any(SocialAccount.class));
+    }
+
+    @Test
+    void rejectsChildMemberDuringParentInvitation() {
+        OAuthProfile profile = new OAuthProfile(
+                OAuthProvider.KAKAO,
+                "child-parent-invite-subject",
+                "child@example.com",
+                "김자녀",
+                null
+        );
+
+        SocialAccount socialAccount =
+                SocialAccount.create(
+                        80L,
+                        OAuthProvider.KAKAO,
+                        "child-parent-invite-subject"
+                );
+
+        Member child = Member.createChild(
+                "child@example.com",
+                "김자녀",
+                null
+        );
+
+        when(
+                socialAccountMapper.findByProviderAndSubject(
+                        OAuthProvider.KAKAO,
+                        "child-parent-invite-subject"
+                )
+        ).thenReturn(socialAccount);
+
+        when(memberMapper.findById(80L))
+                .thenReturn(child);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> oauthMemberService
+                        .findOrCreateParent(profile)
+        );
+
+        assertEquals(
+                ErrorCode.MEMBER_TYPE_CONFLICT,
+                exception.getErrorCode()
+        );
+
+        verify(memberMapper, never())
+                .insert(any(Member.class));
+    }
 }
