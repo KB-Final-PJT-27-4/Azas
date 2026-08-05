@@ -3,12 +3,14 @@ import { computed, ref } from 'vue'
 import { Landmark } from 'lucide-vue-next'
 
 import cloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
+import AssetTransferResultSheet from '@/components/assets/AssetTransferResultSheet.vue'
 import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
 import { assetGoals, assetSummary, assetTransactions } from '@/data/assetDummyData'
 
 const activeGoalIndex = ref(0)
 const activeAccountId = ref<number | null>(null)
 const isTransferSheetOpen = ref(false)
+const transferResult = ref<'success' | 'failure' | null>(null)
 const activeGoal = computed(() => assetGoals[activeGoalIndex.value]!)
 const filteredTransactions = computed(() =>
   assetTransactions.filter(
@@ -32,8 +34,14 @@ const toggleAccount = (accountId: number) => {
   activeAccountId.value = activeAccountId.value === accountId ? null : accountId
 }
 
-const completeTransfer = () => {
+const completeTransfer = ({ success }: { success: boolean }) => {
   isTransferSheetOpen.value = false
+  transferResult.value = success ? 'success' : 'failure'
+}
+
+const retryTransfer = () => {
+  transferResult.value = null
+  isTransferSheetOpen.value = true
 }
 </script>
 
@@ -195,6 +203,13 @@ const completeTransfer = () => {
       :target-account-number="activeGoal.accounts[0]?.accountNumber"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"
+    />
+    <AssetTransferResultSheet
+      v-if="transferResult"
+      :open="true"
+      :status="transferResult"
+      @close="transferResult = null"
+      @retry="retryTransfer"
     />
   </main>
 </template>

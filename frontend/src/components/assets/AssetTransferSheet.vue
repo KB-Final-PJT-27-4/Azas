@@ -19,10 +19,10 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   close: []
-  transfer: [payload: { amount: number; memo: string }]
+  transfer: [payload: { amount: number; memo: string; success: boolean }]
 }>()
 
-const amount = ref(0)
+const amountInput = ref('0')
 const memo = ref('')
 const sourceAccountId = ref('kb-789')
 const targetAccountId = ref('goal-primary')
@@ -43,14 +43,17 @@ const targetAccounts = computed(() => [
   { id: 'goal-secondary', name: 'KB 아이사랑적금 2', number: '952-17362605-44' },
   { id: 'dream', name: '신한 꿈나무적금', number: '110-456-789012' },
 ])
+const selectedSourceAccount = computed(
+  () => sourceAccounts.find(({ id }) => id === sourceAccountId.value) ?? sourceAccounts[0]!,
+)
 
-const formattedAmount = computed(() => `${amount.value.toLocaleString('ko-KR')}원`)
+const amount = computed(() => Number(amountInput.value.replace(/\D/g, '')) || 0)
 
 watch(
   () => props.open,
   (open) => {
     if (!open) return
-    amount.value = 0
+    amountInput.value = '0'
     memo.value = ''
     sourceAccountId.value = 'kb-789'
     targetAccountId.value = 'goal-primary'
@@ -60,21 +63,37 @@ watch(
 const updateAmount = (event: Event) => {
   const input = event.target as HTMLInputElement
   const digits = input.value.replace(/\D/g, '')
-  amount.value = digits ? Number(digits) : 0
-  input.value = amount.value ? `${amount.value.toLocaleString('ko-KR')}원` : ''
+  amountInput.value = digits || '0'
+  if (input.value !== amountInput.value) input.value = amountInput.value
+}
+
+const startAmountEdit = (event: FocusEvent) => {
+  amountInput.value = String(amount.value)
+  const input = event.target as HTMLInputElement
+  requestAnimationFrame(() => {
+    if (input.value === '0') input.select()
+  })
+}
+
+const finishAmountEdit = () => {
+  amountInput.value = amount.value.toLocaleString('ko-KR')
 }
 
 const addAmount = (value: number) => {
-  amount.value += value
+  amountInput.value = (amount.value + value).toLocaleString('ko-KR')
 }
 
 const clearAmount = () => {
-  amount.value = 0
+  amountInput.value = '0'
 }
 
 const submitTransfer = () => {
   if (amount.value <= 0) return
-  emit('transfer', { amount: amount.value, memo: memo.value.trim() })
+  emit('transfer', {
+    amount: amount.value,
+    memo: memo.value.trim(),
+    success: amount.value <= selectedSourceAccount.value.balance,
+  })
 }
 </script>
 
@@ -92,9 +111,11 @@ const submitTransfer = () => {
         aria-modal="true"
         aria-labelledby="asset-transfer-title"
       >
-        <div class="min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-[calc(var(--app-bottom-nav-height)+18px)]">
+        <div
+          class="min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-[calc(var(--app-bottom-nav-height)+18px)]"
+        >
           <header class="flex items-center justify-between">
-            <h2 id="asset-transfer-title" class="m-0 text-[20px] font-extrabold">이체하기</h2>
+            <h2 id="asset-transfer-title" class="m-0 text-[20px] font-semibold">이체하기</h2>
             <button
               class="grid size-8 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[var(--color-unselected-background)]"
               type="button"
@@ -106,7 +127,7 @@ const submitTransfer = () => {
           </header>
 
           <form class="mt-5" @submit.prevent="submitTransfer">
-            <label class="block text-[12px] font-bold">
+            <label class="block text-[12px] font-semibold">
               출금 계좌 <span class="text-[#f04444]">*</span>
             </label>
             <AssetAccountSelect
@@ -117,7 +138,7 @@ const submitTransfer = () => {
               show-balance
             />
 
-            <label class="mt-4 block text-[12px] font-bold">
+            <label class="mt-4 block text-[12px] font-semibold">
               받는 계좌 <span class="text-[#f04444]">*</span>
             </label>
             <AssetAccountSelect
@@ -127,18 +148,26 @@ const submitTransfer = () => {
               label="받는 계좌 선택"
             />
 
-            <label for="transfer-amount" class="mt-4 block text-[12px] font-bold">
+            <label for="transfer-amount" class="mt-4 block text-[12px] font-semibold">
               이체 금액 <span class="text-[#f04444]">*</span>
             </label>
             <div class="relative mt-2">
               <input
                 id="transfer-amount"
-                :value="formattedAmount"
-                class="h-10 w-full rounded-[12px] border border-[#dce8ee] pr-10 pl-3 text-[15px] outline-none focus:border-[var(--color-brand-primary)]"
+                :value="amountInput"
+                class="h-10 w-full rounded-[12px] border border-[#dce8ee] pr-16 pl-3 text-[15px] outline-none focus:border-[var(--color-brand-primary)]"
                 type="text"
                 inputmode="numeric"
+                @focus="startAmountEdit"
                 @input="updateAmount"
+                @blur="finishAmountEdit"
               />
+              <span
+                class="pointer-events-none absolute top-1/2 -translate-y-1/2 text-[15px]"
+                :class="amount > 0 ? 'right-10' : 'right-3'"
+              >
+                원
+              </span>
               <button
                 v-if="amount > 0"
                 class="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-full text-[#9aa6b2] active:bg-[#eef3f6]"
@@ -161,7 +190,7 @@ const submitTransfer = () => {
               </button>
             </div>
 
-            <label for="transfer-memo" class="mt-4 block text-[12px] font-bold">메모</label>
+            <label for="transfer-memo" class="mt-4 block text-[12px] font-semibold">메모</label>
             <div class="relative mt-2">
               <textarea
                 id="transfer-memo"
@@ -178,7 +207,7 @@ const submitTransfer = () => {
             </div>
 
             <button
-              class="mt-5 h-12 w-full rounded-[13px] bg-[var(--color-brand-primary)] text-[15px] font-extrabold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:bg-[#cbd8df]"
+              class="mt-5 h-12 w-full rounded-[13px] bg-[var(--color-brand-primary)] text-[15px] font-semibold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:bg-[#cbd8df]"
               type="submit"
               :disabled="amount <= 0"
             >
