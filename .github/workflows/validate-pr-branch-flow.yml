@@ -21,10 +21,24 @@ jobs:
 
           case "$BASE_REF" in
             dev-be)
-              [[ "$HEAD_REF" == BE/feature/* || "$HEAD_REF" == BE/fix/* || "$HEAD_REF" == dev ]] && allowed=true
+              [[ "$HEAD_REF" == BE/feature/* || \
+                 "$HEAD_REF" == BE/fix/* || \
+                 "$HEAD_REF" == BE/chore/* || \
+                 "$HEAD_REF" == BE/docs/* || \
+                 "$HEAD_REF" == BE/refactor/* || \
+                 "$HEAD_REF" == BE/style/* || \
+                 "$HEAD_REF" == BE/test/* || \
+                 "$HEAD_REF" == dev ]] && allowed=true
               ;;
             dev-fe)
-              [[ "$HEAD_REF" == FE/feature/* || "$HEAD_REF" == FE/fix/* || "$HEAD_REF" == dev ]] && allowed=true
+              [[ "$HEAD_REF" == FE/feature/* || \
+                 "$HEAD_REF" == FE/fix/* || \
+                 "$HEAD_REF" == FE/chore/* || \
+                 "$HEAD_REF" == FE/docs/* || \
+                 "$HEAD_REF" == FE/refactor/* || \
+                 "$HEAD_REF" == FE/style/* || \
+                 "$HEAD_REF" == FE/test/* || \
+                 "$HEAD_REF" == dev ]] && allowed=true
               ;;
             dev)
               [[ "$HEAD_REF" == dev-be || "$HEAD_REF" == dev-fe || "$HEAD_REF" == main ]] && allowed=true
@@ -40,8 +54,8 @@ jobs:
           if [[ "$allowed" != true ]]; then
             echo "Invalid PR branch flow: $HEAD_REF -> $BASE_REF"
             echo "Allowed flows:"
-            echo "  BE/feature/* or BE/fix/* -> dev-be"
-            echo "  FE/feature/* or FE/fix/* -> dev-fe"
+            echo "  BE/{feature,fix,chore,docs,refactor,style,test}/* -> dev-be"
+            echo "  FE/{feature,fix,chore,docs,refactor,style,test}/* -> dev-fe"
             echo "  dev-be, dev-fe, or main -> dev"
             echo "  dev or hotfix/* -> main"
             exit 1
