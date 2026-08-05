@@ -380,4 +380,162 @@ class OAuthMemberServiceTest {
         verify(socialAccountMapper, never())
                 .insert(any(SocialAccount.class));
     }
+
+    @Test
+    void createsChildMemberAndSocialAccountForNewChild() {
+        OAuthProfile profile = new OAuthProfile(
+                OAuthProvider.KAKAO,
+                "new-child-subject",
+                "child@example.com",
+                "김자녀",
+                null
+        );
+
+        when(
+                socialAccountMapper.findByProviderAndSubject(
+                        OAuthProvider.KAKAO,
+                        "new-child-subject"
+                )
+        ).thenReturn(null);
+
+        when(memberMapper.findByEmail("child@example.com"))
+                .thenReturn(null);
+
+        doAnswer(invocation -> {
+            Member insertedMember =
+                    invocation.getArgument(0);
+
+            ReflectionTestUtils.setField(
+                    insertedMember,
+                    "memberId",
+                    40L
+            );
+
+            return 1;
+        }).when(memberMapper)
+                .insert(any(Member.class));
+
+        Member savedMember = Member.createChild(
+                "child@example.com",
+                "김자녀",
+                null
+        );
+
+        ReflectionTestUtils.setField(
+                savedMember,
+                "memberId",
+                40L
+        );
+
+        when(memberMapper.findById(40L))
+                .thenReturn(savedMember);
+
+        OAuthMemberResult result =
+                oauthMemberService.findOrCreateChild(profile);
+
+        assertTrue(result.isNewMember());
+        assertSame(savedMember, result.getMember());
+        assertEquals(
+                MemberType.CHILD,
+                result.getMember().getMemberType()
+        );
+
+        verify(memberMapper)
+                .insert(any(Member.class));
+
+        verify(socialAccountMapper)
+                .insert(any(SocialAccount.class));
+    }
+
+    @Test
+    void rejectsParentMemberDuringChildInviteLogin() {
+        OAuthProfile profile = new OAuthProfile(
+                OAuthProvider.GOOGLE,
+                "parent-subject",
+                "parent@example.com",
+                "김부모",
+                null
+        );
+
+        SocialAccount socialAccount =
+                SocialAccount.create(
+                        50L,
+                        OAuthProvider.GOOGLE,
+                        "parent-subject"
+                );
+
+        Member parent = Member.createParent(
+                "parent@example.com",
+                "김부모",
+                null
+        );
+
+        when(
+                socialAccountMapper.findByProviderAndSubject(
+                        OAuthProvider.GOOGLE,
+                        "parent-subject"
+                )
+        ).thenReturn(socialAccount);
+
+        when(memberMapper.findById(50L))
+                .thenReturn(parent);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> oauthMemberService.findOrCreateChild(profile)
+        );
+
+        assertEquals(
+                ErrorCode.MEMBER_TYPE_CONFLICT,
+                exception.getErrorCode()
+        );
+
+        verify(memberMapper, never())
+                .insert(any(Member.class));
+    }
+
+    @Test
+    void linksNewSocialAccountToExistingChildMember() {
+        OAuthProfile profile = new OAuthProfile(
+                OAuthProvider.KAKAO,
+                "child-kakao-subject",
+                "child@example.com",
+                "김자녀",
+                null
+        );
+
+        Member child = Member.createChild(
+                "child@example.com",
+                "김자녀",
+                null
+        );
+
+        ReflectionTestUtils.setField(
+                child,
+                "memberId",
+                60L
+        );
+
+        when(
+                socialAccountMapper.findByProviderAndSubject(
+                        OAuthProvider.KAKAO,
+                        "child-kakao-subject"
+                )
+        ).thenReturn(null);
+
+        when(memberMapper.findByEmail("child@example.com"))
+                .thenReturn(child);
+
+        OAuthMemberResult result =
+                oauthMemberService.findOrCreateChild(profile);
+
+        assertFalse(result.isNewMember());
+        assertSame(child, result.getMember());
+
+        verify(memberMapper, never())
+                .insert(any(Member.class));
+
+        verify(socialAccountMapper)
+                .insert(any(SocialAccount.class));
+    }
 }
