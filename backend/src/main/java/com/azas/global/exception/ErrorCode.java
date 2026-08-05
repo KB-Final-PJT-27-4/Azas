@@ -88,6 +88,22 @@ public enum ErrorCode {
             HttpStatus.UNPROCESSABLE_ENTITY,
             "엔트리 봉인에 필요한 미디어 업로드 또는 미디어 개수 조건을 충족하지 못했습니다."
     ),
+    TIME_CAPSULE_MEDIA_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "타임캡슐 미디어를 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "현재 엔트리 상태 또는 미디어 슬롯에서는 업로드할 수 없습니다."
+    ),
+    TIME_CAPSULE_MEDIA_OBJECT_INVALID(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "업로드된 미디어 객체의 MIME 타입 또는 파일 크기가 요청값과 다릅니다."
+    ),
+    TIME_CAPSULE_STORAGE_UNAVAILABLE(
+            HttpStatus.BAD_GATEWAY,
+            "타임캡슐 미디어 저장소에 연결할 수 없습니다."
+    ),
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "서버 오류가 발생했습니다."

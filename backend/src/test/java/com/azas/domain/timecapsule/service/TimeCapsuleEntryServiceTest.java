@@ -5,6 +5,10 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
+import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
+import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
@@ -12,9 +16,12 @@ import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryStatus;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMediaType;
+import com.azas.domain.timecapsule.entity.TimeCapsuleMedia;
+import com.azas.domain.timecapsule.mapper.TimeCapsuleMediaMapper;
 import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMapper;
+import com.azas.domain.timecapsule.storage.TimeCapsuleObjectStorage;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
@@ -26,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,6 +58,12 @@ class TimeCapsuleEntryServiceTest {
 
     @Mock
     private TimeCapsuleEntryMapper timeCapsuleEntryMapper;
+
+    @Mock
+    private TimeCapsuleMediaMapper timeCapsuleMediaMapper;
+
+    @Mock
+    private TimeCapsuleObjectStorage timeCapsuleObjectStorage;
 
     @InjectMocks
     private TimeCapsuleEntryService timeCapsuleEntryService;
@@ -89,6 +103,48 @@ class TimeCapsuleEntryServiceTest {
         assertEquals("IMAGE", response.getEntries().get(0).getMediaMode());
         assertEquals(2, response.getEntries().get(0).getMediaCount());
         assertEquals(null, response.getEntries().get(0).getThumbnailUrl());
+    }
+
+    @Test
+    // [JMG] CAPSULE-4 목록 썸네일은 객체 키가 아닌 만료 시각이 있는 Presigned GET URL로만 반환한다.
+    void getTimeCapsuleEntriesReturnsPresignedThumbnailUrl() {
+        TimeCapsule timeCapsule = createTimeCapsule(
+                100L,
+                4L,
+                TimeCapsuleStatus.COLLECTING
+        );
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("100000.00"),
+                TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        String objectKey = "time-capsules/100/entries/1000/slot-1.jpg";
+        ReflectionTestUtils.setField(entry, "thumbnailObjectKey", objectKey);
+
+        given(timeCapsuleMapper.findAccessibleById(100L, 7L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleEntryMapper.findVisibleEntriesByTimeCapsuleId(100L))
+                .willReturn(List.of(entry));
+        given(timeCapsuleObjectStorage.createDownloadUrl(
+                objectKey,
+                Duration.ofMinutes(10)
+        )).willReturn(new TimeCapsuleObjectStorage.PresignedUrl(
+                "https://s3.example.test/presigned-get"
+        ));
+
+        TimeCapsuleEntryListResponse response =
+                timeCapsuleEntryService.getTimeCapsuleEntries(7L, 100L);
+
+        assertEquals(
+                "https://s3.example.test/presigned-get",
+                response.getEntries().get(0).getThumbnailUrl()
+        );
+        assertTrue(response.getEntries().get(0).getThumbnailExpiresAt()
+                .isAfter(LocalDateTime.now()));
     }
 
     @Test
@@ -423,6 +479,105 @@ class TimeCapsuleEntryServiceTest {
         verify(timeCapsuleEntryMapper, never()).sealDraftEntry(1000L);
     }
 
+    @Test
+    // [JMG] CAPSULE-7 IMAGE DRAFT 엔트리에는 서버 객체 키 기반의 Presigned PUT URL만 발급한다.
+    void createMediaUploadUrlsCreatesPendingMediaAndPresignedUrl() {
+        TimeCapsuleEntry imageEntry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(imageEntry);
+        given(timeCapsuleMediaMapper.countByEntryIdAndSlotNo(1000L, 1))
+                .willReturn(0);
+        doAnswer(invocation -> {
+            TimeCapsuleMedia media = invocation.getArgument(0);
+            ReflectionTestUtils.setField(media, "timeCapsuleMediaId", 2001L);
+            return 1;
+        }).when(timeCapsuleMediaMapper).insert(any(TimeCapsuleMedia.class));
+        given(timeCapsuleObjectStorage.createUploadUrl(
+                org.mockito.ArgumentMatchers.startsWith("time-capsules/100/entries/1000/"),
+                eq("image/jpeg"),
+                any()
+        )).willReturn(new TimeCapsuleObjectStorage.PresignedUrl(
+                "https://s3.example.test/presigned-put"
+        ));
+
+        CreateTimeCapsuleMediaUploadUrlsResponse response =
+                timeCapsuleEntryService.createMediaUploadUrls(
+                        7L,
+                        1000L,
+                        createUploadUrlsRequest("image/jpeg", 1024L, 1)
+                );
+
+        assertEquals(1000L, response.getTimeCapsuleEntryId());
+        assertEquals(1, response.getUploads().size());
+        assertEquals(2001L,
+                response.getUploads().get(0).getTimeCapsuleMediaId());
+        assertEquals("image/jpeg",
+                response.getUploads().get(0).getRequiredHeaders()
+                        .get("Content-Type"));
+    }
+
+    @Test
+    // [JMG] CAPSULE-8 S3 메타데이터와 요청값이 일치하면 대기 미디어를 ACTIVE로 전환한다.
+    void completeMediaUploadActivatesVerifiedPendingMedia() {
+        TimeCapsuleEntry imageEntry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
+                1000L,
+                TimeCapsuleMediaType.IMAGE,
+                "time-capsules/100/entries/1000/image.jpg",
+                "image/jpeg",
+                1024L,
+                1
+        );
+        ReflectionTestUtils.setField(media, "timeCapsuleMediaId", 2001L);
+
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(imageEntry);
+        given(timeCapsuleMediaMapper.findByEntryIdAndIdsForUpdate(
+                1000L,
+                List.of(2001L)
+        )).willReturn(List.of(media));
+        given(timeCapsuleObjectStorage.getObjectMetadata(media.getObjectKey()))
+                .willReturn(new TimeCapsuleObjectStorage.StoredObjectMetadata(
+                        "image/jpeg",
+                        1024L
+                ));
+        given(timeCapsuleMediaMapper.activatePendingMedia(List.of(2001L)))
+                .willReturn(1);
+        given(timeCapsuleMediaMapper.setThumbnailIfAbsent(
+                1000L,
+                media.getObjectKey()
+        )).willReturn(1);
+        given(timeCapsuleMediaMapper.countActiveByEntryId(1000L))
+                .willReturn(1);
+
+        CompleteTimeCapsuleMediaUploadResponse response =
+                timeCapsuleEntryService.completeMediaUpload(
+                        7L,
+                        1000L,
+                        createCompleteUploadRequest(2001L)
+                );
+
+        assertEquals(1, response.getMediaCount());
+        assertTrue(response.isThumbnailReady());
+        assertEquals("ACTIVE", response.getMedia().get(0).getStatus());
+    }
+
     // [JMG] CAPSULE-4~5 테스트용 보관함을 상태별로 구성한다.
     private TimeCapsule createTimeCapsule(
             long timeCapsuleId,
@@ -500,6 +655,34 @@ class TimeCapsuleEntryServiceTest {
                 new UpdateTimeCapsuleEntryRequest();
         ReflectionTestUtils.setField(request, "title", title);
         ReflectionTestUtils.setField(request, "message", message);
+        return request;
+    }
+
+    // [JMG] CAPSULE-7 테스트용 미디어 URL 발급 요청을 MIME 타입·파일 크기·슬롯으로 구성한다.
+    private CreateTimeCapsuleMediaUploadUrlsRequest createUploadUrlsRequest(
+            String mimeType,
+            long fileSize,
+            int slotNo
+    ) {
+        CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file =
+                new CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest();
+        ReflectionTestUtils.setField(file, "mimeType", mimeType);
+        ReflectionTestUtils.setField(file, "fileSize", fileSize);
+        ReflectionTestUtils.setField(file, "slotNo", slotNo);
+
+        CreateTimeCapsuleMediaUploadUrlsRequest request =
+                new CreateTimeCapsuleMediaUploadUrlsRequest();
+        ReflectionTestUtils.setField(request, "files", List.of(file));
+        return request;
+    }
+
+    // [JMG] CAPSULE-8 테스트용 업로드 완료 요청을 미디어 ID 목록으로 구성한다.
+    private CompleteTimeCapsuleMediaUploadRequest createCompleteUploadRequest(
+            long mediaId
+    ) {
+        CompleteTimeCapsuleMediaUploadRequest request =
+                new CompleteTimeCapsuleMediaUploadRequest();
+        ReflectionTestUtils.setField(request, "mediaIds", List.of(mediaId));
         return request;
     }
 }

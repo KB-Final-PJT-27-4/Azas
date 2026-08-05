@@ -1,6 +1,10 @@
 package com.azas.domain.timecapsule.controller;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
+import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
+import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
@@ -199,6 +203,62 @@ public class TimeCapsuleController {
                 timeCapsuleEntryService.sealTimeCapsuleEntry(
                         memberId,
                         timeCapsuleEntryId
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 엔트리 미디어 업로드 URL 발급",
+            notes = "DRAFT 엔트리에 서버가 생성한 S3 Presigned PUT URL을 발급합니다."
+    )
+    @PostMapping("/time-capsule-entries/{entry_id}/media/upload-urls")
+    // [JMG] CAPSULE-7 작성자 본인의 DRAFT 엔트리에 첨부할 미디어 업로드 URL 발급 요청을 처리한다.
+    public ResponseEntity<CreateTimeCapsuleMediaUploadUrlsResponse>
+    createMediaUploadUrls(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
+            @PathVariable("entry_id")
+            long timeCapsuleEntryId,
+            @Valid @RequestBody CreateTimeCapsuleMediaUploadUrlsRequest request
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                timeCapsuleEntryService.createMediaUploadUrls(
+                        memberId,
+                        timeCapsuleEntryId,
+                        request
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 엔트리 미디어 업로드 완료",
+            notes = "S3 객체 메타데이터를 검증한 뒤 업로드 대기 미디어를 활성화합니다."
+    )
+    @PostMapping("/time-capsule-entries/{entry_id}/media/complete")
+    // [JMG] CAPSULE-8 S3 업로드가 끝난 작성자 본인의 미디어 완료 처리 요청을 검증한다.
+    public ResponseEntity<CompleteTimeCapsuleMediaUploadResponse>
+    completeMediaUpload(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
+            @PathVariable("entry_id")
+            long timeCapsuleEntryId,
+            @Valid @RequestBody CompleteTimeCapsuleMediaUploadRequest request
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.ok(
+                timeCapsuleEntryService.completeMediaUpload(
+                        memberId,
+                        timeCapsuleEntryId,
+                        request
                 )
         );
     }

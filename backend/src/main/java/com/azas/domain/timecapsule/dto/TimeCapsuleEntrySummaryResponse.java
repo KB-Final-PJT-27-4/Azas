@@ -37,14 +37,18 @@ public class TimeCapsuleEntrySummaryResponse {
     @JsonProperty("media_count")
     private final int mediaCount;
 
-    private TimeCapsuleEntrySummaryResponse(TimeCapsuleEntry entry) {
+    private TimeCapsuleEntrySummaryResponse(
+            TimeCapsuleEntry entry,
+            String thumbnailUrl,
+            LocalDateTime thumbnailExpiresAt
+    ) {
         this.timeCapsuleEntryId = entry.getTimeCapsuleEntryId();
         this.title = entry.getTitle();
         this.contributionAmount = entry.getContributionAmount();
         this.contributedAt = entry.getContributedAt();
         this.mediaMode = entry.getMediaMode().name();
-        this.thumbnailUrl = null;
-        this.thumbnailExpiresAt = null;
+        this.thumbnailUrl = thumbnailUrl;
+        this.thumbnailExpiresAt = thumbnailExpiresAt;
         this.status = entry.getStatus().name();
         this.mediaCount = entry.getMediaCount();
     }
@@ -53,6 +57,19 @@ public class TimeCapsuleEntrySummaryResponse {
     public static TimeCapsuleEntrySummaryResponse from(
             TimeCapsuleEntry entry
     ) {
-        return new TimeCapsuleEntrySummaryResponse(entry);
+        return new TimeCapsuleEntrySummaryResponse(entry, null, null);
+    }
+
+    // [JMG] CAPSULE-4 서버가 발급한 안전한 썸네일 URL을 엔트리 목록 응답에 포함한다.
+    public static TimeCapsuleEntrySummaryResponse from(
+            TimeCapsuleEntry entry,
+            String thumbnailUrl,
+            LocalDateTime thumbnailExpiresAt
+    ) {
+        return new TimeCapsuleEntrySummaryResponse(
+                entry,
+                thumbnailUrl,
+                thumbnailExpiresAt
+        );
     }
 }
