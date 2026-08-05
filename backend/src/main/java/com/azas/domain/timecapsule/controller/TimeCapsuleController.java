@@ -50,7 +50,7 @@ public class TimeCapsuleController {
     private final TimeCapsuleExportService timeCapsuleExportService;
 
     @ApiOperation(
-            value = "타임캡슐 보관함 생성",
+            value = "TC-1 타임캡슐 보관함 생성",
             notes = "자녀 명의 활성 적금 계좌에 연결된 타임캡슐 보관함을 생성합니다."
     )
     @PostMapping("/accounts/{account_id}/time-capsule")
@@ -77,7 +77,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 보관함 목록 조회",
+            value = "TC-2 타임캡슐 보관함 목록 조회",
             notes = "카드 또는 캘린더 화면용 보관함 목록을 커서 기반으로 조회합니다."
     )
     @GetMapping("/children/{child_id}/time-capsules")
@@ -112,7 +112,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 보관함 상세 조회",
+            value = "TC-3 타임캡슐 보관함 상세 조회",
             notes = "보관함 기본 정보와 적금 계좌에 설정된 목표를 조회합니다."
     )
     @GetMapping("/time-capsules/{time_capsule_id}")
@@ -135,7 +135,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 삭제",
+            value = "TC-6 타임캡슐 보관함 삭제",
             notes = "부모 또는 보호자가 보관함과 내부 엔트리·미디어·결과물을 영구 삭제합니다."
     )
     @DeleteMapping("/time-capsules/{time_capsule_id}")
@@ -156,7 +156,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 결과물 생성 요청",
+            value = "TC-11 타임캡슐 결과물 생성 요청",
             notes = "공개된 타임캡슐의 봉인 엔트리를 비동기 VIDEO 또는 ARCHIVE 결과물 작업으로 등록합니다."
     )
     @PostMapping("/time-capsules/{time_capsule_id}/exports")
@@ -184,7 +184,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 결과물 생성 상태 조회",
+            value = "TC-9 타임캡슐 결과물 생성 상태 조회",
             notes = "부모 또는 보호자가 비동기 결과물 생성 작업의 상태와 결과 메타데이터를 조회합니다."
     )
     @GetMapping("/time-capsule-exports/{export_id}")
@@ -208,7 +208,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 결과물 다운로드 URL 발급",
+            value = "TC-10 타임캡슐 결과물 다운로드 URL 발급",
             notes = "생성이 완료되고 보관 기간이 남은 결과물의 임시 다운로드 URL을 발급합니다."
     )
     @GetMapping("/time-capsule-exports/{export_id}/download-url")
@@ -234,7 +234,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 엔트리 목록 조회",
+            value = "TC-4 타임캡슐 엔트리 목록 조회",
             notes = "부모 또는 보호자가 삭제되지 않은 기록 목록을 조회합니다."
     )
     @GetMapping("/time-capsules/{time_capsule_id}/entries")
@@ -260,7 +260,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 엔트리 상세 조회",
+            value = "TC-14 타임캡슐 엔트리 상세 조회",
             notes = "부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다."
     )
     @GetMapping("/time-capsule-entries/{entry_id}")
@@ -286,7 +286,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 엔트리 삭제",
+            value = "TC-13 타임캡슐 엔트리 삭제",
             notes = "작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다."
     )
     @DeleteMapping("/time-capsule-entries/{entry_id}")
@@ -310,7 +310,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 엔트리 수정",
+            value = "TC-12 타임캡슐 엔트리 수정",
             notes = "작성자 본인이 DRAFT 엔트리의 제목 또는 편지를 수정합니다."
     )
     @PatchMapping("/time-capsule-entries/{entry_id}")
@@ -338,7 +338,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 엔트리 봉인",
+            value = "TC-15 타임캡슐 엔트리 봉인",
             notes = "작성자 본인이 미디어 조건을 충족한 DRAFT 엔트리를 봉인합니다."
     )
     @PatchMapping("/time-capsule-entries/{entry_id}/seal")
@@ -364,7 +364,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 엔트리 미디어 업로드 URL 발급",
+            value = "TC-7 타임캡슐 엔트리 미디어 업로드 URL 발급",
             notes = "DRAFT 엔트리에 서버가 생성한 S3 Presigned PUT URL을 발급합니다."
     )
     @PostMapping("/time-capsule-entries/{entry_id}/media/upload-urls")
@@ -392,7 +392,7 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "타임캡슐 엔트리 미디어 업로드 완료",
+            value = "TC-8 타임캡슐 엔트리 미디어 업로드 완료",
             notes = "S3 객체 메타데이터를 검증한 뒤 업로드 대기 미디어를 활성화합니다."
     )
     @PostMapping("/time-capsule-entries/{entry_id}/media/complete")
