@@ -1,3 +1,5 @@
+import { reactive } from 'vue'
+
 export interface ChildTransaction {
   id: string
   title: string
@@ -6,16 +8,21 @@ export interface ChildTransaction {
   type: 'income' | 'expense'
 }
 
-export const childAccountSummary = {
+interface TransferRecordPayload {
+  amount: number
+  bankName: string
+}
+
+export const childAccountSummary = reactive({
   childName: '깨비',
   accountName: '깨비 돈',
   balance: 96_000,
   monthlySpent: 14_000,
   dailyLimit: 20_000,
   usageProgress: 70,
-}
+})
 
-export const childTransactions: ChildTransaction[] = [
+export const childTransactions = reactive<ChildTransaction[]>([
   {
     id: 'allowance-from-mom',
     title: '엄마가 보내준 용돈',
@@ -51,12 +58,33 @@ export const childTransactions: ChildTransaction[] = [
     amount: -8_500,
     type: 'expense',
   },
-]
+])
 
 export const transferDefaults = {
   bankName: '국민은행',
-  balance: 96_000,
+  get balance() {
+    return childAccountSummary.balance
+  },
   quickAmounts: [5_000, 10_000, 20_000],
 }
 
 export const allowanceOptions = [5_000, 10_000, 20_000]
+
+export const recordChildTransfer = ({ amount, bankName }: TransferRecordPayload) => {
+  const transferAmount = Math.abs(amount)
+
+  childAccountSummary.balance -= transferAmount
+  childAccountSummary.monthlySpent += transferAmount
+  childAccountSummary.usageProgress = Math.min(
+    100,
+    Math.round((childAccountSummary.monthlySpent / childAccountSummary.dailyLimit) * 100),
+  )
+
+  childTransactions.unshift({
+    id: `transfer-${Date.now()}`,
+    title: `${bankName} 이체`,
+    time: '방금 전',
+    amount: -transferAmount,
+    type: 'expense',
+  })
+}
