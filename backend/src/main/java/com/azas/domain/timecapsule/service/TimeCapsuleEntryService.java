@@ -211,6 +211,7 @@ public class TimeCapsuleEntryService {
                 timeCapsuleEntryId
         );
         assertDraftEntry(entry);
+        assertEditableEntry(entry);
 
         if (timeCapsuleEntryMapper.updateDraftContent(
                 timeCapsuleEntryId,
@@ -543,6 +544,15 @@ public class TimeCapsuleEntryService {
     // [JMG] CAPSULE-12 봉인 또는 삭제된 엔트리의 변경 시도를 상태 충돌 오류로 처리한다.
     private void assertDraftEntry(TimeCapsuleEntry entry) {
         if (!entry.isDraft()) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
+            );
+        }
+    }
+
+    // [JMG] CAPSULE-12 현재 정책상 한 번 수정한 엔트리는 DRAFT 상태여도 추가 수정을 허용하지 않는다.
+    private void assertEditableEntry(TimeCapsuleEntry entry) {
+        if (entry.getEditCount() >= 1) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
             );

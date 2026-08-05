@@ -273,6 +273,7 @@
         </set>
         WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
           AND status = 'DRAFT'
+          AND edit_count &lt; 1
     </update>
 
     <update id="sealDraftEntry">

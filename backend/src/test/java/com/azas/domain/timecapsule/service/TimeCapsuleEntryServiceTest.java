@@ -543,6 +543,40 @@ class TimeCapsuleEntryServiceTest {
     }
 
     @Test
+    // [JMG] CAPSULE-12 한 번 수정해 edit_count가 1인 DRAFT 엔트리는 추가 수정할 수 없다.
+    void updateTimeCapsuleEntryRejectsAlreadyEditedDraft() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        ReflectionTestUtils.setField(entry, "editCount", 1);
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(entry);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.updateTimeCapsuleEntry(
+                        7L,
+                        1000L,
+                        createUpdateRequest("수정 제목", null)
+                )
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED,
+                exception.getErrorCode());
+        verify(timeCapsuleEntryMapper, never()).updateDraftContent(
+                anyLong(),
+                any(),
+                any()
+        );
+    }
+
+    @Test
     // [JMG] CAPSULE-15 미디어가 없는 NONE 엔트리는 작성자가 바로 봉인할 수 있다.
     void sealTimeCapsuleEntrySealsNoneMediaDraft() {
         TimeCapsuleEntry draftEntry = createEntry(
