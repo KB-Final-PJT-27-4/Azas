@@ -5,6 +5,7 @@ import { ContactRound, FileKey2, Smartphone, X } from 'lucide-vue-next'
 
 import babyImage from '@/assets/images/child/baby.png'
 import registrationCompleteImage from '@/assets/images/accounts/registration-complete.png'
+import AppHeader from '@/components/layout/AppHeader.vue'
 
 type Child = {
   id: number
@@ -22,10 +23,11 @@ const step = ref<1 | 2 | 3>(1)
 const selectedAuthMethod = ref<'kakao' | 'sms' | null>(null)
 const isAuthDialogOpen = ref(false)
 const isAuthenticated = ref(false)
-const phoneNumber = ref('01012345678')
+const phoneNumber = ref('')
 const verificationCode = ref('')
 const isVerificationCodeSent = ref(false)
 const isVerificationCodeConfirmed = ref(false)
+const hasVerificationError = ref(false)
 const remainingSeconds = ref(180)
 let timerId: ReturnType<typeof setInterval> | null = null
 
@@ -33,7 +35,7 @@ const selectedChildName = computed(
   () => children.find(({ id }) => id === selectedChildId.value)?.name ?? '아이',
 )
 const normalizedPhoneNumber = computed(() => phoneNumber.value.replace(/\D/g, ''))
-const canRequestVerificationCode = computed(() => /^01\d{8,9}$/.test(normalizedPhoneNumber.value))
+const canRequestVerificationCode = computed(() => /^01\d{9}$/.test(normalizedPhoneNumber.value))
 const canConfirmVerificationCode = computed(
   () => isVerificationCodeSent.value && /^\d{6}$/.test(verificationCode.value) && remainingSeconds.value > 0,
 )
@@ -63,6 +65,7 @@ const selectAuthMethod = (method: 'kakao' | 'sms') => {
     verificationCode.value = ''
     isVerificationCodeSent.value = false
     isVerificationCodeConfirmed.value = false
+    hasVerificationError.value = false
     remainingSeconds.value = 180
   }
   isAuthDialogOpen.value = true
@@ -74,6 +77,25 @@ const stopVerificationTimer = () => {
   timerId = null
 }
 
+const updatePhoneNumber = (event: Event) => {
+  const digits = (event.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 11)
+
+  if (digits.length <= 3) {
+    phoneNumber.value = digits
+  } else if (digits.length <= 7) {
+    phoneNumber.value = `${digits.slice(0, 3)}-${digits.slice(3)}`
+  } else {
+    phoneNumber.value = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+  }
+
+  stopVerificationTimer()
+  verificationCode.value = ''
+  isVerificationCodeSent.value = false
+  isVerificationCodeConfirmed.value = false
+  hasVerificationError.value = false
+  remainingSeconds.value = 180
+}
+
 const requestVerificationCode = () => {
   if (!canRequestVerificationCode.value) return
 
@@ -81,6 +103,7 @@ const requestVerificationCode = () => {
   verificationCode.value = ''
   isVerificationCodeSent.value = true
   isVerificationCodeConfirmed.value = false
+  hasVerificationError.value = false
   remainingSeconds.value = 180
   timerId = setInterval(() => {
     if (remainingSeconds.value <= 1) {
@@ -95,8 +118,20 @@ const requestVerificationCode = () => {
 const confirmVerificationCode = () => {
   if (!canConfirmVerificationCode.value) return
 
+  if (verificationCode.value !== '123456') {
+    hasVerificationError.value = true
+    isVerificationCodeConfirmed.value = false
+    return
+  }
+
+  hasVerificationError.value = false
   isVerificationCodeConfirmed.value = true
   stopVerificationTimer()
+}
+
+const updateVerificationCode = (event: Event) => {
+  verificationCode.value = (event.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6)
+  hasVerificationError.value = false
 }
 
 const completeAuthentication = () => {
@@ -117,11 +152,10 @@ onBeforeUnmount(stopVerificationTimer)
 </script>
 
 <template>
-  <main class="flex min-h-dvh flex-col bg-white text-[var(--color-text-primary)]">
-    <header class="flex h-[72px] shrink-0 items-center border-b border-[var(--color-border)] px-6">
-      <strong class="text-sm font-bold tracking-[-0.02em]">우리 아이 자산관리 서비스</strong>
-    </header>
-
+  <main
+    class="flex min-h-dvh flex-col bg-white pt-[calc(var(--app-header-height)+env(safe-area-inset-top))] text-[var(--color-text-primary)]"
+  >
+    <AppHeader />
     <section class="flex flex-1 flex-col px-6 pt-5 pb-[max(32px,env(safe-area-inset-bottom))]">
       <div v-if="step !== 3" class="grid grid-cols-2 gap-2" aria-label="아이 계좌 만들기 진행 단계">
         <span
@@ -327,13 +361,14 @@ onBeforeUnmount(stopVerificationTimer)
               class="flex h-14 w-full items-center rounded-xl border border-[var(--color-border)] px-2 pl-4 focus-within:border-[var(--color-brand-primary)]"
             >
               <input
-                v-model="phoneNumber"
                 class="min-w-0 flex-1 bg-transparent text-base outline-none"
                 type="tel"
                 inputmode="numeric"
                 maxlength="13"
+                :value="phoneNumber"
+                placeholder="010-0000-0000"
                 aria-label="휴대폰 번호"
-                @input="isVerificationCodeConfirmed = false"
+                @input="updatePhoneNumber"
               />
               <button
                 class="ml-2 shrink-0 rounded-lg bg-[var(--color-selected-background)] px-3 py-2 text-xs font-bold text-[var(--color-selected-text)] transition-colors hover:bg-[#d8f2ff] disabled:cursor-not-allowed disabled:bg-[#edf0f2] disabled:text-[#a1a9b4]"
@@ -349,7 +384,13 @@ onBeforeUnmount(stopVerificationTimer)
             <span class="mb-2 block text-sm font-bold">인증번호</span>
             <span
               class="flex h-14 w-full items-center rounded-xl border px-2 pl-4 focus-within:border-[var(--color-brand-primary)]"
-              :class="isVerificationCodeConfirmed ? 'border-[#45b878] bg-[#f3fff8]' : 'border-[var(--color-border)]'"
+              :class="
+                hasVerificationError
+                  ? 'border-[#ef5b5b] bg-[#fff5f5] focus-within:!border-[#ef5b5b]'
+                  : isVerificationCodeConfirmed
+                    ? 'border-[#45b878] bg-[#f3fff8]'
+                    : 'border-[var(--color-border)]'
+              "
             >
               <input
                 v-model="verificationCode"
@@ -359,10 +400,10 @@ onBeforeUnmount(stopVerificationTimer)
                 placeholder="인증번호 6자리"
                 aria-label="인증번호"
                 :disabled="!isVerificationCodeSent || isVerificationCodeConfirmed"
-                @input="verificationCode = verificationCode.replace(/\D/g, '')"
+                @input="updateVerificationCode"
               />
               <span
-                v-if="isVerificationCodeSent && !isVerificationCodeConfirmed"
+                v-if="isVerificationCodeSent && !isVerificationCodeConfirmed && !hasVerificationError"
                 class="mr-2 shrink-0 text-xs font-medium"
                 :class="remainingSeconds > 0 ? 'text-[#f05d5d]' : 'text-[#a1a9b4]'"
               >
@@ -370,6 +411,7 @@ onBeforeUnmount(stopVerificationTimer)
               </span>
               <button
                 class="shrink-0 rounded-lg bg-[var(--color-selected-background)] px-3 py-2 text-xs font-bold text-[var(--color-selected-text)] transition-colors hover:bg-[#d8f2ff] disabled:cursor-not-allowed disabled:bg-[#edf0f2] disabled:text-[#a1a9b4]"
+                :class="hasVerificationError ? '!bg-[#eceff1] !text-[#8d969f] hover:!bg-[#eceff1]' : ''"
                 type="button"
                 :disabled="!canConfirmVerificationCode || isVerificationCodeConfirmed"
                 @click="confirmVerificationCode"
@@ -382,6 +424,12 @@ onBeforeUnmount(stopVerificationTimer)
               class="mt-2 block text-xs font-medium text-[#32a66a]"
             >
               휴대폰 인증이 완료되었어요.
+            </span>
+            <span
+              v-else-if="hasVerificationError"
+              class="mt-2 block text-xs font-medium text-[#e54d4d]"
+            >
+              인증번호가 일치하지 않아요. 인증번호를 다시 받아주세요.
             </span>
             <span
               v-else-if="isVerificationCodeSent && remainingSeconds === 0"
