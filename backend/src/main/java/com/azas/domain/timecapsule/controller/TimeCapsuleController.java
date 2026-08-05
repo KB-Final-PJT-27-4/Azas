@@ -2,8 +2,11 @@ package com.azas.domain.timecapsule.controller;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
@@ -15,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -141,6 +145,60 @@ public class TimeCapsuleController {
                 timeCapsuleEntryService.getTimeCapsuleEntries(
                         memberId,
                         timeCapsuleId
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 엔트리 수정",
+            notes = "작성자 본인이 DRAFT 엔트리의 제목 또는 편지를 수정합니다."
+    )
+    @PatchMapping("/time-capsule-entries/{entry_id}")
+    // [JMG] CAPSULE-12 작성자 본인의 DRAFT 엔트리 제목·편지 수정 요청을 처리한다.
+    public ResponseEntity<TimeCapsuleEntryUpdateResponse>
+    updateTimeCapsuleEntry(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
+            @PathVariable("entry_id")
+            long timeCapsuleEntryId,
+            @Valid @RequestBody UpdateTimeCapsuleEntryRequest request
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.ok(
+                timeCapsuleEntryService.updateTimeCapsuleEntry(
+                        memberId,
+                        timeCapsuleEntryId,
+                        request
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "타임캡슐 엔트리 봉인",
+            notes = "작성자 본인이 미디어 조건을 충족한 DRAFT 엔트리를 봉인합니다."
+    )
+    @PatchMapping("/time-capsule-entries/{entry_id}/seal")
+    // [JMG] CAPSULE-15 미디어 조건을 충족한 작성자 본인의 DRAFT 엔트리를 봉인한다.
+    public ResponseEntity<TimeCapsuleEntrySealResponse>
+    sealTimeCapsuleEntry(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
+            @PathVariable("entry_id")
+            long timeCapsuleEntryId
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.ok(
+                timeCapsuleEntryService.sealTimeCapsuleEntry(
+                        memberId,
+                        timeCapsuleEntryId
                 )
         );
     }

@@ -53,4 +53,9 @@ public class TimeCapsuleEntry {
         entry.status = TimeCapsuleEntryStatus.DRAFT;
         return entry;
     }
+
+    // [JMG] CAPSULE-12 엔트리가 수정과 봉인이 가능한 작성 중 상태인지 반환한다.
+    public boolean isDraft() {
+        return status == TimeCapsuleEntryStatus.DRAFT;
+    }
 }

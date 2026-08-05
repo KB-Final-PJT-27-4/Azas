@@ -76,6 +76,18 @@ public enum ErrorCode {
             HttpStatus.UNPROCESSABLE_ENTITY,
             "타임캡슐 기록에는 적금 계좌의 입금 거래만 연결할 수 있습니다."
     ),
+    TIME_CAPSULE_ENTRY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "타임캡슐 엔트리를 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "봉인되었거나 삭제된 타임캡슐 엔트리는 수정할 수 없습니다."
+    ),
+    TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "엔트리 봉인에 필요한 미디어 업로드 또는 미디어 개수 조건을 충족하지 못했습니다."
+    ),
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "서버 오류가 발생했습니다."

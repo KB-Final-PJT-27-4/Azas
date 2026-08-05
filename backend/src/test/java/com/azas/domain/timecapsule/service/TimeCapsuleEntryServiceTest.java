@@ -2,12 +2,16 @@ package com.azas.domain.timecapsule.service;
 
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryAutoCreationResult;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryStatus;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
+import com.azas.domain.timecapsule.entity.TimeCapsuleMediaType;
 import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMapper;
@@ -32,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -239,6 +244,185 @@ class TimeCapsuleEntryServiceTest {
         verify(timeCapsuleEntryMapper, never()).insert(any());
     }
 
+    @Test
+    // [JMG] CAPSULE-12 작성자는 DRAFT 엔트리의 제목 또는 편지를 수정할 수 있다.
+    void updateTimeCapsuleEntryUpdatesDraftContent() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        TimeCapsuleEntry updatedEntry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        ReflectionTestUtils.setField(updatedEntry, "title", "첫 저축 기록");
+        ReflectionTestUtils.setField(
+                updatedEntry,
+                "message",
+                "오늘부터 대학자금을 모으기 시작했어."
+        );
+        ReflectionTestUtils.setField(updatedEntry, "editCount", 1);
+
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(entry);
+        given(timeCapsuleEntryMapper.updateDraftContent(
+                1000L,
+                "첫 저축 기록",
+                "오늘부터 대학자금을 모으기 시작했어."
+        )).willReturn(1);
+        given(timeCapsuleEntryMapper.findOwnedById(1000L, 7L))
+                .willReturn(updatedEntry);
+
+        TimeCapsuleEntryUpdateResponse response =
+                timeCapsuleEntryService.updateTimeCapsuleEntry(
+                        7L,
+                        1000L,
+                        createUpdateRequest(
+                                "  첫 저축 기록  ",
+                                " 오늘부터 대학자금을 모으기 시작했어. "
+                        )
+                );
+
+        assertEquals("첫 저축 기록", response.getTitle());
+        assertEquals("오늘부터 대학자금을 모으기 시작했어.",
+                response.getMessage());
+        assertEquals(1, response.getEditCount());
+        verify(timeCapsuleEntryMapper).updateDraftContent(
+                eq(1000L),
+                eq("첫 저축 기록"),
+                eq("오늘부터 대학자금을 모으기 시작했어.")
+        );
+    }
+
+    @Test
+    // [JMG] CAPSULE-12 봉인된 엔트리는 수정 전에 상태 충돌 오류로 차단한다.
+    void updateTimeCapsuleEntryRejectsSealedEntry() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(entry);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.updateTimeCapsuleEntry(
+                        7L,
+                        1000L,
+                        createUpdateRequest("새 제목", null)
+                )
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED,
+                exception.getErrorCode());
+        verify(timeCapsuleEntryMapper, never()).updateDraftContent(
+                anyLong(),
+                any(),
+                any()
+        );
+    }
+
+    @Test
+    // [JMG] CAPSULE-15 미디어가 없는 NONE 엔트리는 작성자가 바로 봉인할 수 있다.
+    void sealTimeCapsuleEntrySealsNoneMediaDraft() {
+        TimeCapsuleEntry draftEntry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        TimeCapsuleEntry sealedEntry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        ReflectionTestUtils.setField(
+                sealedEntry,
+                "sealedAt",
+                LocalDateTime.of(2026, 8, 5, 11, 40)
+        );
+
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draftEntry);
+        given(timeCapsuleEntryMapper.countPendingMediaByEntryId(1000L))
+                .willReturn(0);
+        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
+                1000L,
+                TimeCapsuleMediaType.IMAGE
+        )).willReturn(0);
+        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
+                1000L,
+                TimeCapsuleMediaType.VIDEO
+        )).willReturn(0);
+        given(timeCapsuleEntryMapper.sealDraftEntry(1000L)).willReturn(1);
+        given(timeCapsuleEntryMapper.findOwnedById(1000L, 7L))
+                .willReturn(sealedEntry);
+
+        TimeCapsuleEntrySealResponse response =
+                timeCapsuleEntryService.sealTimeCapsuleEntry(7L, 1000L);
+
+        assertEquals("SEALED", response.getStatus());
+        assertEquals(LocalDateTime.of(2026, 8, 5, 11, 40),
+                response.getSealedAt());
+    }
+
+    @Test
+    // [JMG] CAPSULE-15 IMAGE 엔트리는 활성 이미지가 없으면 봉인할 수 없다.
+    void sealTimeCapsuleEntryRejectsMissingRequiredImage() {
+        TimeCapsuleEntry imageEntry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(imageEntry);
+        given(timeCapsuleEntryMapper.countPendingMediaByEntryId(1000L))
+                .willReturn(0);
+        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
+                1000L,
+                TimeCapsuleMediaType.IMAGE
+        )).willReturn(0);
+        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
+                1000L,
+                TimeCapsuleMediaType.VIDEO
+        )).willReturn(0);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.sealTimeCapsuleEntry(7L, 1000L)
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET,
+                exception.getErrorCode());
+        verify(timeCapsuleEntryMapper, never()).sealDraftEntry(1000L);
+    }
+
     // [JMG] CAPSULE-4~5 테스트용 보관함을 상태별로 구성한다.
     private TimeCapsule createTimeCapsule(
             long timeCapsuleId,
@@ -305,5 +489,17 @@ class TimeCapsuleEntryServiceTest {
         ReflectionTestUtils.setField(entry, "status", status);
         ReflectionTestUtils.setField(entry, "mediaMode", mediaMode);
         return entry;
+    }
+
+    // [JMG] CAPSULE-12 테스트용 엔트리 수정 요청을 제목·편지 조합으로 구성한다.
+    private UpdateTimeCapsuleEntryRequest createUpdateRequest(
+            String title,
+            String message
+    ) {
+        UpdateTimeCapsuleEntryRequest request =
+                new UpdateTimeCapsuleEntryRequest();
+        ReflectionTestUtils.setField(request, "title", title);
+        ReflectionTestUtils.setField(request, "message", message);
+        return request;
     }
 }
