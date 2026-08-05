@@ -260,6 +260,10 @@ public class TimeCapsuleService {
 
     // [JMG] CAPSULE-6 null·공백·중복 객체 키를 제외해 같은 S3 객체를 한 번만 삭제한다.
     private void addObjectKeys(Set<String> destination, List<String> source) {
+        if (source == null) {
+            return;
+        }
+
         for (String objectKey : source) {
             if (objectKey != null && !objectKey.isBlank()) {
                 destination.add(objectKey);

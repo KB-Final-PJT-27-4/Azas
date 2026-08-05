@@ -183,8 +183,8 @@ public class S3TimeCapsuleObjectStorage
         return Region.of(regionName);
     }
 
-    // [JMG] CAPSULE-7 애플리케이션 종료 시 S3 클라이언트가 잡고 있는 네트워크 리소스를 해제한다.
     @Override
+    // [JMG] CAPSULE-7 애플리케이션 종료 시 S3 클라이언트가 잡고 있는 네트워크 리소스를 해제한다.
     public synchronized void destroy() {
         if (s3Client != null) {
             s3Client.close();
