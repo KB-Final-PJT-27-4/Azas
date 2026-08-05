@@ -38,6 +38,8 @@ public class TimeCapsuleResponse {
     @JsonProperty("latest_entry_at")
     private final LocalDateTime latestEntryAt;
 
+    private final TimeCapsuleGoalResponse goal;
+
     @JsonProperty("created_at")
     private final LocalDateTime createdAt;
 
@@ -52,6 +54,7 @@ public class TimeCapsuleResponse {
         this.releasedAt = timeCapsule.getReleasedAt();
         this.entryCount = timeCapsule.getEntryCount();
         this.latestEntryAt = timeCapsule.getLatestEntryAt();
+        this.goal = TimeCapsuleGoalResponse.fromOrNull(timeCapsule);
         this.createdAt = timeCapsule.getCreatedAt();
     }
 

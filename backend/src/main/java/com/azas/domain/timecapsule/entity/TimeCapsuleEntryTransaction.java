@@ -19,4 +19,9 @@ public class TimeCapsuleEntryTransaction {
     public boolean isCredit() {
         return direction == AccountTransactionDirection.CREDIT;
     }
+
+    // [JMG] CAPSULE-5 이체 금액이 실제 저축 기록으로 사용할 수 있는 양수인지 검증한다.
+    public boolean hasPositiveAmount() {
+        return amount != null && amount.signum() > 0;
+    }
 }

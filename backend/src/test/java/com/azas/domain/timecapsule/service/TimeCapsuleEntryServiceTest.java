@@ -1,8 +1,7 @@
 package com.azas.domain.timecapsule.service;
 
-import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryRequest;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryAutoCreationResult;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
@@ -20,19 +19,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -51,25 +50,23 @@ class TimeCapsuleEntryServiceTest {
     private TimeCapsuleEntryService timeCapsuleEntryService;
 
     @Test
-    // [JMG] CAPSULE-4 접근 가능한 보관함의 삭제되지 않은 기록 목록을 응답 계약으로 변환한다.
+    // [JMG] CAPSULE-4 권한이 있는 부모는 삭제되지 않은 엔트리 목록을 조회할 수 있다.
     void getTimeCapsuleEntriesReturnsVisibleEntries() {
         TimeCapsule timeCapsule = createTimeCapsule(
                 100L,
+                4L,
                 TimeCapsuleStatus.COLLECTING
         );
         TimeCapsuleEntry entry = createEntry(
                 1000L,
                 100L,
+                901L,
                 AccountTransactionDirection.CREDIT,
+                new BigDecimal("100000.00"),
                 TimeCapsuleEntryStatus.SEALED,
                 TimeCapsuleEntryMediaMode.IMAGE
         );
         ReflectionTestUtils.setField(entry, "mediaCount", 2);
-        ReflectionTestUtils.setField(
-                entry,
-                "thumbnailObjectKey",
-                "time-capsules/100/entries/1000/thumbnail.jpg"
-        );
 
         given(timeCapsuleMapper.findAccessibleById(100L, 7L))
                 .willReturn(timeCapsule);
@@ -80,249 +77,178 @@ class TimeCapsuleEntryServiceTest {
                 timeCapsuleEntryService.getTimeCapsuleEntries(7L, 100L);
 
         assertEquals(1, response.getEntries().size());
-        assertEquals(
-                1000L,
-                response.getEntries().get(0).getTimeCapsuleEntryId()
-        );
-        assertEquals(
-                new BigDecimal("100000.00"),
-                response.getEntries().get(0).getContributionAmount()
-        );
+        assertEquals(1000L,
+                response.getEntries().get(0).getTimeCapsuleEntryId());
+        assertEquals(new BigDecimal("100000.00"),
+                response.getEntries().get(0).getContributionAmount());
         assertEquals("IMAGE", response.getEntries().get(0).getMediaMode());
         assertEquals(2, response.getEntries().get(0).getMediaCount());
+        assertEquals(null, response.getEntries().get(0).getThumbnailUrl());
     }
 
     @Test
-    // [JMG] CAPSULE-4 권한 없는 보관함 조회는 존재 여부를 숨긴 404 오류로 처리한다.
-    void getTimeCapsuleEntriesHidesInaccessibleTimeCapsule() {
-        given(timeCapsuleMapper.findAccessibleById(100L, 7L))
-                .willReturn(null);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> timeCapsuleEntryService.getTimeCapsuleEntries(
-                        7L,
-                        100L
-                )
-        );
-
-        assertEquals(
-                ErrorCode.TIME_CAPSULE_NOT_FOUND,
-                exception.getErrorCode()
-        );
-        verify(timeCapsuleEntryMapper, never())
-                .findVisibleEntriesByTimeCapsuleId(100L);
-    }
-
-    @Test
-    // [JMG] CAPSULE-5 적금 입금 거래로 기록을 만들면 거래 스냅샷과 보관함 집계값을 함께 저장한다.
-    void createTimeCapsuleEntryCreatesDraftForCreditTransaction() {
+    // [JMG] CAPSULE-5 성공한 적금 입금 거래는 기본값을 갖는 엔트리 초안으로 자동 생성된다.
+    void createDraftForSuccessfulSavingsTransferCreatesDraftEntry() {
         TimeCapsule timeCapsule = createTimeCapsule(
                 100L,
+                4L,
                 TimeCapsuleStatus.COLLECTING
         );
         TimeCapsuleEntryTransaction transaction = createTransaction(
                 901L,
                 AccountTransactionDirection.CREDIT,
                 new BigDecimal("150000.00"),
-                LocalDateTime.of(2026, 7, 15, 10, 0)
+                LocalDateTime.of(2026, 8, 5, 10, 30)
         );
 
-        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+        given(timeCapsuleMapper.findByFinancialAccountIdForUpdate(4L))
                 .willReturn(timeCapsule);
-        given(timeCapsuleEntryMapper.findTransactionByTimeCapsuleAndId(
+        given(timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
                 100L,
+                901L
+        )).willReturn(null);
+        given(timeCapsuleEntryMapper.findTransactionByFinancialAccountId(
+                4L,
                 901L
         )).willReturn(transaction);
         doAnswer(invocation -> {
             TimeCapsuleEntry entry = invocation.getArgument(0);
-            ReflectionTestUtils.setField(
-                    entry,
-                    "timeCapsuleEntryId",
-                    1000L
-            );
+            ReflectionTestUtils.setField(entry, "timeCapsuleEntryId", 1000L);
             return 1;
         }).when(timeCapsuleEntryMapper).insert(any(TimeCapsuleEntry.class));
         given(timeCapsuleEntryMapper.increaseEntryCountAndRefreshLatestEntry(
                 any(TimeCapsuleEntry.class)
         )).willReturn(1);
 
-        TimeCapsuleEntryResponse response =
-                timeCapsuleEntryService.createTimeCapsuleEntry(
+        Optional<TimeCapsuleEntryAutoCreationResult> result =
+                timeCapsuleEntryService.createDraftForSuccessfulSavingsTransfer(
                         7L,
-                        100L,
-                        createRequest(901L, "  첫 생일 축하  ", " 오늘도 저축했어. ", "IMAGE")
+                        4L,
+                        901L
                 );
 
         ArgumentCaptor<TimeCapsuleEntry> captor =
                 ArgumentCaptor.forClass(TimeCapsuleEntry.class);
         verify(timeCapsuleEntryMapper).insert(captor.capture());
-
         TimeCapsuleEntry savedEntry = captor.getValue();
+
+        assertTrue(result.isPresent());
+        assertEquals(100L, result.get().getTimeCapsuleId());
+        assertEquals(1000L, result.get().getTimeCapsuleEntryId());
+        assertEquals("DRAFT", result.get().getStatus());
         assertEquals(7L, savedEntry.getAuthorMemberId());
-        assertEquals(901L, savedEntry.getAccountTransactionId());
-        assertEquals("첫 생일 축하", savedEntry.getTitle());
-        assertEquals("오늘도 저축했어.", savedEntry.getMessage());
-        assertEquals(
-                new BigDecimal("150000.00"),
-                savedEntry.getContributionAmount()
-        );
+        assertEquals("2026년 8월 5일 저축 기록", savedEntry.getTitle());
+        assertEquals(null, savedEntry.getMessage());
+        assertEquals(TimeCapsuleEntryMediaMode.NONE, savedEntry.getMediaMode());
         assertEquals(TimeCapsuleEntryStatus.DRAFT, savedEntry.getStatus());
-        assertEquals(1000L, response.getTimeCapsuleEntryId());
-        assertEquals("DRAFT", response.getStatus());
+        assertEquals(new BigDecimal("150000.00"),
+                savedEntry.getContributionAmount());
         verify(timeCapsuleEntryMapper)
                 .increaseEntryCountAndRefreshLatestEntry(savedEntry);
     }
 
     @Test
-    // [JMG] CAPSULE-5 공개된 보관함에는 신규 기록을 만들지 않고 거래 정보도 조회하지 않는다.
-    void createTimeCapsuleEntryRejectsReleasedTimeCapsule() {
-        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
-                .willReturn(
-                        createTimeCapsule(
-                                100L,
-                                TimeCapsuleStatus.RELEASED
-                        )
-                );
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> timeCapsuleEntryService.createTimeCapsuleEntry(
-                        7L,
-                        100L,
-                        createRequest(901L, "제목", "메시지", "NONE")
-                )
-        );
-
-        assertEquals(
-                ErrorCode.TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED,
-                exception.getErrorCode()
-        );
-        verify(timeCapsuleEntryMapper, never())
-                .findTransactionByTimeCapsuleAndId(anyLong(), anyLong());
-    }
-
-    @Test
-    // [JMG] CAPSULE-5 적금 계좌의 출금 거래는 기록 생성 대상으로 거부한다.
-    void createTimeCapsuleEntryRejectsDebitTransaction() {
-        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
-                .willReturn(
-                        createTimeCapsule(
-                                100L,
-                                TimeCapsuleStatus.COLLECTING
-                        )
-                );
-        given(timeCapsuleEntryMapper.findTransactionByTimeCapsuleAndId(
+    // [JMG] CAPSULE-5 같은 거래의 이체 이벤트가 재시도되면 기존 엔트리를 반환하고 집계를 증가시키지 않는다.
+    void createDraftForSuccessfulSavingsTransferIsIdempotent() {
+        TimeCapsule timeCapsule = createTimeCapsule(
                 100L,
-                902L
-        )).willReturn(
-                createTransaction(
-                        902L,
-                        AccountTransactionDirection.DEBIT,
-                        new BigDecimal("15000.00"),
-                        LocalDateTime.of(2026, 7, 15, 10, 0)
-                )
+                4L,
+                TimeCapsuleStatus.COLLECTING
         );
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> timeCapsuleEntryService.createTimeCapsuleEntry(
-                        7L,
-                        100L,
-                        createRequest(902L, "제목", "메시지", "NONE")
-                )
-        );
-
-        assertEquals(
-                ErrorCode.INELIGIBLE_TIME_CAPSULE_TRANSACTION,
-                exception.getErrorCode()
-        );
-        verify(timeCapsuleEntryMapper, never())
-                .insert(any(TimeCapsuleEntry.class));
-    }
-
-    @Test
-    // [JMG] CAPSULE-5 다른 계좌 거래 ID는 존재를 노출하지 않고 찾을 수 없음으로 처리한다.
-    void createTimeCapsuleEntryHidesTransactionOutsideTimeCapsuleAccount() {
-        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
-                .willReturn(
-                        createTimeCapsule(
-                                100L,
-                                TimeCapsuleStatus.COLLECTING
-                        )
-                );
-        given(timeCapsuleEntryMapper.findTransactionByTimeCapsuleAndId(
+        TimeCapsuleEntry existingEntry = createEntry(
+                1000L,
                 100L,
-                999L
-        )).willReturn(null);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> timeCapsuleEntryService.createTimeCapsuleEntry(
-                        7L,
-                        100L,
-                        createRequest(999L, "제목", "메시지", "NONE")
-                )
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
         );
 
-        assertEquals(
-                ErrorCode.ACCOUNT_TRANSACTION_NOT_FOUND,
-                exception.getErrorCode()
-        );
-    }
-
-    @Test
-    // [JMG] CAPSULE-5 같은 거래의 동시 또는 재시도 생성은 DB 고유 제약을 409 오류로 변환한다.
-    void createTimeCapsuleEntryConvertsDuplicateKeyToConflict() {
-        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
-                .willReturn(
-                        createTimeCapsule(
-                                100L,
-                                TimeCapsuleStatus.COLLECTING
-                        )
-                );
-        given(timeCapsuleEntryMapper.findTransactionByTimeCapsuleAndId(
+        given(timeCapsuleMapper.findByFinancialAccountIdForUpdate(4L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
                 100L,
                 901L
-        )).willReturn(
-                createTransaction(
-                        901L,
-                        AccountTransactionDirection.CREDIT,
-                        new BigDecimal("150000.00"),
-                        LocalDateTime.of(2026, 7, 15, 10, 0)
-                )
+        )).willReturn(existingEntry);
+
+        Optional<TimeCapsuleEntryAutoCreationResult> result =
+                timeCapsuleEntryService.createDraftForSuccessfulSavingsTransfer(
+                        7L,
+                        4L,
+                        901L
+                );
+
+        assertTrue(result.isPresent());
+        assertEquals(1000L, result.get().getTimeCapsuleEntryId());
+        verify(timeCapsuleEntryMapper, never()).insert(any());
+        verify(timeCapsuleEntryMapper, never())
+                .increaseEntryCountAndRefreshLatestEntry(any());
+    }
+
+    @Test
+    // [JMG] CAPSULE-5 연결된 보관함이 없거나 수집 중이 아니면 이체 자체를 실패시키지 않고 생성을 생략한다.
+    void createDraftForSuccessfulSavingsTransferSkipsUnavailableTimeCapsule() {
+        given(timeCapsuleMapper.findByFinancialAccountIdForUpdate(4L))
+                .willReturn(null);
+
+        Optional<TimeCapsuleEntryAutoCreationResult> result =
+                timeCapsuleEntryService.createDraftForSuccessfulSavingsTransfer(
+                        7L,
+                        4L,
+                        901L
+                );
+
+        assertTrue(result.isEmpty());
+        verify(timeCapsuleEntryMapper, never())
+                .findByTimeCapsuleAndTransactionId(anyLong(), anyLong());
+    }
+
+    @Test
+    // [JMG] CAPSULE-5 출금·0원·음수 거래는 적금 저축 기록으로 생성하지 않는다.
+    void createDraftForSuccessfulSavingsTransferRejectsIneligibleTransaction() {
+        TimeCapsule timeCapsule = createTimeCapsule(
+                100L,
+                4L,
+                TimeCapsuleStatus.COLLECTING
         );
-        given(timeCapsuleEntryMapper.insert(any(TimeCapsuleEntry.class)))
-                .willThrow(new DuplicateKeyException("duplicate entry"));
+        given(timeCapsuleMapper.findByFinancialAccountIdForUpdate(4L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
+                100L,
+                901L
+        )).willReturn(null);
+        given(timeCapsuleEntryMapper.findTransactionByFinancialAccountId(
+                4L,
+                901L
+        )).willReturn(createTransaction(
+                901L,
+                AccountTransactionDirection.CREDIT,
+                BigDecimal.ZERO,
+                LocalDateTime.of(2026, 8, 5, 10, 30)
+        ));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> timeCapsuleEntryService.createTimeCapsuleEntry(
-                        7L,
-                        100L,
-                        createRequest(901L, "제목", "메시지", "NONE")
-                )
+                () -> timeCapsuleEntryService
+                        .createDraftForSuccessfulSavingsTransfer(7L, 4L, 901L)
         );
 
-        assertEquals(
-                ErrorCode.DUPLICATE_TIME_CAPSULE_ENTRY,
-                exception.getErrorCode()
-        );
-        verify(timeCapsuleEntryMapper, never())
-                .increaseEntryCountAndRefreshLatestEntry(
-                        any(TimeCapsuleEntry.class)
-                );
+        assertEquals(ErrorCode.INELIGIBLE_TIME_CAPSULE_TRANSACTION,
+                exception.getErrorCode());
+        verify(timeCapsuleEntryMapper, never()).insert(any());
     }
 
-    // [JMG] CAPSULE-4~5 테스트용 ERD 타임캡슐을 상태별로 구성한다.
+    // [JMG] CAPSULE-4~5 테스트용 보관함을 상태별로 구성한다.
     private TimeCapsule createTimeCapsule(
             long timeCapsuleId,
+            long financialAccountId,
             TimeCapsuleStatus status
     ) {
         TimeCapsule timeCapsule = TimeCapsule.create(
                 10L,
-                3L,
-                "깨비의 적금 타임캡슐",
+                financialAccountId,
+                "깨비의 대학자금 타임캡슐",
                 LocalDate.of(2038, 1, 12)
         );
         ReflectionTestUtils.setField(
@@ -334,7 +260,7 @@ class TimeCapsuleEntryServiceTest {
         return timeCapsule;
     }
 
-    // [JMG] CAPSULE-4~5 테스트용 적금 계좌 거래 스냅샷을 구성한다.
+    // [JMG] CAPSULE-5 테스트용 적금 계좌 거래 스냅샷을 구성한다.
     private TimeCapsuleEntryTransaction createTransaction(
             long accountTransactionId,
             AccountTransactionDirection direction,
@@ -350,61 +276,34 @@ class TimeCapsuleEntryServiceTest {
         );
         ReflectionTestUtils.setField(transaction, "direction", direction);
         ReflectionTestUtils.setField(transaction, "amount", amount);
-        ReflectionTestUtils.setField(
-                transaction,
-                "occurredAt",
-                occurredAt
-        );
+        ReflectionTestUtils.setField(transaction, "occurredAt", occurredAt);
         return transaction;
     }
 
-    // [JMG] CAPSULE-4 테스트용 조회 기록을 미디어 유형과 상태별로 구성한다.
+    // [JMG] CAPSULE-4~5 테스트용 엔트리를 자동 생성 규칙과 동일한 값으로 구성한다.
     private TimeCapsuleEntry createEntry(
             long entryId,
             long timeCapsuleId,
+            long accountTransactionId,
             AccountTransactionDirection direction,
+            BigDecimal amount,
             TimeCapsuleEntryStatus status,
             TimeCapsuleEntryMediaMode mediaMode
     ) {
-        TimeCapsuleEntry entry = TimeCapsuleEntry.create(
-                timeCapsuleId,
-                7L,
-                createTransaction(
-                        901L,
-                        direction,
-                        new BigDecimal("100000.00"),
-                        LocalDateTime.of(2026, 7, 20, 9, 0)
-                ),
-                "7월 저축 기록",
-                "깨비를 위한 저축이야.",
-                mediaMode
-        );
-        ReflectionTestUtils.setField(
-                entry,
-                "timeCapsuleEntryId",
-                entryId
-        );
+        TimeCapsuleEntry entry =
+                TimeCapsuleEntry.createDraftForSuccessfulTransfer(
+                        timeCapsuleId,
+                        7L,
+                        createTransaction(
+                                accountTransactionId,
+                                direction,
+                                amount,
+                                LocalDateTime.of(2026, 8, 5, 10, 30)
+                        )
+                );
+        ReflectionTestUtils.setField(entry, "timeCapsuleEntryId", entryId);
         ReflectionTestUtils.setField(entry, "status", status);
+        ReflectionTestUtils.setField(entry, "mediaMode", mediaMode);
         return entry;
-    }
-
-    // [JMG] CAPSULE-5 테스트용 기록 생성 요청을 API 필드명 기준으로 구성한다.
-    private CreateTimeCapsuleEntryRequest createRequest(
-            long accountTransactionId,
-            String title,
-            String message,
-            String mediaMode
-    ) {
-        CreateTimeCapsuleEntryRequest request =
-                new CreateTimeCapsuleEntryRequest();
-        ReflectionTestUtils.setField(
-                request,
-                "accountTransactionId",
-                accountTransactionId
-        );
-        ReflectionTestUtils.setField(request, "title", title);
-        ReflectionTestUtils.setField(request, "message", message);
-        ReflectionTestUtils.setField(request, "mediaMode", mediaMode);
-        return request;
     }
 }

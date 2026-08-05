@@ -1,20 +1,15 @@
 package com.azas.domain.timecapsule.controller;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
-import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
 import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
-import com.azas.global.response.ApiErrorResponse;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,49 +36,17 @@ public class TimeCapsuleController {
 
     @ApiOperation(
             value = "타임캡슐 보관함 생성",
-            notes = "자녀 명의의 활성 적금 계좌에 타임캡슐 보관함을 생성합니다."
+            notes = "자녀 명의 활성 적금 계좌에 연결된 타임캡슐 보관함을 생성합니다."
     )
-    @ApiResponses({
-            @ApiResponse(
-                    code = 201,
-                    message = "보관함 생성 성공",
-                    response = TimeCapsuleResponse.class
-            ),
-            @ApiResponse(
-                    code = 401,
-                    message = "Access Token 누락 또는 오류",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 404,
-                    message = "금융 계좌를 찾을 수 없음",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 409,
-                    message = "계좌에 이미 보관함이 존재함",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 422,
-                    message = "보관함 생성 대상이 아닌 계좌",
-                    response = ApiErrorResponse.class
-            )
-    })
     @PostMapping("/accounts/{account_id}/time-capsule")
-    // [JMG] CAPSULE-1 활성 적금 계좌를 기반으로 타임캡슐 보관함 생성 요청을 처리한다.
+    // [JMG] CAPSULE-1 자녀 적금 계좌와 1:1로 연결되는 타임캡슐 보관함 생성 요청을 처리한다.
     public ResponseEntity<TimeCapsuleResponse> createTimeCapsule(
-            @RequestHeader(
-                    value = "Authorization",
-                    required = false
-            )
+            @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
             @ApiParam(value = "금융 계좌 ID", required = true)
             @PathVariable("account_id")
             long accountId,
-            @Valid
-            @RequestBody
-            CreateTimeCapsuleRequest request
+            @Valid @RequestBody CreateTimeCapsuleRequest request
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
                 authorizationHeader
@@ -91,127 +54,56 @@ public class TimeCapsuleController {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(
-                        timeCapsuleService.createTimeCapsule(
-                                memberId,
-                                accountId,
-                                request
-                        )
-                );
+                .body(timeCapsuleService.createTimeCapsule(
+                        memberId,
+                        accountId,
+                        request
+                ));
     }
 
     @ApiOperation(
-            value = "자녀별 타임캡슐 보관함 목록 조회",
-            notes = "view=CARD는 최신 생성순, view=CALENDAR는 year와 month 기준 공개 예정일순으로 조회합니다."
+            value = "타임캡슐 보관함 목록 조회",
+            notes = "카드 또는 캘린더 화면용 보관함 목록을 커서 기반으로 조회합니다."
     )
-    @ApiResponses({
-            @ApiResponse(
-                    code = 200,
-                    message = "보관함 목록 조회 성공",
-                    response = TimeCapsuleListResponse.class
-            ),
-            @ApiResponse(
-                    code = 400,
-                    message = "목록 필터 또는 페이지네이션 값 오류",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 404,
-                    message = "조회 가능한 자녀를 찾을 수 없음",
-                    response = ApiErrorResponse.class
-            )
-    })
     @GetMapping("/children/{child_id}/time-capsules")
-    // [JMG] CAPSULE-2 자녀의 타임캡슐 보관함 목록 조회 요청을 처리한다.
+    // [JMG] CAPSULE-2 부모에게 연결된 자녀의 타임캡슐 보관함 목록을 조회한다.
     public ResponseEntity<TimeCapsuleListResponse> getTimeCapsules(
-            @RequestHeader(
-                    value = "Authorization",
-                    required = false
-            )
+            @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
             @ApiParam(value = "자녀 ID", required = true)
             @PathVariable("child_id")
             long childId,
-            @ApiParam(
-                    value = "목록 화면 유형",
-                    allowableValues = "CARD,CALENDAR"
-            )
-            @RequestParam(
-                    value = "view",
-                    required = false
-            )
-            String view,
-            @ApiParam(
-                    value = "보관함 상태",
-                    allowableValues = "COLLECTING,RELEASED,ARCHIVED"
-            )
-            @RequestParam(
-                    value = "status",
-                    required = false
-            )
-            String status,
-            @RequestParam(
-                    value = "cursor",
-                    required = false
-            )
-            String cursor,
-            @RequestParam(
-                    value = "size",
-                    required = false
-            )
-            Integer size,
-            @RequestParam(
-                    value = "year",
-                    required = false
-            )
-            Integer year,
-            @RequestParam(
-                    value = "month",
-                    required = false
-            )
-            Integer month
+            @RequestParam(value = "view", required = false) String view,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "cursor", required = false) String cursor,
+            @RequestParam(value = "size", required = false) Integer size,
+            @RequestParam(value = "year", required = false) Integer year,
+            @RequestParam(value = "month", required = false) Integer month
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
                 authorizationHeader
         );
 
-        return ResponseEntity.ok(
-                timeCapsuleService.getTimeCapsules(
-                        memberId,
-                        childId,
-                        view,
-                        status,
-                        cursor,
-                        size,
-                        year,
-                        month
-                )
-        );
+        return ResponseEntity.ok(timeCapsuleService.getTimeCapsules(
+                memberId,
+                childId,
+                view,
+                status,
+                cursor,
+                size,
+                year,
+                month
+        ));
     }
 
     @ApiOperation(
             value = "타임캡슐 보관함 상세 조회",
-            notes = "보관함 메타데이터를 조회합니다. 기록 목록은 별도 엔드포인트로 제공합니다."
+            notes = "보관함 기본 정보와 적금 계좌에 설정된 목표를 조회합니다."
     )
-    @ApiResponses({
-            @ApiResponse(
-                    code = 200,
-                    message = "보관함 상세 조회 성공",
-                    response = TimeCapsuleResponse.class
-            ),
-            @ApiResponse(
-                    code = 404,
-                    message = "보관함을 찾을 수 없거나 접근 권한이 없음",
-                    response = ApiErrorResponse.class
-            )
-    })
     @GetMapping("/time-capsules/{time_capsule_id}")
-    // [JMG] CAPSULE-3 타임캡슐 보관함 상세 조회 요청을 처리한다.
+    // [JMG] CAPSULE-3 부모 권한을 확인한 뒤 타임캡슐 보관함 기본 정보를 조회한다.
     public ResponseEntity<TimeCapsuleResponse> getTimeCapsule(
-            @RequestHeader(
-                    value = "Authorization",
-                    required = false
-            )
+            @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
             @ApiParam(value = "타임캡슐 보관함 ID", required = true)
             @PathVariable("time_capsule_id")
@@ -221,44 +113,23 @@ public class TimeCapsuleController {
                 authorizationHeader
         );
 
-        return ResponseEntity.ok(
-                timeCapsuleService.getTimeCapsule(
-                        memberId,
-                        timeCapsuleId
-                )
-        );
+        return ResponseEntity.ok(timeCapsuleService.getTimeCapsule(
+                memberId,
+                timeCapsuleId
+        ));
     }
 
     @ApiOperation(
-            value = "타임캡슐 기록 목록 조회",
-            notes = "부모 또는 보호자가 공개 전 타임캡슐의 기록 제목, 저축 금액, 미디어 정보를 조회합니다."
+            value = "타임캡슐 엔트리 목록 조회",
+            notes = "부모 또는 보호자가 삭제되지 않은 기록 목록을 조회합니다."
     )
-    @ApiResponses({
-            @ApiResponse(
-                    code = 200,
-                    message = "기록 목록 조회 성공",
-                    response = TimeCapsuleEntryListResponse.class
-            ),
-            @ApiResponse(
-                    code = 401,
-                    message = "Access Token 누락 또는 오류",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 404,
-                    message = "타임캡슐을 찾을 수 없거나 접근 권한이 없음",
-                    response = ApiErrorResponse.class
-            )
-    })
     @GetMapping("/time-capsules/{time_capsule_id}/entries")
-    // [JMG] CAPSULE-4 타임캡슐 기록 목록 조회 요청을 처리한다.
-    public ResponseEntity<TimeCapsuleEntryListResponse> getTimeCapsuleEntries(
-            @RequestHeader(
-                    value = "Authorization",
-                    required = false
-            )
+    // [JMG] CAPSULE-4 부모 권한을 확인한 뒤 타임캡슐 내부 엔트리 목록을 조회한다.
+    public ResponseEntity<TimeCapsuleEntryListResponse>
+    getTimeCapsuleEntries(
+            @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
-            @ApiParam(value = "타임캡슐 ID", required = true)
+            @ApiParam(value = "타임캡슐 보관함 ID", required = true)
             @PathVariable("time_capsule_id")
             long timeCapsuleId
     ) {
@@ -272,71 +143,5 @@ public class TimeCapsuleController {
                         timeCapsuleId
                 )
         );
-    }
-
-    @ApiOperation(
-            value = "타임캡슐 기록 생성",
-            notes = "해당 적금 계좌의 입금 거래에 부모 메시지와 이후 업로드할 미디어 유형을 연결합니다."
-    )
-    @ApiResponses({
-            @ApiResponse(
-                    code = 201,
-                    message = "기록 생성 성공",
-                    response = TimeCapsuleEntryResponse.class
-            ),
-            @ApiResponse(
-                    code = 400,
-                    message = "요청 값 또는 미디어 유형 오류",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 401,
-                    message = "Access Token 누락 또는 오류",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 404,
-                    message = "타임캡슐 또는 계좌 거래를 찾을 수 없음",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 409,
-                    message = "중복 거래이거나 기록 생성이 불가능한 타임캡슐 상태",
-                    response = ApiErrorResponse.class
-            ),
-            @ApiResponse(
-                    code = 422,
-                    message = "입금 거래가 아닌 계좌 거래",
-                    response = ApiErrorResponse.class
-            )
-    })
-    @PostMapping("/time-capsules/{time_capsule_id}/entries")
-    // [JMG] CAPSULE-5 적금 입금 거래 기반의 타임캡슐 기록 생성 요청을 처리한다.
-    public ResponseEntity<TimeCapsuleEntryResponse> createTimeCapsuleEntry(
-            @RequestHeader(
-                    value = "Authorization",
-                    required = false
-            )
-            String authorizationHeader,
-            @ApiParam(value = "타임캡슐 ID", required = true)
-            @PathVariable("time_capsule_id")
-            long timeCapsuleId,
-            @Valid
-            @RequestBody
-            CreateTimeCapsuleEntryRequest request
-    ) {
-        long memberId = accessTokenMemberResolver.resolveMemberId(
-                authorizationHeader
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(
-                        timeCapsuleEntryService.createTimeCapsuleEntry(
-                                memberId,
-                                timeCapsuleId,
-                                request
-                        )
-                );
     }
 }

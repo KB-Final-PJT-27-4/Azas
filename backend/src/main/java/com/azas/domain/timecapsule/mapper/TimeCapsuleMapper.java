@@ -43,6 +43,11 @@ public interface TimeCapsuleMapper {
             @Param("memberId") long memberId
     );
 
+    // [JMG] CAPSULE-5 이체 성공 이벤트 처리 중 적금 계좌의 보관함을 잠가 중복 엔트리 생성을 막는다.
+    TimeCapsule findByFinancialAccountIdForUpdate(
+            @Param("financialAccountId") long financialAccountId
+    );
+
     // [JMG] CAPSULE-2 카드형 보관함 목록을 keyset pagination으로 조회한다.
     List<TimeCapsule> findCardSummaries(
             TimeCapsuleSearchCondition condition

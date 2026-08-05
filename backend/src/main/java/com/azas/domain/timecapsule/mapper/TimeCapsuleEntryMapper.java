@@ -16,8 +16,14 @@ public interface TimeCapsuleEntryMapper {
     );
 
     // [JMG] CAPSULE-5 해당 보관함의 적금 계좌에 실제로 속한 거래만 조회한다.
-    TimeCapsuleEntryTransaction findTransactionByTimeCapsuleAndId(
+    TimeCapsuleEntry findByTimeCapsuleAndTransactionId(
             @Param("timeCapsuleId") long timeCapsuleId,
+            @Param("accountTransactionId") long accountTransactionId
+    );
+
+    // [JMG] CAPSULE-5 대상 적금 계좌의 거래만 조회해 다른 계좌 거래 연결을 차단한다.
+    TimeCapsuleEntryTransaction findTransactionByFinancialAccountId(
+            @Param("financialAccountId") long financialAccountId,
             @Param("accountTransactionId") long accountTransactionId
     );
 

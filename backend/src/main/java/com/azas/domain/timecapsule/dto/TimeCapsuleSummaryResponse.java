@@ -14,6 +14,9 @@ public class TimeCapsuleSummaryResponse {
     @JsonProperty("time_capsule_id")
     private final Long timeCapsuleId;
 
+    @JsonProperty("financial_account_id")
+    private final Long financialAccountId;
+
     private final String title;
     private final String status;
 
@@ -29,6 +32,8 @@ public class TimeCapsuleSummaryResponse {
     @JsonProperty("latest_entry_at")
     private final LocalDateTime latestEntryAt;
 
+    private final TimeCapsuleGoalResponse goal;
+
     @JsonProperty("created_at")
     private final LocalDateTime createdAt;
 
@@ -37,12 +42,14 @@ public class TimeCapsuleSummaryResponse {
             LocalDate today
     ) {
         this.timeCapsuleId = timeCapsule.getTimeCapsuleId();
+        this.financialAccountId = timeCapsule.getFinancialAccountId();
         this.title = timeCapsule.getTitle();
         this.status = timeCapsule.getStatus().name();
         this.expectedReleaseAt = timeCapsule.getExpectedReleaseAt();
         this.dDay = calculateDDay(timeCapsule, today);
         this.entryCount = timeCapsule.getEntryCount();
         this.latestEntryAt = timeCapsule.getLatestEntryAt();
+        this.goal = TimeCapsuleGoalResponse.fromOrNull(timeCapsule);
         this.createdAt = timeCapsule.getCreatedAt();
     }
 

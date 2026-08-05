@@ -26,8 +26,11 @@ public class TimeCapsuleEntrySummaryResponse {
     @JsonProperty("media_mode")
     private final String mediaMode;
 
-    @JsonProperty("thumbnail_object_key")
-    private final String thumbnailObjectKey;
+    @JsonProperty("thumbnail_url")
+    private final String thumbnailUrl;
+
+    @JsonProperty("thumbnail_expires_at")
+    private final LocalDateTime thumbnailExpiresAt;
 
     private final String status;
 
@@ -40,7 +43,8 @@ public class TimeCapsuleEntrySummaryResponse {
         this.contributionAmount = entry.getContributionAmount();
         this.contributedAt = entry.getContributedAt();
         this.mediaMode = entry.getMediaMode().name();
-        this.thumbnailObjectKey = entry.getThumbnailObjectKey();
+        this.thumbnailUrl = null;
+        this.thumbnailExpiresAt = null;
         this.status = entry.getStatus().name();
         this.mediaCount = entry.getMediaCount();
     }

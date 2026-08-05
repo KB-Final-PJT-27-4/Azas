@@ -80,7 +80,32 @@
         ORDER BY tce.contributed_at DESC, tce.time_capsule_entry_id DESC
     </select>
 
-    <select id="findTransactionByTimeCapsuleAndId"
+    <select id="findByTimeCapsuleAndTransactionId"
+            resultMap="timeCapsuleEntryResultMap">
+        SELECT
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.blurred_thumbnail_object_key,
+            tce.status,
+            tce.edit_count,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at,
+            0 AS media_count
+        FROM time_capsule_entry tce
+        WHERE tce.time_capsule_id = #{timeCapsuleId}
+          AND tce.account_transaction_id = #{accountTransactionId}
+    </select>
+
+    <select id="findTransactionByFinancialAccountId"
             resultMap="timeCapsuleEntryTransactionResultMap">
         SELECT
             at.account_transaction_id,
@@ -88,9 +113,7 @@
             at.amount,
             at.occurred_at
         FROM account_transaction at
-        INNER JOIN time_capsule tc
-            ON tc.financial_account_id = at.financial_account_id
-        WHERE tc.time_capsule_id = #{timeCapsuleId}
+        WHERE at.financial_account_id = #{financialAccountId}
           AND at.account_transaction_id = #{accountTransactionId}
     </select>
 

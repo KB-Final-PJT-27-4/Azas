@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -29,24 +30,26 @@ public class TimeCapsuleEntry {
     private LocalDateTime updatedAt;
     private int mediaCount;
 
-    // [JMG] CAPSULE-5 적금 입금 거래의 금액과 시각을 스냅샷으로 보관하는 기록을 생성한다.
-    public static TimeCapsuleEntry create(
+    private static final DateTimeFormatter AUTO_TITLE_DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy년 M월 d일");
+
+    // [JMG] CAPSULE-5 성공한 적금 입금 거래를 기준으로 수정 가능한 엔트리 초안을 자동 생성한다.
+    public static TimeCapsuleEntry createDraftForSuccessfulTransfer(
             long timeCapsuleId,
             long authorMemberId,
-            TimeCapsuleEntryTransaction transaction,
-            String title,
-            String message,
-            TimeCapsuleEntryMediaMode mediaMode
+            TimeCapsuleEntryTransaction transaction
     ) {
         TimeCapsuleEntry entry = new TimeCapsuleEntry();
         entry.timeCapsuleId = timeCapsuleId;
         entry.authorMemberId = authorMemberId;
         entry.accountTransactionId = transaction.getAccountTransactionId();
-        entry.title = title.trim();
-        entry.message = message.trim();
+        entry.title = transaction.getOccurredAt()
+                .toLocalDate()
+                .format(AUTO_TITLE_DATE_FORMATTER) + " 저축 기록";
+        entry.message = null;
         entry.contributionAmount = transaction.getAmount();
         entry.contributedAt = transaction.getOccurredAt();
-        entry.mediaMode = mediaMode;
+        entry.mediaMode = TimeCapsuleEntryMediaMode.NONE;
         entry.status = TimeCapsuleEntryStatus.DRAFT;
         return entry;
     }
