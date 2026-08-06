@@ -22,7 +22,7 @@ const editGoal = () => router.push({ name: 'Goals' })
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-4 pt-5 pb-6 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-[18px] pt-5 pb-6 text-[var(--color-text-primary)]"
   >
     <section class="rounded-[20px] bg-[var(--color-brand-secondary)] px-[18px] py-5">
       <div class="flex items-center gap-4">

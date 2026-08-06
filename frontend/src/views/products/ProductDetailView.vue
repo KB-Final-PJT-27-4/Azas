@@ -83,7 +83,7 @@ const updateMonthlyAmount = (event: Event) => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-app-background)] px-3 pt-4 pb-6 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-app-background)] px-[18px] pt-4 pb-6 text-[var(--color-text-primary)]"
   >
     <section class="rounded-[18px] bg-[var(--color-brand-secondary)] p-4">
       <div class="flex flex-wrap gap-1.5">
