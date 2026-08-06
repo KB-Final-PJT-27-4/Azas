@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ChevronDown, ChevronRight, X } from 'lucide-vue-next'
 
 import allowanceCardPigUrl from '@/assets/images/child/child-allowance-card-pig.png'
@@ -14,14 +14,19 @@ import {
   type ChildTransaction,
 } from '@/mocks/childHome'
 
+type TransferSheetMode = 'form' | 'success'
+
 const isTransferSheetOpen = ref(false)
+const transferSheetMode = ref<TransferSheetMode>('form')
 const transferAccountNumber = ref('')
 const transferAmount = ref(10_000)
 const completedTransferAmount = ref(0)
-const transferNotice = ref<{ type: 'success' | 'error'; message: string } | null>(null)
-let transferCloseTimer: ReturnType<typeof window.setTimeout> | null = null
+const transferErrorMessage = ref('')
 const recentTransactions = computed(() => childTransactions.slice(0, 3))
 const transferAmountValue = computed(() => Number(transferAmount.value) || 0)
+const formattedTransferAmount = computed(() =>
+  transferAmountValue.value > 0 ? transferAmountValue.value.toLocaleString('ko-KR') : '',
+)
 const transferValidationMessage = computed(() => {
   if (!transferAccountNumber.value.trim()) {
     return '계좌번호를 입력해주세요.'
@@ -45,49 +50,48 @@ const formatSignedCurrency = (transaction: ChildTransaction) => {
 
   return `${prefix}${formatCurrency(transaction.amount)}`
 }
+const getTransactionEmoji = (transaction: ChildTransaction) =>
+  transaction.type === 'income' ? '💰' : '🛍️'
 
-const closeTransferSheet = () => {
-  if (transferCloseTimer) {
-    window.clearTimeout(transferCloseTimer)
-    transferCloseTimer = null
-  }
-
-  isTransferSheetOpen.value = false
+const resetTransferForm = () => {
   transferAccountNumber.value = ''
   transferAmount.value = 10_000
-  transferNotice.value = null
+  transferErrorMessage.value = ''
+}
+
+const updateTransferAmount = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const numericValue = input.value.replace(/\D/g, '')
+
+  transferAmount.value = numericValue ? Number(numericValue) : 0
+}
+
+const openTransferSheet = () => {
+  transferSheetMode.value = 'form'
+  resetTransferForm()
+  isTransferSheetOpen.value = true
+}
+
+const closeTransferSheet = () => {
+  isTransferSheetOpen.value = false
+  transferSheetMode.value = 'form'
+  resetTransferForm()
 }
 
 const submitTransfer = () => {
   if (!canSubmitTransfer.value) {
-    transferNotice.value = {
-      type: 'error',
-      message: transferValidationMessage.value,
-    }
+    transferErrorMessage.value = transferValidationMessage.value
     return
   }
 
   completedTransferAmount.value = transferAmountValue.value
   recordChildTransfer({
-    amount: transferAmountValue.value,
+    amount: completedTransferAmount.value,
     bankName: transferDefaults.bankName,
   })
-  transferNotice.value = {
-    type: 'success',
-    message: `${formatCurrency(completedTransferAmount.value)} 이체가 완료되었어요.`,
-  }
-  transferAccountNumber.value = ''
-  transferAmount.value = 10_000
-  transferCloseTimer = window.setTimeout(() => {
-    closeTransferSheet()
-  }, 900)
+  transferSheetMode.value = 'success'
+  resetTransferForm()
 }
-
-onBeforeUnmount(() => {
-  if (transferCloseTimer) {
-    window.clearTimeout(transferCloseTimer)
-  }
-})
 </script>
 
 <template>
@@ -129,18 +133,18 @@ onBeforeUnmount(() => {
         </div>
 
         <button
-          class="child-balance-button child-balance-button--primary"
+          class="mt-6 flex h-12 w-[150px] items-center justify-center rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[length:var(--font-size-sm)] font-extrabold text-white"
           type="button"
-          @click="isTransferSheetOpen = true"
+          @click="openTransferSheet"
         >
           이체하기
         </button>
         <RouterLink
-          class="child-balance-button child-balance-button--allowance"
+          class="mt-3 inline-flex h-11 w-[150px] max-w-full items-center justify-center gap-[6px] rounded-[14px] bg-white px-2 text-[length:var(--font-size-sm)] font-extrabold whitespace-nowrap text-[#3BA9FF]"
           to="/child/allowance"
         >
           <img
-            class="child-allowance-icon"
+            class="size-[28px] -translate-x-1 shrink-0 object-contain"
             :src="allowanceIconUrl"
             alt=""
             aria-hidden="true"
@@ -182,10 +186,12 @@ onBeforeUnmount(() => {
           class="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-4 border-b border-[var(--color-border)] px-4 py-4 last:border-b-0"
         >
           <div
-            class="size-11 rounded-[14px]"
+            class="grid size-11 place-items-center rounded-[14px] text-[20px]"
             :class="transaction.type === 'income' ? 'bg-[#ebf5ff]' : 'bg-[#fff9d9]'"
             aria-hidden="true"
-          />
+          >
+            {{ getTransactionEmoji(transaction) }}
+          </div>
           <div class="min-w-0">
             <strong
               class="block truncate text-[length:var(--font-size-sm)] text-[var(--color-text-primary)]"
@@ -223,11 +229,11 @@ onBeforeUnmount(() => {
           부모님께 용돈을 요청해보세요!
         </p>
         <RouterLink
-          class="child-request-button"
+          class="inline-flex h-11 w-[150px] max-w-full items-center justify-center gap-[6px] rounded-[12px] bg-[var(--color-selected-background)] px-2 text-[length:var(--font-size-sm)] font-extrabold whitespace-nowrap text-[#3BA9FF]"
           to="/child/allowance"
         >
           <img
-            class="child-allowance-icon"
+            class="size-[28px] -translate-x-1 shrink-0 object-contain"
             :src="allowanceIconUrl"
             alt=""
             aria-hidden="true"
@@ -236,7 +242,7 @@ onBeforeUnmount(() => {
         </RouterLink>
       </div>
       <img
-        class="pointer-events-none absolute right-3 bottom-4 w-[166px] select-none object-contain"
+        class="pointer-events-none absolute right-2 bottom-3 w-[176px] select-none object-contain"
         :src="allowanceCardPigUrl"
         alt=""
         aria-hidden="true"
@@ -260,7 +266,7 @@ onBeforeUnmount(() => {
               id="transfer-sheet-title"
               class="m-0 text-[length:var(--font-size-lg)] font-extrabold"
             >
-              이체하기
+              {{ transferSheetMode === 'success' ? '이체 완료' : '이체하기' }}
             </h2>
             <button
               class="grid size-9 place-items-center rounded-full border-0 bg-[var(--color-surface-muted)] p-0 text-[var(--color-unselected-text)]"
@@ -272,7 +278,38 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
-          <div class="grid gap-4">
+          <div
+            v-if="transferSheetMode === 'success'"
+            class="grid justify-items-center gap-4 py-4 text-center"
+          >
+            <div
+              class="grid size-16 place-items-center rounded-full bg-[var(--color-selected-background)] text-[28px] font-black text-[var(--color-selected-text)]"
+              aria-hidden="true"
+            >
+              ✓
+            </div>
+            <div>
+              <h3
+                class="m-0 text-[length:var(--font-size-lg)] font-black text-[var(--color-text-primary)]"
+              >
+                이체가 완료되었어요!
+              </h3>
+              <p
+                class="mt-2 mb-0 text-[length:var(--font-size-sm)] text-[var(--color-text-secondary)]"
+              >
+                {{ formatCurrency(completedTransferAmount) }}을 보냈어요.
+              </p>
+            </div>
+            <button
+              class="mt-2 h-12 w-full rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[length:var(--font-size-md)] font-extrabold text-white"
+              type="button"
+              @click="closeTransferSheet"
+            >
+              확인
+            </button>
+          </div>
+
+          <div v-else class="grid gap-4">
             <label class="grid gap-2 text-[length:var(--font-size-sm)] font-bold">
               어디로 보낼까요?
               <button
@@ -295,11 +332,21 @@ onBeforeUnmount(() => {
 
             <label class="grid gap-2 text-[length:var(--font-size-sm)] font-bold">
               얼마를 보낼까요?
-              <input
-                v-model.number="transferAmount"
-                class="h-12 rounded-[12px] border border-[var(--color-border)] px-4 text-[length:var(--font-size-xl)] font-extrabold outline-none focus:border-[var(--color-brand-primary)]"
-                type="number"
-              />
+              <div class="relative">
+                <input
+                  :value="formattedTransferAmount"
+                  class="h-12 w-full rounded-[12px] border border-[var(--color-border)] px-4 pr-10 text-[length:var(--font-size-xl)] font-extrabold outline-none focus:border-[var(--color-brand-primary)]"
+                  inputmode="numeric"
+                  placeholder="0"
+                  type="text"
+                  @input="updateTransferAmount"
+                />
+                <span
+                  class="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
+                >
+                  원
+                </span>
+              </div>
               <span
                 class="text-[length:var(--font-size-xs)] font-normal text-[var(--color-text-secondary)]"
               >
@@ -320,16 +367,11 @@ onBeforeUnmount(() => {
             </div>
 
             <p
-              v-if="transferNotice"
-              class="m-0 rounded-[12px] px-4 py-3 text-[length:var(--font-size-xs)] font-bold"
-              :class="
-                transferNotice.type === 'success'
-                  ? 'bg-[#e9fbf1] text-[#177245]'
-                  : 'bg-[#fff2f2] text-[#d64545]'
-              "
+              v-if="transferErrorMessage"
+              class="m-0 rounded-[12px] bg-[#fff2f2] px-4 py-3 text-[length:var(--font-size-xs)] font-bold text-[#d64545]"
               role="alert"
             >
-              {{ transferNotice.message }}
+              {{ transferErrorMessage }}
             </p>
 
             <button
@@ -351,67 +393,3 @@ onBeforeUnmount(() => {
     </Teleport>
   </main>
 </template>
-
-<style scoped>
-.child-balance-button {
-  --button-width: 150px;
-  --button-height: 48px;
-  --button-gap: 4px;
-  --icon-width: 38px;
-  --icon-height: 26px;
-
-  display: inline-flex;
-  width: var(--button-width);
-  height: var(--button-height);
-  align-items: center;
-  justify-content: center;
-  gap: var(--button-gap);
-  border: 0;
-  border-radius: 14px;
-  padding: 0 12px;
-  font-size: var(--font-size-sm);
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.child-balance-button--primary {
-  margin-top: 24px;
-  background: var(--color-brand-primary);
-  color: #fff;
-}
-
-.child-balance-button--allowance {
-  margin-top: 12px;
-  background: #fff;
-  color: var(--color-selected-text);
-}
-
-.child-request-button {
-  --button-width: 150px;
-  --button-height: 44px;
-  --button-gap: 4px;
-  --icon-width: 38px;
-  --icon-height: 26px;
-
-  display: inline-flex;
-  width: var(--button-width);
-  height: var(--button-height);
-  align-items: center;
-  justify-content: center;
-  gap: var(--button-gap);
-  border-radius: 12px;
-  padding: 0 12px;
-  background: var(--color-selected-background);
-  color: var(--color-selected-text);
-  font-size: var(--font-size-sm);
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.child-allowance-icon {
-  width: var(--icon-width);
-  height: var(--icon-height);
-  flex-shrink: 0;
-  object-fit: contain;
-}
-</style>
