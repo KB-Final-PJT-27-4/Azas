@@ -3,7 +3,8 @@ import registrationCompleteImage from '@/assets/images/accounts/registration-com
 import walletIcon from '@/assets/images/accounts/wallet-icon.png'
 
 const emit = defineEmits<{
-  createPlan: []
+  home: []
+  createGoal: []
 }>()
 </script>
 
@@ -38,13 +39,22 @@ const emit = defineEmits<{
         </p>
       </div>
 
-      <button
-        class="mt-auto min-h-14 rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
-        type="button"
-        @click="emit('createPlan')"
-      >
-        맞춤 플랜 생성하기
-      </button>
+      <div class="mt-auto grid grid-cols-2 gap-4">
+        <button
+          class="min-h-14 rounded-xl border border-[var(--color-border)] bg-white text-base font-bold text-[var(--color-selected-text)] transition-colors hover:bg-[var(--color-surface-muted)] active:bg-[var(--color-unselected-background)]"
+          type="button"
+          @click="emit('home')"
+        >
+          홈으로 가기
+        </button>
+        <button
+          class="min-h-14 rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors hover:bg-[var(--color-brand-primary-pressed)] active:bg-[var(--color-brand-primary-pressed)]"
+          type="button"
+          @click="emit('createGoal')"
+        >
+          목표 설정하기
+        </button>
+      </div>
     </div>
   </section>
 </template>
