@@ -83,7 +83,7 @@ const addAccount = () => {
   >
     <section aria-labelledby="accounts-title">
       <h1 id="accounts-title" class="text-[28px] leading-tight font-bold tracking-[-0.04em]">
-        계좌정보 관리
+        계좌 관리
       </h1>
       <p class="mt-3 text-sm text-[var(--color-text-secondary)]">
         계좌를 추가하고 대표 계좌를 설정할 수 있어요.
@@ -113,7 +113,7 @@ const addAccount = () => {
               {{ account.bankMark }}
             </div>
 
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex-1 flex flex-col">
               <div class="flex flex-wrap items-center gap-2">
                 <h3 class="truncate text-base font-bold tracking-[-0.02em]">
                   {{ account.name }}
@@ -125,7 +125,7 @@ const addAccount = () => {
                   대표 계좌
                 </span>
               </div>
-              <p class="mt-1 truncate text-xs text-[var(--color-text-secondary)]">
+              <p class="mt-2 truncate text-xs text-[var(--color-text-secondary)]">
                 {{ account.bank }} · {{ account.accountNumber }}
               </p>
             </div>
