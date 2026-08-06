@@ -173,7 +173,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/alarm',
     name: 'AlarmSettings',
     component: () => import('@/views/mypage/AlarmSettingsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/guide',
@@ -187,7 +193,13 @@ const routes: RouteRecordRaw[] = [
     path: '/alarm',
     name: 'Alarm',
     component: () => import('@/views/alarm/AlarmView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '알림',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 아이
