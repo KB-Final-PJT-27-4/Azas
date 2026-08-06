@@ -210,7 +210,7 @@ const requestHelp = () => {
         <li
           v-for="(step, index) in selectedGuide.steps"
           :key="step"
-          class="flex items-start gap-3 rounded-xl bg-[var(--color-surface-muted)] p-4"
+          class="flex items-center gap-3 rounded-xl bg-[var(--color-surface-muted)] p-4"
         >
           <span
             class="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--color-brand-primary)] text-xs font-bold text-[var(--color-text-inverse)]"
