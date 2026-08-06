@@ -148,7 +148,14 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/permissions',
     name: 'ParentPermissions',
     component: () => import('@/views/mypage/ParentPermissionsView.vue'),
-    meta: { requiresAuth: true, roles: ['PARENT'] },
+    meta: {
+      requiresAuth: true,
+      roles: ['PARENT'],
+      hideBottomNavigation: true,
+      headerTitle: '아이 이용 권한 설정',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/accounts',

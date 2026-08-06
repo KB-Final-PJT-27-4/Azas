@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 type AlarmItem = {
   id: number
+  group: '오늘' | '지난 알림'
   title: string
   message: string
   receivedAt: string
@@ -12,64 +13,118 @@ type AlarmItem = {
 const alarms = ref<AlarmItem[]>([
   {
     id: 1,
-    title: '채린아 잘 지내니',
-    message:
-      '알림이 울렸다.. 누구에게 온 것일까...? 혹시 그녀...? 채린아.. 잘 지내니..? 혹시 자니? 자나보네 잘자.... 너는 진짜 별로다 ㅋㅋ 내 마음의 별로 ㅋㅋ 너 진짜 싫어라.... 어메이징 ㅎㅎ',
-    receivedAt: '2026.07.21 11:01',
+    group: '오늘',
+    title: '오늘은 아이사랑적금 저축일이에요',
+    message: '목표를 향한 작은 한 걸음을 이어가 볼까요?',
+    receivedAt: '오전 11:01',
     isRead: false,
   },
   {
     id: 2,
-    title: '보겔카 가자 ㅋㅋ',
-    message:
-      '아 배고프다 꼬르륵 꼬르륵 홍합 여기는 피그마 공장이라 날 제발 보겔카로 데려가줘 제발 자유 제기야 내일만된다고요!!!',
-    receivedAt: '2026.07.21 11:01',
-    isRead: true,
+    group: '오늘',
+    title: '저축 목표의 80%를 달성했어요',
+    message: '조금만 더 모으면 기다리던 목표를 이룰 수 있어요.',
+    receivedAt: '오전 9:20',
+    isRead: false,
   },
   {
     id: 3,
-    title: '대주오빠 잘지내',
-    message: '대주오빠 3분째 내 디엠 안읽네 잘지내 ㅋㅋ',
-    receivedAt: '2026.07.21 11:01',
+    group: '지난 알림',
+    title: '타임캡슐 공개일이 다가오고 있어요',
+    message: '소중한 추억을 만나는 날까지 이제 3일 남았어요.',
+    receivedAt: '8월 5일',
+    isRead: true,
+  },
+  {
+    id: 4,
+    group: '지난 알림',
+    title: '깨비의 특별한 날을 확인해 보세요',
+    message: '다가오는 기념일에 따뜻한 추억을 남겨보세요.',
+    receivedAt: '8월 3일',
     isRead: true,
   },
 ])
 
+const groups = computed(() =>
+  (['오늘', '지난 알림'] as const)
+    .map((label) => ({ label, items: alarms.value.filter(({ group }) => group === label) }))
+    .filter(({ items }) => items.length),
+)
+const unreadCount = computed(() => alarms.value.filter(({ isRead }) => !isRead).length)
+
 const readAlarm = (alarm: AlarmItem) => {
   alarm.isRead = true
+}
+
+const readAllAlarms = () => {
+  alarms.value.forEach((alarm) => {
+    alarm.isRead = true
+  })
 }
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-white">
+  <main class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-white px-5 pt-4 pb-10">
     <h1 class="sr-only">알림</h1>
 
-    <ul v-if="alarms.length" class="m-0 list-none p-0">
-      <li v-for="alarm in alarms" :key="alarm.id" class="border-b border-[#dce8ee]">
-        <button
-          class="block min-h-[100px] w-full px-6 py-5 text-left transition-colors duration-150"
-          :class="alarm.isRead ? 'bg-white active:bg-[#f7fafb]' : 'bg-[#eaf9ff] active:bg-[#ddf4fd]'"
-          type="button"
-          @click="readAlarm(alarm)"
-        >
-          <span class="flex items-start gap-4">
-            <strong
-              class="min-w-0 flex-1 text-[16px] font-extrabold tracking-[-0.02em] text-[var(--color-text-primary)]"
-            >
-              {{ alarm.title }}
-            </strong>
-            <time class="mt-0.5 shrink-0 text-[10px] text-[var(--color-text-secondary)]">
-              {{ alarm.receivedAt }}
-            </time>
-          </span>
-          <span
-            class="mt-2 block text-[11px] leading-[1.45] text-[var(--color-text-secondary)]"
+    <template v-if="alarms.length">
+      <section v-for="(group, index) in groups" :key="group.label" :class="index ? 'mt-4' : ''">
+        <h2 class="mb-3 px-1 text-xs font-bold text-[var(--color-text-secondary)]">
+          {{ group.label }}
+        </h2>
+        <ul class="m-0 list-none space-y-3 p-0">
+          <li
+            v-for="alarm in group.items"
+            :key="alarm.id"
           >
-            {{ alarm.message }}
-          </span>
+            <button
+              class="block min-h-[96px] w-full rounded-xl border px-4 py-4 text-left transition-colors duration-150"
+              :class="
+                alarm.isRead
+                  ? 'border-[var(--color-border)] bg-white active:bg-[var(--color-unselected-background)]'
+                  : 'border-[#d5edf8] bg-[var(--color-selected-background)] active:bg-[#dff5ff]'
+              "
+              type="button"
+              @click="readAlarm(alarm)"
+            >
+              <span class="block min-w-0">
+                <span class="flex items-start gap-2">
+                  <strong
+                    class="min-w-0 flex-1 text-[14px] leading-snug font-bold tracking-[-0.015em] text-[var(--color-text-primary)]"
+                  >
+                    {{ alarm.title }}
+                  </strong>
+                  <span
+                    v-if="!alarm.isRead"
+                    class="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--color-brand-primary)]"
+                    aria-label="읽지 않음"
+                  ></span>
+                </span>
+                <span class="mt-1.5 block text-[11px] leading-[1.45] text-[var(--color-text-secondary)]">
+                  {{ alarm.message }}
+                </span>
+                <time class="mt-2 block text-[10px] font-medium text-[#a0aab3]">
+                  {{ alarm.receivedAt }}
+                </time>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      <div
+        v-if="unreadCount"
+        class="pointer-events-none fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-1/2 z-10 flex w-full max-w-[var(--app-max-width)] -translate-x-1/2 justify-end px-5"
+      >
+        <button
+          class="pointer-events-auto rounded-lg border border-[#d5edf8] bg-[var(--color-selected-background)] px-4 py-2.5 text-xs font-bold text-[var(--color-selected-text)] shadow-[0_4px_14px_rgba(43,171,232,0.16)] transition-colors active:bg-[#dff5ff]"
+          type="button"
+          @click="readAllAlarms"
+        >
+          모두 읽기
         </button>
-      </li>
-    </ul>
+      </div>
+    </template>
 
     <div v-else class="grid min-h-[55vh] place-items-center px-5 text-center">
       <div>
