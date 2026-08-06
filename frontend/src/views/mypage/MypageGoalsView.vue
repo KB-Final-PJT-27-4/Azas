@@ -60,7 +60,7 @@ const addGoal = () => {
   >
     <section aria-labelledby="goals-title">
       <h1 id="goals-title" class="text-[28px] leading-tight font-bold tracking-[-0.04em]">
-        등록된 목표
+        목표 관리
       </h1>
       <p class="mt-3 text-sm text-[var(--color-text-secondary)]">
         목표 금액과 달성 시기를 수정할 수 있어요.
