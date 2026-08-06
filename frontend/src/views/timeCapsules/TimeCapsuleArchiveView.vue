@@ -7,22 +7,27 @@ import openImage from '@/assets/images/timeCapsules/archive/open.png'
 
 const router = useRouter()
 
+const today = new Date()
+const todayKey = [
+  today.getFullYear(),
+  String(today.getMonth() + 1).padStart(2, '0'),
+  String(today.getDate()).padStart(2, '0'),
+].join('.')
+
+const isReleased = (releaseDate: string) => releaseDate <= todayKey
+
 const capsuleAccounts = [
   {
     id: 1,
     name: '아이사랑적금',
-    createdAt: '2027.07.16',
+    createdAt: '2026.08.06',
     savedAmount: 200000,
-    image: lockImage,
-    imageAlt: '잠긴 타임캡슐',
   },
   {
     id: 2,
     name: '우리사랑적금',
     createdAt: '2027.07.18',
     savedAmount: 200000,
-    image: openImage,
-    imageAlt: '열린 타임캡슐',
   },
 ]
 </script>
@@ -74,7 +79,11 @@ const capsuleAccounts = [
         @click="router.push(`/time-capsules/${capsule.id}`)"
       >
         <span class="grid aspect-[4/3] place-items-center rounded-xl bg-[#ecfaff]">
-          <img class="h-16 w-20 object-contain" :src="capsule.image" :alt="capsule.imageAlt" />
+          <img
+            class="h-16 w-20 object-contain"
+            :src="isReleased(capsule.createdAt) ? openImage : lockImage"
+            :alt="isReleased(capsule.createdAt) ? '열린 타임캡슐' : '잠긴 타임캡슐'"
+          />
         </span>
         <strong class="mt-4 block truncate text-base text-[var(--color-text-primary)]">
           {{ capsule.name }}

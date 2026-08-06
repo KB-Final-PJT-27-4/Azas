@@ -7,6 +7,7 @@ import {
   timeCapsuleAccounts,
   type TimeCapsulePhoto,
 } from '@/data/timeCapsuleDummyData'
+import { useToast } from '@/composables/useToast'
 
 type EditMedia = TimeCapsulePhoto & {
   isNew?: boolean
@@ -14,6 +15,7 @@ type EditMedia = TimeCapsulePhoto & {
 
 const route = useRoute()
 const router = useRouter()
+const { showToast } = useToast()
 const recordId = String(route.params.capsuleId)
 const initialData = findTimeCapsuleRecord(recordId)
 
@@ -32,7 +34,38 @@ const transferOptions = computed(() => selectedAccount.value.records)
 const selectedTransfer = computed(
   () => transferOptions.value.find(({ id }) => id === selectedTransferId.value) ?? transferOptions.value[0]!,
 )
-const canSave = computed(() => Boolean(title.value.trim() && letter.value.trim() && selectedTransfer.value))
+const hasChanges = computed(() => {
+  const initialPhotos = initialData.record.photos
+  const photosChanged =
+    mediaItems.value.length !== initialPhotos.length ||
+    mediaItems.value.some((media, index) => {
+      const initialPhoto = initialPhotos[index]
+
+      return (
+        !initialPhoto ||
+        media.src !== initialPhoto.src ||
+        media.type !== initialPhoto.type ||
+        media.orientation !== initialPhoto.orientation
+      )
+    })
+
+  return (
+    selectedAccountId.value !== String(initialData.account.id) ||
+    selectedTransferId.value !== initialData.record.id ||
+    title.value !== initialData.record.title ||
+    letter.value !== initialData.record.letter ||
+    photosChanged
+  )
+})
+const canSave = computed(() =>
+  Boolean(
+    hasChanges.value &&
+      title.value.trim() &&
+      letter.value.trim() &&
+      selectedTransfer.value &&
+      initialData.record.remainingEdits > 0,
+  ),
+)
 const accountDisplayName = (bankName: string, accountName: string) =>
   bankName === 'KB국민은행' ? `KB ${accountName}` : accountName
 
@@ -95,33 +128,50 @@ const removeMedia = (index: number) => {
 
 const cancelEdit = () => router.back()
 
-const saveEdit = () => {
-  if (!canSave.value) return
+const saveEdit = async () => {
+  if (!canSave.value) {
+    showToast('필수 내용을 모두 입력해주세요.', 'error')
+    return
+  }
+
+  if (initialData.record.remainingEdits <= 0) {
+    showToast('수정 가능 횟수를 모두 사용했습니다.', 'error')
+    return
+  }
 
   const sourceAccount = initialData.account
   const targetAccount = selectedAccount.value
   const sourceIndex = sourceAccount.records.findIndex(({ id }) => id === initialData.record.id)
-  const updatedRecord = {
-    ...initialData.record,
-    title: title.value.trim(),
-    date: selectedTransfer.value.date,
-    amount: selectedTransfer.value.amount,
-    transferName: selectedTransfer.value.transferName,
-    letter: letter.value.trim(),
-    photos: mediaItems.value.map(({ src, orientation, type }) => ({ src, orientation, type })),
-    thumbnail: mediaItems.value[0]?.src ?? initialData.record.thumbnail,
-    remainingEdits: Math.max(initialData.record.remainingEdits - 1, 0),
-  }
 
-  if (sourceAccount.id === targetAccount.id) {
-    sourceAccount.records.splice(sourceIndex, 1, updatedRecord)
-  } else {
-    sourceAccount.records.splice(sourceIndex, 1)
-    targetAccount.records.push(updatedRecord)
-  }
+  try {
+    if (sourceIndex < 0) throw new Error('Time capsule record not found')
 
-  hasSaved.value = true
-  router.replace(`/time-capsules/${targetAccount.id}/${updatedRecord.id}`)
+    const updatedRecord = {
+      ...initialData.record,
+      title: title.value.trim(),
+      date: selectedTransfer.value.date,
+      amount: selectedTransfer.value.amount,
+      transferName: selectedTransfer.value.transferName,
+      letter: letter.value.trim(),
+      photos: mediaItems.value.map(({ src, orientation, type }) => ({ src, orientation, type })),
+      thumbnail: mediaItems.value[0]?.src ?? initialData.record.thumbnail,
+      remainingEdits: Math.max(initialData.record.remainingEdits - 1, 0),
+    }
+
+    if (sourceAccount.id === targetAccount.id) {
+      sourceAccount.records.splice(sourceIndex, 1, updatedRecord)
+    } else {
+      sourceAccount.records.splice(sourceIndex, 1)
+      targetAccount.records.push(updatedRecord)
+    }
+
+    hasSaved.value = true
+    await router.replace(`/time-capsules/${targetAccount.id}/${updatedRecord.id}`)
+    showToast('수정되었습니다.', 'success')
+  } catch {
+    hasSaved.value = false
+    showToast('수정에 실패했습니다. 다시 시도해주세요.', 'error')
+  }
 }
 
 onBeforeUnmount(() => {
@@ -132,9 +182,9 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white"
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col bg-white"
   >
-    <section class="px-5 py-5">
+    <section class="flex flex-1 flex-col px-5 py-5">
       <h1 class="text-[23px] leading-tight font-bold tracking-[-0.025em] text-[var(--color-text-primary)]">
         오늘 어떤 순간을 기록할까요?
       </h1>
@@ -142,7 +192,7 @@ onBeforeUnmount(() => {
         최근 저축 내역과 사진, 마음의 편지를 함께 남겨요.
       </p>
 
-    <form class="mt-7 space-y-5" @submit.prevent="saveEdit">
+    <form class="mt-7 flex flex-1 flex-col gap-5" @submit.prevent="saveEdit">
       <div class="relative">
         <button
           class="flex min-h-14 w-full items-center rounded-xl border border-[var(--color-border)] bg-white px-4 text-left"
@@ -303,7 +353,7 @@ onBeforeUnmount(() => {
         </label>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 pt-2">
+      <div class="mt-auto grid grid-cols-2 gap-3 pt-5">
         <button
           class="min-h-13 rounded-xl border border-[var(--color-border)] bg-white text-sm font-bold text-[var(--color-text-secondary)]"
           type="button"
