@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, ImagePlus, PiggyBank, X } from 'lucide-vue-next'
+import { Check, ChevronDown, ImagePlus, Landmark, X } from 'lucide-vue-next'
 import {
   findTimeCapsuleRecord,
   timeCapsuleAccounts,
   type TimeCapsulePhoto,
 } from '@/data/timeCapsuleDummyData'
+import { useToast } from '@/composables/useToast'
 
 type EditMedia = TimeCapsulePhoto & {
   isNew?: boolean
@@ -14,6 +15,7 @@ type EditMedia = TimeCapsulePhoto & {
 
 const route = useRoute()
 const router = useRouter()
+const { showToast } = useToast()
 const recordId = String(route.params.capsuleId)
 const initialData = findTimeCapsuleRecord(recordId)
 
@@ -32,7 +34,38 @@ const transferOptions = computed(() => selectedAccount.value.records)
 const selectedTransfer = computed(
   () => transferOptions.value.find(({ id }) => id === selectedTransferId.value) ?? transferOptions.value[0]!,
 )
-const canSave = computed(() => Boolean(title.value.trim() && letter.value.trim() && selectedTransfer.value))
+const hasChanges = computed(() => {
+  const initialPhotos = initialData.record.photos
+  const photosChanged =
+    mediaItems.value.length !== initialPhotos.length ||
+    mediaItems.value.some((media, index) => {
+      const initialPhoto = initialPhotos[index]
+
+      return (
+        !initialPhoto ||
+        media.src !== initialPhoto.src ||
+        media.type !== initialPhoto.type ||
+        media.orientation !== initialPhoto.orientation
+      )
+    })
+
+  return (
+    selectedAccountId.value !== String(initialData.account.id) ||
+    selectedTransferId.value !== initialData.record.id ||
+    title.value !== initialData.record.title ||
+    letter.value !== initialData.record.letter ||
+    photosChanged
+  )
+})
+const canSave = computed(() =>
+  Boolean(
+    hasChanges.value &&
+      title.value.trim() &&
+      letter.value.trim() &&
+      selectedTransfer.value &&
+      initialData.record.remainingEdits > 0,
+  ),
+)
 const accountDisplayName = (bankName: string, accountName: string) =>
   bankName === 'KB국민은행' ? `KB ${accountName}` : accountName
 
@@ -95,33 +128,50 @@ const removeMedia = (index: number) => {
 
 const cancelEdit = () => router.back()
 
-const saveEdit = () => {
-  if (!canSave.value) return
+const saveEdit = async () => {
+  if (!canSave.value) {
+    showToast('필수 내용을 모두 입력해주세요.', 'error')
+    return
+  }
+
+  if (initialData.record.remainingEdits <= 0) {
+    showToast('수정 가능 횟수를 모두 사용했습니다.', 'error')
+    return
+  }
 
   const sourceAccount = initialData.account
   const targetAccount = selectedAccount.value
   const sourceIndex = sourceAccount.records.findIndex(({ id }) => id === initialData.record.id)
-  const updatedRecord = {
-    ...initialData.record,
-    title: title.value.trim(),
-    date: selectedTransfer.value.date,
-    amount: selectedTransfer.value.amount,
-    transferName: selectedTransfer.value.transferName,
-    letter: letter.value.trim(),
-    photos: mediaItems.value.map(({ src, orientation, type }) => ({ src, orientation, type })),
-    thumbnail: mediaItems.value[0]?.src ?? initialData.record.thumbnail,
-    remainingEdits: Math.max(initialData.record.remainingEdits - 1, 0),
-  }
 
-  if (sourceAccount.id === targetAccount.id) {
-    sourceAccount.records.splice(sourceIndex, 1, updatedRecord)
-  } else {
-    sourceAccount.records.splice(sourceIndex, 1)
-    targetAccount.records.push(updatedRecord)
-  }
+  try {
+    if (sourceIndex < 0) throw new Error('Time capsule record not found')
 
-  hasSaved.value = true
-  router.replace(`/time-capsules/${targetAccount.id}/${updatedRecord.id}`)
+    const updatedRecord = {
+      ...initialData.record,
+      title: title.value.trim(),
+      date: selectedTransfer.value.date,
+      amount: selectedTransfer.value.amount,
+      transferName: selectedTransfer.value.transferName,
+      letter: letter.value.trim(),
+      photos: mediaItems.value.map(({ src, orientation, type }) => ({ src, orientation, type })),
+      thumbnail: mediaItems.value[0]?.src ?? initialData.record.thumbnail,
+      remainingEdits: Math.max(initialData.record.remainingEdits - 1, 0),
+    }
+
+    if (sourceAccount.id === targetAccount.id) {
+      sourceAccount.records.splice(sourceIndex, 1, updatedRecord)
+    } else {
+      sourceAccount.records.splice(sourceIndex, 1)
+      targetAccount.records.push(updatedRecord)
+    }
+
+    hasSaved.value = true
+    await router.replace(`/time-capsules/${targetAccount.id}/${updatedRecord.id}`)
+    showToast('수정되었습니다.', 'success')
+  } catch {
+    hasSaved.value = false
+    showToast('수정에 실패했습니다. 다시 시도해주세요.', 'error')
+  }
 }
 
 onBeforeUnmount(() => {
@@ -132,9 +182,9 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white"
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col bg-white"
   >
-    <section class="px-5 py-5">
+    <section class="flex flex-1 flex-col px-5 py-5">
       <h1 class="text-[23px] leading-tight font-bold tracking-[-0.025em] text-[var(--color-text-primary)]">
         오늘 어떤 순간을 기록할까요?
       </h1>
@@ -142,20 +192,25 @@ onBeforeUnmount(() => {
         최근 저축 내역과 사진, 마음의 편지를 함께 남겨요.
       </p>
 
-    <form class="mt-7 space-y-5" @submit.prevent="saveEdit">
+    <form class="mt-7 flex flex-1 flex-col gap-5" @submit.prevent="saveEdit">
       <div class="relative">
         <button
-          class="flex min-h-14 w-full items-center rounded-xl border border-[var(--color-border)] bg-white px-4 text-left"
+          class="flex h-14 w-full items-center gap-3 rounded-[12px] border bg-white px-3 text-left transition-colors"
+          :class="
+            isAccountMenuOpen
+              ? 'border-[var(--color-brand-primary)] ring-2 ring-[#e5f7ff]'
+              : 'border-[#dce8ee]'
+          "
           type="button"
           aria-haspopup="listbox"
           :aria-expanded="isAccountMenuOpen"
           @click="toggleAccountMenu"
         >
           <span
-            class="mr-3 grid size-8 shrink-0 place-items-center rounded-full bg-[#fff7dc] text-[#f5a300]"
+            class="grid size-7 shrink-0 place-items-center rounded-full border border-[#ffad20] bg-[#fffaf0] text-[#ff9f00]"
             aria-hidden="true"
           >
-            <PiggyBank :size="18" />
+            <Landmark :size="15" />
           </span>
           <span class="min-w-0 flex-1">
             <strong class="block truncate text-sm">
@@ -165,38 +220,70 @@ onBeforeUnmount(() => {
               {{ selectedAccount.bankName }} · {{ selectedAccount.accountNumber }}
             </span>
           </span>
-          <ChevronDown :size="18" class="ml-2 shrink-0" aria-hidden="true" />
+          <ChevronDown
+            :size="20"
+            class="shrink-0 text-[var(--color-text-secondary)] transition-transform duration-150"
+            :class="isAccountMenuOpen ? 'rotate-180' : ''"
+            aria-hidden="true"
+          />
         </button>
 
-        <div
-          v-if="isAccountMenuOpen"
-          class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 overflow-hidden rounded-xl border border-[var(--color-border)] bg-white p-1.5 shadow-lg"
-          role="listbox"
-          aria-label="계좌 목록"
+        <Transition
+          enter-active-class="transition duration-150 ease-out"
+          enter-from-class="-translate-y-1 opacity-0"
+          leave-active-class="transition duration-100 ease-in"
+          leave-to-class="-translate-y-1 opacity-0"
         >
-          <button
-            v-for="account in accounts"
-            :key="account.id"
-            class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left active:bg-[var(--color-selected-background)]"
-            :class="String(account.id) === selectedAccountId ? 'bg-[var(--color-selected-background)]' : ''"
-            type="button"
-            role="option"
-            :aria-selected="String(account.id) === selectedAccountId"
-            @click="selectAccount(account.id)"
+          <ul
+            v-if="isAccountMenuOpen"
+            class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 m-0 max-h-48 list-none overflow-y-auto rounded-[14px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+            role="listbox"
+            aria-label="계좌 목록"
           >
-            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-[#fff7dc] text-[#f5a300]">
-              <PiggyBank :size="17" />
-            </span>
-            <span class="min-w-0">
-              <strong class="block truncate text-sm">
-                {{ accountDisplayName(account.bankName, account.name) }}
-              </strong>
-              <span class="text-[11px] text-[var(--color-text-secondary)]">
-                {{ account.bankName }} · {{ account.accountNumber }}
-              </span>
-            </span>
-          </button>
-        </div>
+            <li
+              v-for="account in accounts"
+              :key="account.id"
+              role="option"
+              :aria-selected="String(account.id) === selectedAccountId"
+            >
+              <button
+                class="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left"
+                :class="
+                  String(account.id) === selectedAccountId
+                    ? 'bg-[#effaff]'
+                    : 'hover:bg-[#f6f9fb] active:bg-[#edf3f6]'
+                "
+                type="button"
+                @click="selectAccount(account.id)"
+              >
+                <span
+                  class="grid size-7 shrink-0 place-items-center rounded-full border border-[#ffad20] bg-[#fffaf0] text-[#ff9f00]"
+                >
+                  <Landmark :size="14" />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <strong class="block truncate text-[13px]">
+                    {{ accountDisplayName(account.bankName, account.name) }}
+                  </strong>
+                  <span class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]">
+                    {{ account.bankName }} · {{ account.accountNumber }}
+                  </span>
+                </span>
+                <span
+                  class="grid size-5 shrink-0 place-items-center rounded-full"
+                  :class="
+                    String(account.id) === selectedAccountId
+                      ? 'bg-[var(--color-brand-primary)] text-white'
+                      : 'text-transparent'
+                  "
+                  aria-hidden="true"
+                >
+                  <Check :size="13" :stroke-width="3" />
+                </span>
+              </button>
+            </li>
+          </ul>
+        </Transition>
       </div>
 
       <label class="block">
@@ -213,7 +300,12 @@ onBeforeUnmount(() => {
       <fieldset class="relative">
         <legend class="mb-2 text-sm font-bold">이체 내역</legend>
         <button
-          class="flex min-h-14 w-full items-center gap-3 rounded-xl border border-[#d8eff9] bg-[var(--color-selected-background)] px-4 text-left"
+          class="flex h-12 w-full items-center gap-3 rounded-[12px] border bg-white px-3 text-left transition-colors"
+          :class="
+            isTransferMenuOpen
+              ? 'border-[var(--color-brand-primary)] ring-2 ring-[#e5f7ff]'
+              : 'border-[#dce8ee]'
+          "
           type="button"
           aria-haspopup="listbox"
           :aria-expanded="isTransferMenuOpen"
@@ -224,34 +316,52 @@ onBeforeUnmount(() => {
           <strong class="text-xs text-[var(--color-selected-text)]">
             +{{ selectedTransfer.amount.toLocaleString('ko-KR') }}원
           </strong>
-          <ChevronDown :size="17" class="shrink-0 text-[var(--color-text-secondary)]" />
+          <ChevronDown
+            :size="20"
+            class="shrink-0 text-[var(--color-text-secondary)] transition-transform duration-150"
+            :class="isTransferMenuOpen ? 'rotate-180' : ''"
+          />
         </button>
 
-        <div
-          v-if="isTransferMenuOpen"
-          class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 max-h-64 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-white p-1.5 shadow-lg"
-          role="listbox"
-          aria-label="이체 내역 목록"
+        <Transition
+          enter-active-class="transition duration-150 ease-out"
+          enter-from-class="-translate-y-1 opacity-0"
+          leave-active-class="transition duration-100 ease-in"
+          leave-to-class="-translate-y-1 opacity-0"
         >
-          <button
-            v-for="transfer in transferOptions"
-            :key="transfer.id"
-            class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left active:bg-[var(--color-selected-background)]"
-            :class="transfer.id === selectedTransferId ? 'bg-[var(--color-selected-background)]' : ''"
-            type="button"
-            role="option"
-            :aria-selected="transfer.id === selectedTransferId"
-            @click="selectTransfer(transfer.id)"
+          <ul
+            v-if="isTransferMenuOpen"
+            class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 m-0 max-h-48 list-none overflow-y-auto rounded-[14px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+            role="listbox"
+            aria-label="이체 내역 목록"
           >
-            <span class="w-[74px] text-[11px] text-[var(--color-text-secondary)]">
-              {{ transfer.date.replaceAll('-', '.') }}
-            </span>
-            <strong class="min-w-0 flex-1 truncate text-sm">{{ transfer.transferName }}</strong>
-            <strong class="text-xs text-[var(--color-selected-text)]">
-              +{{ transfer.amount.toLocaleString('ko-KR') }}원
-            </strong>
-          </button>
-        </div>
+            <li
+              v-for="transfer in transferOptions"
+              :key="transfer.id"
+              role="option"
+              :aria-selected="transfer.id === selectedTransferId"
+            >
+              <button
+                class="flex w-full items-center gap-3 rounded-[10px] px-2.5 py-2.5 text-left"
+                :class="
+                  transfer.id === selectedTransferId
+                    ? 'bg-[#effaff]'
+                    : 'hover:bg-[#f6f9fb] active:bg-[#edf3f6]'
+                "
+                type="button"
+                @click="selectTransfer(transfer.id)"
+              >
+                <span class="w-[74px] text-[11px] text-[var(--color-text-secondary)]">
+                  {{ transfer.date.replaceAll('-', '.') }}
+                </span>
+                <strong class="min-w-0 flex-1 truncate text-[13px]">{{ transfer.transferName }}</strong>
+                <strong class="shrink-0 text-xs text-[var(--color-selected-text)]">
+                  +{{ transfer.amount.toLocaleString('ko-KR') }}원
+                </strong>
+              </button>
+            </li>
+          </ul>
+        </Transition>
       </fieldset>
 
       <label class="block">
@@ -303,7 +413,7 @@ onBeforeUnmount(() => {
         </label>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 pt-2">
+      <div class="mt-auto grid grid-cols-2 gap-3 pt-5">
         <button
           class="min-h-13 rounded-xl border border-[var(--color-border)] bg-white text-sm font-bold text-[var(--color-text-secondary)]"
           type="button"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, PiggyBank } from 'lucide-vue-next'
+import { PiggyBank } from 'lucide-vue-next'
 import { getTimeCapsuleRecord } from '@/data/timeCapsuleDummyData'
 
 const route = useRoute()

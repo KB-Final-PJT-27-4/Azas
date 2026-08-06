@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import { BaseToast } from '@/components/feedback'
+import { useToast } from '@/composables/useToast'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -13,6 +15,7 @@ const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
 const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
 const showHeaderNotification = computed(() => route.meta.showHeaderNotification !== false)
 const notificationCount = computed(() => Number(route.meta.notificationCount ?? 0))
+const { toastMessage, toastVariant } = useToast()
 </script>
 
 <template>
@@ -37,6 +40,13 @@ const notificationCount = computed(() => Number(route.meta.notificationCount ?? 
         <slot />
       </div>
       <AppBottomNavigation v-if="!hideBottomNavigation" />
+      <Transition name="global-toast">
+        <BaseToast
+          v-if="toastMessage"
+          :message="toastMessage"
+          :variant="toastVariant"
+        />
+      </Transition>
     </div>
   </div>
 </template>
@@ -74,5 +84,16 @@ const notificationCount = computed(() => Number(route.meta.notificationCount ?? 
 
 .default-layout__content--without-navigation :deep(main > :first-child) {
   margin-top: 0;
+}
+
+.global-toast-enter-active,
+.global-toast-leave-active {
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.global-toast-enter-from,
+.global-toast-leave-to {
+  transform: translate(-50%, 10px);
+  opacity: 0;
 }
 </style>
