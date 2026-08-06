@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
-type GuardianRole = 'father' | 'mother' | 'guardian'
-type ChildGender = 'male' | 'female' | 'unknown'
+import { BaseDatePicker } from '@/components/common'
+import {
+  loadRegistrationDraft,
+  saveRegistrationDraft,
+  type ChildGender,
+  type GuardianRole,
+} from '@/utils/registrationDraft'
 
 const route = useRoute()
 const router = useRouter()
 
 // 기본: /register, 공동 보호자 초대: /register?invited=true
 const isGuardianInvitation = computed(() => route.query.invited === 'true')
+const isEditing = computed(() => route.query.edit === 'true')
 
 const inviterName = ref('김하나')
 const guardianRoles: { label: string; value: GuardianRole }[] = [
@@ -23,14 +28,22 @@ const genderOptions: { label: string; value: ChildGender }[] = [
   { label: '아직 모름', value: 'unknown' },
 ]
 
+const savedDraft = isEditing.value ? loadRegistrationDraft() : null
+
 const form = reactive({
-  guardianRole: 'father' as GuardianRole,
-  childName: isGuardianInvitation.value ? '김깨비' : '',
-  birthDate: isGuardianInvitation.value ? '2025.07.15' : '',
-  gender: 'male' as ChildGender,
+  guardianRole: savedDraft?.guardianRole ?? ('father' as GuardianRole),
+  childName: savedDraft?.childName ?? (isGuardianInvitation.value ? '김깨비' : ''),
+  birthDate: savedDraft?.birthDate ?? (isGuardianInvitation.value ? '2025-07-15' : ''),
+  gender: savedDraft?.gender ?? ('male' as ChildGender),
 })
 
+const isSubmitDisabled = computed(() => !form.childName.trim() || !form.birthDate.trim())
+
 const submitRegistration = () => {
+  if (isSubmitDisabled.value) return
+
+  saveRegistrationDraft({ ...form, invited: isGuardianInvitation.value })
+
   // TODO: 회원가입 또는 공동 보호자 초대 수락 API 연결
   router.push({ name: 'Onboarding' })
 }
@@ -42,7 +55,7 @@ const submitRegistration = () => {
       <p class="text-lg font-bold">우리 아이 자산관리 서비스</p>
     </header>
 
-    <form class="flex flex-1 flex-col px-6 pt-14 pb-10" @submit.prevent="submitRegistration">
+    <form class="flex flex-1 flex-col px-6 pt-10 pb-10" @submit.prevent="submitRegistration">
       <section aria-labelledby="register-title">
         <template v-if="isGuardianInvitation">
           <h1 id="register-title" class="text-[30px] leading-[1.35] font-bold tracking-[-0.04em]">
@@ -101,17 +114,13 @@ const submitRegistration = () => {
           />
         </label>
 
-        <label class="grid gap-3">
-          <span class="text-base font-bold">생년월일 또는 출생예정일</span>
-          <input
-            v-model="form.birthDate"
-            class="h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-lg outline-none transition-colors focus:border-[var(--color-brand-primary-pressed)] focus:ring-2 focus:ring-[var(--color-selected-background)] disabled:cursor-not-allowed disabled:border-[var(--color-disabled-border)] disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
-            type="text"
-            inputmode="numeric"
-            placeholder="YYYY.MM.DD"
-            :disabled="isGuardianInvitation"
-          />
-        </label>
+        <BaseDatePicker
+          v-model="form.birthDate"
+          label="생년월일 또는 출생예정일"
+          :disabled="isGuardianInvitation"
+          :min-year="1900"
+          :max-year="new Date().getFullYear() + 20"
+        />
 
         <fieldset>
           <legend class="mb-3 text-base font-bold">아이 성별</legend>
@@ -138,8 +147,9 @@ const submitRegistration = () => {
       </div>
 
       <button
-        class="mt-auto h-14 rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)]"
+        class="mt-auto h-14 rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
         type="submit"
+        :disabled="isSubmitDisabled"
       >
         {{ isGuardianInvitation ? '수락' : '다음' }}
       </button>
