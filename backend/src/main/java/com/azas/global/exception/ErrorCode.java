@@ -75,47 +75,105 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "타임캡슐을 찾을 수 없습니다."
     ),
+    ACCOUNT_TRANSACTION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "계좌 거래내역을 찾을 수 없습니다."
+    ),
     DUPLICATE_TIME_CAPSULE(
             HttpStatus.CONFLICT,
             "해당 적금 계좌에는 이미 타임캡슐이 존재합니다."
+    ),
+    DUPLICATE_TIME_CAPSULE_ENTRY(
+            HttpStatus.CONFLICT,
+            "해당 거래는 이미 타임캡슐 기록으로 등록되어 있습니다."
+    ),
+    TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "공개되었거나 보관 처리된 타임캡슐에는 기록을 생성할 수 없습니다."
     ),
     INELIGIBLE_TIME_CAPSULE_ACCOUNT(
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자녀 명의의 활성 적금 계좌만 타임캡슐로 등록할 수 있습니다."
     ),
-
-    // Child, Family
-    CHILD_NOT_FOUND(
+    INELIGIBLE_TIME_CAPSULE_TRANSACTION(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "타임캡슐 기록에는 적금 계좌의 입금 거래만 연결할 수 있습니다."
+    ),
+    TIME_CAPSULE_ENTRY_NOT_FOUND(
             HttpStatus.NOT_FOUND,
-        "자녀 정보를 찾을 수 없습니다."
+            "타임캡슐 엔트리를 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "봉인·삭제되었거나 수정 가능 횟수를 초과한 타임캡슐 엔트리는 수정할 수 없습니다."
+    ),
+    TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "엔트리 봉인에 필요한 미디어 업로드 또는 미디어 개수 조건을 충족하지 못했습니다."
+    ),
+    TIME_CAPSULE_MEDIA_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "타임캡슐 미디어를 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "현재 엔트리 상태 또는 미디어 슬롯에서는 업로드할 수 없습니다."
+    ),
+    TIME_CAPSULE_MEDIA_OBJECT_INVALID(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "업로드된 미디어 객체의 MIME 타입 또는 파일 크기가 요청값과 다릅니다."
+    ),
+    TIME_CAPSULE_STORAGE_UNAVAILABLE(
+            HttpStatus.BAD_GATEWAY,
+            "타임캡슐 미디어 저장소에 연결할 수 없습니다."
+    ),
+    TIME_CAPSULE_EXPORT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "타임캡슐 결과물 생성 작업을 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_EXPORT_CREATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "공개되었고 봉인된 기록이 있는 타임캡슐에서만 결과물을 생성할 수 있습니다."
+    ),
+    TIME_CAPSULE_EXPORT_NOT_READY(
+            HttpStatus.CONFLICT,
+            "타임캡슐 결과물 생성 작업이 아직 완료되지 않았습니다."
+    ),
+    TIME_CAPSULE_EXPORT_EXPIRED(
+            HttpStatus.GONE,
+            "타임캡슐 결과물의 보관 기간이 만료되었습니다."
+    ),
+      CHILD_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "자녀 정보를 찾을 수 없습니다."
     ),
     CHILD_ACCESS_DENIED(
             HttpStatus.FORBIDDEN,
-        "해당 자녀 정보에 접근할 권한이 없습니다."
+            "해당 자녀 정보에 접근할 권한이 없습니다."
     ),
     CHILD_HAS_FINANCIAL_HISTORY(
             HttpStatus.CONFLICT,
-        "금융 기록이 있는 자녀는 삭제할 수 없습니다."
+            "금융 기록이 있는 자녀는 삭제할 수 없습니다."
     ),
     CHILD_INVALID_NAME(
             HttpStatus.BAD_REQUEST,
-        "자녀 이름은 필수입니다."
+            "자녀 이름은 필수입니다."
     ),
     CHILD_INVALID_BIRTH_STATUS(
             HttpStatus.BAD_REQUEST,
-        "출생 상태는 필수입니다."
+            "출생 상태는 필수입니다."
     ),
     CHILD_EXPECTED_BIRTH_DATE_REQUIRED(
             HttpStatus.BAD_REQUEST,
-        "출생 예정일은 필수입니다."
+            "출생 예정일은 필수입니다."
     ),
     CHILD_BIRTH_DATE_REQUIRED(
             HttpStatus.BAD_REQUEST,
-        "생년월일은 필수입니다."
+            "생년월일은 필수입니다."
     ),
     ALLOWANCE_REQUEST_ALREADY_EXISTS(
             HttpStatus.CONFLICT,
-        "이번 달에는 이미 용돈을 요청했습니다."
+            "이번 달에는 이미 용돈을 요청했습니다."
     );
 
     private final HttpStatus httpStatus;

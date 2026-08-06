@@ -11,6 +11,10 @@ import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
 import com.azas.domain.timecapsule.entity.TimeCapsuleView;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMapper;
+import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
+import com.azas.domain.timecapsule.mapper.TimeCapsuleExportMapper;
+import com.azas.domain.timecapsule.mapper.TimeCapsuleMediaMapper;
+import com.azas.domain.timecapsule.storage.TimeCapsuleObjectStorage;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +26,9 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,6 +39,10 @@ public class TimeCapsuleService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final TimeCapsuleMapper timeCapsuleMapper;
+    private final TimeCapsuleEntryMapper timeCapsuleEntryMapper;
+    private final TimeCapsuleMediaMapper timeCapsuleMediaMapper;
+    private final TimeCapsuleExportMapper timeCapsuleExportMapper;
+    private final TimeCapsuleObjectStorage timeCapsuleObjectStorage;
 
     @Transactional
     // [JMG] CAPSULE-1 활성 적금 계좌에 연결된 타임캡슐 보관함을 생성한다.
@@ -156,6 +166,41 @@ public class TimeCapsuleService {
         return TimeCapsuleResponse.from(timeCapsule);
     }
 
+    @Transactional
+    // [JMG] CAPSULE-6 부모·보호자 요청에 따라 보관함 하위 S3 객체와 DB 데이터를 영구 삭제한다.
+    public void deleteTimeCapsule(
+            long requesterMemberId,
+            long timeCapsuleId
+    ) {
+        TimeCapsule timeCapsule = getAccessibleTimeCapsuleForUpdateOrThrow(
+                requesterMemberId,
+                timeCapsuleId
+        );
+        timeCapsuleEntryMapper.lockByTimeCapsuleId(timeCapsuleId);
+
+        Set<String> objectKeys = new LinkedHashSet<>();
+        addObjectKeys(objectKeys,
+                timeCapsuleMediaMapper
+                        .findObjectKeysByTimeCapsuleIdForUpdate(timeCapsuleId));
+        addObjectKeys(objectKeys,
+                timeCapsuleExportMapper
+                        .findOutputObjectKeysByTimeCapsuleIdForUpdate(
+                                timeCapsuleId
+                        ));
+        for (String objectKey : objectKeys) {
+            timeCapsuleObjectStorage.deleteObject(objectKey);
+        }
+
+        timeCapsuleMediaMapper.deleteByTimeCapsuleId(timeCapsuleId);
+        timeCapsuleEntryMapper.deleteByTimeCapsuleId(timeCapsuleId);
+        timeCapsuleExportMapper.deleteByTimeCapsuleId(timeCapsuleId);
+        if (timeCapsuleMapper.deleteById(
+                timeCapsule.getTimeCapsuleId()
+        ) != 1) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_FOUND);
+        }
+    }
+
     // [JMG] CAPSULE-1 요청 부모가 접근 가능한 금융 계좌의 생성 가능 정보를 조회한다.
     private TimeCapsuleAccount getAccessibleTimeCapsuleAccountOrThrow(
             long requesterMemberId,
@@ -194,6 +239,36 @@ public class TimeCapsuleService {
         }
 
         return timeCapsule;
+    }
+
+    // [JMG] CAPSULE-6 삭제 처리 중 엔트리 생성·수정과의 경합을 막도록 보관함 행을 잠근다.
+    private TimeCapsule getAccessibleTimeCapsuleForUpdateOrThrow(
+            long requesterMemberId,
+            long timeCapsuleId
+    ) {
+        TimeCapsule timeCapsule =
+                timeCapsuleMapper.findAccessibleByIdForUpdate(
+                        timeCapsuleId,
+                        requesterMemberId
+                );
+        if (timeCapsule == null) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_FOUND);
+        }
+
+        return timeCapsule;
+    }
+
+    // [JMG] CAPSULE-6 null·공백·중복 객체 키를 제외해 같은 S3 객체를 한 번만 삭제한다.
+    private void addObjectKeys(Set<String> destination, List<String> source) {
+        if (source == null) {
+            return;
+        }
+
+        for (String objectKey : source) {
+            if (objectKey != null && !objectKey.isBlank()) {
+                destination.add(objectKey);
+            }
+        }
     }
 
     // [JMG] CAPSULE-2 요청 회원의 자녀 접근 권한을 검증하고 존재 여부 노출을 막는다.
