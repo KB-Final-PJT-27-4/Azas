@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import allowancePageBgUrl from '@/assets/images/child/child-allowance-page-bg.png'
 import allowanceRequestPigUrl from '@/assets/images/child/child-allowance-request-pig.png'
 import { BaseToast } from '@/components/feedback'
 import { allowanceOptions } from '@/mocks/childHome'
@@ -56,6 +57,11 @@ const updateCustomAmount = (event: Event) => {
   customAmount.value = input.value.replace(/\D/g, '')
 }
 
+const updateReason = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  reason.value = input.value
+}
+
 const submitAllowanceRequest = () => {
   if (!canSubmitAllowanceRequest.value) {
     showToast(allowanceValidationMessage.value, 'error')
@@ -76,7 +82,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef8ff] px-5 pt-8 pb-8">
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef8ff] bg-cover bg-top bg-no-repeat px-5 pt-8 pb-8"
+    :style="{ backgroundImage: `url(${allowancePageBgUrl})` }"
+  >
     <section class="text-center">
       <img
         class="mx-auto w-[196px] select-none object-contain"
@@ -146,9 +155,10 @@ onBeforeUnmount(() => {
       >
         어떤 이유인가요?
         <input
-          v-model="reason"
+          :value="reason"
           class="h-11 rounded-[14px] border border-[var(--color-border)] px-4 text-center text-[length:var(--font-size-sm)] font-normal outline-none focus:border-[var(--color-brand-primary)]"
           placeholder="직접 입력하기"
+          @input="updateReason"
         />
       </label>
     </section>

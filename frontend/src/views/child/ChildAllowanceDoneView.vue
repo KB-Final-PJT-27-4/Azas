@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import allowanceCompletePigUrl from '@/assets/images/child/child-allowance-complete-pig.png'
+import allowancePageBgUrl from '@/assets/images/child/child-allowance-page-bg.png'
 </script>
 
 <template>
   <main
-    class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-[#eef8ff] px-5 pt-16 pb-8"
+    class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-[#eef8ff] bg-cover bg-top bg-no-repeat px-5 pt-16 pb-8"
+    :style="{ backgroundImage: `url(${allowancePageBgUrl})` }"
   >
     <section class="grid flex-1 content-start justify-items-center text-center">
       <h1 class="m-0 text-[24px] leading-[1.35] font-black text-[var(--color-text-primary)]">
@@ -26,7 +28,7 @@ import allowanceCompletePigUrl from '@/assets/images/child/child-allowance-compl
     </section>
 
     <RouterLink
-      class="flex h-14 w-full items-center justify-center rounded-[14px] bg-white text-[length:var(--font-size-md)] font-extrabold text-[#3BA9FF] shadow-[0_12px_28px_rgb(85_192_244_/_14%)]"
+      class="flex h-14 w-full items-center justify-center rounded-[14px] bg-[var(--color-brand-primary)] text-[length:var(--font-size-md)] font-extrabold !text-[#FFFFFF] shadow-[0_12px_28px_rgb(85_192_244_/_22%)]"
       to="/child/home"
     >
       확인
