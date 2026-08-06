@@ -186,7 +186,13 @@ const routes: RouteRecordRaw[] = [
     name: 'MypageGoalEdit',
     component: () => import('@/views/mypage/MypageGoalEditView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/alarm',
