@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ContactRound, FileKey2, Smartphone, X } from 'lucide-vue-next'
+import { Check, ContactRound, FileKey2, Smartphone, X } from 'lucide-vue-next'
 
 import babyImage from '@/assets/images/child/baby.png'
 import registrationCompleteImage from '@/assets/images/accounts/registration-complete.png'
-import AppHeader from '@/components/layout/AppHeader.vue'
 
 type Child = {
   id: number
@@ -37,7 +36,10 @@ const selectedChildName = computed(
 const normalizedPhoneNumber = computed(() => phoneNumber.value.replace(/\D/g, ''))
 const canRequestVerificationCode = computed(() => /^01\d{9}$/.test(normalizedPhoneNumber.value))
 const canConfirmVerificationCode = computed(
-  () => isVerificationCodeSent.value && /^\d{6}$/.test(verificationCode.value) && remainingSeconds.value > 0,
+  () =>
+    isVerificationCodeSent.value &&
+    /^\d{6}$/.test(verificationCode.value) &&
+    remainingSeconds.value > 0,
 )
 const timerText = computed(() => {
   const minutes = Math.floor(remainingSeconds.value / 60)
@@ -153,9 +155,8 @@ onBeforeUnmount(stopVerificationTimer)
 
 <template>
   <main
-    class="flex min-h-dvh flex-col bg-white pt-[calc(var(--app-header-height)+env(safe-area-inset-top))] text-[var(--color-text-primary)]"
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top))] flex-col bg-white text-[var(--color-text-primary)]"
   >
-    <AppHeader />
     <section class="flex flex-1 flex-col px-6 pt-5 pb-[max(32px,env(safe-area-inset-bottom))]">
       <div v-if="step !== 3" class="grid grid-cols-2 gap-2" aria-label="아이 계좌 만들기 진행 단계">
         <span
@@ -177,40 +178,40 @@ onBeforeUnmount(stopVerificationTimer)
         </h1>
 
         <form class="mt-9 flex flex-1 flex-col" @submit.prevent="goNext">
-        <fieldset>
-          <legend class="sr-only">계좌를 만들 자녀 선택</legend>
-          <div class="grid gap-4">
-            <button
-              v-for="child in children"
-              :key="child.id"
-              class="flex min-h-[72px] w-full items-center rounded-2xl border px-4 text-left transition-colors duration-200"
-              :class="
-                selectedChildId === child.id
-                  ? 'border-[var(--color-brand-primary)] bg-[#eaf8ff] ring-1 ring-[var(--color-brand-primary)]'
-                  : 'border-[var(--color-border)] bg-white  active:bg-[var(--color-surface-muted)]'
-              "
-              type="button"
-              :aria-pressed="selectedChildId === child.id"
-              @click="selectChild(child.id)"
-            >
-              <span
-                class="mr-4 grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#e2f6ff]"
-                aria-hidden="true"
+          <fieldset>
+            <legend class="sr-only">계좌를 만들 자녀 선택</legend>
+            <div class="grid gap-4">
+              <button
+                v-for="child in children"
+                :key="child.id"
+                class="flex min-h-[72px] w-full items-center rounded-2xl border px-4 text-left transition-colors duration-200"
+                :class="
+                  selectedChildId === child.id
+                    ? 'border-[var(--color-brand-primary)] bg-[#eaf8ff] ring-1 ring-[var(--color-brand-primary)]'
+                    : 'border-[var(--color-border)] bg-white  active:bg-[var(--color-surface-muted)]'
+                "
+                type="button"
+                :aria-pressed="selectedChildId === child.id"
+                @click="selectChild(child.id)"
               >
-                <img class="h-[32px] w-[49px] object-contain" :src="babyImage" alt="" />
-              </span>
-              <span class="text-lg font-medium tracking-[-0.02em]">{{ child.name }}</span>
-            </button>
-          </div>
-        </fieldset>
+                <span
+                  class="mr-4 grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#e2f6ff]"
+                  aria-hidden="true"
+                >
+                  <img class="h-[32px] w-[49px] object-contain" :src="babyImage" alt="" />
+                </span>
+                <span class="text-lg font-medium tracking-[-0.02em]">{{ child.name }}</span>
+              </button>
+            </div>
+          </fieldset>
 
-        <button
-          class="mt-auto min-h-[58px] w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors duration-200 active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#cbd8df] disabled:hover:bg-[#cbd8df]"
-          type="submit"
-          :disabled="selectedChildId === null"
-        >
-          다음
-        </button>
+          <button
+            class="mt-auto min-h-[58px] w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors duration-200 active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#cbd8df] disabled:hover:bg-[#cbd8df]"
+            type="submit"
+            :disabled="selectedChildId === null"
+          >
+            다음
+          </button>
         </form>
       </template>
 
@@ -241,7 +242,9 @@ onBeforeUnmount(stopVerificationTimer)
 
         <form class="mt-6 flex flex-1 flex-col" @submit.prevent="continueAfterAuthentication">
           <fieldset>
-            <legend class="mb-4 text-sm text-[var(--color-text-secondary)]">인증수단을 선택해주세요</legend>
+            <legend class="mb-4 text-sm text-[var(--color-text-secondary)]">
+              인증수단을 선택해주세요
+            </legend>
             <div class="grid gap-4">
               <button
                 class="flex min-h-[66px] w-full items-center rounded-2xl border px-4 text-left transition-colors duration-200"
@@ -256,6 +259,13 @@ onBeforeUnmount(stopVerificationTimer)
               >
                 <FileKey2 :size="25" :stroke-width="1.9" class="mr-4 shrink-0" />
                 <span class="text-base font-medium">카카오페이 인증서</span>
+                <span
+                  v-if="isAuthenticated && selectedAuthMethod === 'kakao'"
+                  class="ml-auto grid size-7 shrink-0 place-items-center rounded-full bg-[var(--color-brand-primary)] text-white"
+                  aria-label="인증 완료"
+                >
+                  <Check :size="17" :stroke-width="3" aria-hidden="true" />
+                </span>
               </button>
 
               <button
@@ -271,6 +281,13 @@ onBeforeUnmount(stopVerificationTimer)
               >
                 <Smartphone :size="25" :stroke-width="1.9" class="mr-4 shrink-0" />
                 <span class="text-base font-medium">SMS 휴대폰 인증</span>
+                <span
+                  v-if="isAuthenticated && selectedAuthMethod === 'sms'"
+                  class="ml-auto grid size-7 shrink-0 place-items-center rounded-full bg-[var(--color-brand-primary)] text-white"
+                  aria-label="인증 완료"
+                >
+                  <Check :size="17" :stroke-width="3" aria-hidden="true" />
+                </span>
               </button>
             </div>
           </fieldset>
@@ -300,18 +317,18 @@ onBeforeUnmount(stopVerificationTimer)
 
           <div class="mt-auto grid w-full grid-cols-2 gap-4">
             <button
-              class="min-h-[58px] rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors hover:bg-[var(--color-brand-primary-pressed)]"
-              type="button"
-              @click="router.push({ name: 'ParentPermissions' })"
-            >
-              권한 설정하러 가기
-            </button>
-            <button
               class="min-h-[58px] rounded-2xl border border-[var(--color-border)] bg-white text-base font-bold text-[var(--color-brand-primary)] transition-colors hover:bg-[#f4fbff]"
               type="button"
               @click="router.push({ name: 'Home' })"
             >
               홈으로 가기
+            </button>
+            <button
+              class="min-h-[58px] rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors hover:bg-[var(--color-brand-primary-pressed)]"
+              type="button"
+              @click="router.push({ name: 'ParentPermissions' })"
+            >
+              권한 설정하기
             </button>
           </div>
         </div>
@@ -332,123 +349,126 @@ onBeforeUnmount(stopVerificationTimer)
           aria-labelledby="auth-dialog-title"
         >
           <div class="mx-auto mb-2 h-1.5 w-11 rounded-full bg-[#d7dce1]" aria-hidden="true"></div>
-        <div class="flex items-center justify-between">
-          <h2 id="auth-dialog-title" class="text-xl font-bold">
-            {{ selectedAuthMethod === 'kakao' ? '카카오페이 인증' : 'SMS 휴대폰 인증' }}
-          </h2>
-          <button
-            class="grid size-10 place-items-center rounded-full text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)]"
-            type="button"
-            aria-label="인증창 닫기"
-            @click="isAuthDialogOpen = false"
-          >
-            <X :size="22" />
-          </button>
-        </div>
-
-        <template v-if="selectedAuthMethod === 'kakao'">
-          <div class="mt-5 rounded-2xl bg-[#fff7d6] px-5 py-5">
-            <strong class="text-base">카카오톡으로 인증 요청을 보낼게요</strong>
-            <p class="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-              카카오톡에서 인증을 완료한 뒤 아래 버튼을 눌러주세요.
-            </p>
+          <div class="flex items-center justify-between">
+            <h2 id="auth-dialog-title" class="text-xl font-bold">
+              {{ selectedAuthMethod === 'kakao' ? '카카오페이 인증' : 'SMS 휴대폰 인증' }}
+            </h2>
+            <button
+              class="grid size-10 place-items-center rounded-full text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)]"
+              type="button"
+              aria-label="인증창 닫기"
+              @click="isAuthDialogOpen = false"
+            >
+              <X :size="22" />
+            </button>
           </div>
-        </template>
-        <template v-else>
-          <label class="mt-5 block">
-            <span class="mb-2 block text-sm font-bold">휴대폰 번호</span>
-            <span
-              class="flex h-14 w-full items-center rounded-xl border border-[var(--color-border)] px-2 pl-4 focus-within:border-[var(--color-brand-primary)]"
-            >
-              <input
-                class="min-w-0 flex-1 bg-transparent text-base outline-none"
-                type="tel"
-                inputmode="numeric"
-                maxlength="13"
-                :value="phoneNumber"
-                placeholder="010-0000-0000"
-                aria-label="휴대폰 번호"
-                @input="updatePhoneNumber"
-              />
-              <button
-                class="ml-2 shrink-0 rounded-lg bg-[var(--color-selected-background)] px-3 py-2 text-xs font-bold text-[var(--color-selected-text)] transition-colors hover:bg-[#d8f2ff] disabled:cursor-not-allowed disabled:bg-[#edf0f2] disabled:text-[#a1a9b4]"
-                type="button"
-                :disabled="!canRequestVerificationCode"
-                @click="requestVerificationCode"
-              >
-                {{ isVerificationCodeSent ? '재전송' : '인증번호 받기' }}
-              </button>
-            </span>
-          </label>
-          <label class="mt-4 block">
-            <span class="mb-2 block text-sm font-bold">인증번호</span>
-            <span
-              class="flex h-14 w-full items-center rounded-xl border px-2 pl-4 focus-within:border-[var(--color-brand-primary)]"
-              :class="
-                hasVerificationError
-                  ? 'border-[#ef5b5b] bg-[#fff5f5] focus-within:!border-[#ef5b5b]'
-                  : isVerificationCodeConfirmed
-                    ? 'border-[#45b878] bg-[#f3fff8]'
-                    : 'border-[var(--color-border)]'
-              "
-            >
-              <input
-                v-model="verificationCode"
-                class="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[#a1a9b4] disabled:text-[#6f7884]"
-                inputmode="numeric"
-                maxlength="6"
-                placeholder="인증번호 6자리"
-                aria-label="인증번호"
-                :disabled="!isVerificationCodeSent || isVerificationCodeConfirmed"
-                @input="updateVerificationCode"
-              />
-              <span
-                v-if="isVerificationCodeSent && !isVerificationCodeConfirmed && !hasVerificationError"
-                class="mr-2 shrink-0 text-xs font-medium"
-                :class="remainingSeconds > 0 ? 'text-[#f05d5d]' : 'text-[#a1a9b4]'"
-              >
-                {{ timerText }}
-              </span>
-              <button
-                class="shrink-0 rounded-lg bg-[var(--color-selected-background)] px-3 py-2 text-xs font-bold text-[var(--color-selected-text)] transition-colors hover:bg-[#d8f2ff] disabled:cursor-not-allowed disabled:bg-[#edf0f2] disabled:text-[#a1a9b4]"
-                :class="hasVerificationError ? '!bg-[#eceff1] !text-[#8d969f] hover:!bg-[#eceff1]' : ''"
-                type="button"
-                :disabled="!canConfirmVerificationCode || isVerificationCodeConfirmed"
-                @click="confirmVerificationCode"
-              >
-                {{ isVerificationCodeConfirmed ? '확인됨' : '확인' }}
-              </button>
-            </span>
-            <span
-              v-if="isVerificationCodeConfirmed"
-              class="mt-2 block text-xs font-medium text-[#32a66a]"
-            >
-              휴대폰 인증이 완료되었어요.
-            </span>
-            <span
-              v-else-if="hasVerificationError"
-              class="mt-2 block text-xs font-medium text-[#e54d4d]"
-            >
-              인증번호가 일치하지 않아요. 인증번호를 다시 받아주세요.
-            </span>
-            <span
-              v-else-if="isVerificationCodeSent && remainingSeconds === 0"
-              class="mt-2 block text-xs text-[#f05d5d]"
-            >
-              인증 시간이 만료되었어요. 인증번호를 다시 받아주세요.
-            </span>
-          </label>
-        </template>
 
-        <button
-          class="mt-6 min-h-[56px] w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors hover:bg-[var(--color-brand-primary-pressed)]"
-          type="button"
-          :disabled="!canCompleteAuthentication"
-          :class="!canCompleteAuthentication ? 'cursor-not-allowed bg-[#cbd8df] hover:bg-[#cbd8df]' : ''"
-          @click="completeAuthentication"
-        >
-          인증 완료하기
-        </button>
+          <template v-if="selectedAuthMethod === 'kakao'">
+            <div class="mt-5 rounded-2xl bg-[#fff7d6] px-5 py-5">
+              <strong class="text-base">카카오톡으로 인증 요청을 보낼게요</strong>
+              <p class="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                카카오톡에서 인증을 완료한 뒤 아래 버튼을 눌러주세요.
+              </p>
+            </div>
+          </template>
+          <template v-else>
+            <label class="mt-5 block">
+              <span class="mb-2 block text-sm font-bold">휴대폰 번호</span>
+              <span
+                class="flex h-14 w-full items-center rounded-xl border border-[var(--color-border)] px-2 pl-4 focus-within:border-[var(--color-brand-primary)]"
+              >
+                <input
+                  class="min-w-0 flex-1 bg-transparent text-base outline-none"
+                  type="tel"
+                  inputmode="numeric"
+                  maxlength="13"
+                  :value="phoneNumber"
+                  placeholder="010-0000-0000"
+                  aria-label="휴대폰 번호"
+                  @input="updatePhoneNumber"
+                />
+                <button
+                  class="ml-2 shrink-0 rounded-lg bg-[var(--color-selected-background)] px-3 py-2 text-xs font-bold text-[var(--color-selected-text)] transition-colors hover:bg-[#d8f2ff] disabled:cursor-not-allowed disabled:bg-[#edf0f2] disabled:text-[#a1a9b4]"
+                  type="button"
+                  :disabled="!canRequestVerificationCode"
+                  @click="requestVerificationCode"
+                >
+                  {{ isVerificationCodeSent ? '재전송' : '인증번호 받기' }}
+                </button>
+              </span>
+            </label>
+            <label class="mt-4 block">
+              <span class="mb-2 block text-sm font-bold">인증번호</span>
+              <span
+                class="flex h-14 w-full items-center rounded-xl border px-2 pl-4 focus-within:border-[var(--color-brand-primary)]"
+                :class="
+                  hasVerificationError
+                    ? 'border-[#ef5b5b] bg-[#fff5f5] focus-within:!border-[#ef5b5b]'
+                    : isVerificationCodeConfirmed
+                      ? 'border-[#45b878] bg-[#f3fff8]'
+                      : 'border-[var(--color-border)]'
+                "
+              >
+                <input
+                  v-model="verificationCode"
+                  class="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[#a1a9b4] disabled:text-[#6f7884]"
+                  inputmode="numeric"
+                  maxlength="6"
+                  placeholder="인증번호 6자리"
+                  aria-label="인증번호"
+                  :disabled="!isVerificationCodeSent || isVerificationCodeConfirmed"
+                  @input="updateVerificationCode"
+                />
+                <span
+                  v-if="
+                    isVerificationCodeSent && !isVerificationCodeConfirmed && !hasVerificationError
+                  "
+                  class="mr-2 shrink-0 text-xs font-medium"
+                  :class="remainingSeconds > 0 ? 'text-[#f05d5d]' : 'text-[#a1a9b4]'"
+                >
+                  {{ timerText }}
+                </span>
+                <button
+                  class="shrink-0 rounded-lg bg-[var(--color-selected-background)] px-3 py-2 text-xs font-bold text-[var(--color-selected-text)] transition-colors hover:bg-[#d8f2ff] disabled:cursor-not-allowed disabled:bg-[#edf0f2] disabled:text-[#a1a9b4]"
+                  :class="
+                    hasVerificationError ? '!bg-[#eceff1] !text-[#8d969f] hover:!bg-[#eceff1]' : ''
+                  "
+                  type="button"
+                  :disabled="!canConfirmVerificationCode || isVerificationCodeConfirmed"
+                  @click="confirmVerificationCode"
+                >
+                  {{ isVerificationCodeConfirmed ? '확인됨' : '확인' }}
+                </button>
+              </span>
+              <span
+                v-if="isVerificationCodeConfirmed"
+                class="mt-2 block text-xs font-medium text-[#32a66a]"
+              >
+                휴대폰 인증이 완료되었어요.
+              </span>
+              <span
+                v-else-if="hasVerificationError"
+                class="mt-2 block text-xs font-medium text-[#e54d4d]"
+              >
+                인증번호가 일치하지 않아요. 인증번호를 다시 받아주세요.
+              </span>
+              <span
+                v-else-if="isVerificationCodeSent && remainingSeconds === 0"
+                class="mt-2 block text-xs text-[#f05d5d]"
+              >
+                인증 시간이 만료되었어요. 인증번호를 다시 받아주세요.
+              </span>
+            </label>
+          </template>
+
+          <button
+            class="mt-6 min-h-[56px] w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors hover:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:!bg-[#dfe4e8] disabled:!text-[#9aa3ad] disabled:hover:!bg-[#dfe4e8]"
+            type="button"
+            :disabled="!canCompleteAuthentication"
+            @click="completeAuthentication"
+          >
+            인증 완료하기
+          </button>
         </section>
       </div>
     </Transition>
