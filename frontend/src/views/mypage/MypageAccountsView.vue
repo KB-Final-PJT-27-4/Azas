@@ -81,16 +81,16 @@ const addAccount = () => {
     class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-6 pt-8 pb-10 text-[var(--color-text-primary)]"
     @click="openMenuId = null"
   >
-    <!-- <section aria-labelledby="accounts-title">
+    <section aria-labelledby="accounts-title">
       <h1 id="accounts-title" class="text-[28px] leading-tight font-bold tracking-[-0.04em]">
         계좌정보 관리
       </h1>
       <p class="mt-3 text-sm text-[var(--color-text-secondary)]">
         계좌를 추가하고 대표 계좌를 설정할 수 있어요.
       </p>
-    </section> -->
+    </section>
 
-    <section class="" aria-labelledby="registered-accounts-title">
+    <section class="mt-8" aria-labelledby="registered-accounts-title">
       <div class="flex items-center justify-between">
         <h2 id="registered-accounts-title" class="text-xl font-bold tracking-[-0.03em]">
           등록 계좌
@@ -102,9 +102,9 @@ const addAccount = () => {
         <article
           v-for="account in accounts"
           :key="account.id"
-          class="relative rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[0_8px_24px_rgb(49_91_113_/_8%)]"
+          class="relative rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm"
         >
-          <div class="flex items-center gap-4">
+          <div class="flex items-start gap-4">
             <div
               class="grid size-[54px] shrink-0 place-items-center rounded-2xl text-base font-bold text-white"
               :style="{ backgroundColor: account.bankColor }"
@@ -125,24 +125,24 @@ const addAccount = () => {
                   대표 계좌
                 </span>
               </div>
-              <p class="mt-1 truncate text-sm text-[var(--color-text-secondary)]">
+              <p class="mt-1 truncate text-xs text-[var(--color-text-secondary)]">
                 {{ account.bank }} · {{ account.accountNumber }}
               </p>
             </div>
 
             <button
-              class="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] active:bg-[var(--color-selected-background)]"
+              class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] active:bg-[var(--color-selected-background)]"
               type="button"
               :aria-label="`${account.name} 더보기`"
               :aria-expanded="openMenuId === account.id"
               @click.stop="toggleAccountMenu(account.id)"
             >
-              <EllipsisVertical :size="21" />
+              <EllipsisVertical :size="18" />
             </button>
 
             <div
               v-if="openMenuId === account.id"
-              class="absolute top-[68px] right-5 z-10 w-40 overflow-hidden rounded-xl border border-[var(--color-border)] bg-white py-1 shadow-[0_12px_28px_rgb(49_91_113_/_16%)]"
+              class="absolute top-[68px] right-5 z-10 w-40 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-sm"
               role="menu"
               @click.stop
             >
