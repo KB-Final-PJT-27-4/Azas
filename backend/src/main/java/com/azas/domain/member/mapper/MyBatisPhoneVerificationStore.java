@@ -65,6 +65,19 @@ public class MyBatisPhoneVerificationStore
     }
 
     @Override
+    public Optional<PhoneVerification>
+    findByVerificationTokenHash(
+            String verificationTokenHash
+    ) {
+        return Optional.ofNullable(
+                phoneVerificationMapper
+                        .findByVerificationTokenHash(
+                                verificationTokenHash
+                        )
+        );
+    }
+
+    @Override
     public int expireUnverifiedByMemberId(
             long memberId,
             LocalDateTime expiredAt
@@ -109,6 +122,22 @@ public class MyBatisPhoneVerificationStore
                         verifiedAt,
                         tokenExpiresAt,
                         maxAttempts
+                ) == 1;
+    }
+
+    @Override
+    public boolean consumeVerificationTokenIfUsable(
+            long phoneVerificationId,
+            long memberId,
+            String verificationTokenHash,
+            LocalDateTime consumedAt
+    ) {
+        return phoneVerificationMapper
+                .consumeVerificationTokenIfUsable(
+                        phoneVerificationId,
+                        memberId,
+                        verificationTokenHash,
+                        consumedAt
                 ) == 1;
     }
 }
