@@ -1,4 +1,4 @@
-package com.azas.domain.timecapsule.service;
+package com.azas.global.security;
 
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
@@ -29,18 +29,22 @@ public class AccessTokenMemberResolver {
         );
     }
 
-    // [JMG] CAPSULE-1 Authorization 헤더의 Access Token에서 요청 회원 ID를 검증해 추출한다.
-    public long resolveMemberId(String authorizationHeader) {
+    public long resolveMemberId(
+            String authorizationHeader
+    ) {
         if (authorizationHeader == null
-                || !authorizationHeader.startsWith("Bearer ")) {
+                || !authorizationHeader.startsWith(
+                "Bearer "
+        )) {
             throw new BusinessException(
                     ErrorCode.ACCESS_TOKEN_REQUIRED
             );
         }
 
-        String accessToken = authorizationHeader.substring(
-                "Bearer ".length()
-        ).trim();
+        String accessToken =
+                authorizationHeader.substring(
+                        "Bearer ".length()
+                ).trim();
 
         if (accessToken.isEmpty()) {
             throw new BusinessException(
@@ -57,28 +61,41 @@ public class AccessTokenMemberResolver {
 
             if (!ISSUER.equals(claims.getIssuer())
                     || !TOKEN_TYPE.equals(
-                    claims.get("token_type", String.class)
+                    claims.get(
+                            "token_type",
+                            String.class
+                    )
             )) {
-                throw new BusinessException(
-                        ErrorCode.INVALID_ACCESS_TOKEN
-                );
+                throw invalidAccessToken();
             }
 
-            long memberId = Long.parseLong(claims.getSubject());
+            // 만료 시각이 없는 토큰이 장기 인증 수단으로 사용되지 않도록 차단한다.
+            if (claims.getExpiration() == null) {
+                throw invalidAccessToken();
+            }
+
+            long memberId = Long.parseLong(
+                    claims.getSubject()
+            );
 
             if (memberId <= 0) {
-                throw new BusinessException(
-                        ErrorCode.INVALID_ACCESS_TOKEN
-                );
+                throw invalidAccessToken();
             }
 
             return memberId;
         } catch (BusinessException exception) {
             throw exception;
-        } catch (JwtException | IllegalArgumentException exception) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_ACCESS_TOKEN
-            );
+        } catch (
+                JwtException
+                | IllegalArgumentException exception
+        ) {
+            throw invalidAccessToken();
         }
+    }
+
+    private BusinessException invalidAccessToken() {
+        return new BusinessException(
+                ErrorCode.INVALID_ACCESS_TOKEN
+        );
     }
 }

@@ -3,7 +3,7 @@ package com.azas.domain.member.controller;
 import com.azas.domain.member.dto.MemberProfileResponse;
 import com.azas.domain.member.dto.MemberProfileResult;
 import com.azas.domain.member.service.MemberProfileService;
-import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
+import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.global.response.ApiErrorResponse;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
