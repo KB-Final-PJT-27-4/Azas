@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp } from 'lucide-vue-next'
-
 import { childTransactions, type ChildTransaction } from '@/mocks/childHome'
 
 const formatCurrency = (amount: number) => `${Math.abs(amount).toLocaleString('ko-KR')}원`
@@ -9,11 +7,15 @@ const formatSignedCurrency = (transaction: ChildTransaction) => {
 
   return `${prefix}${formatCurrency(transaction.amount)}`
 }
+const getTransactionEmoji = (transaction: ChildTransaction) =>
+  transaction.type === 'income' ? '💰' : '🛍️'
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#f8fbfd] px-4 pt-6 pb-8">
-    <h1 class="m-0 mb-5 text-center text-[length:var(--font-size-lg)] font-extrabold text-[var(--color-text-primary)]">
+  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#E6F1FB] px-4 pt-6 pb-8">
+    <h1
+      class="m-0 mb-5 text-center text-[length:var(--font-size-lg)] font-extrabold text-[var(--color-text-primary)]"
+    >
       최근 돈 기록
     </h1>
 
@@ -27,26 +29,17 @@ const formatSignedCurrency = (transaction: ChildTransaction) => {
         class="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-4 border-b border-[var(--color-border)] px-4 py-4 last:border-b-0"
       >
         <div
-          class="grid size-11 place-items-center rounded-[14px]"
+          class="grid size-11 place-items-center rounded-[14px] text-[20px]"
           :class="transaction.type === 'income' ? 'bg-[#ebfff7]' : 'bg-[#fff2f2]'"
           aria-hidden="true"
         >
-          <ArrowDown
-            v-if="transaction.type === 'income'"
-            class="text-[#41b883]"
-            :size="18"
-            :stroke-width="2.5"
-          />
-          <ArrowUp
-            v-else
-            class="text-[var(--color-unselected-text)]"
-            :size="18"
-            :stroke-width="2.5"
-          />
+          {{ getTransactionEmoji(transaction) }}
         </div>
 
         <div class="min-w-0">
-          <strong class="block truncate text-[length:var(--font-size-sm)] text-[var(--color-text-primary)]">
+          <strong
+            class="block truncate text-[length:var(--font-size-sm)] text-[var(--color-text-primary)]"
+          >
             {{ transaction.title }}
           </strong>
           <span class="text-[length:var(--font-size-xs)] text-[var(--color-text-secondary)]">
@@ -56,7 +49,7 @@ const formatSignedCurrency = (transaction: ChildTransaction) => {
 
         <strong
           class="text-[length:var(--font-size-sm)]"
-          :class="transaction.type === 'income' ? 'text-[#41b883]' : 'text-[var(--color-text-primary)]'"
+          :class="transaction.type === 'income' ? 'text-[#41b883]' : 'text-[#f05d5d]'"
         >
           {{ formatSignedCurrency(transaction) }}
         </strong>
