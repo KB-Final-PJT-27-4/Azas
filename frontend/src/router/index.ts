@@ -188,7 +188,14 @@ const routes: RouteRecordRaw[] = [
     path: '/child/accounts',
     name: 'ChildAccountCreate',
     component: () => import('@/views/child/ChildAccountCreateView.vue'),
-    meta: { requiresAuth: true, roles: ['CHILD'], hideNavigation: true },
+    meta: {
+      requiresAuth: true,
+      roles: ['CHILD'],
+      headerTitle: '아이계좌등록',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+      hideBottomNavigation: true,
+    },
   },
   {
     path: '/child/home',
