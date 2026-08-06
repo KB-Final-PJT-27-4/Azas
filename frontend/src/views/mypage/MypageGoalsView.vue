@@ -72,7 +72,7 @@ const addGoal = () => {
         <article
           v-for="goal in goals"
           :key="goal.id"
-          class="relative rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[0_8px_24px_var(--color-border)]"
+          class="relative rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-sm"
         >
           <div class="flex items-start justify-between gap-4">
             <h2 class="min-w-0 text-xl font-bold tracking-[-0.03em]">{{ goal.name }}</h2>
@@ -88,7 +88,7 @@ const addGoal = () => {
 
             <div
               v-if="openMenuId === goal.id"
-              class="absolute top-[64px] right-5 z-10 w-32 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-[0_12px_28px_var(--color-border)]"
+              class="absolute top-[64px] right-5 z-10 w-32 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-sm"
               role="menu"
               @click.stop
             >
