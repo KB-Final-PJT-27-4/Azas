@@ -161,20 +161,38 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/accounts',
     name: 'MypageAccounts',
     component: () => import('@/views/mypage/MypageAccountsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/goals',
     name: 'MypageGoals',
     component: () => import('@/views/mypage/MypageGoalsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/goals/:goalsId',
     name: 'MypageGoalEdit',
     component: () => import('@/views/mypage/MypageGoalEditView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/alarm',
@@ -192,7 +210,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/guide',
     name: 'Guide',
     component: () => import('@/views/mypage/GuideView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '도움말',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 알림
