@@ -58,6 +58,8 @@ dependencies {
     // 타임캡슐 이미지·영상은 비공개 S3 객체로 저장하고 Presigned URL로만 접근
     implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
     implementation 'software.amazon.awssdk:s3'
+    implementation 'software.amazon.awssdk:sso'
+    implementation 'software.amazon.awssdk:ssooidc'
 
     // Swagger API 문서화
     implementation 'io.springfox:springfox-swagger2:3.0.0'
