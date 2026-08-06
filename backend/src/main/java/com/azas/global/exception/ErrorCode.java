@@ -60,6 +60,32 @@ public enum ErrorCode {
             "초대 유형과 회원 유형이 일치하지 않습니다."
     ),
 
+    // Member
+    INVALID_PHONE_NUMBER(
+            HttpStatus.BAD_REQUEST,
+            "올바른 휴대폰번호 형식이 아닙니다."
+    ),
+    PHONE_VERIFICATION_RESEND_NOT_ALLOWED(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "인증번호 재발송 대기 시간이 지나지 않았습니다."
+    ),
+    SMS_DELIVERY_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "SMS 인증번호를 발송하지 못했습니다."
+    ),
+    PHONE_VERIFICATION_NOT_AVAILABLE(
+            HttpStatus.BAD_REQUEST,
+            "휴대폰 인증 요청이 만료되었거나 사용할 수 없습니다."
+    ),
+    INVALID_PHONE_VERIFICATION_CODE(
+            HttpStatus.BAD_REQUEST,
+            "휴대폰 인증번호가 올바르지 않습니다."
+    ),
+    PHONE_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "휴대폰 인증번호 확인 가능 횟수를 초과했습니다."
+    ),
+
     // Finance
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
