@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, ImagePlus, PiggyBank, X } from 'lucide-vue-next'
+import { Check, ChevronDown, ImagePlus, Landmark, X } from 'lucide-vue-next'
 import {
   findTimeCapsuleRecord,
   timeCapsuleAccounts,
@@ -195,17 +195,22 @@ onBeforeUnmount(() => {
     <form class="mt-7 flex flex-1 flex-col gap-5" @submit.prevent="saveEdit">
       <div class="relative">
         <button
-          class="flex min-h-14 w-full items-center rounded-xl border border-[var(--color-border)] bg-white px-4 text-left"
+          class="flex h-14 w-full items-center gap-3 rounded-[12px] border bg-white px-3 text-left transition-colors"
+          :class="
+            isAccountMenuOpen
+              ? 'border-[var(--color-brand-primary)] ring-2 ring-[#e5f7ff]'
+              : 'border-[#dce8ee]'
+          "
           type="button"
           aria-haspopup="listbox"
           :aria-expanded="isAccountMenuOpen"
           @click="toggleAccountMenu"
         >
           <span
-            class="mr-3 grid size-8 shrink-0 place-items-center rounded-full bg-[#fff7dc] text-[#f5a300]"
+            class="grid size-7 shrink-0 place-items-center rounded-full border border-[#ffad20] bg-[#fffaf0] text-[#ff9f00]"
             aria-hidden="true"
           >
-            <PiggyBank :size="18" />
+            <Landmark :size="15" />
           </span>
           <span class="min-w-0 flex-1">
             <strong class="block truncate text-sm">
@@ -215,38 +220,70 @@ onBeforeUnmount(() => {
               {{ selectedAccount.bankName }} · {{ selectedAccount.accountNumber }}
             </span>
           </span>
-          <ChevronDown :size="18" class="ml-2 shrink-0" aria-hidden="true" />
+          <ChevronDown
+            :size="20"
+            class="shrink-0 text-[var(--color-text-secondary)] transition-transform duration-150"
+            :class="isAccountMenuOpen ? 'rotate-180' : ''"
+            aria-hidden="true"
+          />
         </button>
 
-        <div
-          v-if="isAccountMenuOpen"
-          class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 overflow-hidden rounded-xl border border-[var(--color-border)] bg-white p-1.5 shadow-lg"
-          role="listbox"
-          aria-label="계좌 목록"
+        <Transition
+          enter-active-class="transition duration-150 ease-out"
+          enter-from-class="-translate-y-1 opacity-0"
+          leave-active-class="transition duration-100 ease-in"
+          leave-to-class="-translate-y-1 opacity-0"
         >
-          <button
-            v-for="account in accounts"
-            :key="account.id"
-            class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left active:bg-[var(--color-selected-background)]"
-            :class="String(account.id) === selectedAccountId ? 'bg-[var(--color-selected-background)]' : ''"
-            type="button"
-            role="option"
-            :aria-selected="String(account.id) === selectedAccountId"
-            @click="selectAccount(account.id)"
+          <ul
+            v-if="isAccountMenuOpen"
+            class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 m-0 max-h-48 list-none overflow-y-auto rounded-[14px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+            role="listbox"
+            aria-label="계좌 목록"
           >
-            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-[#fff7dc] text-[#f5a300]">
-              <PiggyBank :size="17" />
-            </span>
-            <span class="min-w-0">
-              <strong class="block truncate text-sm">
-                {{ accountDisplayName(account.bankName, account.name) }}
-              </strong>
-              <span class="text-[11px] text-[var(--color-text-secondary)]">
-                {{ account.bankName }} · {{ account.accountNumber }}
-              </span>
-            </span>
-          </button>
-        </div>
+            <li
+              v-for="account in accounts"
+              :key="account.id"
+              role="option"
+              :aria-selected="String(account.id) === selectedAccountId"
+            >
+              <button
+                class="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left"
+                :class="
+                  String(account.id) === selectedAccountId
+                    ? 'bg-[#effaff]'
+                    : 'hover:bg-[#f6f9fb] active:bg-[#edf3f6]'
+                "
+                type="button"
+                @click="selectAccount(account.id)"
+              >
+                <span
+                  class="grid size-7 shrink-0 place-items-center rounded-full border border-[#ffad20] bg-[#fffaf0] text-[#ff9f00]"
+                >
+                  <Landmark :size="14" />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <strong class="block truncate text-[13px]">
+                    {{ accountDisplayName(account.bankName, account.name) }}
+                  </strong>
+                  <span class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]">
+                    {{ account.bankName }} · {{ account.accountNumber }}
+                  </span>
+                </span>
+                <span
+                  class="grid size-5 shrink-0 place-items-center rounded-full"
+                  :class="
+                    String(account.id) === selectedAccountId
+                      ? 'bg-[var(--color-brand-primary)] text-white'
+                      : 'text-transparent'
+                  "
+                  aria-hidden="true"
+                >
+                  <Check :size="13" :stroke-width="3" />
+                </span>
+              </button>
+            </li>
+          </ul>
+        </Transition>
       </div>
 
       <label class="block">
@@ -263,7 +300,12 @@ onBeforeUnmount(() => {
       <fieldset class="relative">
         <legend class="mb-2 text-sm font-bold">이체 내역</legend>
         <button
-          class="flex min-h-14 w-full items-center gap-3 rounded-xl border border-[#d8eff9] bg-[var(--color-selected-background)] px-4 text-left"
+          class="flex h-12 w-full items-center gap-3 rounded-[12px] border bg-white px-3 text-left transition-colors"
+          :class="
+            isTransferMenuOpen
+              ? 'border-[var(--color-brand-primary)] ring-2 ring-[#e5f7ff]'
+              : 'border-[#dce8ee]'
+          "
           type="button"
           aria-haspopup="listbox"
           :aria-expanded="isTransferMenuOpen"
@@ -274,34 +316,52 @@ onBeforeUnmount(() => {
           <strong class="text-xs text-[var(--color-selected-text)]">
             +{{ selectedTransfer.amount.toLocaleString('ko-KR') }}원
           </strong>
-          <ChevronDown :size="17" class="shrink-0 text-[var(--color-text-secondary)]" />
+          <ChevronDown
+            :size="20"
+            class="shrink-0 text-[var(--color-text-secondary)] transition-transform duration-150"
+            :class="isTransferMenuOpen ? 'rotate-180' : ''"
+          />
         </button>
 
-        <div
-          v-if="isTransferMenuOpen"
-          class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 max-h-64 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-white p-1.5 shadow-lg"
-          role="listbox"
-          aria-label="이체 내역 목록"
+        <Transition
+          enter-active-class="transition duration-150 ease-out"
+          enter-from-class="-translate-y-1 opacity-0"
+          leave-active-class="transition duration-100 ease-in"
+          leave-to-class="-translate-y-1 opacity-0"
         >
-          <button
-            v-for="transfer in transferOptions"
-            :key="transfer.id"
-            class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left active:bg-[var(--color-selected-background)]"
-            :class="transfer.id === selectedTransferId ? 'bg-[var(--color-selected-background)]' : ''"
-            type="button"
-            role="option"
-            :aria-selected="transfer.id === selectedTransferId"
-            @click="selectTransfer(transfer.id)"
+          <ul
+            v-if="isTransferMenuOpen"
+            class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 m-0 max-h-48 list-none overflow-y-auto rounded-[14px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+            role="listbox"
+            aria-label="이체 내역 목록"
           >
-            <span class="w-[74px] text-[11px] text-[var(--color-text-secondary)]">
-              {{ transfer.date.replaceAll('-', '.') }}
-            </span>
-            <strong class="min-w-0 flex-1 truncate text-sm">{{ transfer.transferName }}</strong>
-            <strong class="text-xs text-[var(--color-selected-text)]">
-              +{{ transfer.amount.toLocaleString('ko-KR') }}원
-            </strong>
-          </button>
-        </div>
+            <li
+              v-for="transfer in transferOptions"
+              :key="transfer.id"
+              role="option"
+              :aria-selected="transfer.id === selectedTransferId"
+            >
+              <button
+                class="flex w-full items-center gap-3 rounded-[10px] px-2.5 py-2.5 text-left"
+                :class="
+                  transfer.id === selectedTransferId
+                    ? 'bg-[#effaff]'
+                    : 'hover:bg-[#f6f9fb] active:bg-[#edf3f6]'
+                "
+                type="button"
+                @click="selectTransfer(transfer.id)"
+              >
+                <span class="w-[74px] text-[11px] text-[var(--color-text-secondary)]">
+                  {{ transfer.date.replaceAll('-', '.') }}
+                </span>
+                <strong class="min-w-0 flex-1 truncate text-[13px]">{{ transfer.transferName }}</strong>
+                <strong class="shrink-0 text-xs text-[var(--color-selected-text)]">
+                  +{{ transfer.amount.toLocaleString('ko-KR') }}원
+                </strong>
+              </button>
+            </li>
+          </ul>
+        </Transition>
       </fieldset>
 
       <label class="block">
