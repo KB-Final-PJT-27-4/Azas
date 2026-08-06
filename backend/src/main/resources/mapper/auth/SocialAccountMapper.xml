@@ -29,6 +29,21 @@
           AND provider_subject = #{providerSubject}
     </select>
 
+    <select id="findAllByMemberId"
+            resultMap="socialAccountResultMap">
+        SELECT
+            social_account_id,
+            member_id,
+            provider,
+            provider_subject,
+            created_at,
+            updated_at
+        FROM social_account
+        WHERE member_id = #{memberId}
+        ORDER BY created_at ASC,
+                 social_account_id ASC
+    </select>
+
     <insert id="insert"
             parameterType="com.azas.domain.auth.entity.SocialAccount"
             useGeneratedKeys="true"

@@ -5,12 +5,18 @@ import com.azas.domain.auth.entity.SocialAccount;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 @Mapper
 public interface SocialAccountMapper {
 
     SocialAccount findByProviderAndSubject(
             @Param("provider") OAuthProvider provider,
             @Param("providerSubject") String providerSubject
+    );
+
+    List<SocialAccount> findAllByMemberId(
+            @Param("memberId") long memberId
     );
 
     int insert(SocialAccount socialAccount);
