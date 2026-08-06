@@ -1,5 +1,12 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
+const timeCapsuleHeaderMeta = {
+  requiresAuth: true,
+  headerTitle: '타임캡슐',
+  showHeaderBack: true,
+  showHeaderNotification: false,
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -76,40 +83,40 @@ const routes: RouteRecordRaw[] = [
     path: '/time-capsules',
     name: 'TimeCapsuleArchive',
     component: () => import('@/views/timeCapsules/TimeCapsuleArchiveView.vue'),
-    meta: { requiresAuth: true },
+    meta: timeCapsuleHeaderMeta,
   },
   {
     path: '/time-capsules/new',
     name: 'TimeCapsuleCreate',
     component: () => import('@/views/timeCapsules/TimeCapsuleCreateView.vue'),
-    meta: { requiresAuth: true },
+    meta: timeCapsuleHeaderMeta,
   },
   {
     path: '/time-capsules/preview',
     name: 'TimeCapsulePreview',
     component: () => import('@/views/timeCapsules/TimeCapsulePreviewView.vue'),
-    meta: { requiresAuth: true },
+    meta: timeCapsuleHeaderMeta,
   },
   {
     path: '/time-capsules/:capsuleId/edit',
     name: 'TimeCapsuleEdit',
     component: () => import('@/views/timeCapsules/TimeCapsuleEditView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: timeCapsuleHeaderMeta,
   },
   {
     path: '/time-capsules/:capsuleListId',
     name: 'TimeCapsuleList',
     component: () => import('@/views/timeCapsules/TimeCapsuleListView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: timeCapsuleHeaderMeta,
   },
   {
     path: '/time-capsules/:capsuleListId/:capsuleId',
     name: 'TimeCapsuleDetail',
     component: () => import('@/views/timeCapsules/TimeCapsuleDetailView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: timeCapsuleHeaderMeta,
   },
 
   // 마이페이지
