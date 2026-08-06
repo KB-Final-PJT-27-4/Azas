@@ -82,17 +82,17 @@ const addAccount = () => {
     @click="openMenuId = null"
   >
     <!-- <section aria-labelledby="accounts-title">
-      <h1 id="accounts-title" class="text-[32px] leading-tight font-bold tracking-[-0.04em]">
+      <h1 id="accounts-title" class="text-[28px] leading-tight font-bold tracking-[-0.04em]">
         계좌정보 관리
       </h1>
-      <p class="mt-3 text-base text-[var(--color-text-secondary)]">
+      <p class="mt-3 text-sm text-[var(--color-text-secondary)]">
         계좌를 추가하고 대표 계좌를 설정할 수 있어요.
       </p>
     </section> -->
 
     <section class="" aria-labelledby="registered-accounts-title">
       <div class="flex items-center justify-between">
-        <h2 id="registered-accounts-title" class="text-2xl font-bold tracking-[-0.03em]">
+        <h2 id="registered-accounts-title" class="text-xl font-bold tracking-[-0.03em]">
           등록 계좌
         </h2>
         <span class="text-sm text-[var(--color-text-secondary)]">{{ accounts.length }}개</span>
@@ -106,7 +106,7 @@ const addAccount = () => {
         >
           <div class="flex items-center gap-4">
             <div
-              class="grid size-[54px] shrink-0 place-items-center rounded-2xl text-lg font-bold text-white"
+              class="grid size-[54px] shrink-0 place-items-center rounded-2xl text-base font-bold text-white"
               :style="{ backgroundColor: account.bankColor }"
               aria-hidden="true"
             >
@@ -115,7 +115,7 @@ const addAccount = () => {
 
             <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-2">
-                <h3 class="truncate text-lg font-bold tracking-[-0.02em]">
+                <h3 class="truncate text-base font-bold tracking-[-0.02em]">
                   {{ account.name }}
                 </h3>
                 <span
@@ -179,11 +179,11 @@ const addAccount = () => {
           <dl class="grid grid-cols-2 gap-4">
             <div>
               <dt class="text-xs text-[var(--color-text-secondary)]">예금주</dt>
-              <dd class="mt-1 text-base font-semibold">{{ account.owner }}</dd>
+              <dd class="mt-1 text-sm font-semibold">{{ account.owner }}</dd>
             </div>
             <div>
               <dt class="text-xs text-[var(--color-text-secondary)]">잔액</dt>
-              <dd class="mt-1 text-base font-semibold">{{ formatAmount(account.balance) }}</dd>
+              <dd class="mt-1 text-sm font-semibold">{{ formatAmount(account.balance) }}</dd>
             </div>
           </dl>
         </article>
@@ -191,7 +191,7 @@ const addAccount = () => {
     </section>
 
     <button
-      class="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-brand-primary)] text-lg font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]"
+      class="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]"
       type="button"
       @click="addAccount"
     >
