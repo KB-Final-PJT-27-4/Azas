@@ -34,6 +34,7 @@ DROP TABLE IF EXISTS child;
 DROP TABLE IF EXISTS financial_goal_template;
 DROP TABLE IF EXISTS refresh_token;
 DROP TABLE IF EXISTS social_account;
+DROP TABLE IF EXISTS phone_verification;
 DROP TABLE IF EXISTS member;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -57,6 +58,28 @@ CREATE TABLE member (
   CONSTRAINT ck_member_type CHECK (member_type IN ('PARENT', 'CHILD', 'ADMIN')),
   CONSTRAINT ck_member_status CHECK (status IN ('ACTIVE', 'WITHDRAWN'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='로그인 가능한 회원';
+
+CREATE TABLE phone_verification (
+  phone_verification_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '휴대폰 인증 ID',
+  member_id BIGINT UNSIGNED NOT NULL COMMENT '인증을 요청한 회원 ID',
+  phone_number_ciphertext VARBINARY(500) NOT NULL COMMENT '인증 대상 휴대폰번호 암호문',
+  phone_number_hash CHAR(64) NOT NULL COMMENT '휴대폰번호 검색·중복 확인용 HMAC-SHA-256 해시',
+  verification_code_hash CHAR(64) NOT NULL COMMENT 'SMS 인증번호 검증용 HMAC-SHA-256 해시',
+  attempt_count INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '인증번호 확인 실패 횟수',
+  expires_at DATETIME(6) NOT NULL COMMENT '인증번호 만료 시각',
+  verified_at DATETIME(6) NULL COMMENT '인증번호 확인 완료 시각',
+  verification_token_hash CHAR(64) NULL COMMENT '회원정보 수정용 일회용 인증 토큰 해시',
+  token_expires_at DATETIME(6) NULL COMMENT '일회용 인증 토큰 만료 시각',
+  token_consumed_at DATETIME(6) NULL COMMENT '일회용 인증 토큰 사용 시각',
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'SMS 인증 요청 생성 시각',
+  PRIMARY KEY (phone_verification_id),
+  UNIQUE KEY uk_phone_verification_token_hash (verification_token_hash),
+  KEY idx_phone_verification_member_created (member_id, created_at),
+  KEY idx_phone_verification_phone_hash_created (phone_number_hash, created_at),
+  KEY idx_phone_verification_expires_at (expires_at),
+  CONSTRAINT fk_phone_verification_member
+    FOREIGN KEY (member_id) REFERENCES member (member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='회원 휴대폰 SMS 인증 요청';
 
 CREATE TABLE social_account (
   social_account_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '소셜 계정 ID',

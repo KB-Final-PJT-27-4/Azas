@@ -1,5 +1,8 @@
 package com.azas.global.config;
 
+import com.azas.domain.member.service.PhoneNumberProtector;
+import com.azas.domain.member.service.PhoneVerificationHasher;
+import com.azas.domain.member.service.SmsSender;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.env.MapPropertySource;
@@ -31,6 +34,19 @@ class SpringContextConfigurationTest {
         try (ClassPathXmlApplicationContext rootContext = createRootContext()) {
             assertNotNull(rootContext.getBean(DataSource.class));
             assertNotNull(rootContext.getBean(SqlSessionFactory.class));
+            assertNotNull(
+                    rootContext.getBean(
+                            PhoneNumberProtector.class
+                    )
+            );
+            assertNotNull(
+                    rootContext.getBean(
+                            PhoneVerificationHasher.class
+                    )
+            );
+            assertNotNull(
+                    rootContext.getBean(SmsSender.class)
+            );
         }
     }
 
@@ -256,7 +272,11 @@ class SpringContextConfigurationTest {
                         "GOOGLE_CLIENT_ID", "test-google-client-id",
                         "GOOGLE_CLIENT_SECRET", "test-google-client-secret",
                         "JWT_SECRET_BASE64",
-                        "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
+                        "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
+                        "PHONE_NUMBER_ENCRYPTION_KEY_BASE64",
+                        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+                        "PHONE_VERIFICATION_SECRET_BASE64",
+                        "YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODk="
                 ))
         );
         rootContext.setConfigLocation("spring/root-context.xml");
