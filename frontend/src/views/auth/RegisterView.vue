@@ -30,7 +30,13 @@ const form = reactive({
   gender: 'male' as ChildGender,
 })
 
+const isSubmitDisabled = computed(
+  () => !form.childName.trim() || !form.birthDate.trim(),
+)
+
 const submitRegistration = () => {
+  if (isSubmitDisabled.value) return
+
   // TODO: 회원가입 또는 공동 보호자 초대 수락 API 연결
   router.push({ name: 'Onboarding' })
 }
@@ -138,8 +144,9 @@ const submitRegistration = () => {
       </div>
 
       <button
-        class="mt-auto h-14 rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)]"
+        class="mt-auto h-14 rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
         type="submit"
+        :disabled="isSubmitDisabled"
       >
         {{ isGuardianInvitation ? '수락' : '다음' }}
       </button>
