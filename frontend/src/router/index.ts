@@ -266,7 +266,7 @@ const routes: RouteRecordRaw[] = [
       hideBottomNavigation: true,
       headerTitle: '금융상품 추천',
       showHeaderBack: true,
-      notificationCount: 3,
+      showHeaderNotification: false,
     },
   },
   {
@@ -274,7 +274,13 @@ const routes: RouteRecordRaw[] = [
     name: 'ProductDetail',
     component: () => import('@/views/products/ProductDetailView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '상품 상세',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 404
