@@ -263,7 +263,9 @@ onBeforeUnmount(() => {
         </label>
 
         <fieldset class="relative">
-          <legend class="mb-2 text-sm font-bold">이체 내역</legend>
+          <legend class="mb-2 text-sm font-bold">
+            이체 내역 <em class="not-italic text-red-500">*</em>
+          </legend>
           <button
             class="flex h-12 w-full items-center gap-3 rounded-[12px] border bg-white px-3 text-left transition-colors"
             :class="
