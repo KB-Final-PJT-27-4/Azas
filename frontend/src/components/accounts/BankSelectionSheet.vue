@@ -9,6 +9,10 @@ type Bank = {
   textColor?: string
 }
 
+defineProps<{
+  open: boolean
+}>()
+
 const emit = defineEmits<{
   close: []
   select: [bank: string]
@@ -60,17 +64,19 @@ const filteredBanks = computed(() => {
 
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
-      role="presentation"
-      @click.self="emit('close')"
-    >
-      <section
-        class="flex h-[calc(100dvh-120px)] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[32px] bg-white pt-7 text-[var(--color-text-primary)]"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="bank-sheet-title"
+    <Transition name="bank-sheet" appear>
+      <div
+        v-if="open"
+        class="bank-sheet-backdrop fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
+        role="presentation"
+        @click.self="emit('close')"
       >
+        <section
+          class="bank-sheet-panel flex h-[clamp(480px,68dvh,620px)] max-h-[calc(100dvh-32px)] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[32px] bg-white pt-7 text-[var(--color-text-primary)] shadow-[0_-12px_40px_rgba(0,0,0,0.12)]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bank-sheet-title"
+        >
         <header class="flex shrink-0 items-center justify-between px-6">
           <h2 id="bank-sheet-title" class="text-xl font-bold">은행선택</h2>
           <button
@@ -123,7 +129,42 @@ const filteredBanks = computed(() => {
         >
           검색 결과가 없습니다.
         </p>
-      </section>
-    </div>
+        </section>
+      </div>
+    </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.bank-sheet-enter-active,
+.bank-sheet-leave-active {
+  transition: background-color 240ms ease;
+}
+
+.bank-sheet-enter-active .bank-sheet-panel {
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bank-sheet-leave-active .bank-sheet-panel {
+  transition: transform 240ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.bank-sheet-enter-from,
+.bank-sheet-leave-to {
+  background-color: rgb(0 0 0 / 0%);
+}
+
+.bank-sheet-enter-from .bank-sheet-panel,
+.bank-sheet-leave-to .bank-sheet-panel {
+  transform: translateY(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bank-sheet-enter-active,
+  .bank-sheet-leave-active,
+  .bank-sheet-enter-active .bank-sheet-panel,
+  .bank-sheet-leave-active .bank-sheet-panel {
+    transition-duration: 1ms;
+  }
+}
+</style>

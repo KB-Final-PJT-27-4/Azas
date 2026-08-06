@@ -26,6 +26,7 @@ const selectBank = (bank: string) => {
       v-model:account-number="accountNumber"
       v-model:account-alias="accountAlias"
       :selected-bank="selectedBank"
+      :is-bank-selector-open="isBankSelectorOpen"
       @open-bank-selector="isBankSelectorOpen = true"
       @next="registrationStep = 'confirmation'"
     />
@@ -39,10 +40,14 @@ const selectBank = (bank: string) => {
       @register="registrationStep = 'complete'"
     />
 
-    <AccountRegistrationComplete v-else @create-plan="router.push('/goals')" />
+    <AccountRegistrationComplete
+      v-else
+      @home="router.push('/home')"
+      @create-goal="router.push('/goals')"
+    />
 
     <BankSelectionSheet
-      v-if="isBankSelectorOpen"
+      :open="isBankSelectorOpen"
       @close="isBankSelectorOpen = false"
       @select="selectBank"
     />
