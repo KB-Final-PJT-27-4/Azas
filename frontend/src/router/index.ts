@@ -161,7 +161,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/accounts',
     name: 'MypageAccounts',
     component: () => import('@/views/mypage/MypageAccountsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/goals',
