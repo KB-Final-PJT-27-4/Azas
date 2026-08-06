@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.family.mapper.FamilyMapper">
+
+    <select id="countChildAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN child_parent cp ON c.child_id = cp.child_id
+        WHERE c.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="findFamilyMembers"
+            resultType="com.azas.domain.family.dto.FamilyGuardianResponse">
+        SELECT
+            m.member_id AS memberId,
+            m.name AS name,
+            m.email AS email,
+            m.profile_image_url AS profileImageUrl,
+            cp.relation_type AS relationType,
+            CASE
+                WHEN cp.relation_type IN ('MOTHER', 'FATHER') THEN 'PARENT'
+                WHEN cp.relation_type = 'GUARDIAN' THEN 'GUARDIAN'
+                END AS familyRole,
+            cp.created_at AS linkedAt
+        FROM child_parent cp
+                 INNER JOIN member m ON cp.member_id = m.member_id
+                 INNER JOIN child c ON cp.child_id = c.child_id
+        WHERE cp.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND cp.relation_type IN ('MOTHER', 'FATHER', 'GUARDIAN')
+        ORDER BY cp.created_at ASC
+    </select>
+
+    <select id="findChildMemberLinkByChildId"
+            resultType="com.azas.domain.family.dto.ChildMemberLinkResponse">
+        SELECT
+            c.child_id AS childId,
+            CASE
+                WHEN c.member_id IS NULL THEN 0
+                ELSE 1
+                END AS linked,
+            m.member_id AS childMemberId,
+            m.name AS childMemberName,
+            m.email AS childMemberEmail,
+            m.profile_image_url AS childMemberProfileImageUrl,
+            m.status AS childMemberStatus,
+            CASE
+                WHEN c.member_id IS NULL THEN NULL
+                ELSE c.updated_at
+                END AS linkedAt
+        FROM child c
+                 LEFT JOIN member m ON c.member_id = m.member_id
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="countChildMemberAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN child_parent cp ON c.child_id = cp.child_id
+        WHERE c.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+          AND cp.relation_type IN ('MOTHER', 'FATHER', 'GUARDIAN')
+    </select>
+
+    <select id="findLastAllowanceRequestMonth" resultType="java.time.LocalDate">
+        SELECT last_allowance_request_month
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <update id="updateAllowanceRequest">
+        UPDATE child
+        SET last_allowance_request_month = #{requestMonth},
+            last_allowance_requested_at = NOW(6),
+            updated_at = NOW(6)
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+    </update>
+
+    <select id="findChildAvailableAmount" resultType="java.math.BigDecimal">
+        SELECT child_available_amount
+        FROM financial_account
+        WHERE child_id = #{childId}
+          AND account_product_type = 'DEMAND_DEPOSIT'
+          AND account_status = 'ACTIVE'
+          AND link_status = 'ACTIVE'
+        ORDER BY is_primary DESC, updated_at DESC
+            LIMIT 1
+    </select>
+</mapper>
