@@ -259,7 +259,7 @@ const routes: RouteRecordRaw[] = [
       hideBottomNavigation: true,
       headerTitle: '금융상품 추천',
       showHeaderBack: true,
-      notificationCount: 3,
+      showHeaderNotification: false,
     },
   },
   {
