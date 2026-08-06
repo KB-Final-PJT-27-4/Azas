@@ -267,7 +267,13 @@ const routes: RouteRecordRaw[] = [
     name: 'ProductDetail',
     component: () => import('@/views/products/ProductDetailView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '상품 상세',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 404
