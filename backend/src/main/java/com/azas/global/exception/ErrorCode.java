@@ -60,6 +60,20 @@ public enum ErrorCode {
             "초대 유형과 회원 유형이 일치하지 않습니다."
     ),
 
+    // Member
+    INVALID_PHONE_NUMBER(
+            HttpStatus.BAD_REQUEST,
+            "올바른 휴대폰번호 형식이 아닙니다."
+    ),
+    PHONE_VERIFICATION_RESEND_NOT_ALLOWED(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "인증번호 재발송 대기 시간이 지나지 않았습니다."
+    ),
+    SMS_DELIVERY_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "SMS 인증번호를 발송하지 못했습니다."
+    ),
+
     // Finance
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,

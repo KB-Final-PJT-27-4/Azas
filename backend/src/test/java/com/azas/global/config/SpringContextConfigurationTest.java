@@ -2,6 +2,7 @@ package com.azas.global.config;
 
 import com.azas.domain.member.service.PhoneNumberProtector;
 import com.azas.domain.member.service.PhoneVerificationHasher;
+import com.azas.domain.member.service.SmsSender;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.env.MapPropertySource;
@@ -38,11 +39,13 @@ class SpringContextConfigurationTest {
                             PhoneNumberProtector.class
                     )
             );
-
             assertNotNull(
                     rootContext.getBean(
                             PhoneVerificationHasher.class
                     )
+            );
+            assertNotNull(
+                    rootContext.getBean(SmsSender.class)
             );
         }
     }

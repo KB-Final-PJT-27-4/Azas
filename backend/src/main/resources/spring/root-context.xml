@@ -23,5 +23,9 @@
     <bean id="oauthObjectMapper"
           class="com.fasterxml.jackson.databind.ObjectMapper"/>
 
+    <!-- SENS 연결 전 로컬·테스트에서 실제 문자 없이 발송 흐름을 검증한다. -->
+    <bean id="smsSender"
+          class="com.azas.domain.member.service.FakeSmsSender"/>
+
     <import resource="database-context.xml"/>
 </beans>
