@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import allowancePageBgUrl from '@/assets/images/child/child-allowance-page-bg.png'
 import allowanceRequestPigUrl from '@/assets/images/child/child-allowance-request-pig.png'
 import { BaseToast } from '@/components/feedback'
 import { allowanceOptions } from '@/mocks/childHome'
@@ -15,7 +16,11 @@ const toastVariant = ref<'success' | 'error'>('error')
 let toastTimer: ReturnType<typeof window.setTimeout> | null = null
 
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
-const requestAmount = computed(() => Number(customAmount.value) || selectedAmount.value)
+const customAmountValue = computed(() => Number(customAmount.value.replace(/\D/g, '')) || 0)
+const formattedCustomAmount = computed(() =>
+  customAmountValue.value > 0 ? customAmountValue.value.toLocaleString('ko-KR') : '',
+)
+const requestAmount = computed(() => customAmountValue.value || selectedAmount.value)
 const allowanceValidationMessage = computed(() => {
   if (requestAmount.value <= 0) {
     return '필요한 금액을 입력해주세요.'
@@ -47,6 +52,16 @@ const selectAmount = (amount: number) => {
   customAmount.value = ''
 }
 
+const updateCustomAmount = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  customAmount.value = input.value.replace(/\D/g, '')
+}
+
+const updateReason = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  reason.value = input.value
+}
+
 const submitAllowanceRequest = () => {
   if (!canSubmitAllowanceRequest.value) {
     showToast(allowanceValidationMessage.value, 'error')
@@ -67,10 +82,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef8ff] px-5 pt-8 pb-8">
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef8ff] bg-cover bg-top bg-no-repeat px-5 pt-8 pb-8"
+    :style="{ backgroundImage: `url(${allowancePageBgUrl})` }"
+  >
     <section class="text-center">
       <img
-        class="mx-auto w-[190px] select-none object-contain"
+        class="mx-auto w-[196px] select-none object-contain"
         :src="allowanceRequestPigUrl"
         alt=""
         aria-hidden="true"
@@ -79,15 +97,21 @@ onBeforeUnmount(() => {
         부모님께<br />
         용돈을 요청해볼까요?
       </h1>
-      <p class="m-0 text-[length:var(--font-size-sm)] leading-[1.5] text-[var(--color-text-secondary)]">
+      <p
+        class="m-0 text-[length:var(--font-size-sm)] leading-[1.5] text-[var(--color-text-secondary)]"
+      >
         하고 싶은 게 있다면<br />
         부모님께 용돈을 요청해보세요!
       </p>
     </section>
 
-    <section class="mt-6 rounded-[24px] bg-white px-5 py-5 shadow-[0_14px_32px_rgb(110_122_138_/_10%)]">
+    <section
+      class="mt-6 rounded-[22px] bg-white px-5 py-5 shadow-[0_14px_32px_rgb(110_122_138_/_10%)]"
+    >
       <fieldset class="m-0 border-0 p-0">
-        <legend class="mb-3 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]">
+        <legend
+          class="mb-3 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
+        >
           얼마나 필요한가요?
         </legend>
         <div class="grid grid-cols-3 gap-2">
@@ -106,22 +130,35 @@ onBeforeUnmount(() => {
             {{ formatCurrency(amount) }}
           </button>
         </div>
-        <input
-          v-model="customAmount"
-          class="mt-3 h-11 w-full rounded-full border border-[var(--color-border)] px-4 text-center text-[length:var(--font-size-sm)] outline-none focus:border-[var(--color-brand-primary)]"
-          inputmode="numeric"
-          placeholder="직접 입력하기"
-        />
+        <div class="relative mt-3">
+          <input
+            :value="formattedCustomAmount"
+            class="h-11 w-full rounded-[14px] border border-[var(--color-border)] px-4 pr-10 text-center text-[length:var(--font-size-sm)] outline-none focus:border-[var(--color-brand-primary)]"
+            inputmode="numeric"
+            placeholder="직접 입력하기"
+            type="text"
+            @input="updateCustomAmount"
+          />
+          <span
+            v-if="customAmountValue > 0"
+            class="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[length:var(--font-size-sm)] font-bold text-[var(--color-text-secondary)]"
+          >
+            원
+          </span>
+        </div>
       </fieldset>
 
       <div class="my-5 h-px bg-[var(--color-border)]" />
 
-      <label class="grid gap-3 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]">
+      <label
+        class="grid gap-3 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
+      >
         어떤 이유인가요?
         <input
-          v-model="reason"
-          class="h-11 rounded-full border border-[var(--color-border)] px-4 text-center text-[length:var(--font-size-sm)] font-normal outline-none focus:border-[var(--color-brand-primary)]"
+          :value="reason"
+          class="h-11 rounded-[14px] border border-[var(--color-border)] px-4 text-center text-[length:var(--font-size-sm)] font-normal outline-none focus:border-[var(--color-brand-primary)]"
           placeholder="직접 입력하기"
+          @input="updateReason"
         />
       </label>
     </section>
@@ -135,10 +172,6 @@ onBeforeUnmount(() => {
       요청 보내기
     </button>
 
-    <BaseToast
-      v-if="toastMessage"
-      :message="toastMessage"
-      :variant="toastVariant"
-    />
+    <BaseToast v-if="toastMessage" :message="toastMessage" :variant="toastVariant" />
   </main>
 </template>
