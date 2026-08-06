@@ -20,7 +20,7 @@ import allowancePageBgUrl from '@/assets/images/child/child-allowance-page-bg.pn
         알림으로 알려드릴게요
       </p>
       <img
-        class="w-[230px] select-none object-contain"
+        class="w-[400px] select-none object-contain"
         :src="allowanceCompletePigUrl"
         alt=""
         aria-hidden="true"

@@ -236,7 +236,7 @@ const routes: RouteRecordRaw[] = [
       roles: ['CHILD'],
       hideBottomNavigation: true,
       headerTitle: '용돈 조르기',
-      showHeaderBack: true,
+      showHeaderBack: false,
     },
   },
 

@@ -140,11 +140,11 @@ const submitTransfer = () => {
           이체하기
         </button>
         <RouterLink
-          class="mt-3 inline-flex h-11 min-w-[150px] max-w-full items-center justify-center gap-2 rounded-[14px] bg-white px-4 text-[length:var(--font-size-sm)] font-extrabold whitespace-nowrap text-[#3BA9FF]"
+          class="mt-3 inline-flex h-11 w-[150px] max-w-full items-center justify-center gap-[6px] rounded-[14px] bg-white px-2 text-[length:var(--font-size-sm)] font-extrabold whitespace-nowrap text-[#3BA9FF]"
           to="/child/allowance"
         >
           <img
-            class="h-[28px] w-[42px] shrink-0 object-contain"
+            class="size-[28px] -translate-x-1 shrink-0 object-contain"
             :src="allowanceIconUrl"
             alt=""
             aria-hidden="true"
@@ -229,11 +229,11 @@ const submitTransfer = () => {
           부모님께 용돈을 요청해보세요!
         </p>
         <RouterLink
-          class="inline-flex h-11 min-w-[135px] max-w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-selected-background)] px-4 text-[length:var(--font-size-sm)] font-extrabold whitespace-nowrap text-[#3BA9FF]"
+          class="inline-flex h-11 w-[150px] max-w-full items-center justify-center gap-[6px] rounded-[12px] bg-[var(--color-selected-background)] px-2 text-[length:var(--font-size-sm)] font-extrabold whitespace-nowrap text-[#3BA9FF]"
           to="/child/allowance"
         >
           <img
-            class="h-[28px] w-[42px] shrink-0 object-contain"
+            class="size-[28px] -translate-x-1 shrink-0 object-contain"
             :src="allowanceIconUrl"
             alt=""
             aria-hidden="true"
