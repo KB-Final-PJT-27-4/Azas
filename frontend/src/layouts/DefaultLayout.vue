@@ -11,6 +11,8 @@ const hideBottomNavigation = computed(
 )
 const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
 const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
+const showHeaderNotification = computed(() => route.meta.showHeaderNotification !== false)
+const notificationCount = computed(() => Number(route.meta.notificationCount ?? 0))
 </script>
 
 <template>
@@ -22,6 +24,8 @@ const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
         profile-name="깨비"
         :center-title="headerTitle"
         :show-back="showHeaderBack"
+        :show-notification="showHeaderNotification"
+        :notification-count="notificationCount"
       />
       <div
         class="default-layout__content"

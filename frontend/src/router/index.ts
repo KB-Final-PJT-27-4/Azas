@@ -48,7 +48,12 @@ const routes: RouteRecordRaw[] = [
     path: '/accounts',
     name: 'Accounts',
     component: () => import('@/views/accounts/AccountsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      headerTitle: '계좌등록',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 자산
@@ -183,7 +188,14 @@ const routes: RouteRecordRaw[] = [
     path: '/child/accounts',
     name: 'ChildAccountCreate',
     component: () => import('@/views/child/ChildAccountCreateView.vue'),
-    meta: { requiresAuth: true, roles: ['CHILD'], hideNavigation: true },
+    meta: {
+      requiresAuth: true,
+      roles: ['CHILD'],
+      headerTitle: '아이계좌등록',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+      hideBottomNavigation: true,
+    },
   },
   {
     path: '/child/home',
@@ -249,7 +261,13 @@ const routes: RouteRecordRaw[] = [
     path: '/products',
     name: 'Products',
     component: () => import('@/views/products/ProductsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '금융상품 추천',
+      showHeaderBack: true,
+      notificationCount: 3,
+    },
   },
   {
     path: '/products/:productId',
