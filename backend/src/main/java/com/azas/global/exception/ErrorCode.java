@@ -73,6 +73,18 @@ public enum ErrorCode {
             HttpStatus.BAD_GATEWAY,
             "SMS 인증번호를 발송하지 못했습니다."
     ),
+    PHONE_VERIFICATION_NOT_AVAILABLE(
+            HttpStatus.BAD_REQUEST,
+            "휴대폰 인증 요청이 만료되었거나 사용할 수 없습니다."
+    ),
+    INVALID_PHONE_VERIFICATION_CODE(
+            HttpStatus.BAD_REQUEST,
+            "휴대폰 인증번호가 올바르지 않습니다."
+    ),
+    PHONE_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "휴대폰 인증번호 확인 가능 횟수를 초과했습니다."
+    ),
 
     // Finance
     FINANCIAL_ACCOUNT_NOT_FOUND(

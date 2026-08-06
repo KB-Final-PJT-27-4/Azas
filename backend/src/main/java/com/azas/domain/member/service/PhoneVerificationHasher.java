@@ -80,6 +80,15 @@ public class PhoneVerificationHasher {
         );
     }
 
+    public String hashVerificationToken(
+            String verificationToken
+    ) {
+        return encode(
+                "verification-token\u0000"
+                        + verificationToken
+        );
+    }
+
     private String encode(String value) {
         try {
             // Mac은 thread-safe하지 않아 호출할 때마다 새로 생성한다.

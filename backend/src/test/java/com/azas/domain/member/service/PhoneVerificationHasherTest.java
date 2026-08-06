@@ -108,4 +108,34 @@ class PhoneVerificationHasherTest {
                 )
         );
     }
+
+    @Test
+    void hashesVerificationToken() {
+        String tokenHash =
+                hasher.hashVerificationToken(
+                        "raw-verification-token"
+                );
+
+        assertEquals(64, tokenHash.length());
+
+        assertTrue(
+                tokenHash.matches(
+                        "[0-9a-f]{64}"
+                )
+        );
+
+        assertEquals(
+                tokenHash,
+                hasher.hashVerificationToken(
+                        "raw-verification-token"
+                )
+        );
+
+        assertNotEquals(
+                tokenHash,
+                hasher.hashVerificationToken(
+                        "different-token"
+                )
+        );
+    }
 }
