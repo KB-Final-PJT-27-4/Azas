@@ -143,7 +143,8 @@ public enum ErrorCode {
             HttpStatus.GONE,
             "타임캡슐 결과물의 보관 기간이 만료되었습니다."
     ),
-      CHILD_NOT_FOUND(
+    //child
+    CHILD_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "자녀 정보를 찾을 수 없습니다."
     ),
@@ -171,9 +172,26 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "생년월일은 필수입니다."
     ),
+    //family
     ALLOWANCE_REQUEST_ALREADY_EXISTS(
             HttpStatus.CONFLICT,
             "이번 달에는 이미 용돈을 요청했습니다."
+    ),
+    FAMILY_INVITATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "가족 초대를 찾을 수 없습니다."
+    ),
+    FAMILY_INVITATION_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "같은 유형의 사용 가능한 가족 초대가 이미 존재합니다."
+    ),
+    FAMILY_INVITATION_GONE(
+            HttpStatus.GONE,
+            "만료되었거나 이미 처리된 가족 초대입니다."
+    ),
+    FAMILY_INVITATION_RELATION_TYPE_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+            "부모 초대 수락에는 관계 유형이 필요합니다."
     );
 
     private final HttpStatus httpStatus;
