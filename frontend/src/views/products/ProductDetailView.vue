@@ -119,7 +119,7 @@ const updateMonthlyAmount = (event: Event) => {
         :aria-pressed="isFavorite"
         @click="isFavorite = !isFavorite"
       >
-        <Heart :size="15" :class="isFavorite ? 'fill-[var(--color-brand-primary)] text-[var(--color-brand-primary)]' : ''" />
+        <Heart :size="15" :class="isFavorite ? 'fill-[#ff001b] text-[#ff001b]' : ''" />
         {{ isFavorite ? '관심상품 저장됨' : '관심상품 저장' }}
       </button>
     </section>
