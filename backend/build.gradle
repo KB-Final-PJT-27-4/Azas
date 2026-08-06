@@ -21,6 +21,7 @@ def springSecurityVersion = '5.8.13'
 def jacksonVersion = '2.21.2'
 def jjwtVersion = '0.13.0'
 def lombokVersion = '1.18.46'
+def awsSdkVersion = '2.47.3'
 
 dependencies {
     // Spring Legacy 웹 MVC 및 데이터 접근
@@ -53,6 +54,10 @@ dependencies {
     implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
     runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
     runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
+
+    // 타임캡슐 이미지·영상은 비공개 S3 객체로 저장하고 Presigned URL로만 접근
+    implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
+    implementation 'software.amazon.awssdk:s3'
 
     // Swagger API 문서화
     implementation 'io.springfox:springfox-swagger2:3.0.0'

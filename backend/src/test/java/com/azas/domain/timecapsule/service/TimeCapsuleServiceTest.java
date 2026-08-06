@@ -7,6 +7,10 @@ import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMapper;
+import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
+import com.azas.domain.timecapsule.mapper.TimeCapsuleExportMapper;
+import com.azas.domain.timecapsule.mapper.TimeCapsuleMediaMapper;
+import com.azas.domain.timecapsule.storage.TimeCapsuleObjectStorage;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
@@ -29,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -37,6 +42,18 @@ class TimeCapsuleServiceTest {
 
     @Mock
     private TimeCapsuleMapper timeCapsuleMapper;
+
+    @Mock
+    private TimeCapsuleEntryMapper timeCapsuleEntryMapper;
+
+    @Mock
+    private TimeCapsuleMediaMapper timeCapsuleMediaMapper;
+
+    @Mock
+    private TimeCapsuleExportMapper timeCapsuleExportMapper;
+
+    @Mock
+    private TimeCapsuleObjectStorage timeCapsuleObjectStorage;
 
     @InjectMocks
     private TimeCapsuleService timeCapsuleService;
@@ -254,6 +271,83 @@ class TimeCapsuleServiceTest {
                 ErrorCode.TIME_CAPSULE_NOT_FOUND,
                 exception.getErrorCode()
         );
+    }
+
+    @Test
+    // [JMG] CAPSULE-6 보관함 삭제는 엔트리·미디어·결과물 객체를 정리한 뒤 DB 하위 행부터 영구 삭제한다.
+    void deleteTimeCapsuleDeletesStorageObjectsAndDatabaseRows() {
+        TimeCapsule timeCapsule = createTimeCapsule(
+                100L,
+                10L,
+                "깨비의 대학자금 타임캡슐",
+                LocalDateTime.of(2030, 7, 23, 0, 0),
+                LocalDateTime.of(2026, 8, 5, 10, 0)
+        );
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleEntryMapper.lockByTimeCapsuleId(100L))
+                .willReturn(List.of(1000L));
+        given(timeCapsuleMediaMapper
+                .findObjectKeysByTimeCapsuleIdForUpdate(100L))
+                .willReturn(List.of(
+                        "time-capsules/100/entries/1000/slot-1.jpg"
+                ));
+        given(timeCapsuleExportMapper
+                .findOutputObjectKeysByTimeCapsuleIdForUpdate(100L))
+                .willReturn(List.of("time-capsules/100/exports/100.mp4"));
+        given(timeCapsuleMapper.deleteById(100L)).willReturn(1);
+
+        timeCapsuleService.deleteTimeCapsule(7L, 100L);
+
+        verify(timeCapsuleObjectStorage).deleteObject(
+                "time-capsules/100/entries/1000/slot-1.jpg"
+        );
+        verify(timeCapsuleObjectStorage).deleteObject(
+                "time-capsules/100/exports/100.mp4"
+        );
+        verify(timeCapsuleMediaMapper).deleteByTimeCapsuleId(100L);
+        verify(timeCapsuleEntryMapper).deleteByTimeCapsuleId(100L);
+        verify(timeCapsuleExportMapper).deleteByTimeCapsuleId(100L);
+        verify(timeCapsuleMapper).deleteById(100L);
+    }
+
+    @Test
+    // [JMG] CAPSULE-6 S3 객체 삭제 실패 시 DB 하위 행과 보관함은 삭제하지 않는다.
+    void deleteTimeCapsuleLeavesDatabaseUntouchedWhenStorageDeletionFails() {
+        TimeCapsule timeCapsule = createTimeCapsule(
+                100L,
+                10L,
+                "깨비의 대학자금 타임캡슐",
+                LocalDateTime.of(2030, 7, 23, 0, 0),
+                LocalDateTime.of(2026, 8, 5, 10, 0)
+        );
+        String mediaObjectKey =
+                "time-capsules/100/entries/1000/slot-1.jpg";
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleEntryMapper.lockByTimeCapsuleId(100L))
+                .willReturn(List.of(1000L));
+        given(timeCapsuleMediaMapper
+                .findObjectKeysByTimeCapsuleIdForUpdate(100L))
+                .willReturn(List.of(mediaObjectKey));
+        given(timeCapsuleExportMapper
+                .findOutputObjectKeysByTimeCapsuleIdForUpdate(100L))
+                .willReturn(List.of());
+        doThrow(new BusinessException(ErrorCode.TIME_CAPSULE_STORAGE_UNAVAILABLE))
+                .when(timeCapsuleObjectStorage)
+                .deleteObject(mediaObjectKey);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.deleteTimeCapsule(7L, 100L)
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_STORAGE_UNAVAILABLE,
+                exception.getErrorCode());
+        verify(timeCapsuleMediaMapper, never()).deleteByTimeCapsuleId(100L);
+        verify(timeCapsuleEntryMapper, never()).deleteByTimeCapsuleId(100L);
+        verify(timeCapsuleExportMapper, never()).deleteByTimeCapsuleId(100L);
+        verify(timeCapsuleMapper, never()).deleteById(100L);
     }
 
     // [JMG] CAPSULE-1 테스트용 보관함 생성 가능 계좌를 구성한다.
