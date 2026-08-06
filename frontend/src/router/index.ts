@@ -210,7 +210,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/guide',
     name: 'Guide',
     component: () => import('@/views/mypage/GuideView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '도움말',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 알림
