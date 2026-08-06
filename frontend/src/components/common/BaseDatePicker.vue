@@ -3,6 +3,7 @@ import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue
 import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 
 type CalendarView = 'days' | 'months' | 'years'
+type SelectionMode = 'date' | 'month'
 
 const props = withDefaults(
   defineProps<{
@@ -12,6 +13,7 @@ const props = withDefaults(
     disabled?: boolean
     minYear?: number
     maxYear?: number
+    selectionMode?: SelectionMode
   }>(),
   {
     label: undefined,
@@ -19,6 +21,7 @@ const props = withDefaults(
     disabled: false,
     minYear: 1900,
     maxYear: 2100,
+    selectionMode: 'date',
   },
 )
 
@@ -42,10 +45,16 @@ const formatDateValue = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+const formatMonthValue = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
 const selectedDate = computed(() => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(props.modelValue)
+  const match = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(props.modelValue)
   if (!match) return null
-  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3] ?? 1))
 })
 
 const formattedDate = computed(() => {
@@ -53,7 +62,7 @@ const formattedDate = computed(() => {
   return new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
+    ...(props.selectionMode === 'date' ? { day: 'numeric' } : {}),
   }).format(selectedDate.value)
 })
 
@@ -78,7 +87,7 @@ const openPicker = () => {
   if (props.disabled) return
   visibleMonth.value = selectedDate.value ?? new Date()
   yearPageStart.value = visibleMonth.value.getFullYear() - 5
-  calendarView.value = 'days'
+  calendarView.value = props.selectionMode === 'month' ? 'months' : 'days'
   isOpen.value = !isOpen.value
 }
 
@@ -105,11 +114,16 @@ const moveYearPage = (offset: number) => {
 
 const selectYear = (year: number) => {
   visibleMonth.value = new Date(year, visibleMonth.value.getMonth(), 1)
-  calendarView.value = 'days'
+  calendarView.value = props.selectionMode === 'month' ? 'months' : 'days'
 }
 
 const selectMonth = (month: number) => {
   visibleMonth.value = new Date(visibleMonth.value.getFullYear(), month, 1)
+  if (props.selectionMode === 'month') {
+    emit('update:modelValue', formatMonthValue(visibleMonth.value))
+    isOpen.value = false
+    return
+  }
   calendarView.value = 'days'
 }
 
