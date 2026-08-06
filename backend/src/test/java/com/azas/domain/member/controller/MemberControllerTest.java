@@ -5,7 +5,7 @@ import com.azas.domain.auth.entity.SocialAccount;
 import com.azas.domain.member.dto.MemberProfileResult;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.service.MemberProfileService;
-import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
+import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import com.azas.global.exception.GlobalExceptionHandler;

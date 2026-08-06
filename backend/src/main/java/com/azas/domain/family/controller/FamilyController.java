@@ -4,7 +4,7 @@ import com.azas.domain.family.dto.AllowanceRequestResponse;
 import com.azas.domain.family.dto.ChildMemberLinkResponse;
 import com.azas.domain.family.dto.FamilyGuardianListResponse;
 import com.azas.domain.family.service.FamilyService;
-import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
+import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.global.response.ApiErrorResponse;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;

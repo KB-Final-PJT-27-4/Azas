@@ -7,7 +7,7 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
-import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
+import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
 import com.azas.global.exception.GlobalExceptionHandler;

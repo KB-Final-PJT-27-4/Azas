@@ -15,7 +15,7 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleExportDownloadUrlResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleExportResponse;
 import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
-import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
+import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleExportService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;

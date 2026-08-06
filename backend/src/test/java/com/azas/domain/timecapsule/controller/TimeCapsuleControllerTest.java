@@ -2,7 +2,7 @@ package com.azas.domain.timecapsule.controller;
 
 import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
-import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
+import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
