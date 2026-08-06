@@ -23,9 +23,30 @@
     <bean id="oauthObjectMapper"
           class="com.fasterxml.jackson.databind.ObjectMapper"/>
 
-    <!-- SENS 연결 전 로컬·테스트에서 실제 문자 없이 발송 흐름을 검증한다. -->
-    <bean id="smsSender"
-          class="com.azas.domain.member.service.FakeSmsSender"/>
-
     <import resource="database-context.xml"/>
+
+    <!-- 별도 프로필이 없으면 실제 문자 비용 없이 로컬 발송 흐름을 검증한다. -->
+    <beans profile="default">
+        <bean id="smsSender"
+              class="com.azas.domain.member.service.FakeSmsSender"/>
+    </beans>
+
+    <!-- 실제 SMS 발송 환경에서만 SENS 인증정보를 요구한다. -->
+    <beans profile="sens">
+        <bean id="smsSender"
+              class="com.azas.domain.member.service.NaverSensSmsSender">
+            <constructor-arg
+                    index="0"
+                    value="${NCP_SENS_ACCESS_KEY}"/>
+            <constructor-arg
+                    index="1"
+                    value="${NCP_SENS_SECRET_KEY}"/>
+            <constructor-arg
+                    index="2"
+                    value="${NCP_SENS_SERVICE_ID}"/>
+            <constructor-arg
+                    index="3"
+                    value="${NCP_SENS_SENDER_NUMBER}"/>
+        </bean>
+    </beans>
 </beans>
