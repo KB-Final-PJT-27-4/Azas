@@ -173,7 +173,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/goals',
     name: 'MypageGoals',
     component: () => import('@/views/mypage/MypageGoalsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/goals/:goalsId',
