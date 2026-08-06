@@ -50,6 +50,8 @@ const formatSignedCurrency = (transaction: ChildTransaction) => {
 
   return `${prefix}${formatCurrency(transaction.amount)}`
 }
+const getTransactionEmoji = (transaction: ChildTransaction) =>
+  transaction.type === 'income' ? '💰' : '🛍️'
 
 const resetTransferForm = () => {
   transferAccountNumber.value = ''
@@ -131,18 +133,18 @@ const submitTransfer = () => {
         </div>
 
         <button
-          class="mt-6 flex h-12 w-[124px] items-center justify-center rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[length:var(--font-size-sm)] font-extrabold text-white"
+          class="mt-6 flex h-12 w-[150px] items-center justify-center rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[length:var(--font-size-sm)] font-extrabold text-white"
           type="button"
           @click="openTransferSheet"
         >
           이체하기
         </button>
         <RouterLink
-          class="mt-3 flex h-11 w-[124px] items-center justify-center gap-1 rounded-[14px] bg-white px-2 text-[length:var(--font-size-sm)] font-extrabold text-[var(--color-selected-text)]"
+          class="mt-3 inline-flex h-11 min-w-[150px] max-w-full items-center justify-center gap-2 rounded-[14px] bg-white px-4 text-[length:var(--font-size-sm)] font-extrabold whitespace-nowrap text-[#3BA9FF]"
           to="/child/allowance"
         >
           <img
-            class="h-[31px] w-[46px] shrink-0 object-contain"
+            class="h-[28px] w-[42px] shrink-0 object-contain"
             :src="allowanceIconUrl"
             alt=""
             aria-hidden="true"
@@ -184,10 +186,12 @@ const submitTransfer = () => {
           class="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-4 border-b border-[var(--color-border)] px-4 py-4 last:border-b-0"
         >
           <div
-            class="size-11 rounded-[14px]"
+            class="grid size-11 place-items-center rounded-[14px] text-[20px]"
             :class="transaction.type === 'income' ? 'bg-[#ebf5ff]' : 'bg-[#fff9d9]'"
             aria-hidden="true"
-          />
+          >
+            {{ getTransactionEmoji(transaction) }}
+          </div>
           <div class="min-w-0">
             <strong
               class="block truncate text-[length:var(--font-size-sm)] text-[var(--color-text-primary)]"
@@ -225,11 +229,11 @@ const submitTransfer = () => {
           부모님께 용돈을 요청해보세요!
         </p>
         <RouterLink
-          class="inline-flex h-11 min-w-[142px] items-center justify-center gap-1 rounded-[12px] bg-[var(--color-selected-background)] px-3 text-[length:var(--font-size-sm)] font-extrabold text-[var(--color-selected-text)]"
+          class="inline-flex h-11 min-w-[135px] max-w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-selected-background)] px-4 text-[length:var(--font-size-sm)] font-extrabold whitespace-nowrap text-[#3BA9FF]"
           to="/child/allowance"
         >
           <img
-            class="h-[31px] w-[46px] shrink-0 object-contain"
+            class="h-[28px] w-[42px] shrink-0 object-contain"
             :src="allowanceIconUrl"
             alt=""
             aria-hidden="true"
@@ -238,7 +242,7 @@ const submitTransfer = () => {
         </RouterLink>
       </div>
       <img
-        class="pointer-events-none absolute right-3 bottom-4 w-[166px] select-none object-contain"
+        class="pointer-events-none absolute right-2 bottom-3 w-[176px] select-none object-contain"
         :src="allowanceCardPigUrl"
         alt=""
         aria-hidden="true"
