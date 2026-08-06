@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { BaseDatePicker } from '@/components/common'
 
 type GuardianRole = 'father' | 'mother' | 'guardian'
 type ChildGender = 'male' | 'female' | 'unknown'
@@ -26,13 +27,11 @@ const genderOptions: { label: string; value: ChildGender }[] = [
 const form = reactive({
   guardianRole: 'father' as GuardianRole,
   childName: isGuardianInvitation.value ? '김깨비' : '',
-  birthDate: isGuardianInvitation.value ? '2025.07.15' : '',
+  birthDate: isGuardianInvitation.value ? '2025-07-15' : '',
   gender: 'male' as ChildGender,
 })
 
-const isSubmitDisabled = computed(
-  () => !form.childName.trim() || !form.birthDate.trim(),
-)
+const isSubmitDisabled = computed(() => !form.childName.trim() || !form.birthDate.trim())
 
 const submitRegistration = () => {
   if (isSubmitDisabled.value) return
@@ -48,7 +47,7 @@ const submitRegistration = () => {
       <p class="text-lg font-bold">우리 아이 자산관리 서비스</p>
     </header>
 
-    <form class="flex flex-1 flex-col px-6 pt-14 pb-10" @submit.prevent="submitRegistration">
+    <form class="flex flex-1 flex-col px-6 pt-10 pb-10" @submit.prevent="submitRegistration">
       <section aria-labelledby="register-title">
         <template v-if="isGuardianInvitation">
           <h1 id="register-title" class="text-[30px] leading-[1.35] font-bold tracking-[-0.04em]">
@@ -107,17 +106,13 @@ const submitRegistration = () => {
           />
         </label>
 
-        <label class="grid gap-3">
-          <span class="text-base font-bold">생년월일 또는 출생예정일</span>
-          <input
-            v-model="form.birthDate"
-            class="h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-lg outline-none transition-colors focus:border-[var(--color-brand-primary-pressed)] focus:ring-2 focus:ring-[var(--color-selected-background)] disabled:cursor-not-allowed disabled:border-[var(--color-disabled-border)] disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
-            type="text"
-            inputmode="numeric"
-            placeholder="YYYY.MM.DD"
-            :disabled="isGuardianInvitation"
-          />
-        </label>
+        <BaseDatePicker
+          v-model="form.birthDate"
+          label="생년월일 또는 출생예정일"
+          :disabled="isGuardianInvitation"
+          :min-year="1900"
+          :max-year="new Date().getFullYear() + 20"
+        />
 
         <fieldset>
           <legend class="mb-3 text-base font-bold">아이 성별</legend>
