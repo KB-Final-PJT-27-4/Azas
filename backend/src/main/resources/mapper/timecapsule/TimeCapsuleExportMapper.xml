@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.timecapsule.mapper.TimeCapsuleExportMapper">
+
+    <resultMap id="timeCapsuleExportResultMap"
+               type="com.azas.domain.timecapsule.entity.TimeCapsuleExport">
+        <id property="timeCapsuleExportId" column="time_capsule_export_id"/>
+        <result property="timeCapsuleId" column="time_capsule_id"/>
+        <result property="requestedByMemberId" column="requested_by_member_id"/>
+        <result property="exportType" column="export_type"/>
+        <result property="optionsJson" column="options_json"/>
+        <result property="status" column="status"/>
+        <result property="outputObjectKey" column="output_object_key"/>
+        <result property="outputMimeType" column="output_mime_type"/>
+        <result property="outputFileSize" column="output_file_size"/>
+        <result property="errorCode" column="error_code"/>
+        <result property="errorMessage" column="error_message"/>
+        <result property="startedAt" column="started_at"/>
+        <result property="completedAt" column="completed_at"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.azas.domain.timecapsule.entity.TimeCapsuleExport"
+            useGeneratedKeys="true"
+            keyProperty="timeCapsuleExportId"
+            keyColumn="time_capsule_export_id">
+        INSERT INTO time_capsule_export (
+            time_capsule_id,
+            requested_by_member_id,
+            export_type,
+            options_json,
+            status
+        ) VALUES (
+            #{timeCapsuleId},
+            #{requestedByMemberId},
+            #{exportType},
+            #{optionsJson, jdbcType=VARCHAR},
+            #{status}
+        )
+    </insert>
+
+    <select id="findAccessibleById"
+            resultMap="timeCapsuleExportResultMap">
+        SELECT
+            tce.time_capsule_export_id,
+            tce.time_capsule_id,
+            tce.requested_by_member_id,
+            tce.export_type,
+            tce.options_json,
+            tce.status,
+            tce.output_object_key,
+            tce.output_mime_type,
+            tce.output_file_size,
+            tce.error_code,
+            tce.error_message,
+            tce.started_at,
+            tce.completed_at,
+            tce.expires_at,
+            tce.created_at,
+            tce.updated_at
+        FROM time_capsule_export tce
+        INNER JOIN time_capsule tc
+            ON tc.time_capsule_id = tce.time_capsule_id
+        INNER JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE tce.time_capsule_export_id = #{timeCapsuleExportId}
+    </select>
+
+    <select id="findOutputObjectKeysByTimeCapsuleIdForUpdate"
+            resultType="string">
+        SELECT output_object_key
+        FROM time_capsule_export
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND output_object_key IS NOT NULL
+          AND output_object_key != ''
+        FOR UPDATE
+    </select>
+
+    <delete id="deleteByTimeCapsuleId">
+        DELETE FROM time_capsule_export
+        WHERE time_capsule_id = #{timeCapsuleId}
+    </delete>
+
+</mapper>
