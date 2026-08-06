@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import {
-  BookOpen,
-  ChevronDown,
-  Clock3,
-  MessageCircleQuestion,
-  Target,
-  UsersRound,
-  WalletCards,
-} from 'lucide-vue-next'
+import { ChevronDown, X } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 import { useToast } from '@/composables/useToast'
@@ -18,24 +10,43 @@ interface FrequentlyAskedQuestion {
   answer: string
 }
 
+interface QuickGuide {
+  title: string
+  description: string
+  steps: string[]
+}
+
 const { showToast } = useToast()
 const openQuestionId = ref<string | null>('account')
+const selectedGuide = ref<QuickGuide | null>(null)
 
-const guides = [
+const guides: QuickGuide[] = [
   {
     title: '계좌 연결하기',
     description: '아이의 자산을 한눈에 확인해요',
-    icon: WalletCards,
+    steps: [
+      '마이페이지에서 계좌정보 관리를 선택해주세요.',
+      '계좌 추가하기를 누르고 연결할 은행을 선택해주세요.',
+      '본인 인증을 완료하면 계좌와 잔액을 확인할 수 있어요.',
+    ],
   },
   {
     title: '저축 목표 만들기',
     description: '목표 금액과 기간을 설정해요',
-    icon: Target,
+    steps: [
+      '목표 메뉴에서 새로 만들 목표를 선택해주세요.',
+      '필요한 목표 금액과 달성 시기를 입력해주세요.',
+      '계산된 월 저축액을 확인하고 목표를 저장해주세요.',
+    ],
   },
   {
     title: '타임캡슐 남기기',
     description: '소중한 순간과 마음을 기록해요',
-    icon: Clock3,
+    steps: [
+      '타임캡슐 메뉴에서 새 타임캡슐 만들기를 눌러주세요.',
+      '아이에게 남길 메시지와 사진을 기록해주세요.',
+      '공개할 날짜를 정하면 소중하게 보관해드려요.',
+    ],
   },
 ]
 
@@ -82,16 +93,6 @@ const requestHelp = () => {
       class="relative overflow-hidden rounded-[24px] bg-[var(--color-selected-background)] p-6"
       aria-labelledby="guide-title"
     >
-      <div
-        class="absolute -top-8 -right-8 size-32 rounded-full bg-[var(--color-brand-primary)] opacity-10"
-        aria-hidden="true"
-      ></div>
-      <div
-        class="mb-5 grid size-12 place-items-center rounded-2xl bg-[var(--color-surface)] text-[var(--color-selected-text)] shadow-sm"
-        aria-hidden="true"
-      >
-        <BookOpen :size="25" />
-      </div>
       <h1 id="guide-title" class="text-[26px] font-bold tracking-[-0.04em]">
         무엇을 도와드릴까요?
       </h1>
@@ -102,35 +103,29 @@ const requestHelp = () => {
 
     <section class="mt-8" aria-labelledby="quick-guide-title">
       <div class="flex items-center gap-2">
-        <MessageCircleQuestion :size="20" class="text-[var(--color-selected-text)]" />
         <h2 id="quick-guide-title" class="text-lg font-bold">빠른 이용 가이드</h2>
       </div>
 
       <div class="mt-4 grid gap-3">
-        <article
+        <button
           v-for="guide in guides"
           :key="guide.title"
-          class="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm"
+          class="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left shadow-sm transition-colors active:bg-[var(--color-surface-muted)]"
+          type="button"
+          @click="selectedGuide = guide"
         >
-          <div
-            class="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--color-selected-background)] text-[var(--color-selected-text)]"
-            aria-hidden="true"
-          >
-            <component :is="guide.icon" :size="22" />
-          </div>
-          <div>
+          <div class="min-w-0 flex-1">
             <h3 class="text-base font-bold">{{ guide.title }}</h3>
             <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
               {{ guide.description }}
             </p>
           </div>
-        </article>
+        </button>
       </div>
     </section>
 
     <section class="mt-8" aria-labelledby="faq-title">
       <div class="flex items-center gap-2">
-        <UsersRound :size="20" class="text-[var(--color-selected-text)]" />
         <h2 id="faq-title" class="text-lg font-bold">자주 묻는 질문</h2>
       </div>
 
@@ -179,4 +174,60 @@ const requestHelp = () => {
       </button>
     </section>
   </main>
+
+  <div
+    v-if="selectedGuide"
+    class="fixed inset-0 z-[var(--z-index-overlay)] grid place-items-center bg-black/40 px-6"
+    role="presentation"
+    @click.self="selectedGuide = null"
+  >
+    <section
+      class="w-full max-w-[380px] rounded-2xl bg-[var(--color-surface)] p-6 shadow-lg"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quick-guide-modal-title"
+    >
+      <header class="flex items-start justify-between gap-4">
+        <div>
+          <h2 id="quick-guide-modal-title" class="text-xl font-bold">
+            {{ selectedGuide.title }}
+          </h2>
+          <p class="mt-1 text-sm text-[var(--color-text-secondary)]">
+            {{ selectedGuide.description }}
+          </p>
+        </div>
+        <button
+          class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
+          type="button"
+          aria-label="닫기"
+          @click="selectedGuide = null"
+        >
+          <X :size="21" />
+        </button>
+      </header>
+
+      <ol class="mt-6 grid gap-4">
+        <li
+          v-for="(step, index) in selectedGuide.steps"
+          :key="step"
+          class="flex items-start gap-3 rounded-xl bg-[var(--color-surface-muted)] p-4"
+        >
+          <span
+            class="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--color-brand-primary)] text-xs font-bold text-[var(--color-text-inverse)]"
+          >
+            {{ index + 1 }}
+          </span>
+          <p class="pt-0.5 text-sm leading-6">{{ step }}</p>
+        </li>
+      </ol>
+
+      <button
+        class="mt-6 h-12 w-full rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
+        type="button"
+        @click="selectedGuide = null"
+      >
+        확인했어요
+      </button>
+    </section>
+  </div>
 </template>
