@@ -2,15 +2,19 @@
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { BaseDatePicker } from '@/components/common'
-
-type GuardianRole = 'father' | 'mother' | 'guardian'
-type ChildGender = 'male' | 'female' | 'unknown'
+import {
+  loadRegistrationDraft,
+  saveRegistrationDraft,
+  type ChildGender,
+  type GuardianRole,
+} from '@/utils/registrationDraft'
 
 const route = useRoute()
 const router = useRouter()
 
 // 기본: /register, 공동 보호자 초대: /register?invited=true
 const isGuardianInvitation = computed(() => route.query.invited === 'true')
+const isEditing = computed(() => route.query.edit === 'true')
 
 const inviterName = ref('김하나')
 const guardianRoles: { label: string; value: GuardianRole }[] = [
@@ -24,17 +28,21 @@ const genderOptions: { label: string; value: ChildGender }[] = [
   { label: '아직 모름', value: 'unknown' },
 ]
 
+const savedDraft = isEditing.value ? loadRegistrationDraft() : null
+
 const form = reactive({
-  guardianRole: 'father' as GuardianRole,
-  childName: isGuardianInvitation.value ? '김깨비' : '',
-  birthDate: isGuardianInvitation.value ? '2025-07-15' : '',
-  gender: 'male' as ChildGender,
+  guardianRole: savedDraft?.guardianRole ?? ('father' as GuardianRole),
+  childName: savedDraft?.childName ?? (isGuardianInvitation.value ? '김깨비' : ''),
+  birthDate: savedDraft?.birthDate ?? (isGuardianInvitation.value ? '2025-07-15' : ''),
+  gender: savedDraft?.gender ?? ('male' as ChildGender),
 })
 
 const isSubmitDisabled = computed(() => !form.childName.trim() || !form.birthDate.trim())
 
 const submitRegistration = () => {
   if (isSubmitDisabled.value) return
+
+  saveRegistrationDraft({ ...form, invited: isGuardianInvitation.value })
 
   // TODO: 회원가입 또는 공동 보호자 초대 수락 API 연결
   router.push({ name: 'Onboarding' })
