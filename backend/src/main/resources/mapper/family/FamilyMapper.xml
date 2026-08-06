@@ -61,13 +61,12 @@
 
     <select id="countChildMemberAccess" resultType="int">
         SELECT COUNT(*)
-        FROM child c
-                 INNER JOIN child_parent cp ON c.child_id = cp.child_id
-        WHERE c.child_id = #{childId}
-          AND cp.member_id = #{memberId}
-          AND c.status = 'ACTIVE'
-          AND cp.relation_type IN ('MOTHER', 'FATHER', 'GUARDIAN')
+        FROM child
+        WHERE child_id = #{childId}
+          AND member_id = #{memberId}
+          AND status = 'ACTIVE'
     </select>
+
 
     <select id="findLastAllowanceRequestMonth" resultType="java.time.LocalDate">
         SELECT last_allowance_request_month
@@ -94,5 +93,72 @@
           AND link_status = 'ACTIVE'
         ORDER BY is_primary DESC, updated_at DESC
             LIMIT 1
+    </select>
+
+    <select id="lockActiveChild" resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+            FOR UPDATE
+    </select>
+
+    <update id="expirePendingFamilyInvitations">
+        UPDATE family_invitation
+        SET status = 'EXPIRED',
+            updated_at = CURRENT_TIMESTAMP(6)
+        WHERE child_id = #{childId}
+          AND invitee_type = #{inviteeType}
+          AND status = 'PENDING'
+          AND expires_at &lt;= #{now}
+    </update>
+
+    <select id="countUsableFamilyInvitations" resultType="int">
+        SELECT COUNT(*)
+        FROM family_invitation
+        WHERE child_id = #{childId}
+          AND invitee_type = #{inviteeType}
+          AND status = 'PENDING'
+          AND expires_at &gt; #{now}
+    </select>
+
+    <insert id="insertFamilyInvitation"
+            parameterType="com.azas.domain.family.dto.FamilyInvitationInsertCommand"
+            useGeneratedKeys="true"
+            keyProperty="familyInvitationId"
+            keyColumn="family_invitation_id">
+        INSERT INTO family_invitation (
+            child_id,
+            inviter_member_id,
+            invitee_type,
+            invite_token_hash,
+            status,
+            expires_at,
+            created_at,
+            updated_at
+        ) VALUES (
+                     #{childId},
+                     #{inviterMemberId},
+                     #{inviteeType},
+                     #{inviteTokenHash},
+                     'PENDING',
+                     #{expiresAt},
+                     CURRENT_TIMESTAMP(6),
+                     CURRENT_TIMESTAMP(6)
+                 )
+    </insert>
+
+    <select id="findFamilyInvitationInfoByTokenHash"
+            resultType="com.azas.domain.family.dto.FamilyInvitationInfoProjection">
+        SELECT
+            c.name AS childName,
+            inviter.name AS inviterName,
+            fi.invitee_type AS inviteeType,
+            fi.status AS status,
+            fi.expires_at AS expiresAt
+        FROM family_invitation fi
+                 INNER JOIN child c ON fi.child_id = c.child_id
+                 INNER JOIN member inviter ON fi.inviter_member_id = inviter.member_id
+        WHERE fi.invite_token_hash = #{inviteTokenHash}
     </select>
 </mapper>
