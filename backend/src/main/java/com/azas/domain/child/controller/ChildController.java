@@ -5,7 +5,7 @@ import com.azas.domain.child.dto.ChildListResponse;
 import com.azas.domain.child.dto.ChildResponse;
 import com.azas.domain.child.dto.ChildUpdateRequest;
 import com.azas.domain.child.service.ChildService;
-import com.azas.domain.timecapsule.service.AccessTokenMemberResolver;
+import com.azas.global.security.AccessTokenMemberResolver;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Api(tags = "자녀")
 @RestController
