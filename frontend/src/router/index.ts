@@ -134,7 +134,7 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage',
     name: 'Mypage',
     component: () => import('@/views/mypage/MypageView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, headerTitle: '마이페이지' },
   },
   {
     path: '/mypage/edit',
