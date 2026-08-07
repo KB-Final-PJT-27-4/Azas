@@ -9,6 +9,7 @@ import homeHeroBgUrl from '@/assets/images/home/home-hero-bg.png'
 import checklistIconUrl from '@/assets/images/home/icon-checklist.png'
 import goalIconUrl from '@/assets/images/home/icon-goal.png'
 import timeCapsuleIconUrl from '@/assets/images/home/icon-time-capsule.png'
+import { recommendedProducts } from '@/data/productDummyData'
 import { currentHomeMemberType, homeDataByMemberType } from '@/mocks/home'
 
 const homeData = computed(() => homeDataByMemberType[currentHomeMemberType])
@@ -73,7 +74,7 @@ const updateSelectedProductByScroll = (event: Event) => {
 
   selectedProductIndex.value = Math.min(
     Math.max(Math.round(target.scrollLeft / target.clientWidth), 0),
-    homeData.value.products.length - 1,
+    recommendedProducts.length - 1,
   )
 }
 
@@ -93,10 +94,10 @@ const stopProductCarousel = () => {
 
 const startProductCarousel = () => {
   stopProductCarousel()
-  if (homeData.value.products.length < 2) return
+  if (recommendedProducts.length < 2) return
 
   productCarouselTimer = window.setInterval(() => {
-    const nextIndex = (selectedProductIndex.value + 1) % homeData.value.products.length
+    const nextIndex = (selectedProductIndex.value + 1) % recommendedProducts.length
     selectProduct(nextIndex)
   }, 3500)
 }
@@ -255,12 +256,17 @@ onBeforeUnmount(stopProductCarousel)
     </BaseCard>
 
     <section
-      class="grid gap-[14px] rounded-2xl border border-[#fff0bf] bg-[var(--color-brand-secondary)] p-4 shadow-[0_8px_22px_rgba(176,142,43,0.07)]"
+      class="grid gap-3 rounded-2xl border border-[#f5e8b9] bg-[var(--color-brand-secondary)] p-[14px] shadow-[0_8px_22px_rgba(176,142,43,0.06)]"
     >
-      <div class="flex items-center justify-between">
-        <h2 class="m-0 text-[length:var(--font-size-md)] font-extrabold">추천 금융상품</h2>
+      <div class="flex items-start justify-between gap-3 px-0.5">
+        <div>
+          <h2 class="m-0 text-[length:var(--font-size-md)] font-extrabold">추천 금융상품</h2>
+          <p class="mt-1 mb-0 text-[11px] text-[var(--color-text-secondary)]">
+            아이의 목표에 맞는 상품을 골라봤어요
+          </p>
+        </div>
         <RouterLink
-          class="inline-flex items-center gap-0.5 text-[length:var(--font-size-xs)] font-medium text-[var(--color-text-secondary)]"
+          class="mt-0.5 inline-flex shrink-0 items-center gap-0.5 text-[length:var(--font-size-xs)] font-semibold text-[var(--color-selected-text)]"
           :to="homeData.productsMoreTo"
         >
           더보기
@@ -278,42 +284,68 @@ onBeforeUnmount(stopProductCarousel)
         @touchend.passive="startProductCarousel"
       >
         <article
-          v-for="product in homeData.products"
+          v-for="product in recommendedProducts"
           :key="product.id"
-          class="grid w-full flex-none snap-center gap-[10px] rounded-xl border border-[#f4efe0] bg-[var(--color-surface)] p-4"
+          class="grid w-full flex-none snap-center gap-3 rounded-2xl border border-[#f0ead8] bg-[var(--color-surface)] p-4 shadow-[0_5px_16px_rgba(107,93,50,0.055)]"
         >
-          <div class="flex items-center justify-between gap-[var(--space-2)]">
-            <strong class="text-[length:var(--font-size-xs)] leading-tight text-[var(--color-text-primary)]">
-              {{ product.name }}
-            </strong>
-            <span
-              class="rounded-full bg-[var(--color-selected-background)] px-[var(--space-2)] py-0.5 text-[10px] font-bold text-[var(--color-selected-text)]"
-            >
-              {{ product.type }}
-            </span>
+          <div class="flex min-h-[82px] items-center justify-between gap-2">
+            <div class="min-w-0 self-start">
+              <div class="mb-1.5 flex items-center gap-1.5">
+                <span
+                  class="rounded-full bg-[var(--color-selected-background)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-selected-text)]"
+                >
+                  {{ product.type }}
+                </span>
+                <span class="truncate text-[10px] text-[var(--color-text-secondary)]">
+                  {{ product.bankName }}
+                </span>
+              </div>
+              <h3 class="m-0 text-[15px] leading-tight font-extrabold text-[var(--color-text-primary)]">
+                {{ product.name }}
+              </h3>
+              <p class="mt-1.5 mb-0 text-[11px] text-[var(--color-text-secondary)]">
+                아이의 미래를 위한 든든한 첫 저축
+              </p>
+            </div>
+            <div class="relative grid size-[80px] shrink-0 place-items-center">
+              <!-- <span class="absolute inset-1 rounded-full bg-[#fff8dc]"></span> -->
+              <img
+                class="relative z-[1] size-[76px] object-contain drop-shadow-[0_5px_7px_rgba(84,122,151,0.12)]"
+                :src="product.mascot"
+                :alt="`${product.name} 추천 이미지`"
+              />
+            </div>
           </div>
-          <strong class="m-0 text-[15px] text-[var(--color-selected-text)]">
-            {{ product.rate }}
-          </strong>
-          <p class="m-0 text-[length:var(--font-size-xs)] text-[var(--color-text-secondary)]">
-            가입 기간 {{ product.period }}
-          </p>
+
+          <div class="flex items-end justify-between gap-3 border-t border-[#f2eee3] pt-3">
+            <div>
+              <span class="block text-[10px] text-[var(--color-text-secondary)]">최고 연</span>
+              <strong class="text-[24px] leading-none font-extrabold tracking-[-0.04em] text-[var(--color-brand-primary)]">
+                {{ product.rate }}
+              </strong>
+            </div>
+            <p class="m-0 text-right text-[10px] leading-[1.6] text-[var(--color-text-secondary)]">
+              {{ product.period }} · 자유적립식<br />월 최대 {{ product.monthlyLimit }}
+            </p>
+          </div>
+
           <RouterLink
-            class="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-[var(--color-border)] bg-white px-[var(--space-3)] text-[length:var(--font-size-xs)] font-bold text-[var(--color-unselected-text)] transition-colors active:bg-[var(--color-unselected-background)]"
-            :to="product.to"
+            class="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-xl border border-[var(--color-border)] bg-[#fbfcfd] px-3 text-[length:var(--font-size-xs)] font-bold text-[var(--color-unselected-text)] transition-colors hover:bg-[var(--color-unselected-background)] active:bg-[#e9eef2]"
+            :to="{ name: 'ProductDetail', params: { productId: product.id } }"
           >
-            상품 보기
+            상품 자세히 보기
+            <ChevronRight :size="14" />
           </RouterLink>
         </article>
       </div>
 
       <div
-        v-if="homeData.products.length > 1"
+        v-if="recommendedProducts.length > 1"
         class="flex justify-center gap-1.5"
         aria-label="추천 금융상품 위치"
       >
         <button
-          v-for="(_, index) in homeData.products"
+          v-for="(_, index) in recommendedProducts"
           :key="`product-dot-${index}`"
           class="size-2 rounded-full border-0 p-0 transition-colors"
           :class="
