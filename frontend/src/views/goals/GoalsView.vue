@@ -32,6 +32,10 @@ const getGoalName = (goalId: string) =>
 
 const currentGoalId = computed(() => selectedGoals.value[currentGoalIndex.value] ?? '')
 const currentGoalName = computed(() => getGoalName(currentGoalId.value))
+const currentGoalNumber = computed(() => currentGoalIndex.value + 1)
+const remainingGoalCount = computed(() =>
+  Math.max(selectedGoals.value.length - currentGoalNumber.value, 0),
+)
 const currentSetting = computed(() =>
   currentGoalId.value ? goalSettings[currentGoalId.value] : undefined,
 )
@@ -107,7 +111,6 @@ const updateTargetDate = (value: string) => {
 }
 const selectRecommendation = (value: number) => {
   updateAmount(value)
-  isRecommendationOpen.value = false
 }
 </script>
 
@@ -133,7 +136,7 @@ const selectRecommendation = (value: number) => {
         :key="step"
         class="h-1 flex-1 rounded-full"
         :class="
-          step === progressStep ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'
+          step <= progressStep ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'
         "
       ></span>
     </div>
@@ -147,15 +150,16 @@ const selectRecommendation = (value: number) => {
         @update:custom-goal="customGoal = $event"
       />
 
-      <GoalAmountStep
-        v-else-if="currentStep === 2 && currentSetting"
-        :goal-name="currentGoalName"
-        :amount="currentSetting.amount"
-        :target-date="currentSetting.targetDate"
-        @update:amount="updateAmount"
-        @update:target-date="updateTargetDate"
-        @open-recommendation="isRecommendationOpen = true"
-      />
+      <template v-else-if="currentStep === 2 && currentSetting">
+        <GoalAmountStep
+          :goal-name="currentGoalName"
+          :amount="currentSetting.amount"
+          :target-date="currentSetting.targetDate"
+          @update:amount="updateAmount"
+          @update:target-date="updateTargetDate"
+          @open-recommendation="isRecommendationOpen = true"
+        />
+      </template>
 
       <GoalPlanStep v-else :plans="plans" />
     </div>
@@ -167,6 +171,21 @@ const selectRecommendation = (value: number) => {
         currentStep === 3 ? 'relative min-h-[220px] overflow-hidden pb-[140px]' : 'pb-8',
       ]"
     >
+      <div
+        v-if="currentStep === 2"
+        class="col-span-2 flex items-center justify-between rounded-xl bg-[var(--color-selected-background)] px-4 py-3 text-sm"
+        role="status"
+        aria-live="polite"
+        :aria-label="`${selectedGoals.length}개 중 ${currentGoalNumber}번째 목표 설정 중. ${remainingGoalCount > 0 ? `${remainingGoalCount}개 남음` : '마지막 목표'}`"
+      >
+        <strong class="text-[var(--color-selected-text)]">
+          목표 {{ currentGoalNumber }} / {{ selectedGoals.length }}
+        </strong>
+        <span class="text-[var(--color-text-secondary)]">
+          {{ remainingGoalCount > 0 ? `${remainingGoalCount}개 남음` : '마지막 목표' }}
+        </span>
+      </div>
+
       <img
         v-if="currentStep === 3"
         class="pointer-events-none absolute bottom-0 left-3/4 h-70 w-[150%] max-w-none -translate-x-1/2 object-cover object-top"
@@ -195,6 +214,7 @@ const selectRecommendation = (value: number) => {
 
     <AiRecommendationModal
       v-if="isRecommendationOpen"
+      :selected-amount="currentSetting?.amount"
       @close="isRecommendationOpen = false"
       @select="selectRecommendation"
     />
