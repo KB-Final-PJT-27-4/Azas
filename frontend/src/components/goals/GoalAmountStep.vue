@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { BaseDatePicker } from '@/components/common'
+
 defineProps<{
   goalName: string
   amount: number
@@ -11,7 +13,7 @@ const emit = defineEmits<{
   openRecommendation: []
 }>()
 
-const minimumMonth = new Date().toISOString().slice(0, 7)
+const currentYear = new Date().getFullYear()
 
 const updateAmount = (event: Event) => {
   const value = Number((event.target as HTMLInputElement).value.replace(/[^0-9]/g, ''))
@@ -55,16 +57,14 @@ const updateAmount = (event: Event) => {
         </div>
       </label>
 
-      <label class="grid gap-2">
-        <span class="text-sm font-bold">목표 달성 시기</span>
-        <input
-          class="h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 outline-none focus:border-[var(--color-brand-primary-pressed)]"
-          type="month"
-          :min="minimumMonth"
-          :value="targetDate"
-          @input="emit('update:targetDate', ($event.target as HTMLInputElement).value)"
-        />
-      </label>
+      <BaseDatePicker
+        :model-value="targetDate"
+        label="목표 달성 시기"
+        selection-mode="month"
+        :min-year="currentYear"
+        :max-year="currentYear + 100"
+        @update:model-value="emit('update:targetDate', $event)"
+      />
 
       <div class="rounded-2xl bg-[var(--color-selected-background)] p-5">
         <strong class="text-xl text-[var(--color-selected-text)]">
