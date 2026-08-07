@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { X } from 'lucide-vue-next'
+import { Check, X } from 'lucide-vue-next'
+
+defineProps<{
+  selectedAmount?: number
+}>()
 
 defineEmits<{
   close: []
@@ -48,10 +52,27 @@ const recommendations = [
         <button
           v-for="option in recommendations"
           :key="option.label"
-          class="rounded-xl bg-[var(--color-surface-muted)] p-4 text-left"
+          class="relative rounded-xl border p-4 pr-14 text-left transition-colors"
+          :class="
+            selectedAmount === option.amount
+              ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)]'
+              : 'border-transparent bg-[var(--color-surface-muted)]'
+          "
           type="button"
+          :aria-pressed="selectedAmount === option.amount"
           @click="$emit('select', option.amount)"
         >
+          <span
+            class="absolute top-1/2 right-4 grid size-6 -translate-y-1/2 place-items-center rounded-full border transition-colors"
+            :class="
+              selectedAmount === option.amount
+                ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-[var(--color-text-inverse)]'
+                : 'border-[var(--color-border)] bg-[var(--color-surface)]'
+            "
+            aria-hidden="true"
+          >
+            <Check v-if="selectedAmount === option.amount" :size="16" :stroke-width="3" />
+          </span>
           <strong class="text-sm">{{ option.label }}</strong>
           <strong class="mt-1 block text-lg text-[var(--color-selected-text)]">
             {{ (option.amount / 10_000).toLocaleString('ko-KR') }}만원
