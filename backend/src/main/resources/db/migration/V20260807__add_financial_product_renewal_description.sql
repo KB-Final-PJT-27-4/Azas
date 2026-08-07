@@ -1,7 +1,7 @@
 -- Existing shared RDS instances created before PRODUCT-4 need this once.
 -- Fresh installations already receive the column from schema.sql.
 ALTER TABLE financial_product
-    ADD COLUMN IF NOT EXISTS renewal_description VARCHAR(500) NULL
+    ADD COLUMN renewal_description VARCHAR(500) NULL
     AFTER contract_period_months;
 
 UPDATE financial_product
