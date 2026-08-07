@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { Check, ChevronDown, Funnel, Landmark } from 'lucide-vue-next'
+import { Check, ChevronDown, Funnel, Landmark, Plus } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 
 import cloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
@@ -126,20 +126,13 @@ const retryTransfer = () => {
       backgroundSize: 'auto 100dvh',
     }"
   >
-    <section class="flex items-start justify-between gap-4">
+    <section>
       <div>
         <h1 class="m-0 text-[21px] leading-tight font-extrabold tracking-[-0.025em]">자산 관리</h1>
         <p class="mt-1.5 mb-0 text-[12px] text-[var(--color-text-secondary)]">
           목표별 자산과 연결된 계좌를 함께 관리해요.
         </p>
       </div>
-      <button
-        class="asset-transfer-button fixed z-40 grid size-[42px] place-items-center rounded-full bg-[#2babe8] text-[12px] font-bold text-white shadow-sm active:bg-[#159bd8]"
-        type="button"
-        @click="isTransferSheetOpen = true"
-      >
-        이체
-      </button>
     </section>
 
     <section
@@ -365,6 +358,19 @@ const retryTransfer = () => {
       </ul>
     </section>
 
+    <button
+      class="asset-transfer-button group fixed z-[60] h-10 w-20 rounded-t-full bg-white/80 shadow-[0_-5px_16px_rgba(43,171,232,0.12)]"
+      type="button"
+      aria-label="이체하기"
+      @click="isTransferSheetOpen = true"
+    >
+      <span
+        class="absolute right-1 bottom-0 left-1 grid h-9 place-items-center rounded-t-full bg-[#2babe8] pt-1 text-white transition-colors group-active:bg-[#159bd8]"
+      >
+        <Plus :size="23" :stroke-width="3" aria-hidden="true" />
+      </span>
+    </button>
+
     <AssetTransferSheet
       :open="isTransferSheetOpen"
       :target-account-name="requestedTargetName"
@@ -385,7 +391,8 @@ const retryTransfer = () => {
 
 <style scoped>
 .asset-transfer-button {
-  top: calc(var(--app-header-height) + env(safe-area-inset-top) + 18px);
-  right: max(18px, calc((100vw - var(--app-max-width)) / 2 + 18px));
+  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 1px);
+  left: 50%;
+  transform: translateX(-50%);
 }
 </style>
