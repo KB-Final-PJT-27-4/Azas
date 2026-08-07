@@ -6,10 +6,22 @@
            http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
            http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
 
-    <context:component-scan base-package="com.azas.domain">
-        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
-        <context:exclude-filter type="annotation" expression="org.springframework.web.bind.annotation.RestController"/>
+    <context:component-scan
+            base-package="com.azas.domain,com.azas.global.security">
+        <context:exclude-filter
+                type="annotation"
+                expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter
+                type="annotation"
+                expression="org.springframework.web.bind.annotation.RestController"/>
     </context:component-scan>
+
+    <!-- OAuth 제공자 REST API 통신 -->
+    <bean id="oauthRestTemplate"
+          class="org.springframework.web.client.RestTemplate"/>
+
+    <bean id="oauthObjectMapper"
+          class="com.fasterxml.jackson.databind.ObjectMapper"/>
 
     <import resource="database-context.xml"/>
 </beans>

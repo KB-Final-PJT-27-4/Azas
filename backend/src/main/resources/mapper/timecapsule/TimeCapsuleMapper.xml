@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.timecapsule.mapper.TimeCapsuleMapper">
+
+    <resultMap id="timeCapsuleResultMap"
+               type="com.azas.domain.timecapsule.entity.TimeCapsule">
+        <id property="timeCapsuleId" column="time_capsule_id"/>
+        <result property="childId" column="child_id"/>
+        <result property="financialAccountId" column="financial_account_id"/>
+        <result property="title" column="title"/>
+        <result property="status" column="status"/>
+        <result property="expectedReleaseAt" column="expected_release_at"/>
+        <result property="releaseReason" column="release_reason"/>
+        <result property="releasedAt" column="released_at"/>
+        <result property="entryCount" column="entry_count"/>
+        <result property="latestEntryAt" column="latest_entry_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="financialGoalTemplateId" column="financial_goal_template_id"/>
+        <result property="goalName" column="goal_name"/>
+        <result property="goalTargetAmount" column="goal_target_amount"/>
+        <result property="goalTargetDate" column="goal_target_date"/>
+    </resultMap>
+
+    <resultMap id="timeCapsuleAccountResultMap"
+               type="com.azas.domain.timecapsule.entity.TimeCapsuleAccount">
+        <id property="financialAccountId" column="financial_account_id"/>
+        <result property="childId" column="child_id"/>
+        <result property="accountProductType" column="account_product_type"/>
+        <result property="accountStatus" column="account_status"/>
+        <result property="linkStatus" column="link_status"/>
+        <result property="maturityDate" column="maturity_date"/>
+    </resultMap>
+
+    <sql id="timeCapsuleColumns">
+        time_capsule_id,
+        child_id,
+        financial_account_id,
+        title,
+        status,
+        expected_release_at,
+        release_reason,
+        released_at,
+        entry_count,
+        latest_entry_at,
+        created_at,
+        updated_at
+    </sql>
+
+    <sql id="timeCapsuleColumnsWithAlias">
+        tc.time_capsule_id,
+        tc.child_id,
+        tc.financial_account_id,
+        tc.title,
+        tc.status,
+        tc.expected_release_at,
+        tc.release_reason,
+        tc.released_at,
+        tc.entry_count,
+        tc.latest_entry_at,
+        tc.created_at,
+        tc.updated_at,
+        fa.financial_goal_template_id,
+        COALESCE(fa.goal_name_snapshot, fgt.goal_name) AS goal_name,
+        fa.goal_target_amount,
+        fa.goal_target_date
+    </sql>
+
+    <select id="findAccessibleAccountById"
+            resultMap="timeCapsuleAccountResultMap">
+        SELECT
+            fa.financial_account_id,
+            fa.child_id,
+            fa.account_product_type,
+            fa.account_status,
+            fa.link_status,
+            fa.maturity_date
+        FROM financial_account fa
+        INNER JOIN child_parent cp
+            ON cp.child_id = fa.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE fa.financial_account_id = #{financialAccountId}
+    </select>
+
+    <select id="existsActiveParentRelation"
+            resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+            FROM child_parent cp
+            INNER JOIN member m
+                ON m.member_id = cp.member_id
+            WHERE cp.child_id = #{childId}
+              AND cp.member_id = #{memberId}
+              AND m.status = 'ACTIVE'
+        )
+    </select>
+
+    <select id="findByFinancialAccountId"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = tc.financial_account_id
+        LEFT JOIN financial_goal_template fgt
+            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
+        WHERE tc.financial_account_id = #{financialAccountId}
+    </select>
+
+    <insert id="insert"
+            parameterType="com.azas.domain.timecapsule.entity.TimeCapsule"
+            useGeneratedKeys="true"
+            keyProperty="timeCapsuleId"
+            keyColumn="time_capsule_id">
+        INSERT INTO time_capsule (
+            child_id,
+            financial_account_id,
+            title,
+            status,
+            expected_release_at
+        ) VALUES (
+            #{childId},
+            #{financialAccountId},
+            #{title},
+            #{status},
+            #{expectedReleaseAt}
+        )
+    </insert>
+
+    <select id="findAccessibleById"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = tc.financial_account_id
+        LEFT JOIN financial_goal_template fgt
+            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
+        INNER JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE tc.time_capsule_id = #{timeCapsuleId}
+    </select>
+
+    <select id="findAccessibleByIdForUpdate"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = tc.financial_account_id
+        LEFT JOIN financial_goal_template fgt
+            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
+        INNER JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE tc.time_capsule_id = #{timeCapsuleId}
+        FOR UPDATE
+    </select>
+
+    <select id="findByFinancialAccountIdForUpdate"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = tc.financial_account_id
+        LEFT JOIN financial_goal_template fgt
+            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
+        WHERE tc.financial_account_id = #{financialAccountId}
+        FOR UPDATE
+    </select>
+
+    <update id="decreaseEntryCountAndRefreshLatestEntry">
+        UPDATE time_capsule tc
+        SET entry_count = CASE
+                WHEN tc.entry_count &gt; 0 THEN tc.entry_count - 1
+                ELSE 0
+            END,
+            latest_entry_at = (
+                SELECT MAX(tce.contributed_at)
+                FROM time_capsule_entry tce
+                WHERE tce.time_capsule_id = tc.time_capsule_id
+                  AND tce.status != 'DELETED'
+            )
+        WHERE tc.time_capsule_id = #{timeCapsuleId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM time_capsule
+        WHERE time_capsule_id = #{timeCapsuleId}
+    </delete>
+
+    <select id="findCardSummaries"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = tc.financial_account_id
+        LEFT JOIN financial_goal_template fgt
+            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
+        WHERE tc.child_id = #{childId}
+        <if test="status != null">
+            AND tc.status = #{status}
+        </if>
+        <if test="cursorAt != null">
+            AND (
+                tc.created_at &lt; #{cursorAt}
+                OR (
+                    tc.created_at = #{cursorAt}
+                    AND tc.time_capsule_id &lt; #{cursorId}
+                )
+            )
+        </if>
+        ORDER BY tc.created_at DESC, tc.time_capsule_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findCalendarSummaries"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = tc.financial_account_id
+        LEFT JOIN financial_goal_template fgt
+            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
+        WHERE tc.child_id = #{childId}
+          AND tc.expected_release_at &gt;= #{calendarStart}
+          AND tc.expected_release_at &lt; #{calendarEnd}
+        <if test="status != null">
+            AND tc.status = #{status}
+        </if>
+        <if test="cursorAt != null">
+            AND (
+                tc.expected_release_at &gt; #{cursorAt}
+                OR (
+                    tc.expected_release_at = #{cursorAt}
+                    AND tc.time_capsule_id &gt; #{cursorId}
+                )
+            )
+        </if>
+        ORDER BY tc.expected_release_at ASC, tc.time_capsule_id ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.child.mapper.ChildMapper">
+
+    <insert id="insertChild"
+            parameterType="com.azas.domain.child.entity.Child"
+            useGeneratedKeys="true"
+            keyProperty="childId">
+        INSERT INTO child (
+            name,
+            birth_status,
+            expected_birth_date,
+            birth_date,
+            gender,
+            profile_image_url,
+            status,
+            created_at,
+            updated_at
+        )
+        VALUES (
+                   #{name},
+                   #{birthStatus},
+                   #{expectedBirthDate},
+                   #{birthDate},
+                   #{gender},
+                   #{profileImageUrl},
+                   'ACTIVE',
+                   NOW(),
+                   NOW()
+               )
+    </insert>
+
+    <insert id="insertChildParent">
+        INSERT INTO child_parent (
+            child_id,
+            member_id,
+            relation_type,
+            created_at,
+            updated_at
+        )
+        VALUES (
+                   #{childId},
+                   #{memberId},
+                   #{relationType},
+                   NOW(),
+                   NOW()
+               )
+    </insert>
+
+    <select id="findChildrenByMemberId"
+            resultType="com.azas.domain.child.dto.ChildSummaryResponse">
+        SELECT
+            c.child_id AS childId,
+            c.name AS name,
+            c.birth_status AS birthStatus,
+            c.birth_date AS birthDate,
+            c.expected_birth_date AS expectedBirthDate,
+            CASE
+                WHEN c.birth_date IS NULL THEN NULL
+                ELSE TIMESTAMPDIFF(YEAR, c.birth_date, CURDATE())
+                END AS age,
+            c.profile_image_url AS profileImageUrl,
+            cp.relation_type AS relationType
+        FROM child c
+                 INNER JOIN child_parent cp ON c.child_id = cp.child_id
+        WHERE cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+        ORDER BY c.created_at DESC
+    </select>
+
+    <select id="findChildByIdForMember"
+            resultType="com.azas.domain.child.dto.ChildResponse">
+        SELECT
+            c.child_id AS childId,
+            c.name AS name,
+            c.birth_status AS birthStatus,
+            c.expected_birth_date AS expectedBirthDate,
+            c.birth_date AS birthDate,
+            c.gender AS gender,
+            c.profile_image_url AS profileImageUrl,
+            CASE
+                WHEN c.birth_date IS NULL THEN NULL
+                ELSE TIMESTAMPDIFF(YEAR, c.birth_date, CURDATE())
+                END AS age,
+            cp.relation_type AS relationType,
+            c.created_at AS createdAt,
+            c.updated_at AS updatedAt
+        FROM child c
+                 INNER JOIN child_parent cp ON c.child_id = cp.child_id
+        WHERE c.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="countChildAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN child_parent cp ON c.child_id = cp.child_id
+        WHERE c.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <!-- TODO: 최신 ERD 반영 후 이체/거래/자동이체 테이블까지 금융 기록 검증 범위 확장 -->
+    <select id="countFinancialHistory" resultType="int">
+        SELECT
+            (
+                SELECT COUNT(*)
+                FROM financial_account
+                WHERE child_id = #{childId}
+            )
+                +
+            (
+                SELECT COUNT(*)
+                FROM time_capsule
+                WHERE child_id = #{childId}
+            )
+    </select>
+
+    <update id="updateChild"
+            parameterType="com.azas.domain.child.entity.Child">
+        UPDATE child
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="birthStatus != null">birth_status = #{birthStatus},</if>
+            <if test="expectedBirthDate != null">expected_birth_date = #{expectedBirthDate},</if>
+            <if test="birthDate != null">birth_date = #{birthDate},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="profileImageUrl != null">profile_image_url = #{profileImageUrl},</if>
+            updated_at = NOW()
+        </set>
+        WHERE child_id = #{childId}
+        AND status = 'ACTIVE'
+    </update>
+
+    <update id="softDeleteChild">
+        UPDATE child
+        SET
+            status = 'DELETED',
+            deleted_at = NOW(),
+            updated_at = NOW()
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+    </update>
+
+
+</mapper>
