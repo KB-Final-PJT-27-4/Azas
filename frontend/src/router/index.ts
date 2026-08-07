@@ -97,6 +97,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/timeCapsules/TimeCapsulePreviewView.vue'),
     meta: timeCapsuleHeaderMeta,
   },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: '/__dev/time-capsules-api-test',
+          name: 'TimeCapsuleApiTest',
+          component: () => import('@/views/timeCapsules/TimeCapsuleApiTestView.vue'),
+          meta: { ...timeCapsuleHeaderMeta, hideNavigation: true },
+        },
+      ]
+    : []),
   {
     path: '/time-capsules/:capsuleId/edit',
     name: 'TimeCapsuleEdit',
