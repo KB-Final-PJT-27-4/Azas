@@ -54,7 +54,6 @@ class ParentInviteOAuthResponseTest {
                         true,
                         10L,
                         "김자녀",
-                        RelationType.GUARDIAN,
                         50L,
                         LocalDateTime.of(
                                 2026,
@@ -95,11 +94,9 @@ class ParentInviteOAuthResponseTest {
                         .get("child_id")
                         .asLong()
         );
-        assertEquals(
-                "GUARDIAN",
+        assertFalse(
                 json.get("child")
-                        .get("relation_type")
-                        .asText()
+                        .has("relation_type")
         );
 
         assertEquals(
@@ -115,16 +112,22 @@ class ParentInviteOAuthResponseTest {
                         .asText()
         );
         assertEquals(
-                "ACCEPTED",
+                "PENDING",
                 json.get("invitation")
                         .get("status")
                         .asText()
         );
+
         assertEquals(
                 "2026-08-05T03:00:00Z",
                 json.get("invitation")
-                        .get("accepted_at")
+                        .get("expires_at")
                         .asText()
+        );
+
+        assertFalse(
+                json.get("invitation")
+                        .has("accepted_at")
         );
 
         assertFalse(json.has("accessToken"));

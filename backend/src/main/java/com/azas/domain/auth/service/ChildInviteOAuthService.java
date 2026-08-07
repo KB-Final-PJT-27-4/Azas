@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 public class ChildInviteOAuthService {
 
     private final OAuthClientRegistry oauthClientRegistry;
-    private final ChildInviteAcceptanceService childInviteAcceptanceService;
+    private final ChildInviteLoginService childInviteLoginService;
 
     public ChildInviteOAuthResult login(
             String providerValue,
@@ -31,7 +31,7 @@ public class ChildInviteOAuthService {
                         redirectUri
                 );
 
-        return childInviteAcceptanceService.accept(
+        return childInviteLoginService.login(
                 inviteToken,
                 profile
         );

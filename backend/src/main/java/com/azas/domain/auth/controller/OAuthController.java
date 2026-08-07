@@ -191,8 +191,7 @@ public class OAuthController {
                         provider,
                         request.getAuthorizationCode(),
                         request.getRedirectUri(),
-                        request.getInviteToken(),
-                        request.getRelationType()
+                        request.getInviteToken()
                 );
 
         return ResponseEntity.ok(

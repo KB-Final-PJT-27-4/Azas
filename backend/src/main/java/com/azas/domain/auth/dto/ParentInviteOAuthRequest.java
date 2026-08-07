@@ -1,6 +1,5 @@
 package com.azas.domain.auth.dto;
 
-import com.azas.domain.child.entity.RelationType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -8,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 
 @ApiModel(description = "부모 초대코드 기반 소셜 로그인 요청")
 @Getter
@@ -41,14 +39,4 @@ public class ParentInviteOAuthRequest {
     @NotBlank
     @JsonProperty("invite_token")
     private String inviteToken;
-
-    @ApiModelProperty(
-            value = "초대받은 부모와 자녀의 관계",
-            required = true,
-            allowableValues = "MOTHER,FATHER,GUARDIAN",
-            example = "GUARDIAN"
-    )
-    @NotNull
-    @JsonProperty("relation_type")
-    private RelationType relationType;
 }
