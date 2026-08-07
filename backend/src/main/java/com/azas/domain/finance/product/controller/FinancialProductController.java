@@ -33,7 +33,7 @@ public class FinancialProductController {
     private final FinancialProductService financialProductService;
 
     @ApiOperation("PRODUCT-1 Financial product recommendations")
-    @GetMapping("/children/{child_id}/financial-product-recommendations")
+    @GetMapping("/children/{child_id}/financial-products/recommendations")
     public ResponseEntity<FinancialProductRecommendationResponse>
     getRecommendations(
             @RequestHeader(value = "Authorization", required = false)
@@ -63,7 +63,7 @@ public class FinancialProductController {
     }
 
     @ApiOperation("PRODUCT-2 Financial product bookmarks")
-    @GetMapping("/children/{child_id}/financial-product-bookmarks")
+    @GetMapping("/children/{child_id}/financial-products/bookmarks")
     public ResponseEntity<FinancialProductBookmarkListResponse> getBookmarks(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
