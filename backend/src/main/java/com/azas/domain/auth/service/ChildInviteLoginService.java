@@ -20,7 +20,7 @@ import java.time.ZoneOffset;
 
 @Service
 @RequiredArgsConstructor
-public class ChildInviteAcceptanceService {
+public class ChildInviteLoginService {
 
     private final TokenHashEncoder tokenHashEncoder;
     private final FamilyInvitationStore familyInvitationStore;
@@ -29,26 +29,14 @@ public class ChildInviteAcceptanceService {
     private final AuthTokenService authTokenService;
 
     @Transactional
-    public ChildInviteOAuthResult accept(
+    public ChildInviteOAuthResult login(
             String inviteToken,
             OAuthProfile profile
     ) {
-        LocalDateTime acceptedAt =
-                LocalDateTime.now(ZoneOffset.UTC);
-
-        String inviteTokenHash =
-                tokenHashEncoder.encode(inviteToken);
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         FamilyInvitation invitation =
-                familyInvitationStore
-                        .findByInviteTokenHash(inviteTokenHash)
-                        .filter(value -> value.isUsableFor(
-                                FamilyInviteeType.CHILD,
-                                acceptedAt
-                        ))
-                        .orElseThrow(
-                                this::invalidInvitation
-                        );
+                findUsableInvitation(inviteToken, now);
 
         Child child =
                 childInviteMapper.findActiveById(
@@ -59,45 +47,10 @@ public class ChildInviteAcceptanceService {
             throw invalidInvitation();
         }
 
-        if (child.getMemberId() != null) {
-            throw memberAlreadyLinked();
-        }
-
         OAuthMemberResult memberResult =
                 oauthMemberService.findOrCreateChild(profile);
 
         Member member = memberResult.getMember();
-
-        Child connectedChild =
-                childInviteMapper.findByMemberId(
-                        member.getMemberId()
-                );
-
-        if (connectedChild != null) {
-            throw memberAlreadyLinked();
-        }
-
-        int linkedCount =
-                childInviteMapper.linkMemberIfUnlinked(
-                        child.getChildId(),
-                        member.getMemberId()
-                );
-
-        if (linkedCount != 1) {
-            throw memberAlreadyLinked();
-        }
-
-        boolean invitationAccepted =
-                familyInvitationStore.acceptIfPending(
-                        invitation.getFamilyInvitationId(),
-                        member.getMemberId(),
-                        null,
-                        acceptedAt
-                );
-
-        if (!invitationAccepted) {
-            throw invalidInvitation();
-        }
 
         AuthTokenPair tokenPair =
                 authTokenService.issue(member);
@@ -109,19 +62,29 @@ public class ChildInviteAcceptanceService {
                 child.getChildId(),
                 child.getName(),
                 invitation.getFamilyInvitationId(),
-                acceptedAt
+                invitation.getExpiresAt()
         );
+    }
+
+    private FamilyInvitation findUsableInvitation(
+            String inviteToken,
+            LocalDateTime now
+    ) {
+        String inviteTokenHash =
+                tokenHashEncoder.encode(inviteToken);
+
+        return familyInvitationStore
+                .findByInviteTokenHash(inviteTokenHash)
+                .filter(invitation -> invitation.isUsableFor(
+                        FamilyInviteeType.CHILD,
+                        now
+                ))
+                .orElseThrow(this::invalidInvitation);
     }
 
     private BusinessException invalidInvitation() {
         return new BusinessException(
                 ErrorCode.INVALID_FAMILY_INVITATION
-        );
-    }
-
-    private BusinessException memberAlreadyLinked() {
-        return new BusinessException(
-                ErrorCode.FAMILY_MEMBER_ALREADY_LINKED
         );
     }
 }

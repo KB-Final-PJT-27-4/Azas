@@ -17,20 +17,20 @@ import static org.mockito.Mockito.when;
 class ChildInviteOAuthServiceTest {
 
     @Test
-    void fetchesOAuthProfileBeforeAcceptingChildInvitation() {
+    void fetchesOAuthProfileBeforePreparingChildInviteLogin() {
         OAuthClientRegistry oauthClientRegistry =
                 mock(OAuthClientRegistry.class);
 
         OAuthClient oauthClient =
                 mock(OAuthClient.class);
 
-        ChildInviteAcceptanceService acceptanceService =
-                mock(ChildInviteAcceptanceService.class);
+        ChildInviteLoginService loginService =
+                mock(ChildInviteLoginService.class);
 
         ChildInviteOAuthService service =
                 new ChildInviteOAuthService(
                         oauthClientRegistry,
-                        acceptanceService
+                        loginService
                 );
 
         OAuthProfile profile = new OAuthProfile(
@@ -82,7 +82,7 @@ class ChildInviteOAuthServiceTest {
         ).thenReturn(profile);
 
         when(
-                acceptanceService.accept(
+                loginService.login(
                         "raw-invite-token",
                         profile
                 )
@@ -101,7 +101,7 @@ class ChildInviteOAuthServiceTest {
         var callOrder = inOrder(
                 oauthClientRegistry,
                 oauthClient,
-                acceptanceService
+                loginService
         );
 
         callOrder.verify(oauthClientRegistry)
@@ -113,8 +113,8 @@ class ChildInviteOAuthServiceTest {
                         "http://localhost:5173/auth/kakao/child-invite/callback"
                 );
 
-        callOrder.verify(acceptanceService)
-                .accept(
+        callOrder.verify(loginService)
+                .login(
                         "raw-invite-token",
                         profile
                 );

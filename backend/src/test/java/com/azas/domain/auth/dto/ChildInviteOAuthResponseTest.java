@@ -93,10 +93,9 @@ class ChildInviteOAuthResponseTest {
                         .get("child_id")
                         .asLong()
         );
-        assertTrue(
+        assertFalse(
                 json.get("child")
-                        .get("member_linked")
-                        .asBoolean()
+                        .has("member_linked")
         );
 
         assertEquals(
@@ -112,16 +111,22 @@ class ChildInviteOAuthResponseTest {
                         .asText()
         );
         assertEquals(
-                "ACCEPTED",
+                "PENDING",
                 json.get("invitation")
                         .get("status")
                         .asText()
         );
+
         assertEquals(
                 "2026-08-05T03:00:00Z",
                 json.get("invitation")
-                        .get("accepted_at")
+                        .get("expires_at")
                         .asText()
+        );
+
+        assertFalse(
+                json.get("invitation")
+                        .has("accepted_at")
         );
 
         assertFalse(json.has("accessToken"));

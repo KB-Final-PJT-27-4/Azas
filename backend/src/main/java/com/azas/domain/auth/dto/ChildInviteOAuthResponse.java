@@ -7,7 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-@ApiModel(description = "자녀 초대코드 기반 소셜 로그인 응답")
+@ApiModel(description = "자녀 초대 기반 소셜 로그인 및 수락 대기 응답")
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class ChildInviteOAuthResponse {
@@ -61,13 +61,13 @@ public class ChildInviteOAuthResponse {
     private final OAuthLoginMemberResponse member;
 
     @ApiModelProperty(
-            value = "회원 계정과 연결된 자녀 정보",
+            value = "수락 페이지에 표시할 초대 대상 자녀 정보",
             required = true
     )
     private final ChildInviteChildResponse child;
 
     @ApiModelProperty(
-            value = "수락 완료된 가족 초대 정보",
+            value = "수락 전 PENDING 상태의 가족 초대 정보",
             required = true
     )
     private final ChildInviteInvitationResponse invitation;

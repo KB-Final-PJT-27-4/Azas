@@ -16,5 +16,5 @@ public class ChildInviteOAuthResult {
     private final Long childId;
     private final String childName;
     private final Long familyInvitationId;
-    private final LocalDateTime acceptedAt;
+    private final LocalDateTime expiresAt;
 }
