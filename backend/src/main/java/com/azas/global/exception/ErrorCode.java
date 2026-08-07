@@ -99,6 +99,14 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "금융 계좌를 찾을 수 없습니다."
     ),
+    FINANCIAL_PRODUCT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융상품을 찾을 수 없습니다."
+    ),
+    INVALID_QUERY_PARAMETER(
+            HttpStatus.BAD_REQUEST,
+            "조회 조건이 올바르지 않습니다."
+    ),
 
     // Time Capsule
     TIME_CAPSULE_ACCESS_DENIED(
