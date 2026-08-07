@@ -32,6 +32,10 @@ const cancelMemoEdit = () => {
   isEditingMemo.value = false
 }
 
+const updateMemoDraft = (event: Event) => {
+  memoDraft.value = (event.target as HTMLTextAreaElement).value
+}
+
 const goToAssets = () => router.push({ name: 'Assets' })
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
 </script>
@@ -43,19 +47,15 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
         {{ transaction.accountLabel }}
       </h1>
 
-      <form
-        v-if="isEditingMemo"
-        class="mt-3"
-        aria-label="메모 수정"
-        @submit.prevent="saveMemo"
-      >
+      <form v-if="isEditingMemo" class="mt-3" aria-label="메모 수정" @submit.prevent="saveMemo">
         <div class="relative">
           <textarea
             ref="memoInput"
-            v-model="memoDraft"
+            :value="memoDraft"
             class="block h-24 w-full resize-none rounded-lg border border-[var(--color-brand-primary)] px-3 pt-2.5 pb-7 text-[15px] leading-6 text-[var(--color-text-secondary)] outline-none focus:ring-2 focus:ring-[var(--color-selected-background)]"
             aria-label="메모"
             maxlength="50"
+            @input="updateMemoDraft"
             @keydown.esc="cancelMemoEdit"
           ></textarea>
           <span
