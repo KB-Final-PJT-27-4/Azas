@@ -13,4 +13,6 @@ public interface MemberMapper {
     Member findByEmail(@Param("email") String email);
 
     int insert(Member member);
+
+    int updateProfile(Member member);
 }

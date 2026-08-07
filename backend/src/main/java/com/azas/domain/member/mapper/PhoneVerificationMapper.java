@@ -28,6 +28,11 @@ public interface PhoneVerificationMapper {
             String phoneNumberHash
     );
 
+    PhoneVerification findByVerificationTokenHash(
+            @Param("verificationTokenHash")
+            String verificationTokenHash
+    );
+
     int expireUnverifiedByMemberId(
             @Param("memberId")
             long memberId,
@@ -59,5 +64,16 @@ public interface PhoneVerificationMapper {
             LocalDateTime tokenExpiresAt,
             @Param("maxAttempts")
             int maxAttempts
+    );
+
+    int consumeVerificationTokenIfUsable(
+            @Param("phoneVerificationId")
+            long phoneVerificationId,
+            @Param("memberId")
+            long memberId,
+            @Param("verificationTokenHash")
+            String verificationTokenHash,
+            @Param("consumedAt")
+            LocalDateTime consumedAt
     );
 }

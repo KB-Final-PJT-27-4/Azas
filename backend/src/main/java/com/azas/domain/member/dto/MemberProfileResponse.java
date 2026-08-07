@@ -133,8 +133,8 @@ public final class MemberProfileResponse {
                         .map(MemberSocialAccountResponse::from)
                         .toList();
 
-        // 복호화 공통 모듈 도입 전에는 휴대폰 암호문을 API에 노출하지 않는다.
-        String phoneNumber = null;
+        String phoneNumber =
+                result.getMaskedPhoneNumber();
 
         return new MemberProfileResponse(
                 member.getMemberId(),
