@@ -1,9 +1,18 @@
 <script setup lang="ts">
-defineProps<{
-  goalName: string
-  amount: number
-  targetDate: string
-}>()
+import { BaseDatePicker } from '@/components/common'
+
+withDefaults(
+  defineProps<{
+    goalName: string
+    amount: number
+    targetDate: string
+    goalNumber?: number
+    showIntro?: boolean
+  }>(),
+  {
+    showIntro: true,
+  },
+)
 
 const emit = defineEmits<{
   'update:amount': [value: number]
@@ -11,7 +20,7 @@ const emit = defineEmits<{
   openRecommendation: []
 }>()
 
-const minimumMonth = new Date().toISOString().slice(0, 7)
+const currentYear = new Date().getFullYear()
 
 const updateAmount = (event: Event) => {
   const value = Number((event.target as HTMLInputElement).value.replace(/[^0-9]/g, ''))
@@ -20,16 +29,21 @@ const updateAmount = (event: Event) => {
 </script>
 
 <template>
-  <section>
-    <h1 class="text-[25px] leading-[1.35] font-bold tracking-[-0.04em]">
-      <strong class="text-[var(--color-selected-text)]">{{ goalName }}</strong> 목표 금액을
-      정해주세요
+  <div>
+    <h1 v-if="showIntro" class="text-[25px] leading-[1.35] font-bold tracking-[-0.04em]">
+      <span
+        v-if="goalNumber"
+        class="mr-1.5 inline-grid size-6 translate-y-[-2px] place-items-center rounded-full bg-[var(--color-brand-primary)] text-sm tracking-normal text-[var(--color-text-inverse)] align-middle"
+      >
+        {{ goalNumber }}
+      </span>
+      <span class="text-[var(--color-selected-text)]">{{ goalName }}</span> 목표 금액을 정해주세요
     </h1>
-    <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
+    <p v-if="showIntro" class="mt-2 text-sm text-[var(--color-text-secondary)]">
       금액과 시기를 입력하면 월 저축액을 계산해드려요.
     </p>
 
-    <div class="mt-9 grid gap-6">
+    <div class="grid gap-6" :class="showIntro ? 'mt-9' : ''">
       <label class="grid gap-2">
         <span class="flex items-center justify-between text-sm font-bold">
           목표 금액
@@ -55,25 +69,23 @@ const updateAmount = (event: Event) => {
         </div>
       </label>
 
-      <label class="grid gap-2">
-        <span class="text-sm font-bold">목표 달성 시기</span>
-        <input
-          class="h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 outline-none focus:border-[var(--color-brand-primary-pressed)]"
-          type="month"
-          :min="minimumMonth"
-          :value="targetDate"
-          @input="emit('update:targetDate', ($event.target as HTMLInputElement).value)"
-        />
-      </label>
+      <BaseDatePicker
+        :model-value="targetDate"
+        label="목표 달성 시기"
+        selection-mode="month"
+        :min-year="currentYear"
+        :max-year="currentYear + 100"
+        @update:model-value="emit('update:targetDate', $event)"
+      />
 
       <div class="rounded-2xl bg-[var(--color-selected-background)] p-5">
-        <strong class="text-xl text-[var(--color-selected-text)]">
+        <div class="text-xl font-semibold text-[var(--color-selected-text)]">
           매월 약 {{ Math.ceil(amount / 240).toLocaleString('ko-KR') }}원
-        </strong>
+        </div>
         <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
           현재부터 240개월 동안 균등 저축 기준
         </p>
       </div>
     </div>
-  </section>
+  </div>
 </template>
