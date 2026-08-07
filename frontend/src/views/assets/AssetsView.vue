@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Check, ChevronDown, Funnel, Landmark } from 'lucide-vue-next'
+import { useRoute } from 'vue-router'
 
 import cloudBackground from '@/assets/images/timeCapsules/preview-cloud-background.png'
 import AssetTransferResultSheet from '@/components/assets/AssetTransferResultSheet.vue'
 import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
 import { assetGoals, assetSummary, assetTransactions } from '@/data/assetDummyData'
+
+const route = useRoute()
 
 const activeGoalIndex = ref(0)
 const activeAccountId = ref<number | null>(null)
@@ -15,6 +18,10 @@ const swipeStart = ref({ x: 0, y: 0 })
 const goalSlideDirection = ref<'left' | 'right'>('left')
 const isTransferSheetOpen = ref(false)
 const transferResult = ref<'success' | 'failure' | null>(null)
+const requestedTransferAmount = computed(() => Number(route.query.amount) || 0)
+const requestedTransferMemo = computed(() => String(route.query.memo ?? ''))
+const requestedTargetName = computed(() => String(route.query.targetName ?? activeGoal.value.accounts[0]?.name ?? ''))
+const requestedTargetNumber = computed(() => String(route.query.targetNumber ?? activeGoal.value.accounts[0]?.accountNumber ?? ''))
 const isAnyTransferSheetOpen = computed(
   () => isTransferSheetOpen.value || transferResult.value !== null,
 )
@@ -33,15 +40,23 @@ const activeAccountFilterLabel = computed(
 
 let previousBodyOverflow = ''
 
-watch(isAnyTransferSheetOpen, (isOpen) => {
-  if (isOpen) {
-    previousBodyOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return
-  }
+if (route.query.allowanceRequest) {
+  isTransferSheetOpen.value = true
+}
 
-  document.body.style.overflow = previousBodyOverflow
-})
+watch(
+  isAnyTransferSheetOpen,
+  (isOpen) => {
+    if (isOpen) {
+      previousBodyOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return
+    }
+
+    document.body.style.overflow = previousBodyOverflow
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   document.body.style.overflow = previousBodyOverflow
@@ -339,8 +354,10 @@ const retryTransfer = () => {
 
     <AssetTransferSheet
       :open="isTransferSheetOpen"
-      :target-account-name="activeGoal.accounts[0]?.name"
-      :target-account-number="activeGoal.accounts[0]?.accountNumber"
+      :target-account-name="requestedTargetName"
+      :target-account-number="requestedTargetNumber"
+      :initial-amount="requestedTransferAmount"
+      :initial-memo="requestedTransferMemo"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"
     />
