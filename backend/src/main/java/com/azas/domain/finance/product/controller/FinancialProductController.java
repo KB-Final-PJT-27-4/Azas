@@ -23,7 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import java.math.BigDecimal;
 
-@Api(tags = "Financial products")
+@Api(
+        tags = "금융상품",
+        description = "금융상품 조회 및 북마크 API"
+)
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -32,7 +35,7 @@ public class FinancialProductController {
     private final AccessTokenMemberResolver accessTokenMemberResolver;
     private final FinancialProductService financialProductService;
 
-    @ApiOperation("PRODUCT-1 Financial product recommendations")
+    @ApiOperation("PRODUCT-1 금융상품 추천 조회")
     @GetMapping("/children/{child_id}/financial-products/recommendations")
     public ResponseEntity<FinancialProductRecommendationResponse>
     getRecommendations(
@@ -62,7 +65,7 @@ public class FinancialProductController {
         ));
     }
 
-    @ApiOperation("PRODUCT-2 Financial product bookmarks")
+    @ApiOperation("PRODUCT-2 금융상품 북마크 목록 조회")
     @GetMapping("/children/{child_id}/financial-products/bookmarks")
     public ResponseEntity<FinancialProductBookmarkListResponse> getBookmarks(
             @RequestHeader(value = "Authorization", required = false)
@@ -85,7 +88,7 @@ public class FinancialProductController {
         ));
     }
 
-    @ApiOperation("PRODUCT-3 Update financial product bookmark")
+    @ApiOperation("PRODUCT-3 금융상품 북마크 설정")
     @PutMapping("/children/{child_id}/financial-products/{financial_product_id}/bookmark")
     public ResponseEntity<FinancialProductBookmarkResponse> updateBookmark(
             @RequestHeader(value = "Authorization", required = false)
@@ -105,7 +108,7 @@ public class FinancialProductController {
         ));
     }
 
-    @ApiOperation("PRODUCT-4 Financial product detail")
+    @ApiOperation("PRODUCT-4 금융상품 상세 조회")
     @GetMapping("/financial-products/{financial_product_id}")
     public ResponseEntity<FinancialProductDetailResponse> getProductDetail(
             @RequestHeader(value = "Authorization", required = false)
