@@ -14,14 +14,17 @@ const activeGoalIndex = ref(0)
 const activeAccountId = ref<number | null>(null)
 const isTransferFilterOpen = ref(false)
 const transferFilterRoot = ref<HTMLElement | null>(null)
-const swipeStart = ref({ x: 0, y: 0 })
-const goalSlideDirection = ref<'left' | 'right'>('left')
+const goalCarouselRef = ref<HTMLElement | null>(null)
 const isTransferSheetOpen = ref(false)
 const transferResult = ref<'success' | 'failure' | null>(null)
 const requestedTransferAmount = computed(() => Number(route.query.amount) || 0)
 const requestedTransferMemo = computed(() => String(route.query.memo ?? ''))
-const requestedTargetName = computed(() => String(route.query.targetName ?? activeGoal.value.accounts[0]?.name ?? ''))
-const requestedTargetNumber = computed(() => String(route.query.targetNumber ?? activeGoal.value.accounts[0]?.accountNumber ?? ''))
+const requestedTargetName = computed(() =>
+  String(route.query.targetName ?? activeGoal.value.accounts[0]?.name ?? ''),
+)
+const requestedTargetNumber = computed(() =>
+  String(route.query.targetNumber ?? activeGoal.value.accounts[0]?.accountNumber ?? ''),
+)
 const isAnyTransferSheetOpen = computed(
   () => isTransferSheetOpen.value || transferResult.value !== null,
 )
@@ -68,31 +71,28 @@ const percentage = (current: number, target: number) =>
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
 const selectGoal = (index: number) => {
-  goalSlideDirection.value = index >= activeGoalIndex.value ? 'left' : 'right'
   activeGoalIndex.value = index
   activeAccountId.value = null
   isTransferFilterOpen.value = false
+  goalCarouselRef.value?.scrollTo({
+    left: goalCarouselRef.value.clientWidth * index,
+    behavior: 'smooth',
+  })
 }
 
-const startGoalSwipe = (event: TouchEvent) => {
-  const touch = event.touches[0]
-  if (!touch) return
-  swipeStart.value = { x: touch.clientX, y: touch.clientY }
-}
+const updateActiveGoalByScroll = (event: Event) => {
+  const target = event.currentTarget as HTMLElement
+  if (!target.clientWidth) return
 
-const finishGoalSwipe = (event: TouchEvent) => {
-  const touch = event.changedTouches[0]
-  if (!touch) return
+  const nextIndex = Math.min(
+    Math.max(Math.round(target.scrollLeft / target.clientWidth), 0),
+    assetGoals.length - 1,
+  )
+  if (nextIndex === activeGoalIndex.value) return
 
-  const deltaX = touch.clientX - swipeStart.value.x
-  const deltaY = touch.clientY - swipeStart.value.y
-  if (Math.abs(deltaX) < 45 || Math.abs(deltaX) <= Math.abs(deltaY)) return
-
-  if (deltaX < 0 && activeGoalIndex.value < assetGoals.length - 1) {
-    selectGoal(activeGoalIndex.value + 1)
-  } else if (deltaX > 0 && activeGoalIndex.value > 0) {
-    selectGoal(activeGoalIndex.value - 1)
-  }
+  activeGoalIndex.value = nextIndex
+  activeAccountId.value = null
+  isTransferFilterOpen.value = false
 }
 
 const selectAccountFilter = (accountId: number | null) => {
@@ -142,7 +142,9 @@ const retryTransfer = () => {
       </button>
     </section>
 
-    <section class="mt-[18px] rounded-[20px] bg-white px-4 py-[18px] shadow-[0_5px_20px_rgba(80,140,170,0.06)]">
+    <section
+      class="mt-[18px] rounded-[20px] bg-white px-4 py-[18px] shadow-[0_5px_20px_rgba(80,140,170,0.06)]"
+    >
       <h2 class="m-0 text-[14px] font-bold text-[var(--color-text-secondary)]">전체 목표 현황</h2>
       <p class="mt-2 mb-0 text-[21px] leading-tight font-extrabold">
         총 목표
@@ -150,7 +152,9 @@ const retryTransfer = () => {
       </p>
       <p class="mt-2.5 mb-0 text-[12px] text-[var(--color-text-secondary)]">
         현재 {{ formatWon(assetSummary.totalCurrentAmount) }} · 전체 달성률
-        {{ percentage(assetSummary.totalCurrentAmount, assetSummary.totalTargetAmount).toFixed(1) }}%
+        {{
+          percentage(assetSummary.totalCurrentAmount, assetSummary.totalTargetAmount).toFixed(1)
+        }}%
       </p>
       <div class="mt-2 h-2 overflow-hidden rounded-full bg-[#edf1f4]" role="progressbar">
         <div
@@ -166,74 +170,79 @@ const retryTransfer = () => {
       <h2 class="m-0 text-[18px] font-extrabold">목표별 자산 현황</h2>
 
       <div
-        class="overflow-hidden touch-pan-y"
-        @touchstart.passive="startGoalSwipe"
-        @touchend.passive="finishGoalSwipe"
+        ref="goalCarouselRef"
+        class="flex snap-x snap-mandatory overflow-x-auto scroll-smooth overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        @scroll.passive="updateActiveGoalByScroll"
       >
-        <Transition
-          :name="goalSlideDirection === 'left' ? 'goal-slide-left' : 'goal-slide-right'"
-          mode="out-in"
+        <article
+          v-for="goal in assetGoals"
+          :key="goal.id"
+          class="mx-[5px] mt-[18px] w-[calc(100%-10px)] flex-none snap-center rounded-[18px] border border-[#dce8ee] bg-white px-[15px] py-4 shadow-sm"
         >
-          <article
-            :key="activeGoal.id"
-            class="mx-[5px] mt-[18px] rounded-[18px] border border-[#dce8ee] bg-white px-[15px] py-4 shadow-sm"
-          >
-        <div class="flex items-center justify-between gap-3">
-          <h3 class="m-0 truncate text-[20px] font-extrabold">{{ activeGoal.title }}</h3>
-          <span
-            class="shrink-0 rounded-full bg-[#e9f8ff] px-[18px] py-1.5 text-[11px] font-bold text-[#2babe8]"
-          >
-            {{ activeGoal.status }}
-          </span>
-        </div>
-        <p class="mt-2.5 mb-0 text-[14px] font-extrabold">
-          {{ formatWon(activeGoal.currentAmount) }}
-          <span class="font-normal text-[var(--color-text-secondary)]">
-            / 목표 {{ formatWon(activeGoal.targetAmount) }}
-          </span>
-        </p>
-        <div class="mt-3 flex items-center gap-4">
-          <div class="h-2 flex-1 overflow-hidden rounded-full bg-[#e4edf2]">
-            <div
-              class="h-full rounded-full bg-[#2babe8]"
-              :style="{ width: `${percentage(activeGoal.currentAmount, activeGoal.targetAmount)}%` }"
-            ></div>
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="m-0 truncate text-[20px] font-extrabold">{{ goal.title }}</h3>
+            <span
+              class="shrink-0 rounded-full bg-[#e9f8ff] px-[18px] py-1.5 text-[11px] font-bold text-[#2babe8]"
+            >
+              {{ goal.status }}
+            </span>
           </div>
-          <strong class="w-12 text-right text-[15px] text-[#2babe8]">
-            {{ percentage(activeGoal.currentAmount, activeGoal.targetAmount).toFixed(1) }}%
-          </strong>
-        </div>
-
-        <p class="mt-5 mb-2.5 text-[12px] font-medium">연결된 계좌 {{ activeGoal.accounts.length }}개</p>
-        <ul
-          v-if="activeGoal.accounts.length"
-          class="m-0 overflow-hidden rounded-[16px] border border-[#dce8ee] p-0"
-        >
-          <li
-            v-for="account in activeGoal.accounts"
-            :key="account.id"
-            class="[&+&]:border-t [&+&]:border-[#dce8ee]"
-          >
-            <div class="flex w-full items-center gap-2.5 bg-white px-3 py-2 text-left">
-              <span
-                class="grid size-6 shrink-0 place-items-center rounded-full border border-[#ffad20] text-[#ff9f00]"
-                aria-hidden="true"
-              >
-                <Landmark :size="14" :stroke-width="2" />
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="block truncate text-[10px] font-bold text-[#8c98a7]">{{ account.name }}</span>
-                <strong class="block truncate text-[14px]">{{ account.accountNumber }}</strong>
-              </span>
-              <strong class="shrink-0 text-[12px] text-[#20a8eb]">{{ formatWon(account.balance) }}</strong>
+          <p class="mt-2.5 mb-0 text-[14px] font-extrabold">
+            {{ formatWon(goal.currentAmount) }}
+            <span class="font-normal text-[var(--color-text-secondary)]">
+              / 목표 {{ formatWon(goal.targetAmount) }}
+            </span>
+          </p>
+          <div class="mt-3 flex items-center gap-4">
+            <div class="h-2 flex-1 overflow-hidden rounded-full bg-[#e4edf2]">
+              <div
+                class="h-full rounded-full bg-[#2babe8]"
+                :style="{ width: `${percentage(goal.currentAmount, goal.targetAmount)}%` }"
+              ></div>
             </div>
-          </li>
-        </ul>
-        <p v-else class="m-0 rounded-xl bg-[#f6f9fb] px-4 py-5 text-center text-sm text-[#8c98a7]">
-          연결된 계좌가 없어요.
-        </p>
-          </article>
-        </Transition>
+            <strong class="w-12 text-right text-[15px] text-[#2babe8]">
+              {{ percentage(goal.currentAmount, goal.targetAmount).toFixed(1) }}%
+            </strong>
+          </div>
+
+          <p class="mt-5 mb-2.5 text-[12px] font-medium">
+            연결된 계좌 {{ goal.accounts.length }}개
+          </p>
+          <ul
+            v-if="goal.accounts.length"
+            class="m-0 overflow-hidden rounded-[16px] border border-[#dce8ee] p-0"
+          >
+            <li
+              v-for="account in goal.accounts"
+              :key="account.id"
+              class="[&+&]:border-t [&+&]:border-[#dce8ee]"
+            >
+              <div class="flex w-full items-center gap-2.5 bg-white px-3 py-2 text-left">
+                <span
+                  class="grid size-6 shrink-0 place-items-center rounded-full border border-[#ffad20] text-[#ff9f00]"
+                  aria-hidden="true"
+                >
+                  <Landmark :size="14" :stroke-width="2" />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-[10px] font-bold text-[#8c98a7]">{{
+                    account.name
+                  }}</span>
+                  <strong class="block truncate text-[14px]">{{ account.accountNumber }}</strong>
+                </span>
+                <strong class="shrink-0 text-[12px] text-[#20a8eb]">{{
+                  formatWon(account.balance)
+                }}</strong>
+              </div>
+            </li>
+          </ul>
+          <p
+            v-else
+            class="m-0 rounded-xl bg-[#f6f9fb] px-4 py-5 text-center text-sm text-[#8c98a7]"
+          >
+            연결된 계좌가 없어요.
+          </p>
+        </article>
       </div>
 
       <div class="mt-2.5 flex justify-center gap-1.5" aria-label="목표 선택">
@@ -253,11 +262,7 @@ const retryTransfer = () => {
     <section class="mt-[18px]">
       <div class="flex items-center justify-between gap-3">
         <h2 class="m-0 text-[18px] font-extrabold">최근 이체 내역</h2>
-        <div
-          ref="transferFilterRoot"
-          class="relative"
-          @focusout="closeTransferFilterOnFocusOut"
-        >
+        <div ref="transferFilterRoot" class="relative" @focusout="closeTransferFilterOnFocusOut">
           <button
             class="flex h-8 max-w-[145px] items-center gap-1.5 rounded-full border border-[#dce8ee] bg-white px-3 text-[11px] font-bold text-[var(--color-text-secondary)] shadow-sm active:bg-[#f6f9fb]"
             type="button"
@@ -290,7 +295,9 @@ const retryTransfer = () => {
               <li role="option" :aria-selected="activeAccountId === null">
                 <button
                   class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[12px] font-bold"
-                  :class="activeAccountId === null ? 'bg-[#effaff] text-[#20a8eb]' : 'active:bg-[#f6f9fb]'"
+                  :class="
+                    activeAccountId === null ? 'bg-[#effaff] text-[#20a8eb]' : 'active:bg-[#f6f9fb]'
+                  "
                   type="button"
                   @click="selectAccountFilter(null)"
                 >
@@ -306,7 +313,11 @@ const retryTransfer = () => {
               >
                 <button
                   class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-[12px] font-bold"
-                  :class="activeAccountId === account.id ? 'bg-[#effaff] text-[#20a8eb]' : 'active:bg-[#f6f9fb]'"
+                  :class="
+                    activeAccountId === account.id
+                      ? 'bg-[#effaff] text-[#20a8eb]'
+                      : 'active:bg-[#f6f9fb]'
+                  "
                   type="button"
                   @click="selectAccountFilter(account.id)"
                 >
@@ -336,7 +347,9 @@ const retryTransfer = () => {
               </time>
             </div>
             <div class="min-w-0 text-right">
-              <strong class="block text-[15px] text-[#20a8eb]">+{{ formatWon(transaction.amount) }}</strong>
+              <strong class="block text-[15px] text-[#20a8eb]"
+                >+{{ formatWon(transaction.amount) }}</strong
+              >
               <span class="mt-0.5 block truncate text-[10px] text-[var(--color-text-secondary)]">
                 {{ transaction.depositName }}
               </span>
@@ -374,26 +387,5 @@ const retryTransfer = () => {
 .asset-transfer-button {
   top: calc(var(--app-header-height) + env(safe-area-inset-top) + 18px);
   right: max(18px, calc((100vw - var(--app-max-width)) / 2 + 18px));
-}
-
-.goal-slide-left-enter-active,
-.goal-slide-left-leave-active,
-.goal-slide-right-enter-active,
-.goal-slide-right-leave-active {
-  transition:
-    transform 180ms ease,
-    opacity 180ms ease;
-}
-
-.goal-slide-left-enter-from,
-.goal-slide-right-leave-to {
-  opacity: 0;
-  transform: translateX(28px);
-}
-
-.goal-slide-left-leave-to,
-.goal-slide-right-enter-from {
-  opacity: 0;
-  transform: translateX(-28px);
 }
 </style>
