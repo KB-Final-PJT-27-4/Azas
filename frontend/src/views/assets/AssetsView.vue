@@ -120,7 +120,7 @@ const retryTransfer = () => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[#eef9ff] bg-top bg-no-repeat px-[18px] pt-[18px] pb-6 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[var(--color-selected-background)] bg-top bg-no-repeat px-[18px] pt-[18px] pb-6 text-[var(--color-text-primary)]"
     :style="{
       backgroundImage: `url(${cloudBackground})`,
       backgroundSize: 'auto 100dvh',
@@ -135,13 +135,13 @@ const retryTransfer = () => {
       </div>
     </section>
 
-    <section
-      class="mt-[18px] rounded-[20px] bg-white px-4 py-[18px] shadow-[0_5px_20px_rgba(80,140,170,0.06)]"
-    >
+    <section class="mt-[18px] rounded-[20px] bg-[var(--color-surface)] px-4 py-[18px] shadow-sm">
       <h2 class="m-0 text-[14px] font-bold text-[var(--color-text-secondary)]">전체 목표 현황</h2>
       <p class="mt-2 mb-0 text-[21px] leading-tight font-extrabold">
         총 목표
-        <strong class="text-[#2babe8]">{{ formatWon(assetSummary.totalTargetAmount) }}</strong>
+        <strong class="text-[var(--color-selected-text)]">
+          {{ formatWon(assetSummary.totalTargetAmount) }}
+        </strong>
       </p>
       <p class="mt-2.5 mb-0 text-[12px] text-[var(--color-text-secondary)]">
         현재 {{ formatWon(assetSummary.totalCurrentAmount) }} · 전체 달성률
@@ -149,9 +149,12 @@ const retryTransfer = () => {
           percentage(assetSummary.totalCurrentAmount, assetSummary.totalTargetAmount).toFixed(1)
         }}%
       </p>
-      <div class="mt-2 h-2 overflow-hidden rounded-full bg-[#edf1f4]" role="progressbar">
+      <div
+        class="mt-2 h-2 overflow-hidden rounded-full bg-[var(--color-border)]"
+        role="progressbar"
+      >
         <div
-          class="h-full rounded-full bg-[#2babe8]"
+          class="h-full rounded-full bg-[var(--color-brand-primary)]"
           :style="{
             width: `${percentage(assetSummary.totalCurrentAmount, assetSummary.totalTargetAmount)}%`,
           }"
@@ -170,12 +173,12 @@ const retryTransfer = () => {
         <article
           v-for="goal in assetGoals"
           :key="goal.id"
-          class="mx-[5px] mt-[18px] w-[calc(100%-10px)] flex-none snap-center rounded-[18px] border border-[#dce8ee] bg-white px-[15px] py-4 shadow-sm"
+          class="mx-[5px] mt-[18px] w-[calc(100%-10px)] flex-none snap-center rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-4 shadow-sm"
         >
           <div class="flex items-center justify-between gap-3">
             <h3 class="m-0 truncate text-[20px] font-extrabold">{{ goal.title }}</h3>
             <span
-              class="shrink-0 rounded-full bg-[#e9f8ff] px-[18px] py-1.5 text-[11px] font-bold text-[#2babe8]"
+              class="shrink-0 rounded-full bg-[var(--color-selected-background)] px-[18px] py-1.5 text-[11px] font-bold text-[var(--color-selected-text)]"
             >
               {{ goal.status }}
             </span>
@@ -187,13 +190,13 @@ const retryTransfer = () => {
             </span>
           </p>
           <div class="mt-3 flex items-center gap-4">
-            <div class="h-2 flex-1 overflow-hidden rounded-full bg-[#e4edf2]">
+            <div class="h-2 flex-1 overflow-hidden rounded-full bg-[var(--color-border)]">
               <div
-                class="h-full rounded-full bg-[#2babe8]"
+                class="h-full rounded-full bg-[var(--color-brand-primary)]"
                 :style="{ width: `${percentage(goal.currentAmount, goal.targetAmount)}%` }"
               ></div>
             </div>
-            <strong class="w-12 text-right text-[15px] text-[#2babe8]">
+            <strong class="w-12 text-right text-[15px] text-[var(--color-selected-text)]">
               {{ percentage(goal.currentAmount, goal.targetAmount).toFixed(1) }}%
             </strong>
           </div>
@@ -203,14 +206,16 @@ const retryTransfer = () => {
           </p>
           <ul
             v-if="goal.accounts.length"
-            class="m-0 overflow-hidden rounded-[16px] border border-[#dce8ee] p-0"
+            class="m-0 overflow-hidden rounded-[16px] border border-[var(--color-border)] p-0"
           >
             <li
               v-for="account in goal.accounts"
               :key="account.id"
-              class="[&+&]:border-t [&+&]:border-[#dce8ee]"
+              class="[&+&]:border-t [&+&]:border-[var(--color-border)]"
             >
-              <div class="flex w-full items-center gap-2.5 bg-white px-3 py-2 text-left">
+              <div
+                class="flex w-full items-center gap-2.5 bg-[var(--color-surface)] px-3 py-2 text-left"
+              >
                 <span
                   class="grid size-6 shrink-0 place-items-center rounded-full border border-[#ffad20] text-[#ff9f00]"
                   aria-hidden="true"
@@ -218,12 +223,13 @@ const retryTransfer = () => {
                   <Landmark :size="14" :stroke-width="2" />
                 </span>
                 <span class="min-w-0 flex-1">
-                  <span class="block truncate text-[10px] font-bold text-[#8c98a7]">{{
-                    account.name
-                  }}</span>
+                  <span
+                    class="block truncate text-[10px] font-bold text-[var(--color-text-secondary)]"
+                    >{{ account.name }}</span
+                  >
                   <strong class="block truncate text-[14px]">{{ account.accountNumber }}</strong>
                 </span>
-                <strong class="shrink-0 text-[12px] text-[#20a8eb]">{{
+                <strong class="shrink-0 text-[12px] text-[var(--color-selected-text)]">{{
                   formatWon(account.balance)
                 }}</strong>
               </div>
@@ -231,7 +237,7 @@ const retryTransfer = () => {
           </ul>
           <p
             v-else
-            class="m-0 rounded-xl bg-[#f6f9fb] px-4 py-5 text-center text-sm text-[#8c98a7]"
+            class="m-0 rounded-xl bg-[var(--color-surface-muted)] px-4 py-5 text-center text-sm text-[var(--color-text-secondary)]"
           >
             연결된 계좌가 없어요.
           </p>
@@ -243,7 +249,11 @@ const retryTransfer = () => {
           v-for="(goal, index) in assetGoals"
           :key="goal.id"
           class="size-2 rounded-full"
-          :class="index === activeGoalIndex ? 'bg-[#2babe8]' : 'bg-[#dce8ee]'"
+          :class="
+            index === activeGoalIndex
+              ? 'bg-[var(--color-brand-primary)]'
+              : 'bg-[var(--color-border)]'
+          "
           type="button"
           :aria-label="`${goal.title} 보기`"
           :aria-current="index === activeGoalIndex ? 'true' : undefined"
@@ -257,7 +267,7 @@ const retryTransfer = () => {
         <h2 class="m-0 text-[18px] font-extrabold">최근 이체 내역</h2>
         <div ref="transferFilterRoot" class="relative" @focusout="closeTransferFilterOnFocusOut">
           <button
-            class="flex h-8 max-w-[145px] items-center gap-1.5 rounded-full border border-[#dce8ee] bg-white px-3 text-[11px] font-bold text-[var(--color-text-secondary)] shadow-sm active:bg-[#f6f9fb]"
+            class="flex h-8 max-w-[145px] items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[11px] font-bold text-[var(--color-text-secondary)] shadow-sm active:bg-[var(--color-surface-muted)]"
             type="button"
             aria-label="이체 내역 계좌 필터"
             :aria-expanded="isTransferFilterOpen"
@@ -281,7 +291,7 @@ const retryTransfer = () => {
           >
             <ul
               v-if="isTransferFilterOpen"
-              class="absolute top-[calc(100%+6px)] right-0 z-20 m-0 w-44 list-none rounded-[12px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_25px_rgba(45,77,94,0.16)]"
+              class="absolute top-[calc(100%+6px)] right-0 z-20 m-0 w-44 list-none rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-sm"
               role="listbox"
               aria-label="이체 내역 계좌 선택"
             >
@@ -289,7 +299,9 @@ const retryTransfer = () => {
                 <button
                   class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[12px] font-bold"
                   :class="
-                    activeAccountId === null ? 'bg-[#effaff] text-[#20a8eb]' : 'active:bg-[#f6f9fb]'
+                    activeAccountId === null
+                      ? 'bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+                      : 'active:bg-[var(--color-surface-muted)]'
                   "
                   type="button"
                   @click="selectAccountFilter(null)"
@@ -308,8 +320,8 @@ const retryTransfer = () => {
                   class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-[12px] font-bold"
                   :class="
                     activeAccountId === account.id
-                      ? 'bg-[#effaff] text-[#20a8eb]'
-                      : 'active:bg-[#f6f9fb]'
+                      ? 'bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+                      : 'active:bg-[var(--color-surface-muted)]'
                   "
                   type="button"
                   @click="selectAccountFilter(account.id)"
@@ -330,7 +342,7 @@ const retryTransfer = () => {
       <ul class="mt-[18px] mb-0 grid list-none gap-2.5 p-0">
         <li v-for="transaction in filteredTransactions" :key="transaction.id">
           <RouterLink
-            class="flex h-[55px] items-center justify-between gap-4 rounded-[16px] border border-[#dce8ee] bg-white px-4 py-2 !text-[var(--color-text-primary)] shadow-sm"
+            class="flex h-[55px] items-center justify-between gap-4 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 !text-[var(--color-text-primary)] shadow-sm"
             :to="{ name: 'AssetDetail', params: { assetId: transaction.id } }"
           >
             <div class="min-w-0">
@@ -340,7 +352,7 @@ const retryTransfer = () => {
               </time>
             </div>
             <div class="min-w-0 text-right">
-              <strong class="block text-[15px] text-[#20a8eb]"
+              <strong class="block text-[15px] text-[var(--color-selected-text)]"
                 >+{{ formatWon(transaction.amount) }}</strong
               >
               <span class="mt-0.5 block truncate text-[10px] text-[var(--color-text-secondary)]">
@@ -351,7 +363,7 @@ const retryTransfer = () => {
         </li>
         <li
           v-if="filteredTransactions.length === 0"
-          class="rounded-[16px] border border-[#dce8ee] bg-white px-4 py-6 text-center text-[12px] text-[var(--color-text-secondary)]"
+          class="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-6 text-center text-[12px] text-[var(--color-text-secondary)]"
         >
           이체 내역이 없어요.
         </li>
@@ -359,13 +371,13 @@ const retryTransfer = () => {
     </section>
 
     <button
-      class="asset-transfer-button group fixed z-[60] h-10 w-20 rounded-t-full bg-white/80 shadow-[0_-5px_16px_rgba(43,171,232,0.12)]"
+      class="asset-transfer-button group fixed z-[60] h-10 w-20 rounded-t-full bg-[var(--color-surface)]/80 shadow-sm"
       type="button"
       aria-label="이체하기"
       @click="isTransferSheetOpen = true"
     >
       <span
-        class="absolute right-1 bottom-0 left-1 grid h-9 place-items-center rounded-t-full bg-[#2babe8] pt-1 text-white transition-colors group-active:bg-[#159bd8]"
+        class="absolute right-1 bottom-0 left-1 grid h-9 place-items-center rounded-t-full bg-[var(--color-brand-primary)] pt-1 text-[var(--color-text-inverse)] transition-colors group-active:bg-[var(--color-brand-primary-pressed)]"
       >
         <Plus :size="23" :stroke-width="3" aria-hidden="true" />
       </span>
