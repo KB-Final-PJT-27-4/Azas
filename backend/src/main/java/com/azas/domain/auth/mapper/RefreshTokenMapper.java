@@ -19,4 +19,9 @@ public interface RefreshTokenMapper {
             @Param("tokenHash") String tokenHash,
             @Param("revokedAt") LocalDateTime revokedAt
     );
+
+    int revokeAllActiveByMemberId(
+            @Param("memberId") long memberId,
+            @Param("revokedAt") LocalDateTime revokedAt
+    );
 }
