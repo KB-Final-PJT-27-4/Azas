@@ -7,7 +7,6 @@ import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
 import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import GoalPlanStep from '@/components/goals/GoalPlanStep.vue'
 import GoalSelectionStep from '@/components/goals/GoalSelectionStep.vue'
-import goalFooterImage from '@/assets/images/login/bg-default.png'
 
 type GoalSetting = { amount: number; targetDate: string }
 
@@ -171,22 +170,12 @@ const selectRecommendation = (value: number) => {
     </div>
 
     <footer
-      class="bg-[var(--color-surface)] px-6 pt-3"
-      :class="[
-        currentStep === 1 ? 'grid grid-cols-1 pb-8' : 'grid grid-cols-2 gap-4',
-        currentStep === 3 ? 'relative min-h-[220px] overflow-hidden pb-[140px]' : 'pb-8',
-      ]"
+      class="bg-[var(--color-surface)] px-6 pt-3 pb-8"
+      :class="currentStep === 1 ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-4'"
     >
-      <img
-        v-if="currentStep === 3"
-        class="pointer-events-none absolute bottom-0 left-3/4 h-70 w-[150%] max-w-none -translate-x-1/2 object-cover object-top"
-        :src="goalFooterImage"
-        alt=""
-      />
-
       <button
         v-if="currentStep > 1"
-        class="relative z-1 h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] font-bold text-[var(--color-selected-text)]"
+        class="relative z-1 h-14 min-h-14 max-h-14 self-start rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] font-bold text-[var(--color-selected-text)]"
         type="button"
         @click="goBack"
       >
@@ -194,7 +183,7 @@ const selectRecommendation = (value: number) => {
       </button>
 
       <button
-        class="relative z-1 h-14 rounded-xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
+        class="relative z-1 h-14 min-h-14 max-h-14 self-start rounded-xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
         type="button"
         :disabled="!canContinue"
         @click="currentStep === 3 ? router.push({ name: 'Home' }) : goNext()"
