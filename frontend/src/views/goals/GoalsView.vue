@@ -17,6 +17,7 @@ const selectedGoals = ref<string[]>([])
 const customGoal = ref('')
 const isRecommendationOpen = ref(false)
 const goalSettings = reactive<Record<string, GoalSetting>>({})
+const slideDirection = ref<'forward' | 'backward'>('forward')
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
@@ -82,6 +83,7 @@ const toggleGoal = (goalId: string) => {
 }
 
 const goBack = () => {
+  slideDirection.value = 'backward'
   if (currentStep.value === 3) {
     currentStep.value = 2
     currentGoalIndex.value = selectedGoals.value.length - 1
@@ -96,6 +98,7 @@ const goBack = () => {
 
 const goNext = () => {
   if (!canContinue.value) return
+  slideDirection.value = 'forward'
   if (currentStep.value === 1) {
     selectedGoals.value.forEach(ensureSetting)
     currentGoalIndex.value = 0
@@ -145,28 +148,31 @@ const selectRecommendation = (value: number) => {
       ></span>
     </div>
 
-    <div class="flex-1 px-6 pt-7 pb-6">
-      <GoalSelectionStep
-        v-if="currentStep === 1"
-        :selected-goals="selectedGoals"
-        :custom-goal="customGoal"
-        @toggle="toggleGoal"
-        @update:custom-goal="customGoal = $event"
-      />
+    <div class="flex-1 overflow-x-hidden px-6 pt-7 pb-6">
+      <Transition :name="`goal-slide-${slideDirection}`" mode="out-in">
+        <div :key="`${currentStep}-${currentGoalIndex}`">
+          <GoalSelectionStep
+            v-if="currentStep === 1"
+            :selected-goals="selectedGoals"
+            :custom-goal="customGoal"
+            @toggle="toggleGoal"
+            @update:custom-goal="customGoal = $event"
+          />
 
-      <template v-else-if="currentStep === 2 && currentSetting">
-        <GoalAmountStep
-          :goal-name="currentGoalName"
-          :goal-number="currentGoalNumber"
-          :amount="currentSetting.amount"
-          :target-date="currentSetting.targetDate"
-          @update:amount="updateAmount"
-          @update:target-date="updateTargetDate"
-          @open-recommendation="isRecommendationOpen = true"
-        />
-      </template>
+          <GoalAmountStep
+            v-else-if="currentStep === 2 && currentSetting"
+            :goal-name="currentGoalName"
+            :goal-number="currentGoalNumber"
+            :amount="currentSetting.amount"
+            :target-date="currentSetting.targetDate"
+            @update:amount="updateAmount"
+            @update:target-date="updateTargetDate"
+            @open-recommendation="isRecommendationOpen = true"
+          />
 
-      <GoalPlanStep v-else :plans="plans" />
+          <GoalPlanStep v-else :plans="plans" />
+        </div>
+      </Transition>
     </div>
 
     <footer
@@ -200,3 +206,33 @@ const selectRecommendation = (value: number) => {
     />
   </main>
 </template>
+
+<style scoped>
+.goal-slide-forward-enter-active,
+.goal-slide-forward-leave-active,
+.goal-slide-backward-enter-active,
+.goal-slide-backward-leave-active {
+  transition: transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity 120ms ease-out;
+}
+
+.goal-slide-forward-enter-from,
+.goal-slide-backward-leave-to {
+  transform: translateX(18px);
+  opacity: 0;
+}
+
+.goal-slide-forward-leave-to,
+.goal-slide-backward-enter-from {
+  transform: translateX(-18px);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-slide-forward-enter-active,
+  .goal-slide-forward-leave-active,
+  .goal-slide-backward-enter-active,
+  .goal-slide-backward-leave-active {
+    transition-duration: 1ms;
+  }
+}
+</style>

@@ -157,7 +157,7 @@ onBeforeUnmount(stopVerificationTimer)
   <main
     class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top))] flex-col bg-white text-[var(--color-text-primary)]"
   >
-    <section class="flex flex-1 flex-col px-6 pt-5 pb-[max(32px,env(safe-area-inset-bottom))]">
+    <section class="flex flex-1 flex-col overflow-x-hidden px-6 pt-5 pb-[max(32px,env(safe-area-inset-bottom))]">
       <div v-if="step !== 3" class="grid grid-cols-2 gap-2" aria-label="아이 계좌 만들기 진행 단계">
         <span
           class="h-[3px] rounded-full"
@@ -171,6 +171,8 @@ onBeforeUnmount(stopVerificationTimer)
         ></span>
       </div>
 
+      <Transition name="child-step-slide" mode="out-in">
+        <div :key="step" class="flex flex-1 flex-col">
       <template v-if="step === 1">
         <h1 class="mt-8 text-[27px] leading-[1.18] font-bold tracking-[-0.035em]">
           어떤 자녀의<br />
@@ -333,6 +335,8 @@ onBeforeUnmount(stopVerificationTimer)
           </div>
         </div>
       </template>
+        </div>
+      </Transition>
     </section>
 
     <Transition name="auth-sheet">
@@ -476,6 +480,21 @@ onBeforeUnmount(stopVerificationTimer)
 </template>
 
 <style scoped>
+.child-step-slide-enter-active,
+.child-step-slide-leave-active {
+  transition: transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity 120ms ease-out;
+}
+
+.child-step-slide-enter-from {
+  transform: translateX(18px);
+  opacity: 0;
+}
+
+.child-step-slide-leave-to {
+  transform: translateX(-18px);
+  opacity: 0;
+}
+
 .auth-sheet-enter-active,
 .auth-sheet-leave-active {
   transition: background-color 240ms ease;
@@ -500,6 +519,8 @@ onBeforeUnmount(stopVerificationTimer)
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .child-step-slide-enter-active,
+  .child-step-slide-leave-active,
   .auth-sheet-enter-active,
   .auth-sheet-leave-active,
   .auth-sheet-enter-active .auth-sheet-panel,
