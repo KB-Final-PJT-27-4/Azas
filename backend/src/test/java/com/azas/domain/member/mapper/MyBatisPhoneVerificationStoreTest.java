@@ -246,6 +246,94 @@ class MyBatisPhoneVerificationStoreTest {
         assertFalse(verified);
     }
 
+    @Test
+    void returnsVerificationWhenMapperFindsByTokenHash() {
+        PhoneVerification phoneVerification =
+                createPhoneVerification();
+
+        when(
+                phoneVerificationMapper
+                        .findByVerificationTokenHash(
+                                "verification-token-hash"
+                        )
+        ).thenReturn(phoneVerification);
+
+        Optional<PhoneVerification> result =
+                phoneVerificationStore
+                        .findByVerificationTokenHash(
+                                "verification-token-hash"
+                        );
+
+        assertTrue(result.isPresent());
+        assertSame(phoneVerification, result.get());
+    }
+
+    @Test
+    void returnsEmptyWhenMapperDoesNotFindTokenHash() {
+        when(
+                phoneVerificationMapper
+                        .findByVerificationTokenHash(
+                                "verification-token-hash"
+                        )
+        ).thenReturn(null);
+
+        Optional<PhoneVerification> result =
+                phoneVerificationStore
+                        .findByVerificationTokenHash(
+                                "verification-token-hash"
+                        );
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void returnsTrueWhenVerificationTokenIsConsumed() {
+        when(
+                phoneVerificationMapper
+                        .consumeVerificationTokenIfUsable(
+                                10L,
+                                1L,
+                                "verification-token-hash",
+                                NOW
+                        )
+        ).thenReturn(1);
+
+        boolean consumed =
+                phoneVerificationStore
+                        .consumeVerificationTokenIfUsable(
+                                10L,
+                                1L,
+                                "verification-token-hash",
+                                NOW
+                        );
+
+        assertTrue(consumed);
+    }
+
+    @Test
+    void returnsFalseWhenVerificationTokenIsNotConsumed() {
+        when(
+                phoneVerificationMapper
+                        .consumeVerificationTokenIfUsable(
+                                10L,
+                                1L,
+                                "verification-token-hash",
+                                NOW
+                        )
+        ).thenReturn(0);
+
+        boolean consumed =
+                phoneVerificationStore
+                        .consumeVerificationTokenIfUsable(
+                                10L,
+                                1L,
+                                "verification-token-hash",
+                                NOW
+                        );
+
+        assertFalse(consumed);
+    }
+
     private PhoneVerification createPhoneVerification() {
         return PhoneVerification.issue(
                 1L,

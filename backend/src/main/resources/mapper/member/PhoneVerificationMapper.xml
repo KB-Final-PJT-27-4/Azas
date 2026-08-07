@@ -104,6 +104,15 @@
         LIMIT 1
     </select>
 
+    <select id="findByVerificationTokenHash"
+            resultMap="phoneVerificationResultMap">
+        SELECT
+        <include refid="phoneVerificationColumns"/>
+        FROM phone_verification
+        WHERE verification_token_hash =
+        #{verificationTokenHash}
+    </select>
+
     <update id="expireUnverifiedByMemberId">
         UPDATE phone_verification
         SET expires_at = #{expiredAt}
@@ -135,6 +144,19 @@
           AND verified_at IS NULL
           AND expires_at > #{verifiedAt}
           AND attempt_count &lt; #{maxAttempts}
+    </update>
+
+    <update id="consumeVerificationTokenIfUsable">
+        UPDATE phone_verification
+        SET token_consumed_at = #{consumedAt}
+        WHERE phone_verification_id =
+              #{phoneVerificationId}
+          AND member_id = #{memberId}
+          AND verification_token_hash =
+              #{verificationTokenHash}
+          AND verified_at IS NOT NULL
+          AND token_expires_at > #{consumedAt}
+          AND token_consumed_at IS NULL
     </update>
 
 </mapper>
