@@ -7,6 +7,7 @@ import com.azas.domain.member.dto.MemberProfileUpdateCommand;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.service.MemberProfileService;
 import com.azas.domain.member.service.MemberProfileUpdateService;
+import com.azas.domain.member.service.MemberWithdrawalService;
 import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
@@ -32,11 +33,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -51,6 +49,10 @@ class MemberControllerTest {
 
     @Mock
     private AccessTokenMemberResolver accessTokenMemberResolver;
+
+    @Mock
+    private MemberWithdrawalService
+            memberWithdrawalService;
 
     @InjectMocks
     private MemberController memberController;
@@ -302,5 +304,91 @@ class MemberControllerTest {
 
         verify(memberProfileService)
                 .getMyProfile(1L);
+    }
+
+    @Test
+    void withdrawsCurrentMember()
+            throws Exception {
+        when(
+                accessTokenMemberResolver.resolveMemberId(
+                        "Bearer access-token"
+                )
+        ).thenReturn(1L);
+
+        mockMvc.perform(
+                        delete("/api/v1/members/me")
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isNoContent());
+
+        verify(accessTokenMemberResolver)
+                .resolveMemberId(
+                        "Bearer access-token"
+                );
+        verify(memberWithdrawalService)
+                .withdrawMyMembership(1L);
+    }
+
+    @Test
+    void rejectsWithdrawalWithoutAccessToken()
+            throws Exception {
+        when(
+                accessTokenMemberResolver.resolveMemberId(
+                        null
+                )
+        ).thenThrow(
+                new BusinessException(
+                        ErrorCode.ACCESS_TOKEN_REQUIRED
+                )
+        );
+
+        mockMvc.perform(
+                        delete("/api/v1/members/me")
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(
+                        jsonPath("$.error.code")
+                                .value(
+                                        "ACCESS_TOKEN_REQUIRED"
+                                )
+                );
+
+        verifyNoInteractions(memberWithdrawalService);
+    }
+
+    @Test
+    void rejectsAlreadyWithdrawnMember()
+            throws Exception {
+        when(
+                accessTokenMemberResolver.resolveMemberId(
+                        "Bearer access-token"
+                )
+        ).thenReturn(1L);
+
+        doThrow(
+                new BusinessException(
+                        ErrorCode.WITHDRAWN_MEMBER
+                )
+        ).when(memberWithdrawalService)
+                .withdrawMyMembership(1L);
+
+        mockMvc.perform(
+                        delete("/api/v1/members/me")
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(
+                        jsonPath("$.error.code")
+                                .value("WITHDRAWN_MEMBER")
+                );
+
+        verify(memberWithdrawalService)
+                .withdrawMyMembership(1L);
     }
 }

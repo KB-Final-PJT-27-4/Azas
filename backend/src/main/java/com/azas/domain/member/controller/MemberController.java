@@ -5,6 +5,7 @@ import com.azas.domain.member.dto.MemberProfileResult;
 import com.azas.domain.member.dto.MemberProfileUpdateRequest;
 import com.azas.domain.member.service.MemberProfileService;
 import com.azas.domain.member.service.MemberProfileUpdateService;
+import com.azas.domain.member.service.MemberWithdrawalService;
 import com.azas.global.response.ApiErrorResponse;
 import com.azas.global.security.AccessTokenMemberResolver;
 import io.swagger.annotations.Api;
@@ -13,12 +14,7 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Api(tags = "회원")
 @RestController
@@ -31,6 +27,8 @@ public class MemberController {
             memberProfileUpdateService;
     private final AccessTokenMemberResolver
             accessTokenMemberResolver;
+    private final MemberWithdrawalService
+            memberWithdrawalService;
 
     @ApiOperation(
             value = "내 회원 정보 조회",
@@ -123,5 +121,41 @@ public class MemberController {
         return ResponseEntity.ok(
                 MemberProfileResponse.from(result)
         );
+    }
+
+    @ApiOperation(
+            value = "회원 탈퇴",
+            notes = "현재 로그인 회원을 탈퇴 처리하고 "
+                    + "해당 회원의 모든 활성 Refresh Token을 폐기합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    code = 204,
+                    message = "회원 탈퇴 성공"
+            ),
+            @ApiResponse(
+                    code = 401,
+                    message = "Access Token 누락·만료·유효하지 않음 또는 이미 탈퇴한 회원",
+                    response = ApiErrorResponse.class
+            )
+    })
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> withdrawMyMembership(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorizationHeader
+    ) {
+        long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        memberWithdrawalService.withdrawMyMembership(
+                memberId
+        );
+
+        return ResponseEntity.noContent().build();
     }
 }
