@@ -84,4 +84,11 @@
           AND status = 'ACTIVE'
     </update>
 
+    <update id="withdrawIfActive">
+        UPDATE member
+        SET status = 'WITHDRAWN'
+        WHERE member_id = #{memberId}
+          AND status = 'ACTIVE'
+    </update>
+
 </mapper>
