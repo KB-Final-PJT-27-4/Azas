@@ -242,6 +242,20 @@ const routes: RouteRecordRaw[] = [
       showHeaderNotification: false,
     },
   },
+  {
+    path: '/allowance-requests/:requestId',
+    name: 'AllowanceRequest',
+    component: () => import('@/views/allowance/AllowanceRequestView.vue'),
+    props: true,
+    meta: {
+      requiresAuth: true,
+      roles: ['PARENT'],
+      hideBottomNavigation: true,
+      headerTitle: '용돈 요청',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
 
   // 아이
   {
