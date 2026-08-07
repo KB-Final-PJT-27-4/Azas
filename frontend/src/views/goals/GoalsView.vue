@@ -36,6 +36,11 @@ const currentGoalNumber = computed(() => currentGoalIndex.value + 1)
 const remainingGoalCount = computed(() =>
   Math.max(selectedGoals.value.length - currentGoalNumber.value, 0),
 )
+const nextButtonLabel = computed(() => {
+  if (currentStep.value === 3) return '시작하기'
+  if (currentStep.value !== 2) return '다음'
+  return remainingGoalCount.value > 0 ? '다음 목표' : '목표 확인하기'
+})
 const currentSetting = computed(() =>
   currentGoalId.value ? goalSettings[currentGoalId.value] : undefined,
 )
@@ -153,6 +158,7 @@ const selectRecommendation = (value: number) => {
       <template v-else-if="currentStep === 2 && currentSetting">
         <GoalAmountStep
           :goal-name="currentGoalName"
+          :goal-number="currentGoalNumber"
           :amount="currentSetting.amount"
           :target-date="currentSetting.targetDate"
           @update:amount="updateAmount"
@@ -171,21 +177,6 @@ const selectRecommendation = (value: number) => {
         currentStep === 3 ? 'relative min-h-[220px] overflow-hidden pb-[140px]' : 'pb-8',
       ]"
     >
-      <div
-        v-if="currentStep === 2"
-        class="col-span-2 flex items-center justify-between rounded-xl bg-[var(--color-selected-background)] px-4 py-3 text-sm"
-        role="status"
-        aria-live="polite"
-        :aria-label="`${selectedGoals.length}개 중 ${currentGoalNumber}번째 목표 설정 중. ${remainingGoalCount > 0 ? `${remainingGoalCount}개 남음` : '마지막 목표'}`"
-      >
-        <strong class="text-[var(--color-selected-text)]">
-          목표 {{ currentGoalNumber }} / {{ selectedGoals.length }}
-        </strong>
-        <span class="text-[var(--color-text-secondary)]">
-          {{ remainingGoalCount > 0 ? `${remainingGoalCount}개 남음` : '마지막 목표' }}
-        </span>
-      </div>
-
       <img
         v-if="currentStep === 3"
         class="pointer-events-none absolute bottom-0 left-3/4 h-70 w-[150%] max-w-none -translate-x-1/2 object-cover object-top"
@@ -208,7 +199,7 @@ const selectRecommendation = (value: number) => {
         :disabled="!canContinue"
         @click="currentStep === 3 ? router.push({ name: 'Home' }) : goNext()"
       >
-        {{ currentStep === 3 ? '시작하기' : '다음' }}
+        {{ nextButtonLabel }}
       </button>
     </footer>
 

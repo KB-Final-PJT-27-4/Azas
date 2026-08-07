@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { BaseDatePicker } from '@/components/common'
 
-defineProps<{
-  goalName: string
-  amount: number
-  targetDate: string
-}>()
+withDefaults(
+  defineProps<{
+    goalName: string
+    amount: number
+    targetDate: string
+    goalNumber?: number
+    showIntro?: boolean
+  }>(),
+  {
+    showIntro: true,
+  },
+)
 
 const emit = defineEmits<{
   'update:amount': [value: number]
@@ -22,16 +29,21 @@ const updateAmount = (event: Event) => {
 </script>
 
 <template>
-  <section>
-    <h1 class="text-[25px] leading-[1.35] font-bold tracking-[-0.04em]">
-      <strong class="text-[var(--color-selected-text)]">{{ goalName }}</strong> 목표 금액을
-      정해주세요
+  <div>
+    <h1 v-if="showIntro" class="text-[25px] leading-[1.35] font-bold tracking-[-0.04em]">
+      <span
+        v-if="goalNumber"
+        class="mr-1.5 inline-grid size-6 translate-y-[-2px] place-items-center rounded-full bg-[var(--color-brand-primary)] text-sm tracking-normal text-[var(--color-text-inverse)] align-middle"
+      >
+        {{ goalNumber }}
+      </span>
+      <span class="text-[var(--color-selected-text)]">{{ goalName }}</span> 목표 금액을 정해주세요
     </h1>
-    <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
+    <p v-if="showIntro" class="mt-2 text-sm text-[var(--color-text-secondary)]">
       금액과 시기를 입력하면 월 저축액을 계산해드려요.
     </p>
 
-    <div class="mt-9 grid gap-6">
+    <div class="grid gap-6" :class="showIntro ? 'mt-9' : ''">
       <label class="grid gap-2">
         <span class="flex items-center justify-between text-sm font-bold">
           목표 금액
@@ -67,13 +79,13 @@ const updateAmount = (event: Event) => {
       />
 
       <div class="rounded-2xl bg-[var(--color-selected-background)] p-5">
-        <strong class="text-xl text-[var(--color-selected-text)]">
+        <div class="text-xl font-semibold text-[var(--color-selected-text)]">
           매월 약 {{ Math.ceil(amount / 240).toLocaleString('ko-KR') }}원
-        </strong>
+        </div>
         <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
           현재부터 240개월 동안 균등 저축 기준
         </p>
       </div>
     </div>
-  </section>
+  </div>
 </template>
