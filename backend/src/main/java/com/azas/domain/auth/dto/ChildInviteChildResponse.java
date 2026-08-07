@@ -7,7 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-@ApiModel(description = "회원 계정과 연결된 자녀 정보")
+@ApiModel(description = "자녀 초대 대상 정보")
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class ChildInviteChildResponse {
@@ -27,21 +27,12 @@ public class ChildInviteChildResponse {
     )
     private final String name;
 
-    @ApiModelProperty(
-            value = "자녀 회원 계정 연결 완료 여부",
-            required = true,
-            example = "true"
-    )
-    @JsonProperty("member_linked")
-    private final boolean memberLinked;
-
     public static ChildInviteChildResponse from(
             ChildInviteOAuthResult result
     ) {
         return new ChildInviteChildResponse(
                 result.getChildId(),
-                result.getChildName(),
-                true
+                result.getChildName()
         );
     }
 }
