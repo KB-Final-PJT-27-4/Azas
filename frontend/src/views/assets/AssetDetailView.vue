@@ -32,30 +32,32 @@ const cancelMemoEdit = () => {
   isEditingMemo.value = false
 }
 
+const updateMemoDraft = (event: Event) => {
+  memoDraft.value = (event.target as HTMLTextAreaElement).value
+}
+
 const goToAssets = () => router.push({ name: 'Assets' })
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white">
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[var(--color-surface)]"
+  >
     <article class="px-5 pt-7 pb-10 text-[var(--color-text-primary)]">
       <h1 class="m-0 text-[24px] leading-tight font-bold tracking-[-0.02em]">
         {{ transaction.accountLabel }}
       </h1>
 
-      <form
-        v-if="isEditingMemo"
-        class="mt-3"
-        aria-label="메모 수정"
-        @submit.prevent="saveMemo"
-      >
+      <form v-if="isEditingMemo" class="mt-3" aria-label="메모 수정" @submit.prevent="saveMemo">
         <div class="relative">
           <textarea
             ref="memoInput"
-            v-model="memoDraft"
+            :value="memoDraft"
             class="block h-24 w-full resize-none rounded-lg border border-[var(--color-brand-primary)] px-3 pt-2.5 pb-7 text-[15px] leading-6 text-[var(--color-text-secondary)] outline-none focus:ring-2 focus:ring-[var(--color-selected-background)]"
             aria-label="메모"
             maxlength="50"
+            @input="updateMemoDraft"
             @keydown.esc="cancelMemoEdit"
           ></textarea>
           <span
@@ -66,7 +68,7 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
         </div>
         <div class="mt-1.5 flex justify-end">
           <button
-            class="h-9 shrink-0 rounded-lg bg-[var(--color-brand-primary)] px-4 text-[14px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+            class="h-9 shrink-0 rounded-lg bg-[var(--color-brand-primary)] px-4 text-[14px] font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
             type="submit"
             aria-label="메모 저장"
           >
@@ -80,7 +82,7 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
           {{ memo }}
         </p>
         <button
-          class="grid size-8 shrink-0 place-items-center rounded-full text-[#8b97a7] active:bg-[var(--color-unselected-background)]"
+          class="grid size-8 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[var(--color-unselected-background)]"
           type="button"
           aria-label="메모 수정"
           @click="startMemoEdit"
@@ -91,7 +93,7 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
 
       <button
         v-else
-        class="mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 text-[14px] font-semibold text-[var(--color-text-secondary)] active:bg-[var(--color-unselected-background)]"
+        class="mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[14px] font-semibold text-[var(--color-text-secondary)] active:bg-[var(--color-unselected-background)]"
         type="button"
         @click="startMemoEdit"
       >
@@ -102,7 +104,7 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
       <div class="mt-5 border-t border-[var(--color-border)] pt-6">
         <dl class="m-0 grid grid-cols-[minmax(92px,1fr)_minmax(0,2fr)] gap-x-5 gap-y-6">
           <dt class="text-[16px] font-semibold text-[var(--color-text-secondary)]">거래 금액</dt>
-          <dd class="m-0 text-right text-[20px] font-semibold text-[#22a8e8]">
+          <dd class="m-0 text-right text-[20px] font-semibold text-[var(--color-selected-text)]">
             +{{ formatWon(transaction.amount) }}
           </dd>
 
@@ -133,7 +135,7 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
       </div>
 
       <button
-        class="mt-16 h-14 w-full rounded-[14px] bg-[var(--color-brand-primary)] text-[17px] font-extrabold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]"
+        class="mt-16 h-14 w-full rounded-[14px] bg-[var(--color-brand-primary)] text-[17px] font-extrabold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)]"
         type="button"
         @click="goToAssets"
       >
