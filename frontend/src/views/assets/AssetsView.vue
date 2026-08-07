@@ -9,6 +9,8 @@ import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
 import { assetGoals, assetSummary, assetTransactions } from '@/data/assetDummyData'
 
 const route = useRoute()
+const loopedAssetGoals =
+  assetGoals.length > 1 && assetGoals[0] ? [...assetGoals, assetGoals[0]] : assetGoals
 
 const activeGoalIndex = ref(0)
 const activeAccountId = ref<number | null>(null)
@@ -42,6 +44,7 @@ const activeAccountFilterLabel = computed(
 )
 
 let previousBodyOverflow = ''
+let goalCarouselResetTimer: ReturnType<typeof window.setTimeout> | null = null
 
 if (route.query.allowanceRequest) {
   isTransferSheetOpen.value = true
@@ -63,6 +66,7 @@ watch(
 
 onBeforeUnmount(() => {
   document.body.style.overflow = previousBodyOverflow
+  if (goalCarouselResetTimer !== null) window.clearTimeout(goalCarouselResetTimer)
 })
 
 const percentage = (current: number, target: number) =>
@@ -84,15 +88,26 @@ const updateActiveGoalByScroll = (event: Event) => {
   const target = event.currentTarget as HTMLElement
   if (!target.clientWidth) return
 
-  const nextIndex = Math.min(
+  const slideIndex = Math.min(
     Math.max(Math.round(target.scrollLeft / target.clientWidth), 0),
-    assetGoals.length - 1,
+    loopedAssetGoals.length - 1,
   )
-  if (nextIndex === activeGoalIndex.value) return
+  const nextIndex = slideIndex % assetGoals.length
 
-  activeGoalIndex.value = nextIndex
-  activeAccountId.value = null
-  isTransferFilterOpen.value = false
+  if (nextIndex !== activeGoalIndex.value) {
+    activeGoalIndex.value = nextIndex
+    activeAccountId.value = null
+    isTransferFilterOpen.value = false
+  }
+
+  if (goalCarouselResetTimer !== null) window.clearTimeout(goalCarouselResetTimer)
+  goalCarouselResetTimer = window.setTimeout(() => {
+    if (slideIndex !== assetGoals.length) return
+
+    target.style.scrollBehavior = 'auto'
+    target.scrollLeft = 0
+    requestAnimationFrame(() => target.style.removeProperty('scroll-behavior'))
+  }, 120)
 }
 
 const selectAccountFilter = (accountId: number | null) => {
@@ -171,9 +186,10 @@ const retryTransfer = () => {
         @scroll.passive="updateActiveGoalByScroll"
       >
         <article
-          v-for="goal in assetGoals"
-          :key="goal.id"
+          v-for="(goal, slideIndex) in loopedAssetGoals"
+          :key="`${goal.id}-${slideIndex}`"
           class="mx-[5px] mt-[18px] w-[calc(100%-10px)] flex-none snap-center rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-4 shadow-sm"
+          :aria-hidden="slideIndex === assetGoals.length ? 'true' : undefined"
         >
           <div class="flex items-center justify-between gap-3">
             <h3 class="m-0 truncate text-[20px] font-extrabold">{{ goal.title }}</h3>
