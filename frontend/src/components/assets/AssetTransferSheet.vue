@@ -10,10 +10,14 @@ const props = withDefaults(
     open: boolean
     targetAccountName?: string
     targetAccountNumber?: string
+    initialAmount?: number
+    initialMemo?: string
   }>(),
   {
     targetAccountName: 'KB 아이사랑적금',
     targetAccountNumber: '123-456-789',
+    initialAmount: 0,
+    initialMemo: '',
   },
 )
 
@@ -53,8 +57,8 @@ watch(
   () => props.open,
   (open) => {
     if (!open) return
-    amountInput.value = '0'
-    memo.value = ''
+    amountInput.value = props.initialAmount > 0 ? props.initialAmount.toLocaleString('ko-KR') : '0'
+    memo.value = props.initialMemo
     sourceAccountId.value = 'kb-789'
     targetAccountId.value = 'goal-primary'
   },

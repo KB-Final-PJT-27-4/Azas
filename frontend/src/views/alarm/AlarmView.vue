@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+import { allowanceRequests } from '@/mocks/allowanceRequests'
 
 type AlarmItem = {
   id: number
@@ -8,9 +11,26 @@ type AlarmItem = {
   message: string
   receivedAt: string
   isRead: boolean
+  requestId?: string
 }
 
+const router = useRouter()
+const pendingAllowanceRequest = allowanceRequests.find(({ status }) => status === 'pending')
+
 const alarms = ref<AlarmItem[]>([
+  ...(pendingAllowanceRequest
+    ? [
+        {
+          id: 5,
+          group: '오늘' as const,
+          title: `${pendingAllowanceRequest.childName}가 용돈을 요청했어요`,
+          message: `${pendingAllowanceRequest.amount.toLocaleString('ko-KR')}원이 필요한 이유를 확인해 주세요.`,
+          receivedAt: '방금 전',
+          isRead: false,
+          requestId: pendingAllowanceRequest.id,
+        },
+      ]
+    : []),
   {
     id: 1,
     group: '오늘',
@@ -54,6 +74,9 @@ const unreadCount = computed(() => alarms.value.filter(({ isRead }) => !isRead).
 
 const readAlarm = (alarm: AlarmItem) => {
   alarm.isRead = true
+  if (alarm.requestId) {
+    router.push({ name: 'AllowanceRequest', params: { requestId: alarm.requestId } })
+  }
 }
 
 const readAllAlarms = () => {
