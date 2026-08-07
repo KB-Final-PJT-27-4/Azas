@@ -140,7 +140,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/edit',
     name: 'MypageEdit',
     component: () => import('@/views/mypage/MypageEditView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/child-edit',
