@@ -82,28 +82,32 @@ public class OAuthController {
     }
 
     @ApiOperation(
-            value = "자녀 초대코드 기반 소셜 로그인/회원가입",
-            notes = "자녀 초대코드와 Google 또는 Kakao 인가 코드를 검증하고, 자녀 회원 계정 생성 또는 로그인을 처리한 뒤 자녀 정보와 연결합니다."
+            value = "자녀 초대코드 기반 소셜 회원가입/로그인",
+            notes = "자녀 초대 토큰과 소셜 인가 코드를 검증하고 "
+                    + "CHILD 회원을 생성하거나 로그인합니다. "
+                    + "이 단계에서는 자녀 정보와 회원 계정을 연결하지 않으며, "
+                    + "가족 초대 상태를 PENDING으로 유지합니다. "
+                    + "로그인 성공 후 별도의 가족 초대 수락 API를 호출해야 합니다."
     )
     @ApiResponses({
             @ApiResponse(
                     code = 200,
-                    message = "자녀 회원가입 또는 로그인 및 초대 수락 성공",
+                    message = "로그인 및 수락 대기 초대 정보 조회 성공",
                     response = ChildInviteOAuthResponse.class
             ),
             @ApiResponse(
                     code = 400,
-                    message = "요청값 오류, 지원하지 않는 제공자 또는 사용할 수 없는 초대코드",
+                    message = "요청값 오류, 지원하지 않는 제공자 또는 사용할 수 없는 자녀 초대",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
                     code = 401,
-                    message = "만료되었거나 유효하지 않은 인가 코드",
+                    message = "유효하지 않은 인가 코드 또는 탈퇴 회원",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
                     code = 409,
-                    message = "회원 유형 충돌 또는 이미 연결된 가족 구성원",
+                    message = "초대 유형과 기존 회원 유형 불일치",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
@@ -141,28 +145,32 @@ public class OAuthController {
     }
 
     @ApiOperation(
-            value = "부모 초대코드 기반 소셜 로그인/회원가입",
-            notes = "부모 초대코드와 Google 또는 Kakao 인가 코드를 검증하고, 부모 회원 계정 생성 또는 로그인을 처리한 뒤 자녀와의 관계를 등록합니다."
+            value = "부모 초대코드 기반 소셜 회원가입/로그인",
+            notes = "부모 초대 토큰과 소셜 인가 코드를 검증하고 "
+                    + "PARENT 회원을 생성하거나 로그인합니다. "
+                    + "이 단계에서는 부모·자녀 관계를 등록하지 않으며, "
+                    + "가족 초대 상태를 PENDING으로 유지합니다. "
+                    + "부모 관계 유형은 별도의 가족 초대 수락 API에서 전달합니다."
     )
     @ApiResponses({
             @ApiResponse(
                     code = 200,
-                    message = "부모 회원가입 또는 로그인 및 초대 수락 성공",
+                    message = "로그인 및 수락 대기 초대 정보 조회 성공",
                     response = ParentInviteOAuthResponse.class
             ),
             @ApiResponse(
                     code = 400,
-                    message = "요청값 오류, 지원하지 않는 제공자 또는 사용할 수 없는 초대코드",
+                    message = "요청값 오류, 지원하지 않는 제공자 또는 사용할 수 없는 부모 초대",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
                     code = 401,
-                    message = "만료되었거나 유효하지 않은 인가 코드",
+                    message = "유효하지 않은 인가 코드 또는 탈퇴 회원",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
                     code = 409,
-                    message = "회원 유형 충돌 또는 이미 등록된 부모-자녀 관계",
+                    message = "초대 유형과 기존 회원 유형 불일치",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
