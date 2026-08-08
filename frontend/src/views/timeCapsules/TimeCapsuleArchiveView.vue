@@ -71,30 +71,53 @@ const capsuleAccounts = [
     </section>
 
     <section class="grid grid-cols-2 gap-3 px-5 pt-1" aria-label="타임캡슐 계좌 목록">
-      <button
+      <article
         v-for="capsule in capsuleAccounts"
         :key="capsule.id"
-        class="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white p-3 text-left shadow-[0_4px_16px_rgba(39,91,119,0.04)] transition-transform active:scale-[0.98]"
-        type="button"
-        @click="router.push(`/time-capsules/${capsule.id}`)"
+        class="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[0_4px_16px_rgba(39,91,119,0.04)]"
+        :class="{
+          'border-[#8ecbf1] shadow-[0_18px_40px_rgba(85,192,244,0.22)] ring-2 ring-[#dff4ff]':
+            isReleased(capsule.createdAt),
+        }"
       >
-        <span class="grid aspect-[4/3] place-items-center rounded-xl bg-[#ecfaff]">
-          <img
-            class="h-16 w-20 object-contain"
-            :src="isReleased(capsule.createdAt) ? openImage : lockImage"
-            :alt="isReleased(capsule.createdAt) ? '열린 타임캡슐' : '잠긴 타임캡슐'"
-          />
-        </span>
-        <strong class="mt-4 block truncate text-base text-[var(--color-text-primary)]">
-          {{ capsule.name }}
-        </strong>
-        <time class="mt-3 block text-xs text-[var(--color-text-secondary)]">
-          {{ capsule.createdAt }}
-        </time>
-        <p class="mt-3 text-xs font-bold text-[var(--color-selected-text)]">
-          저축 금액 {{ capsule.savedAmount.toLocaleString('ko-KR') }}원
-        </p>
-      </button>
+        <button
+          class="block w-full text-left transition-transform active:scale-[0.98]"
+          type="button"
+          @click="router.push(`/time-capsules/${capsule.id}`)"
+        >
+          <span class="relative grid aspect-[4/3] place-items-center rounded-xl bg-[#ecfaff]">
+            <em
+              v-if="isReleased(capsule.createdAt)"
+              class="absolute top-2 right-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-black text-[var(--color-selected-text)] not-italic shadow-[0_4px_10px_rgba(85,192,244,0.18)]"
+            >
+              열림
+            </em>
+            <img
+              class="h-16 w-20 object-contain"
+              :src="isReleased(capsule.createdAt) ? openImage : lockImage"
+              :alt="isReleased(capsule.createdAt) ? '열린 타임캡슐' : '잠긴 타임캡슐'"
+            />
+          </span>
+          <strong class="mt-4 block truncate text-base text-[var(--color-text-primary)]">
+            {{ capsule.name }}
+          </strong>
+          <time class="mt-3 block text-xs text-[var(--color-text-secondary)]">
+            {{ capsule.createdAt }}
+          </time>
+          <p class="mt-3 text-xs font-bold text-[var(--color-selected-text)]">
+            저축 금액 {{ capsule.savedAmount.toLocaleString('ko-KR') }}원
+          </p>
+        </button>
+
+        <button
+          v-if="capsule.id === 1"
+          class="mt-4 min-h-11 w-full rounded-xl border-0 bg-[var(--color-brand-primary)] px-3 text-sm font-black text-white shadow-[0_8px_20px_rgba(85,192,244,0.25)] active:bg-[var(--color-brand-primary-pressed)]"
+          type="button"
+          @click="router.push(`/time-capsules/${capsule.id}/open`)"
+        >
+          타임캡슐 보러가기
+        </button>
+      </article>
     </section>
 
     <div class="mt-auto flex justify-end px-5 pt-10 pb-5">

@@ -122,6 +122,13 @@ const routes: RouteRecordRaw[] = [
     meta: timeCapsuleHeaderMeta,
   },
   {
+    path: '/time-capsules/:capsuleListId/open',
+    name: 'TimeCapsuleOpen',
+    component: () => import('@/views/timeCapsules/TimeCapsuleOpenView.vue'),
+    props: true,
+    meta: { requiresAuth: true, hideNavigation: true },
+  },
+  {
     path: '/time-capsules/:capsuleListId/:capsuleId',
     name: 'TimeCapsuleDetail',
     component: () => import('@/views/timeCapsules/TimeCapsuleDetailView.vue'),
