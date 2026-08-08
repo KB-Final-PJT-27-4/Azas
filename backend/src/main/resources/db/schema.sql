@@ -320,10 +320,10 @@ CREATE TABLE financial_account (
   balance DECIMAL(19, 2) NOT NULL DEFAULT 0 COMMENT '최신 잔액 캐시',
   balance_updated_at DATETIME(6) NULL COMMENT '잔액 기준 시각',
   account_status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, MATURED, CLOSED',
-  child_access_mode VARCHAR(30) NULL COMMENT 'CO_MANAGED, UNRESTRICTED',
-  child_available_amount DECIMAL(19, 2) NULL COMMENT '자녀 사용 가능 금액',
-  access_updated_by_member_id BIGINT UNSIGNED NULL COMMENT '접근정책 변경 회원 ID',
-  access_updated_at DATETIME(6) NULL COMMENT '접근정책 변경 시각',
+  child_access_mode VARCHAR(30) NULL COMMENT '자녀 사용 관리 모드: CO_MANAGED, UNRESTRICTED',
+  child_available_amount DECIMAL(19, 2) NULL COMMENT '월간 사용 관리 기준 금액. 실제 금융기관 제한 금액이 아님',
+  access_updated_by_member_id BIGINT UNSIGNED NULL COMMENT '자녀 사용 관리 정책 변경 회원 ID',
+  access_updated_at DATETIME(6) NULL COMMENT '자녀 사용 관리 정책 변경 시각',
   goal_name_snapshot VARCHAR(100) NULL COMMENT '목표명 스냅샷',
   goal_target_amount DECIMAL(19, 2) NULL COMMENT '목표 금액',
   goal_target_date DATE NULL COMMENT '목표 달성 예정일',
@@ -350,9 +350,41 @@ CREATE TABLE financial_account (
     FOREIGN KEY (access_updated_by_member_id) REFERENCES member (member_id),
   CONSTRAINT fk_financial_account_goal_template
     FOREIGN KEY (financial_goal_template_id) REFERENCES financial_goal_template (financial_goal_template_id),
-  CONSTRAINT ck_financial_account_product_type CHECK (account_product_type IN ('DEMAND_DEPOSIT', 'SAVINGS', 'SUBSCRIPTION')),
-  CONSTRAINT ck_financial_account_status CHECK (account_status IN ('ACTIVE', 'MATURED', 'CLOSED')),
-  CONSTRAINT ck_financial_account_link_status CHECK (link_status IN ('DISCOVERED', 'ACTIVE', 'UNLINKED'))
+  CONSTRAINT ck_financial_account_product_type
+    CHECK (account_product_type IN ('DEMAND_DEPOSIT', 'SAVINGS', 'SUBSCRIPTION')),
+  CONSTRAINT ck_financial_account_status
+    CHECK (account_status IN ('ACTIVE', 'MATURED', 'CLOSED')),
+  CONSTRAINT ck_financial_account_link_status
+    CHECK (link_status IN ('DISCOVERED', 'ACTIVE', 'UNLINKED')),
+  CONSTRAINT ck_financial_account_child_usage_mode
+    CHECK (
+      child_access_mode IS NULL
+      OR child_access_mode IN ('CO_MANAGED', 'UNRESTRICTED')
+    ),
+  CONSTRAINT ck_financial_account_child_usage_target
+    CHECK (
+      child_access_mode IS NULL
+      OR (
+        child_id IS NOT NULL
+        AND account_product_type = 'DEMAND_DEPOSIT'
+      )
+    ),
+  CONSTRAINT ck_financial_account_child_usage_amount
+    CHECK (
+      (
+        child_access_mode IS NULL
+        AND child_available_amount IS NULL
+      )
+      OR (
+        child_access_mode = 'CO_MANAGED'
+        AND child_available_amount IS NOT NULL
+        AND child_available_amount >= 0
+      )
+      OR (
+        child_access_mode = 'UNRESTRICTED'
+        AND child_available_amount IS NULL
+      )
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='연결 금융계좌';
 
 CREATE TABLE financial_sync_job (
