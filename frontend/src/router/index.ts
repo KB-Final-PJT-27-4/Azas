@@ -152,7 +152,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/child-edit',
     name: 'ChildEdit',
     component: () => import('@/views/mypage/ChildEditView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/family',
