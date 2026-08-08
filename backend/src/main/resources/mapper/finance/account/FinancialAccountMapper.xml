@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.finance.account.mapper.FinancialAccountMapper">
+
+    <!-- 기존 DB 컬럼을 자녀 사용 관리 정책 도메인 명칭으로 변환한다. -->
+    <sql id="usagePolicyColumns">
+        financial_account_id,
+        child_id,
+        account_product_type,
+        account_status,
+        link_status,
+        child_access_mode AS child_usage_mode,
+        child_available_amount AS child_monthly_budget_amount,
+        access_updated_by_member_id
+            AS usage_policy_updated_by_member_id,
+        access_updated_at
+            AS usage_policy_updated_at
+    </sql>
+
+    <select id="findUsagePolicyByAccountId"
+            resultType="com.azas.domain.finance.account.entity.FinancialAccountUsagePolicy">
+        SELECT
+        <include refid="usagePolicyColumns"/>
+        FROM financial_account
+        WHERE financial_account_id = #{financialAccountId}
+    </select>
+
+    <!-- 정책 변경 중 동일 계좌가 동시에 수정되지 않도록 행 잠금을 건다. -->
+    <select id="findUsagePolicyByAccountIdForUpdate"
+            resultType="com.azas.domain.finance.account.entity.FinancialAccountUsagePolicy">
+        SELECT
+        <include refid="usagePolicyColumns"/>
+        FROM financial_account
+        WHERE financial_account_id = #{financialAccountId}
+        FOR UPDATE
+    </select>
+
+    <select id="countActiveParentAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+        WHERE cp.member_id = #{memberId}
+          AND cp.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND m.member_type = 'PARENT'
+    </select>
+
+    <select id="countActiveChildMemberAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+        WHERE c.child_id = #{childId}
+          AND c.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND m.member_type = 'CHILD'
+    </select>
+
+    <update id="updateUsagePolicy">
+        UPDATE financial_account
+        SET child_access_mode = #{childUsageMode},
+            child_available_amount =
+                #{childMonthlyBudgetAmount},
+            access_updated_by_member_id =
+                #{updatedByMemberId},
+            access_updated_at = #{updatedAt},
+            updated_at = #{updatedAt}
+        WHERE financial_account_id =
+              #{financialAccountId}
+    </update>
+
+</mapper>
