@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import memorySheetUrl from '@/assets/images/timeCapsules/open/memory-sheet.png'
 
 type Memory = {
@@ -131,6 +132,9 @@ const openLetterModal = (index: number) => {
   selectedMemoryIndex.value = index
   isFullLetterModalOpen.value = true
 }
+
+const router = useRouter()
+const goBack = () => router.back()
 </script>
 
 <template>
@@ -290,6 +294,8 @@ const openLetterModal = (index: number) => {
         마지막 추억 콜라주 보기 <span>→</span>
       </button>
       <small>대표 사진 12장은 언제든 직접 바꿀 수 있어요</small>
+
+      <button class="back-button" type="button" @click="goBack">돌아가기</button>
     </section>
 
     <Teleport to="body">
@@ -1009,6 +1015,18 @@ const openLetterModal = (index: number) => {
   margin-top: 14px;
   color: #a2aeb2;
   font-size: 10px;
+}
+
+.back-button {
+  margin-top: 22px;
+  padding: 10px 22px;
+  color: #7f939d;
+  background: transparent;
+  border: 1px solid rgba(127, 147, 157, 0.32);
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .modal-backdrop {
