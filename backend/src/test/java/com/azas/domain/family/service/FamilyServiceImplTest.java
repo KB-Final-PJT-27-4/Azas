@@ -1,15 +1,10 @@
 package com.azas.domain.family.service;
 
-import com.azas.domain.auth.entity.FamilyInvitation;
-import com.azas.domain.auth.entity.FamilyInvitationStatus;
-import com.azas.domain.auth.entity.FamilyInviteeType;
 import com.azas.domain.auth.mapper.ChildInviteMapper;
 import com.azas.domain.auth.mapper.ParentInviteMapper;
 import com.azas.domain.auth.service.FamilyInvitationStore;
 import com.azas.domain.auth.service.TokenHashEncoder;
-import com.azas.domain.child.entity.Child;
-import com.azas.domain.child.entity.ChildStatus;
-import com.azas.domain.child.entity.RelationType;
+
 import com.azas.domain.family.dto.AllowanceRequestResponse;
 import com.azas.domain.family.dto.ChildMemberLinkResponse;
 import com.azas.domain.family.dto.FamilyGuardianListResponse;
@@ -19,7 +14,6 @@ import com.azas.domain.family.mapper.FamilyMapper;
 import com.azas.domain.member.mapper.MemberMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -64,15 +58,6 @@ public class FamilyServiceImplTest {
 
     @InjectMocks
     private FamilyServiceImpl familyService;
-
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(
-                familyService,
-                "familyInvitationBaseUrl",
-                "http://localhost:5173/family-invitations"
-        );
-    }
 
     @Test
     void getFamilyMembersReturnsMembersForAccessibleChild() {
