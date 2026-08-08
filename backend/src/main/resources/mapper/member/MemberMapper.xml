@@ -71,4 +71,24 @@
                  )
     </insert>
 
+    <update id="updateProfile"
+            parameterType="com.azas.domain.member.entity.Member">
+        UPDATE member
+        SET birth_date = #{birthDate},
+            profile_image_url = #{profileImageUrl},
+            phone_number_ciphertext =
+                #{phoneNumberCiphertext},
+            phone_number_hash = #{phoneNumberHash},
+            phone_verified_at = #{phoneVerifiedAt}
+        WHERE member_id = #{memberId}
+          AND status = 'ACTIVE'
+    </update>
+
+    <update id="withdrawIfActive">
+        UPDATE member
+        SET status = 'WITHDRAWN'
+        WHERE member_id = #{memberId}
+          AND status = 'ACTIVE'
+    </update>
+
 </mapper>

@@ -89,11 +89,27 @@ public enum ErrorCode {
             HttpStatus.TOO_MANY_REQUESTS,
             "휴대폰 인증번호 확인 가능 횟수를 초과했습니다."
     ),
+    INVALID_PHONE_VERIFICATION_TOKEN(
+            HttpStatus.BAD_REQUEST,
+            "휴대폰 인증 토큰이 만료되었거나 사용할 수 없습니다."
+    ),
+    PHONE_NUMBER_ALREADY_IN_USE(
+            HttpStatus.CONFLICT,
+            "이미 다른 회원이 사용 중인 휴대폰번호입니다."
+    ),
 
     // Finance
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 계좌를 찾을 수 없습니다."
+    ),
+    FINANCIAL_PRODUCT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융상품을 찾을 수 없습니다."
+    ),
+    INVALID_QUERY_PARAMETER(
+            HttpStatus.BAD_REQUEST,
+            "조회 조건이 올바르지 않습니다."
     ),
 
     // Time Capsule

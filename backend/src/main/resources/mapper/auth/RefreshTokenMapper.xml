@@ -56,4 +56,12 @@
           AND expires_at > #{revokedAt}
     </update>
 
+    <update id="revokeAllActiveByMemberId">
+        UPDATE refresh_token
+        SET revoked_at = #{revokedAt}
+        WHERE member_id = #{memberId}
+          AND revoked_at IS NULL
+          AND expires_at > #{revokedAt}
+    </update>
+
 </mapper>

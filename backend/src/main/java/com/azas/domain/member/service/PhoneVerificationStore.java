@@ -23,6 +23,11 @@ public interface PhoneVerificationStore {
             String phoneNumberHash
     );
 
+    Optional<PhoneVerification>
+    findByVerificationTokenHash(
+            String verificationTokenHash
+    );
+
     int expireUnverifiedByMemberId(
             long memberId,
             LocalDateTime expiredAt
@@ -42,5 +47,12 @@ public interface PhoneVerificationStore {
             LocalDateTime verifiedAt,
             LocalDateTime tokenExpiresAt,
             int maxAttempts
+    );
+
+    boolean consumeVerificationTokenIfUsable(
+            long phoneVerificationId,
+            long memberId,
+            String verificationTokenHash,
+            LocalDateTime consumedAt
     );
 }
