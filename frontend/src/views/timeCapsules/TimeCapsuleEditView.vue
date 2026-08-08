@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Check, ChevronDown, ImagePlus, Landmark, X } from 'lucide-vue-next'
+import { AlertTriangle, Check, ChevronDown, ImagePlus, Landmark, Trash2, X } from 'lucide-vue-next'
 import {
   findTimeCapsuleRecord,
   timeCapsuleAccounts,
@@ -27,6 +27,8 @@ const mediaItems = ref<EditMedia[]>(initialData.record.photos.map((photo) => ({ 
 const hasSaved = ref(false)
 const isAccountMenuOpen = ref(false)
 const isTransferMenuOpen = ref(false)
+const isDeleteDialogOpen = ref(false)
+const isDeleting = ref(false)
 
 const accounts = Object.values(timeCapsuleAccounts)
 const selectedAccount = computed(() => timeCapsuleAccounts[selectedAccountId.value] ?? initialData.account)
@@ -128,6 +130,36 @@ const removeMedia = (index: number) => {
 
 const cancelEdit = () => router.back()
 
+const openDeleteDialog = () => {
+  isAccountMenuOpen.value = false
+  isTransferMenuOpen.value = false
+  isDeleteDialogOpen.value = true
+}
+
+const closeDeleteDialog = () => {
+  if (!isDeleting.value) isDeleteDialogOpen.value = false
+}
+
+const deleteRecord = async () => {
+  if (isDeleting.value) return
+  isDeleting.value = true
+
+  try {
+    const sourceAccount = initialData.account
+    const sourceIndex = sourceAccount.records.findIndex(({ id }) => id === initialData.record.id)
+    if (sourceIndex < 0) throw new Error('Time capsule record not found')
+
+    sourceAccount.records.splice(sourceIndex, 1)
+    isDeleteDialogOpen.value = false
+    await router.replace(`/time-capsules/${sourceAccount.id}`)
+    showToast('타임캡슐을 삭제했습니다.', 'success')
+  } catch {
+    showToast('삭제에 실패했습니다. 다시 시도해주세요.', 'error')
+  } finally {
+    isDeleting.value = false
+  }
+}
+
 const saveEdit = async () => {
   if (!canSave.value) {
     showToast('필수 내용을 모두 입력해주세요.', 'error')
@@ -184,6 +216,18 @@ onBeforeUnmount(() => {
   <main
     class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col bg-white"
   >
+    <Teleport to="#app-header-action">
+      <button
+        class="grid size-11 place-items-center rounded-full text-[#df5a5f] transition-colors active:bg-[#fff0f1]"
+        type="button"
+        aria-label="타임캡슐 삭제"
+        title="타임캡슐 삭제"
+        @click="openDeleteDialog"
+      >
+        <Trash2 :size="21" :stroke-width="2.1" />
+      </button>
+    </Teleport>
+
     <section class="flex flex-1 flex-col px-5 py-5">
       <h1 class="text-[23px] leading-tight font-bold tracking-[-0.025em] text-[var(--color-text-primary)]">
         오늘 어떤 순간을 기록할까요?
@@ -433,5 +477,54 @@ onBeforeUnmount(() => {
       </div>
     </form>
     </section>
+
+    <Teleport to="body">
+      <Transition name="delete-sheet">
+        <div v-if="isDeleteDialogOpen" class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40" @click.self="closeDeleteDialog">
+          <section class="delete-sheet-panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]" role="alertdialog" aria-modal="true" aria-labelledby="delete-capsule-title" aria-describedby="delete-capsule-description">
+            <span class="mx-auto block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
+            <div class="mt-5 flex items-start gap-3.5">
+              <span class="grid size-11 shrink-0 place-items-center rounded-full bg-[#fff0f1] text-[#e2535a]"><AlertTriangle :size="22" /></span>
+              <div class="min-w-0 flex-1 pt-0.5">
+                <h2 id="delete-capsule-title" class="m-0 text-[19px] font-bold">타임캡슐을 삭제할까요?</h2>
+                <p id="delete-capsule-description" class="mt-1.5 mb-0 text-xs leading-relaxed text-[var(--color-text-secondary)]">삭제한 타임캡슐은 다시 복구할 수 없어요.</p>
+              </div>
+              <button class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f7] disabled:opacity-40" type="button" aria-label="삭제 확인창 닫기" :disabled="isDeleting" @click="closeDeleteDialog"><X :size="20" /></button>
+            </div>
+
+            <div class="mt-5 rounded-2xl bg-[#f7f9fa] px-4 py-3.5">
+              <strong class="mt-1 block truncate text-sm">{{ initialData.record.title }}</strong>
+              <span class="mt-1 block text-[11px] text-[var(--color-text-secondary)]">{{ initialData.record.date.replaceAll('-', '.') }} · 사진 및 영상 {{ mediaItems.length }}개</span>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-3">
+              <button class="h-[52px] rounded-xl border border-[var(--color-border)] bg-white text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8] disabled:opacity-50" type="button" :disabled="isDeleting" @click="closeDeleteDialog">취소</button>
+              <button class="flex h-[52px] items-center justify-center gap-1.5 rounded-xl border-0 bg-[#e85b61] text-sm font-bold text-white active:bg-[#cf484e] disabled:opacity-55" type="button" :disabled="isDeleting" @click="deleteRecord">
+                <Trash2 v-if="!isDeleting" :size="16" />
+                {{ isDeleting ? '삭제 중...' : '삭제하기' }}
+              </button>
+            </div>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
   </main>
 </template>
+
+<style scoped>
+.delete-sheet-enter-active,
+.delete-sheet-leave-active { transition: background-color 180ms ease; }
+.delete-sheet-enter-active .delete-sheet-panel,
+.delete-sheet-leave-active .delete-sheet-panel { transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.delete-sheet-enter-from,
+.delete-sheet-leave-to { background-color: transparent; }
+.delete-sheet-enter-from .delete-sheet-panel,
+.delete-sheet-leave-to .delete-sheet-panel { transform: translateY(100%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .delete-sheet-enter-active,
+  .delete-sheet-leave-active,
+  .delete-sheet-enter-active .delete-sheet-panel,
+  .delete-sheet-leave-active .delete-sheet-panel { transition-duration: 1ms; }
+}
+</style>
