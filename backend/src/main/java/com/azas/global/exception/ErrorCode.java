@@ -17,6 +17,10 @@ public enum ErrorCode {
             HttpStatus.INTERNAL_SERVER_ERROR,
             "서버 오류가 발생했습니다."
     ),
+    INVALID_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "잘못된 요청입니다."
+    ),
 
     // Auth
     UNSUPPORTED_OAUTH_PROVIDER(
@@ -185,7 +189,8 @@ public enum ErrorCode {
             HttpStatus.GONE,
             "타임캡슐 결과물의 보관 기간이 만료되었습니다."
     ),
-    //child
+
+    // Child
     CHILD_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "자녀 정보를 찾을 수 없습니다."
@@ -214,7 +219,8 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "생년월일은 필수입니다."
     ),
-    //family
+
+    //Family
     ALLOWANCE_REQUEST_ALREADY_EXISTS(
             HttpStatus.CONFLICT,
             "이번 달에는 이미 용돈을 요청했습니다."
@@ -234,6 +240,32 @@ public enum ErrorCode {
     FAMILY_INVITATION_RELATION_TYPE_REQUIRED(
             HttpStatus.BAD_REQUEST,
             "부모 초대 수락에는 관계 유형이 필요합니다."
+    ),
+
+    // Transfer
+    TRANSFER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "이체 정보를 찾을 수 없습니다."
+    ),
+    TRANSFER_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 이체 정보에 접근할 권한이 없습니다."
+    ),
+    INVALID_TRANSFER_REQUEST(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "출금·입금 계좌 또는 이체 금액 조건이 올바르지 않습니다."
+    ),
+    INSUFFICIENT_ACCOUNT_BALANCE(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "출금 계좌의 잔액이 부족합니다."
+    ),
+    DUPLICATE_TRANSFER_REQUEST(
+            HttpStatus.CONFLICT,
+            "이미 처리되었거나 처리 중인 이체 요청입니다."
+    ),
+    TRANSFER_PROCESSING_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "이체 처리 중 오류가 발생했습니다."
     );
 
     private final HttpStatus httpStatus;
