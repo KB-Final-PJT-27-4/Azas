@@ -30,10 +30,10 @@ const icons: Record<string, string> = {
   custom: goalCustomIcon,
 }
 const cardStyles = [
-  'border-[var(--color-brand-primary)] bg-linear-to-b from-sky-100 to-sky-50',
-  'border-amber-300 bg-linear-to-b from-amber-100 to-amber-50',
-  'border-lime-400 bg-linear-to-b from-lime-100 to-lime-50',
-  'border-pink-300 bg-linear-to-b from-pink-100 to-pink-50',
+  'border-sky-200 bg-linear-to-br from-sky-100 via-sky-50 to-blue-50',
+  'border-amber-200 bg-linear-to-br from-amber-100 via-amber-50 to-orange-50',
+  'border-lime-200 bg-linear-to-br from-lime-100 via-lime-50 to-emerald-50',
+  'border-pink-200 bg-linear-to-br from-pink-100 via-pink-50 to-rose-50',
 ]
 
 const formatTargetDate = (targetDate: string) => {
@@ -77,33 +77,65 @@ const moveTo = (index: number) => {
 
 <template>
   <section>
-    <h1 class="text-[26px] font-bold tracking-[-0.04em]">목표가 설정되었어요!</h1>
-    <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
-      목표 금액과 달성 시기를 확인하고 준비를 시작해보세요.
+    <h1 class="text-[26px] leading-tight font-bold tracking-[-0.04em]">목표가 설정되었어요!</h1>
+    <p class="mt-2 text-sm leading-5 text-[var(--color-text-secondary)]">
+      설정한 계획을 확인하고 준비를 시작해보세요.
     </p>
 
     <div
       ref="carousel"
-      class="-mx-6 mt-12 flex snap-x snap-mandatory scroll-px-[12%] gap-7 overflow-x-auto pb-3 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="-mx-6 mt-8 flex snap-x snap-mandatory scroll-px-[5%] gap-4 overflow-x-auto pt-2 pb-14 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       @scroll="updateActiveIndex"
     >
       <article
         v-for="(plan, index) in plans"
         :key="plan.id"
-        class="flex min-h-[470px] w-[76%] shrink-0 snap-center snap-always flex-col items-center justify-center rounded-3xl border-2 px-6 text-center first:ml-[12%] last:mr-[12%]"
+        class="relative flex min-h-[520px] w-[90%] shrink-0 snap-center snap-always flex-col overflow-hidden rounded-[32px] border p-4 shadow-[0_14px_36px_rgb(29_68_89_/_12%)] first:ml-[5%] last:mr-[5%]"
         :class="cardStyles[index % cardStyles.length]"
+        :aria-label="`${index + 1}번째 목표 ${plan.name}`"
       >
-        <img class="size-40 object-contain" :src="icons[plan.id]" alt="" />
-        <h2 class="mt-8 text-3xl font-bold">{{ plan.name }}</h2>
-        <strong class="mt-6 text-2xl">{{ plan.amount.toLocaleString('ko-KR') }}원</strong>
-        <p class="mt-5 text-sm text-[var(--color-text-secondary)]">
-          {{ formatTargetDate(plan.targetDate) }}까지 · 월 약
-          {{ Math.ceil(plan.amount / 240).toLocaleString('ko-KR') }}원
-        </p>
+        <div class="flex items-center">
+          <span
+            class="rounded-full bg-white/80 px-3 py-1.5 text-xs font-bold text-[var(--color-text-secondary)] shadow-sm"
+          >
+            목표 {{ index + 1 }}
+          </span>
+        </div>
+
+        <div
+          class="mx-auto mt-3 grid size-34 place-items-center rounded-full bg-white/65 shadow-inner"
+        >
+          <img class="size-27 object-contain" :src="icons[plan.id]" alt="" />
+        </div>
+
+        <div
+          class="mt-4 flex flex-1 flex-col rounded-[26px] border border-white/80 bg-white/85 p-5 text-left shadow-[0_8px_24px_rgb(29_68_89_/_8%)]"
+        >
+          <h2 class="text-[25px] font-bold tracking-[-0.03em]">{{ plan.name }}</h2>
+          <p class="mt-5 text-xs font-semibold text-[var(--color-text-secondary)]">목표 금액</p>
+          <strong class="mt-1 text-[30px] leading-tight tracking-[-0.04em]">
+            {{ plan.amount.toLocaleString('ko-KR') }}원
+          </strong>
+
+          <dl
+            class="mt-auto divide-y divide-black/8 rounded-2xl bg-[var(--color-surface-muted)] px-4"
+          >
+            <div class="flex items-center justify-between py-3">
+              <dt class="text-sm text-[var(--color-text-secondary)]">목표 시기</dt>
+              <dd class="text-sm font-bold">{{ formatTargetDate(plan.targetDate) }}</dd>
+            </div>
+            <div class="flex items-center justify-between py-3">
+              <dt class="text-sm text-[var(--color-text-secondary)]">월 저축액</dt>
+              <dd class="text-sm font-bold">
+                약 {{ Math.ceil(plan.amount / 240).toLocaleString('ko-KR') }}원
+              </dd>
+            </div>
+          </dl>
+        </div>
       </article>
     </div>
 
-    <div class="mt-2 flex justify-center gap-2">
+    <div v-if="plans.length > 1" class="flex justify-center gap-2">
       <button
         v-for="(_, index) in plans"
         :key="index"

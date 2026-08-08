@@ -7,7 +7,6 @@ import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
 import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import GoalPlanStep from '@/components/goals/GoalPlanStep.vue'
 import GoalSelectionStep from '@/components/goals/GoalSelectionStep.vue'
-import goalFooterImage from '@/assets/images/login/bg-default.png'
 
 type GoalSetting = { amount: number; targetDate: string }
 
@@ -18,6 +17,7 @@ const selectedGoals = ref<string[]>([])
 const customGoal = ref('')
 const isRecommendationOpen = ref(false)
 const goalSettings = reactive<Record<string, GoalSetting>>({})
+const slideDirection = ref<'forward' | 'backward'>('forward')
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
@@ -32,6 +32,15 @@ const getGoalName = (goalId: string) =>
 
 const currentGoalId = computed(() => selectedGoals.value[currentGoalIndex.value] ?? '')
 const currentGoalName = computed(() => getGoalName(currentGoalId.value))
+const currentGoalNumber = computed(() => currentGoalIndex.value + 1)
+const remainingGoalCount = computed(() =>
+  Math.max(selectedGoals.value.length - currentGoalNumber.value, 0),
+)
+const nextButtonLabel = computed(() => {
+  if (currentStep.value === 3) return '시작하기'
+  if (currentStep.value !== 2) return '다음'
+  return remainingGoalCount.value > 0 ? '다음 목표' : '목표 확인하기'
+})
 const currentSetting = computed(() =>
   currentGoalId.value ? goalSettings[currentGoalId.value] : undefined,
 )
@@ -74,6 +83,7 @@ const toggleGoal = (goalId: string) => {
 }
 
 const goBack = () => {
+  slideDirection.value = 'backward'
   if (currentStep.value === 3) {
     currentStep.value = 2
     currentGoalIndex.value = selectedGoals.value.length - 1
@@ -88,6 +98,7 @@ const goBack = () => {
 
 const goNext = () => {
   if (!canContinue.value) return
+  slideDirection.value = 'forward'
   if (currentStep.value === 1) {
     selectedGoals.value.forEach(ensureSetting)
     currentGoalIndex.value = 0
@@ -107,7 +118,6 @@ const updateTargetDate = (value: string) => {
 }
 const selectRecommendation = (value: number) => {
   updateAmount(value)
-  isRecommendationOpen.value = false
 }
 </script>
 
@@ -133,50 +143,45 @@ const selectRecommendation = (value: number) => {
         :key="step"
         class="h-1 flex-1 rounded-full"
         :class="
-          step === progressStep ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'
+          step <= progressStep ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'
         "
       ></span>
     </div>
 
-    <div class="flex-1 px-6 pt-7 pb-6">
-      <GoalSelectionStep
-        v-if="currentStep === 1"
-        :selected-goals="selectedGoals"
-        :custom-goal="customGoal"
-        @toggle="toggleGoal"
-        @update:custom-goal="customGoal = $event"
-      />
+    <div class="flex-1 overflow-x-hidden px-6 pt-7 pb-6">
+      <Transition :name="`goal-slide-${slideDirection}`" mode="out-in">
+        <div :key="`${currentStep}-${currentGoalIndex}`">
+          <GoalSelectionStep
+            v-if="currentStep === 1"
+            :selected-goals="selectedGoals"
+            :custom-goal="customGoal"
+            @toggle="toggleGoal"
+            @update:custom-goal="customGoal = $event"
+          />
 
-      <GoalAmountStep
-        v-else-if="currentStep === 2 && currentSetting"
-        :goal-name="currentGoalName"
-        :amount="currentSetting.amount"
-        :target-date="currentSetting.targetDate"
-        @update:amount="updateAmount"
-        @update:target-date="updateTargetDate"
-        @open-recommendation="isRecommendationOpen = true"
-      />
+          <GoalAmountStep
+            v-else-if="currentStep === 2 && currentSetting"
+            :goal-name="currentGoalName"
+            :goal-number="currentGoalNumber"
+            :amount="currentSetting.amount"
+            :target-date="currentSetting.targetDate"
+            @update:amount="updateAmount"
+            @update:target-date="updateTargetDate"
+            @open-recommendation="isRecommendationOpen = true"
+          />
 
-      <GoalPlanStep v-else :plans="plans" />
+          <GoalPlanStep v-else :plans="plans" />
+        </div>
+      </Transition>
     </div>
 
     <footer
-      class="bg-[var(--color-surface)] px-6 pt-3"
-      :class="[
-        currentStep === 1 ? 'grid grid-cols-1 pb-8' : 'grid grid-cols-2 gap-4',
-        currentStep === 3 ? 'relative min-h-[220px] overflow-hidden pb-[140px]' : 'pb-8',
-      ]"
+      class="bg-[var(--color-surface)] px-6 pt-3 pb-8"
+      :class="currentStep === 1 ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-4'"
     >
-      <img
-        v-if="currentStep === 3"
-        class="pointer-events-none absolute bottom-0 left-3/4 h-70 w-[150%] max-w-none -translate-x-1/2 object-cover object-top"
-        :src="goalFooterImage"
-        alt=""
-      />
-
       <button
         v-if="currentStep > 1"
-        class="relative z-1 h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] font-bold text-[var(--color-selected-text)]"
+        class="relative z-1 h-14 min-h-14 max-h-14 self-start rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] font-bold text-[var(--color-selected-text)]"
         type="button"
         @click="goBack"
       >
@@ -184,19 +189,50 @@ const selectRecommendation = (value: number) => {
       </button>
 
       <button
-        class="relative z-1 h-14 rounded-xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
+        class="relative z-1 h-14 min-h-14 max-h-14 self-start rounded-xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
         type="button"
         :disabled="!canContinue"
         @click="currentStep === 3 ? router.push({ name: 'Home' }) : goNext()"
       >
-        {{ currentStep === 3 ? '시작하기' : '다음' }}
+        {{ nextButtonLabel }}
       </button>
     </footer>
 
     <AiRecommendationModal
       v-if="isRecommendationOpen"
+      :selected-amount="currentSetting?.amount"
       @close="isRecommendationOpen = false"
       @select="selectRecommendation"
     />
   </main>
 </template>
+
+<style scoped>
+.goal-slide-forward-enter-active,
+.goal-slide-forward-leave-active,
+.goal-slide-backward-enter-active,
+.goal-slide-backward-leave-active {
+  transition: transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity 120ms ease-out;
+}
+
+.goal-slide-forward-enter-from,
+.goal-slide-backward-leave-to {
+  transform: translateX(18px);
+  opacity: 0;
+}
+
+.goal-slide-forward-leave-to,
+.goal-slide-backward-enter-from {
+  transform: translateX(-18px);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-slide-forward-enter-active,
+  .goal-slide-forward-leave-active,
+  .goal-slide-backward-enter-active,
+  .goal-slide-backward-leave-active {
+    transition-duration: 1ms;
+  }
+}
+</style>

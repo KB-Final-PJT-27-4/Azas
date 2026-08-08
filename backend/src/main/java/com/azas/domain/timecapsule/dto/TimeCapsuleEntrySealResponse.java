@@ -1,0 +1,30 @@
+package com.azas.domain.timecapsule.dto;
+
+import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+
+import java.time.LocalDateTime;
+
+@Getter
+public class TimeCapsuleEntrySealResponse {
+
+    @JsonProperty("time_capsule_entry_id")
+    private final Long timeCapsuleEntryId;
+
+    private final String status;
+
+    @JsonProperty("sealed_at")
+    private final LocalDateTime sealedAt;
+
+    private TimeCapsuleEntrySealResponse(TimeCapsuleEntry entry) {
+        this.timeCapsuleEntryId = entry.getTimeCapsuleEntryId();
+        this.status = entry.getStatus().name();
+        this.sealedAt = entry.getSealedAt();
+    }
+
+    // [JMG] CAPSULE-15 봉인된 엔트리 엔티티를 프런트엔드 봉인 결과 응답으로 변환한다.
+    public static TimeCapsuleEntrySealResponse from(TimeCapsuleEntry entry) {
+        return new TimeCapsuleEntrySealResponse(entry);
+    }
+}

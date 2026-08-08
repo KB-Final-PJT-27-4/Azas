@@ -97,6 +97,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/timeCapsules/TimeCapsulePreviewView.vue'),
     meta: timeCapsuleHeaderMeta,
   },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: '/__dev/time-capsules-api-test',
+          name: 'TimeCapsuleApiTest',
+          component: () => import('@/views/timeCapsules/TimeCapsuleApiTestView.vue'),
+          meta: { ...timeCapsuleHeaderMeta, hideNavigation: true },
+        },
+      ]
+    : []),
   {
     path: '/time-capsules/:capsuleId/edit',
     name: 'TimeCapsuleEdit',
@@ -131,13 +141,19 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage',
     name: 'Mypage',
     component: () => import('@/views/mypage/MypageView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, headerTitle: '마이페이지' },
   },
   {
     path: '/mypage/edit',
     name: 'MypageEdit',
     component: () => import('@/views/mypage/MypageEditView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/child-edit',
@@ -168,20 +184,38 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/accounts',
     name: 'MypageAccounts',
     component: () => import('@/views/mypage/MypageAccountsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/goals',
     name: 'MypageGoals',
     component: () => import('@/views/mypage/MypageGoalsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/goals/:goalsId',
     name: 'MypageGoalEdit',
     component: () => import('@/views/mypage/MypageGoalEditView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/alarm',
@@ -199,7 +233,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/guide',
     name: 'Guide',
     component: () => import('@/views/mypage/GuideView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '도움말',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 알림
@@ -211,6 +251,20 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       hideBottomNavigation: true,
       headerTitle: '알림',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
+    path: '/allowance-requests/:requestId',
+    name: 'AllowanceRequest',
+    component: () => import('@/views/allowance/AllowanceRequestView.vue'),
+    props: true,
+    meta: {
+      requiresAuth: true,
+      roles: ['PARENT'],
+      hideBottomNavigation: true,
+      headerTitle: '용돈 요청',
       showHeaderBack: true,
       showHeaderNotification: false,
     },
