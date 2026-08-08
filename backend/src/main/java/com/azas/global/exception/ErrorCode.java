@@ -99,6 +99,18 @@ public enum ErrorCode {
     ),
 
     // Finance
+    INVALID_CHILD_USAGE_POLICY(
+            HttpStatus.BAD_REQUEST,
+            "자녀 계좌 사용 관리 정책 값이 올바르지 않습니다."
+    ),
+    PARENT_ACCESS_REQUIRED(
+            HttpStatus.FORBIDDEN,
+            "해당 자녀의 부모 권한이 필요합니다."
+    ),
+    INELIGIBLE_CHILD_USAGE_POLICY_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "자녀 명의의 활성 입출금 계좌에만 사용 관리 정책을 설정할 수 있습니다."
+    ),
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 계좌를 찾을 수 없습니다."
