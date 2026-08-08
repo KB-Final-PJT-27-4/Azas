@@ -164,7 +164,13 @@ const routes: RouteRecordRaw[] = [
     path: '/mypage/family',
     name: 'FamilyManagement',
     component: () => import('@/views/mypage/FamilyManagementView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '마이페이지',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
   {
     path: '/mypage/permissions',
