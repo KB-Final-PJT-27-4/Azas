@@ -162,7 +162,7 @@ onBeforeUnmount(clearProfilePress)
           {{ notificationCount > 9 ? '9+' : notificationCount }}
         </span>
       </button>
-      <div v-else class="size-11 flex-[0_0_44px]" aria-hidden="true" />
+      <div v-else id="app-header-action" class="size-11 flex-[0_0_44px]" />
     </div>
   </header>
 
