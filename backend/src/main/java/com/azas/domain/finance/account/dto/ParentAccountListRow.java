@@ -19,5 +19,5 @@ public class ParentAccountListRow {
     private BigDecimal balance;
     private LocalDateTime balanceUpdatedAt;
     private String accountStatus;
-    private boolean primary;
+    private boolean primaryAccount;
 }

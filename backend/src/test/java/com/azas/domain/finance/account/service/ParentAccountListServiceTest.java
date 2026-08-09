@@ -188,7 +188,11 @@ class ParentAccountListServiceTest {
                 LocalDateTime.of(2026, 8, 8, 5, 30)
         );
         ReflectionTestUtils.setField(row, "accountStatus", "ACTIVE");
-        ReflectionTestUtils.setField(row, "primary", primary);
+        ReflectionTestUtils.setField(
+                row,
+                "primaryAccount",
+                primary
+        );
 
         return row;
     }

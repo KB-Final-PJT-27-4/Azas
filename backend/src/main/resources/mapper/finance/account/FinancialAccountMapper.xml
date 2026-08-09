@@ -17,7 +17,7 @@
             fa.balance,
             fa.balance_updated_at,
             fa.account_status,
-            fa.is_primary AS primary
+            fa.is_primary AS primary_account
         FROM financial_account fa
                  INNER JOIN financial_connection fc
                             ON fc.financial_connection_id =

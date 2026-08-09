@@ -77,7 +77,7 @@ public class ParentAccountListService {
                 row.getBalance(),
                 row.getBalanceUpdatedAt(),
                 row.getAccountStatus(),
-                row.isPrimary()
+                row.isPrimaryAccount()
         );
     }
 
