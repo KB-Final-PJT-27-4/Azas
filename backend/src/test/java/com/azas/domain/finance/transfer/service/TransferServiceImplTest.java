@@ -8,6 +8,7 @@ import com.azas.domain.finance.transfer.entity.TransferStatus;
 import com.azas.domain.finance.transfer.mapper.TransferMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
+import com.azas.global.security.AccountNumberProtector;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
