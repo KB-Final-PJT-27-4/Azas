@@ -25,6 +25,7 @@ public class ChildAccountListService {
             long requesterMemberId,
             long childId
     ) {
+        validateChildId(childId);
         validateActiveChild(childId);
         validateChildAccess(requesterMemberId, childId);
 
@@ -38,6 +39,12 @@ public class ChildAccountListService {
                 .toList();
 
         return new ChildAccountListResult(childId, accounts);
+    }
+
+    private void validateChildId(long childId) {
+        if (childId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
     }
 
     private void validateActiveChild(long childId) {

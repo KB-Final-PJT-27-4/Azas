@@ -143,6 +143,18 @@ class ChildAccountListServiceTest {
     }
 
     @Test
+    void rejectsInvalidChildId() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.getChildAccounts(MEMBER_ID, 0L)
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+        verify(financialAccountMapper, never())
+                .countActiveChildById(0L);
+    }
+
+    @Test
     void rejectsMemberWithoutChildAccess() {
         when(financialAccountMapper.countActiveChildById(CHILD_ID))
                 .thenReturn(1);
