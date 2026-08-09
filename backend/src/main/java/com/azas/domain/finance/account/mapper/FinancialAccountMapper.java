@@ -1,5 +1,6 @@
 package com.azas.domain.finance.account.mapper;
 
+import com.azas.domain.finance.account.dto.ParentAccountListRow;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
 import com.azas.domain.finance.account.entity.FinancialAccountUsagePolicy;
 import org.apache.ibatis.annotations.Mapper;
@@ -7,9 +8,15 @@ import org.apache.ibatis.annotations.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Mapper
 public interface FinancialAccountMapper {
+
+    List<ParentAccountListRow> findActiveParentAccounts(
+            @Param("memberId")
+            long memberId
+    );
 
     FinancialAccountUsagePolicy findUsagePolicyByAccountId(
             @Param("financialAccountId")

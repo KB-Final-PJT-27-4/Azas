@@ -8,6 +8,7 @@ import com.azas.domain.finance.transfer.entity.TransferType;
 import com.azas.domain.finance.transfer.mapper.TransferMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
+import com.azas.global.security.AccountNumberProtector;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
