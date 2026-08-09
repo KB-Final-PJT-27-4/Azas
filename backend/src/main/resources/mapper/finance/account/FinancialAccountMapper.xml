@@ -5,6 +5,38 @@
 
 <mapper namespace="com.azas.domain.finance.account.mapper.FinancialAccountMapper">
 
+    <select id="findActiveParentAccounts"
+            resultType="com.azas.domain.finance.account.dto.ParentAccountListRow">
+        SELECT
+            fa.financial_account_id AS account_id,
+            fa.organization_code,
+            fa.bank_name,
+            fa.account_name,
+            fa.account_number_ciphertext,
+            fa.account_product_type,
+            fa.balance,
+            fa.balance_updated_at,
+            fa.account_status,
+            fa.is_primary AS primary
+        FROM financial_account fa
+                 INNER JOIN financial_connection fc
+                            ON fc.financial_connection_id =
+                               fa.financial_connection_id
+        WHERE fc.connected_by_member_id = #{memberId}
+          AND fc.owner_type = 'PARENT'
+          AND fc.consent_status = 'ACTIVE'
+          AND fc.revoked_at IS NULL
+          AND (
+              fc.consent_expires_at IS NULL
+              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
+          )
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+        ORDER BY fa.is_primary DESC,
+                 fa.linked_at DESC,
+                 fa.financial_account_id DESC
+    </select>
+
     <!-- 기존 DB 컬럼을 자녀 사용 관리 정책 도메인 명칭으로 변환한다. -->
     <sql id="usagePolicyColumns">
         financial_account_id,
