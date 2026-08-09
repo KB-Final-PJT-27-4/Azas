@@ -1,4 +1,4 @@
-package com.azas.domain.finance.transfer.service;
+package com.azas.global.security;
 
 import org.junit.jupiter.api.Test;
 
