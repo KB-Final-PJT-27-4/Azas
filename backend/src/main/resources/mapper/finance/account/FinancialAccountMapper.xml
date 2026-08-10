@@ -246,4 +246,30 @@
               #{financialAccountId}
     </update>
 
+    <!-- 연결 해제 권한과 현재 상태를 같은 트랜잭션에서 확인한다. -->
+    <select id="findAccountUnlinkTargetByIdForUpdate"
+            resultType="com.azas.domain.finance.account.dto.AccountUnlinkTargetRow">
+        SELECT
+            fa.financial_account_id AS account_id,
+            fc.connected_by_member_id,
+            fa.link_status,
+            fa.unlinked_at
+        FROM financial_account fa
+                 INNER JOIN financial_connection fc
+                            ON fc.financial_connection_id =
+                               fa.financial_connection_id
+        WHERE fa.financial_account_id = #{financialAccountId}
+        FOR UPDATE
+    </select>
+
+    <update id="unlinkAccount">
+        UPDATE financial_account
+        SET link_status = 'UNLINKED',
+            unlinked_at = #{unlinkedAt},
+            is_primary = 0,
+            updated_at = #{unlinkedAt}
+        WHERE financial_account_id = #{financialAccountId}
+          AND link_status != 'UNLINKED'
+    </update>
+
 </mapper>
