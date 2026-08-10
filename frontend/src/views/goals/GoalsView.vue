@@ -54,9 +54,9 @@ const progressStep = computed(() =>
     ? 1
     : currentStep.value === 2
       ? currentGoalIndex.value + 2
-      : selectedGoals.value.length + 2,
+      : selectedGoals.value.length + 1,
 )
-const progressTotal = computed(() => selectedGoals.value.length + 2)
+const progressTotal = computed(() => selectedGoals.value.length + 1)
 const plans = computed(() =>
   selectedGoals.value.map((id) => ({
     id,
