@@ -5,6 +5,40 @@
 
 <mapper namespace="com.azas.domain.finance.account.mapper.FinancialAccountMapper">
 
+    <select id="findLinkedAccountBalanceById"
+            resultType="com.azas.domain.finance.account.dto.AccountBalanceRow">
+        SELECT
+            fa.financial_account_id AS account_id,
+            fc.owner_type,
+            fc.connected_by_member_id,
+            fc.child_id,
+            fa.balance,
+            fa.balance_updated_at
+        FROM financial_account fa
+                 INNER JOIN financial_connection fc
+                            ON fc.financial_connection_id =
+                               fa.financial_connection_id
+                 LEFT JOIN child c
+                           ON c.child_id = fc.child_id
+                          AND c.status = 'ACTIVE'
+        WHERE fa.financial_account_id = #{financialAccountId}
+          AND fa.link_status = 'ACTIVE'
+          AND fc.consent_status = 'ACTIVE'
+          AND fc.revoked_at IS NULL
+          AND (
+              fc.consent_expires_at IS NULL
+              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
+          )
+          AND (
+              fc.owner_type = 'PARENT'
+              OR (
+                  fc.owner_type = 'CHILD'
+                  AND c.child_id IS NOT NULL
+                  AND fa.child_id = fc.child_id
+              )
+          )
+    </select>
+
     <select id="findLinkedAccountDetailById"
             resultType="com.azas.domain.finance.account.dto.AccountDetailRow">
         SELECT

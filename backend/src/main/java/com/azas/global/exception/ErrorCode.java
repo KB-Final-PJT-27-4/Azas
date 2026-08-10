@@ -119,6 +119,10 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "해당 금융 계좌에 접근할 권한이 없습니다."
     ),
+    ACCOUNT_BALANCE_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "아직 동기화된 계좌 잔액이 없습니다."
+    ),
     FINANCIAL_PRODUCT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융상품을 찾을 수 없습니다."
