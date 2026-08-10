@@ -1,5 +1,6 @@
 package com.azas.domain.finance.account.mapper;
 
+import com.azas.domain.finance.account.dto.AccountDetailRow;
 import com.azas.domain.finance.account.dto.ChildAccountListRow;
 import com.azas.domain.finance.account.dto.ParentAccountListRow;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
@@ -13,6 +14,11 @@ import java.util.List;
 
 @Mapper
 public interface FinancialAccountMapper {
+
+    AccountDetailRow findLinkedAccountDetailById(
+            @Param("financialAccountId")
+            long financialAccountId
+    );
 
     List<ParentAccountListRow> findActiveParentAccounts(
             @Param("memberId")
