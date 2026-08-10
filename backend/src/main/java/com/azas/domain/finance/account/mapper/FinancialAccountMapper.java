@@ -1,5 +1,6 @@
 package com.azas.domain.finance.account.mapper;
 
+import com.azas.domain.finance.account.dto.ChildAccountListRow;
 import com.azas.domain.finance.account.dto.ParentAccountListRow;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
 import com.azas.domain.finance.account.entity.FinancialAccountUsagePolicy;
@@ -16,6 +17,16 @@ public interface FinancialAccountMapper {
     List<ParentAccountListRow> findActiveParentAccounts(
             @Param("memberId")
             long memberId
+    );
+
+    List<ChildAccountListRow> findActiveChildAccounts(
+            @Param("childId")
+            long childId
+    );
+
+    int countActiveChildById(
+            @Param("childId")
+            long childId
     );
 
     FinancialAccountUsagePolicy findUsagePolicyByAccountId(
