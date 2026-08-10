@@ -76,6 +76,7 @@ const toggleGoal = (goalId: string) => {
   const index = selectedGoals.value.indexOf(goalId)
   if (index >= 0) {
     selectedGoals.value.splice(index, 1)
+    if (goalId === 'custom') customGoal.value = ''
     return
   }
   selectedGoals.value.push(goalId)
