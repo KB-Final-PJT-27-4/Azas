@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { X } from 'lucide-vue-next'
+
 import goalEducationIcon from '@/assets/images/goals/goals_1.png'
 import goalIndependenceIcon from '@/assets/images/goals/goals_2.png'
 import goalHousingIcon from '@/assets/images/goals/goals_3.png'
@@ -22,6 +24,15 @@ const emit = defineEmits<{
   toggle: [goalId: string]
   'update:customGoal': [value: string]
 }>()
+
+const customGoalSuggestions = [
+  '첫 걸음마 기념',
+  '첫 생일 기념',
+  '유치원 입학 기념',
+  '초등학교 입학 기념',
+  '첫 가족 여행',
+  '자전거 선물',
+]
 
 const goals: GoalOption[] = [
   {
@@ -58,7 +69,7 @@ const goals: GoalOption[] = [
     id: 'custom',
     icon: goalCustomIcon,
     title: '직접 설정',
-    description: '목표를 직접 입력해주세요',
+    description: '추천받거나 원하는 목표를 입력해요',
   },
 ]
 </script>
@@ -101,16 +112,51 @@ const goals: GoalOption[] = [
       </button>
     </div>
 
-    <label v-if="selectedGoals.includes('custom')" class="mt-4 grid gap-2">
-      <span class="text-sm font-bold">목표 이름</span>
-      <input
-        class="h-14 rounded-xl border border-[var(--color-border)] px-4 outline-none focus:border-[var(--color-brand-primary-pressed)] focus:ring-2 focus:ring-[var(--color-selected-background)]"
-        type="text"
-        maxlength="20"
-        placeholder="예: 세계 여행 자금"
-        :value="customGoal"
-        @input="emit('update:customGoal', ($event.target as HTMLInputElement).value)"
-      />
-    </label>
+    <div v-if="selectedGoals.includes('custom')" class="mt-5 grid gap-5">
+      <div class="grid gap-3">
+        <legend class="text-sm font-bold">이런 목표는 어때요?</legend>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="suggestion in customGoalSuggestions"
+            :key="suggestion"
+            class="min-h-10 rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+            :class="
+              customGoal === suggestion
+                ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]'
+            "
+            type="button"
+            :aria-pressed="customGoal === suggestion"
+            @click="emit('update:customGoal', suggestion)"
+          >
+            {{ suggestion }}
+          </button>
+        </div>
+      </div>
+
+      <div class="grid gap-2">
+        <label class="text-sm font-bold" for="custom-goal-name">직접 입력</label>
+        <span class="relative">
+          <input
+            id="custom-goal-name"
+            class="h-14 w-full rounded-xl border border-[var(--color-border)] px-4 pr-12 outline-none focus:border-[var(--color-brand-primary-pressed)] focus:ring-2 focus:ring-[var(--color-selected-background)]"
+            type="text"
+            maxlength="20"
+            placeholder="예: 첫 피아노 발표회"
+            :value="customGoal"
+            @input="emit('update:customGoal', ($event.target as HTMLInputElement).value)"
+          />
+          <button
+            v-if="customGoal"
+            class="absolute top-1/2 right-2 grid size-10 -translate-y-1/2 place-items-center rounded-full text-[var(--color-text-secondary)]"
+            type="button"
+            aria-label="입력한 목표 지우기"
+            @click="emit('update:customGoal', '')"
+          >
+            <X :size="20" aria-hidden="true" />
+          </button>
+        </span>
+      </div>
+    </div>
   </section>
 </template>

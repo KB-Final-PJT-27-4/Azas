@@ -18,6 +18,8 @@ const customGoal = ref('')
 const isRecommendationOpen = ref(false)
 const goalSettings = reactive<Record<string, GoalSetting>>({})
 const slideDirection = ref<'forward' | 'backward'>('forward')
+const today = new Date()
+const defaultTargetDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
@@ -54,21 +56,21 @@ const progressStep = computed(() =>
     ? 1
     : currentStep.value === 2
       ? currentGoalIndex.value + 2
-      : selectedGoals.value.length + 2,
+      : selectedGoals.value.length + 1,
 )
-const progressTotal = computed(() => selectedGoals.value.length + 2)
+const progressTotal = computed(() => selectedGoals.value.length + 1)
 const plans = computed(() =>
   selectedGoals.value.map((id) => ({
     id,
     name: getGoalName(id),
     amount: goalSettings[id]?.amount ?? 30_000_000,
-    targetDate: goalSettings[id]?.targetDate ?? '2045-03',
+    targetDate: goalSettings[id]?.targetDate ?? defaultTargetDate,
   })),
 )
 
 const ensureSetting = (goalId: string) => {
   if (!goalSettings[goalId]) {
-    goalSettings[goalId] = { amount: 30_000_000, targetDate: '2045-03' }
+    goalSettings[goalId] = { amount: 30_000_000, targetDate: defaultTargetDate }
   }
 }
 
@@ -76,6 +78,7 @@ const toggleGoal = (goalId: string) => {
   const index = selectedGoals.value.indexOf(goalId)
   if (index >= 0) {
     selectedGoals.value.splice(index, 1)
+    if (goalId === 'custom') customGoal.value = ''
     return
   }
   selectedGoals.value.push(goalId)
@@ -122,9 +125,11 @@ const selectRecommendation = (value: number) => {
 </script>
 
 <template>
-  <main class="flex min-h-dvh flex-col bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+  <main
+    class="flex h-dvh flex-col overflow-hidden bg-[var(--color-surface)] text-[var(--color-text-primary)]"
+  >
     <header
-      class="relative flex h-16 items-center justify-center border-b border-[var(--color-border)]"
+      class="relative flex h-16 shrink-0 items-center justify-center border-b border-[var(--color-border)]"
     >
       <button
         class="absolute left-4 grid size-10 place-items-center text-[var(--color-text-secondary)]"
@@ -137,7 +142,7 @@ const selectRecommendation = (value: number) => {
       <strong>목표</strong>
     </header>
 
-    <div v-if="currentStep < 3" class="flex gap-2 px-6 pt-7" aria-hidden="true">
+    <div v-if="currentStep < 3" class="flex shrink-0 gap-2 px-6 pt-7" aria-hidden="true">
       <span
         v-for="step in progressTotal"
         :key="step"
@@ -148,7 +153,7 @@ const selectRecommendation = (value: number) => {
       ></span>
     </div>
 
-    <div class="flex-1 overflow-x-hidden px-6 pt-7 pb-6">
+    <div class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-6 pt-7 pb-6">
       <Transition :name="`goal-slide-${slideDirection}`" mode="out-in">
         <div :key="`${currentStep}-${currentGoalIndex}`">
           <GoalSelectionStep
@@ -176,7 +181,7 @@ const selectRecommendation = (value: number) => {
     </div>
 
     <footer
-      class="bg-[var(--color-surface)] px-6 pt-3 pb-8"
+      class="shrink-0 bg-[var(--color-surface)] px-6 pt-3 pb-8"
       :class="currentStep === 1 ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-4'"
     >
       <button
