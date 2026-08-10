@@ -1,0 +1,30 @@
+package com.azas.domain.finance.account.dto;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Getter
+@RequiredArgsConstructor
+public final class AccountDetailResult {
+
+    private final Long accountId;
+    private final String ownerType;
+    private final AccountDetailChildResult child;
+    private final String organizationCode;
+    private final String bankName;
+    private final String accountName;
+    private final String accountNumber;
+    private final String accountProductType;
+    private final BigDecimal balance;
+    private final LocalDateTime balanceUpdatedAt;
+    private final String accountStatus;
+    private final boolean primary;
+    private final LocalDateTime openedAt;
+    private final LocalDate maturityDate;
+    private final LocalDateTime linkedAt;
+    private final AccountFinancialGoalResult financialGoal;
+}
