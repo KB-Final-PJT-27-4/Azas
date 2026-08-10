@@ -3,6 +3,7 @@ package com.azas.domain.finance.account.mapper;
 import com.azas.domain.finance.account.dto.AccountDetailRow;
 import com.azas.domain.finance.account.dto.AccountBalanceHistorySnapshotRow;
 import com.azas.domain.finance.account.dto.AccountBalanceRow;
+import com.azas.domain.finance.account.dto.AccountUnlinkTargetRow;
 import com.azas.domain.finance.account.dto.ChildAccountListRow;
 import com.azas.domain.finance.account.dto.ParentAccountListRow;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
@@ -86,5 +87,17 @@ public interface FinancialAccountMapper {
             long updatedByMemberId,
             @Param("updatedAt")
             LocalDateTime updatedAt
+    );
+
+    AccountUnlinkTargetRow findAccountUnlinkTargetByIdForUpdate(
+            @Param("financialAccountId")
+            long financialAccountId
+    );
+
+    int unlinkAccount(
+            @Param("financialAccountId")
+            long financialAccountId,
+            @Param("unlinkedAt")
+            LocalDateTime unlinkedAt
     );
 }
