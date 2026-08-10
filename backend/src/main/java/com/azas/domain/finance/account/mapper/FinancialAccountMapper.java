@@ -1,6 +1,7 @@
 package com.azas.domain.finance.account.mapper;
 
 import com.azas.domain.finance.account.dto.AccountDetailRow;
+import com.azas.domain.finance.account.dto.AccountBalanceHistorySnapshotRow;
 import com.azas.domain.finance.account.dto.AccountBalanceRow;
 import com.azas.domain.finance.account.dto.ChildAccountListRow;
 import com.azas.domain.finance.account.dto.ParentAccountListRow;
@@ -19,6 +20,15 @@ public interface FinancialAccountMapper {
     AccountBalanceRow findLinkedAccountBalanceById(
             @Param("financialAccountId")
             long financialAccountId
+    );
+
+    List<AccountBalanceHistorySnapshotRow> findBalanceSnapshotsByPeriod(
+            @Param("financialAccountId")
+            long financialAccountId,
+            @Param("startObservedAt")
+            LocalDateTime startObservedAt,
+            @Param("endObservedAtExclusive")
+            LocalDateTime endObservedAtExclusive
     );
 
     AccountDetailRow findLinkedAccountDetailById(

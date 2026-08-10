@@ -123,6 +123,10 @@ public enum ErrorCode {
             HttpStatus.CONFLICT,
             "아직 동기화된 계좌 잔액이 없습니다."
     ),
+    INVALID_BALANCE_HISTORY_MONTHS(
+            HttpStatus.BAD_REQUEST,
+            "잔액 변화 조회 개월 수는 1개월 이상 12개월 이하여야 합니다."
+    ),
     FINANCIAL_PRODUCT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융상품을 찾을 수 없습니다."

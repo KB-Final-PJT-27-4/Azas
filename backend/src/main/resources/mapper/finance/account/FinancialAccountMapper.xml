@@ -39,6 +39,18 @@
           )
     </select>
 
+    <select id="findBalanceSnapshotsByPeriod"
+            resultType="com.azas.domain.finance.account.dto.AccountBalanceHistorySnapshotRow">
+        SELECT
+            balance,
+            observed_at
+        FROM account_balance_snapshot
+        WHERE financial_account_id = #{financialAccountId}
+          AND observed_at <![CDATA[>=]]> #{startObservedAt}
+          AND observed_at <![CDATA[<]]> #{endObservedAtExclusive}
+        ORDER BY observed_at ASC
+    </select>
+
     <select id="findLinkedAccountDetailById"
             resultType="com.azas.domain.finance.account.dto.AccountDetailRow">
         SELECT
