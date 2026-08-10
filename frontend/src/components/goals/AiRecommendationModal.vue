@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { Check, X } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
+import { ref } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   selectedAmount?: number
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   select: [amount: number]
 }>()
+
+const pendingAmount = ref<number | null>(props.selectedAmount ?? null)
 
 const recommendations = [
   { label: '기본 준비안', amount: 30_000_000, items: ['등록금', '교재 및 학습비'] },
@@ -19,6 +22,21 @@ const recommendations = [
     items: ['등록금', '생활비', '주거비', '사회초년 자금'],
   },
 ]
+
+const toggleRecommendation = (amount: number) => {
+  if (pendingAmount.value === amount) {
+    pendingAmount.value = null
+    return
+  }
+
+  pendingAmount.value = amount
+}
+
+const applyRecommendation = (amount: number) => {
+  if (pendingAmount.value !== amount) return
+  emit('select', amount)
+  emit('close')
+}
 </script>
 
 <template>
@@ -49,38 +67,37 @@ const recommendations = [
       </p>
 
       <div class="mt-5 grid gap-4">
-        <button
-          v-for="option in recommendations"
-          :key="option.label"
-          class="relative rounded-xl border p-4 pr-14 text-left transition-colors"
-          :class="
-            selectedAmount === option.amount
-              ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)]'
-              : 'border-transparent bg-[var(--color-surface-muted)]'
-          "
-          type="button"
-          :aria-pressed="selectedAmount === option.amount"
-          @click="$emit('select', option.amount)"
-        >
-          <span
-            class="absolute top-1/2 right-4 grid size-6 -translate-y-1/2 place-items-center rounded-full border transition-colors"
+        <div v-for="option in recommendations" :key="option.label" class="relative">
+          <button
+            class="w-full rounded-xl border p-4 pr-22 text-left transition-colors"
             :class="
-              selectedAmount === option.amount
-                ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-[var(--color-text-inverse)]'
-                : 'border-[var(--color-border)] bg-[var(--color-surface)]'
+              pendingAmount === option.amount
+                ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)]'
+                : 'border-transparent bg-[var(--color-surface-muted)]'
             "
-            aria-hidden="true"
+            type="button"
+            :aria-pressed="pendingAmount === option.amount"
+            @click="toggleRecommendation(option.amount)"
           >
-            <Check v-if="selectedAmount === option.amount" :size="16" :stroke-width="3" />
-          </span>
-          <strong class="text-sm">{{ option.label }}</strong>
-          <strong class="mt-1 block text-lg text-[var(--color-selected-text)]">
-            {{ (option.amount / 10_000).toLocaleString('ko-KR') }}만원
-          </strong>
-          <ul class="mt-2 text-xs text-[var(--color-text-secondary)]">
-            <li v-for="item in option.items" :key="item">• {{ item }}</li>
-          </ul>
-        </button>
+            <strong class="text-sm">{{ option.label }}</strong>
+            <strong class="mt-1 block text-lg text-[var(--color-selected-text)]">
+              {{ (option.amount / 10_000).toLocaleString('ko-KR') }}만원
+            </strong>
+            <ul class="mt-2 text-xs text-[var(--color-text-secondary)]">
+              <li v-for="item in option.items" :key="item">• {{ item }}</li>
+            </ul>
+          </button>
+
+          <button
+            v-if="pendingAmount === option.amount"
+            class="absolute top-1/2 right-4 h-9 -translate-y-1/2 rounded-full bg-[var(--color-brand-primary)] px-5 text-xs font-semibold text-[var(--color-text-inverse)]"
+            type="button"
+            :aria-label="`${option.label} 적용`"
+            @click="applyRecommendation(option.amount)"
+          >
+            적용
+          </button>
+        </div>
       </div>
     </section>
   </div>
