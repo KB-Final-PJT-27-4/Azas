@@ -102,7 +102,7 @@ onBeforeUnmount(clearProfilePress)
     >
       <button
         v-if="showBack"
-        class="grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
+        class="-ml-3 grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
         type="button"
         aria-label="뒤로가기"
         @click="goBack"
