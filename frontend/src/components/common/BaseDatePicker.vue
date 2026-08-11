@@ -13,6 +13,8 @@ const props = withDefaults(
     disabled?: boolean
     minYear?: number
     maxYear?: number
+    minDate?: string
+    maxDate?: string
     selectionMode?: SelectionMode
   }>(),
   {
@@ -21,6 +23,8 @@ const props = withDefaults(
     disabled: false,
     minYear: 1900,
     maxYear: 2100,
+    minDate: undefined,
+    maxDate: undefined,
     selectionMode: 'date',
   },
 )
@@ -128,12 +132,17 @@ const selectMonth = (month: number) => {
 }
 
 const selectDate = (date: Date) => {
+  if (isDateDisabled(date)) return
   emit('update:modelValue', formatDateValue(date))
   isOpen.value = false
 }
 
 const isSelectedDate = (date: Date) => formatDateValue(date) === props.modelValue
 const isToday = (date: Date) => formatDateValue(date) === formatDateValue(new Date())
+const isDateDisabled = (date: Date) => {
+  const value = formatDateValue(date)
+  return Boolean((props.minDate && value < props.minDate) || (props.maxDate && value > props.maxDate))
+}
 
 const closeOnOutsideClick = (event: PointerEvent) => {
   if (!pickerRoot.value?.contains(event.target as Node)) isOpen.value = false
@@ -228,7 +237,12 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside
             <button
               v-if="date"
               class="grid size-10 place-items-center rounded-full text-sm font-semibold hover:bg-[var(--color-selected-background)]"
+              type="button"
+              :aria-label="`${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`"
+              :aria-pressed="isSelectedDate(date)"
+              :disabled="isDateDisabled(date)"
               :class="[
+                isDateDisabled(date) ? 'cursor-not-allowed opacity-25 hover:bg-transparent' : '',
                 isSelectedDate(date)
                   ? 'bg-[var(--color-brand-primary)] text-white hover:bg-[var(--color-brand-primary-pressed)]'
                   : date.getDay() === 0
@@ -240,9 +254,6 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside
                   ? 'ring-1 ring-inset ring-[var(--color-brand-primary)]'
                   : '',
               ]"
-              type="button"
-              :aria-label="`${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`"
-              :aria-pressed="isSelectedDate(date)"
               @click="selectDate(date)"
             >
               {{ date.getDate() }}

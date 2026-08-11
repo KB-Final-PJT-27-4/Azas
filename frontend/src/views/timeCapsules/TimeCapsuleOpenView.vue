@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import memorySheetUrl from '@/assets/images/timeCapsules/open/memory-sheet.png'
 
 type Memory = {
@@ -134,7 +134,9 @@ const openLetterModal = (index: number) => {
 }
 
 const router = useRouter()
+const route = useRoute()
 const goBack = () => router.back()
+const goToList = () => router.push(`/time-capsules/${String(route.params.capsuleListId)}`)
 </script>
 
 <template>
@@ -295,6 +297,7 @@ const goBack = () => router.back()
       </button>
       <small>대표 사진 12장은 언제든 직접 바꿀 수 있어요</small>
 
+      <button class="list-button" type="button" @click="goToList">기록 리스트 보기</button>
       <button class="back-button" type="button" @click="goBack">돌아가기</button>
     </section>
 
@@ -1027,6 +1030,24 @@ const goBack = () => router.back()
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.list-button {
+  width: min(100%, 320px);
+  min-height: 50px;
+  margin-top: 26px;
+  color: white;
+  background: #79bdf0;
+  border: 0;
+  border-radius: 15px;
+  box-shadow: 0 10px 24px rgba(76, 159, 214, 0.2);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.list-button + .back-button {
+  margin-top: 12px;
 }
 
 .modal-backdrop {
