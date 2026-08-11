@@ -24,7 +24,7 @@ const editGoal = () => router.push({ name: 'Goals' })
   <main
     class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-[18px] pt-5 pb-6 text-[var(--color-text-primary)]"
   >
-    <section class="rounded-[20px] bg-[var(--color-brand-secondary)] px-[18px] py-5">
+    <!-- <section class="rounded-[20px] bg-[var(--color-brand-secondary)] px-[18px] py-5">
       <div class="flex items-center gap-4">
         <span
           class="grid size-13 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--color-surface)]"
@@ -65,9 +65,9 @@ const editGoal = () => router.push({ name: 'Goals' })
       >
         수정하기
       </button>
-    </section>
+    </section> -->
 
-    <section class="mt-4">
+    <section>
       <h2 class="m-0 px-1 text-[15px] font-extrabold">
         추천 상품 {{ recommendedProducts.length }}개
       </h2>
@@ -85,7 +85,9 @@ const editGoal = () => router.push({ name: 'Goals' })
                 {{ product.type }}
               </span>
             </div>
-            <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">{{ product.bankName }}</p>
+            <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">
+              {{ product.bankName }}
+            </p>
 
             <button
               class="absolute top-5 right-5 grid size-8 place-items-center rounded-full active:bg-[var(--color-selected-background)]"
@@ -117,7 +119,9 @@ const editGoal = () => router.push({ name: 'Goals' })
                 <strong class="mt-2 block text-[13px]">{{ product.period }}</strong>
               </div>
               <div>
-                <span class="block text-[10px] text-[var(--color-text-secondary)]">월 납입한도</span>
+                <span class="block text-[10px] text-[var(--color-text-secondary)]"
+                  >월 납입한도</span
+                >
                 <strong class="mt-2 block text-[13px]">{{ product.monthlyLimit }}</strong>
               </div>
               <div class="relative h-[64px]" aria-hidden="true">
