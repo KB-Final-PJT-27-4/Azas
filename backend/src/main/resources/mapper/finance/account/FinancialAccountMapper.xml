@@ -201,6 +201,15 @@
         LIMIT 1
     </select>
 
+    <select id="findActiveChildIdByMemberId"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE member_id = #{memberId}
+          AND status = 'ACTIVE'
+        LIMIT 1
+    </select>
+
     <select id="sumDebitAmountByAccountAndPeriod"
             resultType="java.math.BigDecimal">
         SELECT COALESCE(SUM(amount), 0)

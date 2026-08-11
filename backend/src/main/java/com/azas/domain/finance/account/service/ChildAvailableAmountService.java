@@ -53,6 +53,15 @@ public class ChildAvailableAmountService {
     ) {
         validateChildMember(requesterMemberId);
 
+        Long childId = financialAccountMapper
+                .findActiveChildIdByMemberId(requesterMemberId);
+
+        if (childId == null) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_NOT_FOUND
+            );
+        }
+
         ChildAvailableAmountAccountRow account =
                 financialAccountMapper
                         .findActivePrimaryChildDemandDepositByMemberId(
@@ -62,6 +71,12 @@ public class ChildAvailableAmountService {
         if (account == null) {
             throw new BusinessException(
                     ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND
+            );
+        }
+
+        if (!childId.equals(account.getChildId())) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR
             );
         }
 

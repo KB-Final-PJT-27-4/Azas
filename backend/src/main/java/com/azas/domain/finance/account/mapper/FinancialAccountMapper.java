@@ -48,6 +48,11 @@ public interface FinancialAccountMapper {
             long childId
     );
 
+    Long findActiveChildIdByMemberId(
+            @Param("memberId")
+            long memberId
+    );
+
     ChildAvailableAmountAccountRow
     findActivePrimaryChildDemandDepositByMemberId(
             @Param("memberId")

@@ -209,6 +209,33 @@ class ChildAvailableAmountServiceTest {
     }
 
     @Test
+    void returnsNotFoundWhenChildProfileIsNotLinked() {
+        when(memberMapper.findById(MEMBER_ID))
+                .thenReturn(Member.createChild(
+                        "child@example.com",
+                        "자녀",
+                        null
+                ));
+        when(financialAccountMapper.findActiveChildIdByMemberId(
+                MEMBER_ID
+        )).thenReturn(null);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.getCurrentMonthUsage(MEMBER_ID)
+        );
+
+        assertEquals(
+                ErrorCode.CHILD_NOT_FOUND,
+                exception.getErrorCode()
+        );
+        verify(financialAccountMapper, never())
+                .findActivePrimaryChildDemandDepositByMemberId(
+                        MEMBER_ID
+                );
+    }
+
+    @Test
     void rejectsMissingUsagePolicy() {
         mockChildMember();
         when(financialAccountMapper
@@ -268,6 +295,9 @@ class ChildAvailableAmountServiceTest {
                         "자녀",
                         null
                 ));
+        when(financialAccountMapper.findActiveChildIdByMemberId(
+                MEMBER_ID
+        )).thenReturn(CHILD_ID);
     }
 
     private ChildAvailableAmountAccountRow accountRow(
