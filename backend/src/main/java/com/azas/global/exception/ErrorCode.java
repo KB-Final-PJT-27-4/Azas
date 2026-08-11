@@ -111,6 +111,14 @@ public enum ErrorCode {
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자녀 명의의 활성 입출금 계좌에만 사용 관리 정책을 설정할 수 있습니다."
     ),
+    CHILD_MEMBER_ACCESS_REQUIRED(
+            HttpStatus.FORBIDDEN,
+            "자녀 회원 계정으로만 조회할 수 있습니다."
+    ),
+    CHILD_USAGE_POLICY_NOT_CONFIGURED(
+            HttpStatus.CONFLICT,
+            "자녀 대표 계좌의 사용 관리 정책이 설정되지 않았습니다."
+    ),
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 계좌를 찾을 수 없습니다."

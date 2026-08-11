@@ -5,6 +5,7 @@ import com.azas.domain.finance.account.dto.AccountBalanceHistorySnapshotRow;
 import com.azas.domain.finance.account.dto.AccountBalanceRow;
 import com.azas.domain.finance.account.dto.AccountUnlinkTargetRow;
 import com.azas.domain.finance.account.dto.ChildAccountListRow;
+import com.azas.domain.finance.account.dto.ChildAvailableAmountAccountRow;
 import com.azas.domain.finance.account.dto.ParentAccountListRow;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
 import com.azas.domain.finance.account.entity.FinancialAccountUsagePolicy;
@@ -45,6 +46,21 @@ public interface FinancialAccountMapper {
     List<ChildAccountListRow> findActiveChildAccounts(
             @Param("childId")
             long childId
+    );
+
+    ChildAvailableAmountAccountRow
+    findActivePrimaryChildDemandDepositByMemberId(
+            @Param("memberId")
+            long memberId
+    );
+
+    BigDecimal sumDebitAmountByAccountAndPeriod(
+            @Param("financialAccountId")
+            long financialAccountId,
+            @Param("startOccurredAt")
+            LocalDateTime startOccurredAt,
+            @Param("endOccurredAtExclusive")
+            LocalDateTime endOccurredAtExclusive
     );
 
     int countActiveChildById(

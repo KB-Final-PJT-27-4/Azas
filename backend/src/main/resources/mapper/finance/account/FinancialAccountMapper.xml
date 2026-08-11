@@ -164,6 +164,53 @@
                  fa.financial_account_id DESC
     </select>
 
+    <select id="findActivePrimaryChildDemandDepositByMemberId"
+            resultType="com.azas.domain.finance.account.dto.ChildAvailableAmountAccountRow">
+        SELECT
+            fa.financial_account_id AS account_id,
+            c.child_id,
+            fa.child_access_mode AS child_usage_mode,
+            fa.child_available_amount
+                AS child_monthly_budget_amount
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+                 INNER JOIN financial_connection fc
+                            ON fc.child_id = c.child_id
+                           AND fc.owner_type = 'CHILD'
+                 INNER JOIN financial_account fa
+                            ON fa.financial_connection_id =
+                               fc.financial_connection_id
+                           AND fa.child_id = c.child_id
+        WHERE c.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND m.member_type = 'CHILD'
+          AND fc.consent_status = 'ACTIVE'
+          AND fc.revoked_at IS NULL
+          AND (
+              fc.consent_expires_at IS NULL
+              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
+          )
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.is_primary = 1
+        ORDER BY fa.linked_at DESC,
+                 fa.financial_account_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="sumDebitAmountByAccountAndPeriod"
+            resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(amount), 0)
+        FROM account_transaction
+        WHERE financial_account_id = #{financialAccountId}
+          AND direction = 'DEBIT'
+          AND occurred_at <![CDATA[>=]]> #{startOccurredAt}
+          AND occurred_at <![CDATA[<]]> #{endOccurredAtExclusive}
+    </select>
+
     <select id="countActiveChildById"
             resultType="int">
         SELECT COUNT(*)
