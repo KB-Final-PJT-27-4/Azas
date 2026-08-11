@@ -53,6 +53,15 @@ const formatDate = (date: string) => date.replaceAll('-', '.')
 const openRecord = (recordId: number) =>
   router.push(`/time-capsules/${accountId.value}/${recordId}`)
 
+const createFirstRecord = () =>
+  router.push({
+    name: 'TimeCapsuleCreate',
+    query: {
+      account: accountId.value,
+      ...(typeof route.query.openDate === 'string' ? { openDate: route.query.openDate } : {}),
+    },
+  })
+
 const scrollToMonth = async (month: number) => {
   await nextTick()
   document
@@ -74,7 +83,9 @@ const changeYear = () => {
 </script>
 
 <template>
-  <main class="flex h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col overflow-hidden bg-white">
+  <main
+    class="flex h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col overflow-hidden bg-white"
+  >
     <section class="shrink-0 px-5">
       <div class="flex items-center">
         <div class="min-w-0 flex-1">
@@ -82,7 +93,7 @@ const changeYear = () => {
           <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ account.description }}</p>
         </div>
         <img
-          class="h-28 w-32 translate-y-4 shrink-0 origin-right scale-[1.3] object-contain"
+          class="h-28 w-32 translate-y-4 translate-x-5 shrink-0 origin-right scale-[1.3] object-contain"
           :src="capsulePigImage"
           alt="타임캡슐 저금통"
         />
@@ -169,6 +180,23 @@ const changeYear = () => {
           {{ record.amount.toLocaleString('ko-KR') }}원
         </strong>
       </button>
+
+      <div
+        v-if="listRecords.length === 0"
+        class="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#cfe5ef] bg-[#f7fbfd] px-6 text-center"
+      >
+        <strong class="mt-4 text-base">아직 담긴 추억이 없어요</strong>
+        <p class="mt-1.5 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+          타임 캡슐에 첫 번째 금융 기록과<br />소중한 순간을 남겨보세요.
+        </p>
+        <button
+          class="mt-5 min-h-11 rounded-xl bg-[var(--color-brand-primary)] px-5 text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+          type="button"
+          @click="createFirstRecord"
+        >
+          첫 기록 만들기
+        </button>
+      </div>
     </section>
 
     <section
@@ -196,27 +224,37 @@ const changeYear = () => {
             >
               <button
                 v-if="day && getRecord(month.year, month.month, day)"
-                class="relative grid size-10 place-items-center overflow-hidden rounded-full text-sm font-black text-white shadow-sm"
+                class="relative grid size-10 place-items-center overflow-hidden rounded-full text-sm font-semibold text-white shadow-sm"
+                :class="
+                  getRecord(month.year, month.month, day)!.photos.length ? '' : 'bg-[#79ccef]'
+                "
                 type="button"
                 :aria-label="`${day}일 ${getRecord(month.year, month.month, day)!.title}`"
                 @click="openRecord(getRecord(month.year, month.month, day)!.id)"
               >
                 <img
+                  v-if="getRecord(month.year, month.month, day)!.photos.length"
                   class="absolute inset-0 size-full object-cover"
                   :src="getRecord(month.year, month.month, day)!.thumbnail"
                   alt=""
                   aria-hidden="true"
                 />
-                <span class="absolute inset-0 grid place-items-center bg-black/15 text-xs">{{
-                  day
-                }}</span>
+                <span
+                  class="absolute inset-0 grid place-items-center text-xs"
+                  :class="
+                    getRecord(month.year, month.month, day)!.photos.length
+                      ? 'bg-black/15'
+                      : 'bg-transparent'
+                  "
+                  >{{ day }}</span
+                >
               </button>
               <span
                 v-else-if="day"
                 class="grid size-9 place-items-center rounded-full text-sm font-semibold"
                 :class="
                   isToday(month.year, month.month, day)
-                    ? 'bg-[var(--color-brand-primary)] text-white'
+                    ? 'bg-[#e85b61] text-white'
                     : 'text-[#87919e]'
                 "
               >
