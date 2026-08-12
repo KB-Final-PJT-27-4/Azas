@@ -28,7 +28,7 @@ const formattedBirthDate = computed(() => {
 })
 
 const startService = () => {
-  router.push({ name: 'Home' })
+  router.push({ name: 'Accounts' })
 }
 
 const editRegistration = () => {
