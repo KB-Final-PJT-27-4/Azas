@@ -10,8 +10,6 @@ type PermissionItem = {
   enabled: boolean
 }
 
-type LimitKey = 'daily' | 'monthly'
-
 type ChildProfile = {
   id: number
   name: string
@@ -32,18 +30,6 @@ const selectedChild = computed(() =>
 )
 const permissions = ref<PermissionItem[]>([
   {
-    id: 'balance',
-    title: '잔액 및 돈 기록 보기',
-    description: '현재 잔액과 입출금 내역을 확인할 수 있어요.',
-    enabled: true,
-  },
-  {
-    id: 'transfer',
-    title: '이체하기',
-    description: '아이 계좌에서 직접 이체할 수 있어요.',
-    enabled: true,
-  },
-  {
     id: 'allowance',
     title: '용돈 요청',
     description: '부모님에게 용돈을 요청할 수 있어요.',
@@ -52,20 +38,25 @@ const permissions = ref<PermissionItem[]>([
   {
     id: 'limit',
     title: '사용 금액 한도 보기',
-    description: '설정된 일·월 사용 한도를 확인할 수 있어요.',
+    description: '설정된 한 달 사용 한도를 확인할 수 있어요.',
     enabled: true,
   },
 ])
 
-const limits = ref({ daily: 20000, monthly: 100000 })
+const monthlyLimit = ref(100000)
+const limitPresets = [50000, 100000, 200000, 300000]
 
 const formatAmount = (amount: number) => amount.toLocaleString('ko-KR')
 
-const updateLimit = (key: LimitKey, event: Event) => {
+const updateLimit = (event: Event) => {
   const input = event.target as HTMLInputElement
   const amount = Number(input.value.replace(/[^0-9]/g, ''))
-  limits.value[key] = Number.isFinite(amount) ? amount : 0
-  input.value = formatAmount(limits.value[key])
+  monthlyLimit.value = Number.isFinite(amount) ? amount : 0
+  input.value = formatAmount(monthlyLimit.value)
+}
+
+const setMonthlyLimit = (amount: number) => {
+  monthlyLimit.value = amount
 }
 
 const savePermissions = () => {
@@ -88,9 +79,9 @@ const disconnectChild = () => {
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-6 pb-28">
+  <main class="min-h-[calc(100dvh-var(--app-header-height))] px-5 pt-6 pb-21">
     <section
-      class="flex items-center gap-3 rounded-2xl border border-[#d5edf8] bg-[var(--color-selected-background)] p-4"
+      class="flex items-center gap-3 rounded-[20px] border border-[var(--color-border)] bg-white p-4 shadow-[0_6px_20px_rgba(49,87,108,0.04)]"
     >
       <span
         class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white"
@@ -105,12 +96,12 @@ const disconnectChild = () => {
         <span class="mt-0.5 block text-[11px] text-[var(--color-text-secondary)]">
           {{ selectedChild.age }}세 · {{ selectedChild.schoolLevel }}
         </span>
-        <span class="mt-0.5 block text-[11px] font-medium text-[var(--color-selected-text)]">
-          아이 계정 연결 완료
-        </span>
       </div>
+      <span class="shrink-0 rounded-full bg-[#eaf8ff] px-2.5 py-1 text-[10px] font-bold text-[var(--color-selected-text)]">
+        연결됨
+      </span>
       <button
-        class="shrink-0 rounded-lg bg-white px-3 py-2 text-[11px] font-bold text-[var(--color-selected-text)] active:bg-[#f5fbfe]"
+        class="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-[11px] font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]"
         type="button"
         @click="changeChild"
       >
@@ -118,9 +109,8 @@ const disconnectChild = () => {
       </button>
     </section>
 
-    <aside class="mt-3 rounded-xl bg-[#fff8dc] px-4 py-3 text-[11px] leading-relaxed text-[#79662c]">
-      설정한 권한은 아이 화면에 즉시 반영돼요. 부모님이 허용한 기능과 금액 범위 안에서만
-      이용할 수 있어요.
+    <aside class="mt-3 rounded-xl bg-[#edf8fd] px-4 py-3 text-[11px] leading-relaxed text-[#587482]">
+      변경한 권한과 사용 한도는 저장 후 아이 화면에 바로 반영돼요.
     </aside>
 
     <form class="mt-7" @submit.prevent="savePermissions">
@@ -132,11 +122,11 @@ const disconnectChild = () => {
           아이 화면에서 사용할 기능을 선택해주세요.
         </p>
 
-        <ul class="mt-4 m-0 list-none overflow-hidden rounded-2xl border border-[var(--color-border)] p-0">
+        <ul class="mt-4 m-0 list-none overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-white p-0 shadow-[0_6px_20px_rgba(49,87,108,0.04)]">
           <li
             v-for="permission in permissions"
             :key="permission.id"
-            class="relative flex min-h-[76px] items-center gap-3 px-4 py-3 after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-[var(--color-border)] last:after:hidden"
+            class="relative flex min-h-[78px] items-center gap-3 px-5 py-3.5 after:absolute after:right-5 after:bottom-0 after:left-5 after:h-px after:bg-[#edf1f3] last:after:hidden"
           >
             <label class="min-w-0 flex-1 cursor-pointer" :for="`permission-${permission.id}`">
               <strong class="block text-[14px] font-bold text-[var(--color-text-primary)]">
@@ -167,61 +157,56 @@ const disconnectChild = () => {
         </ul>
       </section>
 
-      <section class="mt-8">
+      <section class="mt-9">
         <h2 class="text-[19px] font-extrabold tracking-[-0.02em] text-[var(--color-text-primary)]">
           사용 금액 한도
         </h2>
         <p class="mt-1 text-[11px] text-[var(--color-text-secondary)]">
-          아이가 사용할 수 있는 최대 금액이에요.
+          아이가 한 달 동안 사용할 수 있는 최대 금액이에요.
         </p>
 
-        <div class="mt-4 space-y-3">
-          <label class="block rounded-2xl border border-[var(--color-border)] bg-white p-4">
-            <span class="flex items-center justify-between gap-4">
-              <strong class="text-[13px] font-bold">하루 사용 한도</strong>
-              <span class="text-[11px] font-bold text-[var(--color-selected-text)]">
-                {{ formatAmount(limits.daily) }}원
-              </span>
-            </span>
+        <div class="mt-4 rounded-[20px] border border-[var(--color-border)] bg-white p-5 shadow-[0_6px_20px_rgba(49,87,108,0.04)]">
+          <label class="block">
+            <strong class="text-[13px] font-bold">한 달 사용 한도</strong>
             <span
-              class="mt-3 flex min-h-12 items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 focus-within:border-[var(--color-brand-primary)] focus-within:bg-white"
+              class="mt-3 flex min-h-14 items-center rounded-xl border border-[var(--color-border)] bg-[#f7f9fa] px-4 focus-within:border-[var(--color-brand-primary)] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#e1f5fe]"
             >
               <input
-                class="min-w-0 flex-1 bg-transparent text-right text-[16px] font-bold outline-none"
+                class="min-w-0 flex-1 bg-transparent text-right text-[20px] font-extrabold outline-none"
                 inputmode="numeric"
-                :value="formatAmount(limits.daily)"
-                aria-label="하루 사용 한도"
-                @input="updateLimit('daily', $event)"
+                :value="formatAmount(monthlyLimit)"
+                aria-label="한 달 사용 한도"
+                @input="updateLimit"
               />
-              <span class="ml-2 text-xs text-[var(--color-text-secondary)]">원</span>
+              <span class="ml-2 text-sm font-bold text-[var(--color-text-secondary)]">원</span>
             </span>
           </label>
 
-          <label class="block rounded-2xl border border-[var(--color-border)] bg-white p-4">
-            <span class="flex items-center justify-between gap-4">
-              <strong class="text-[13px] font-bold">한 달 사용 한도</strong>
-              <span class="text-[11px] font-bold text-[var(--color-selected-text)]">
-                {{ formatAmount(limits.monthly) }}원
-              </span>
-            </span>
-            <span
-              class="mt-3 flex min-h-12 items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 focus-within:border-[var(--color-brand-primary)] focus-within:bg-white"
+          <div class="mt-3 grid grid-cols-4 gap-2" aria-label="한 달 사용 한도 빠른 선택">
+            <button
+              v-for="amount in limitPresets"
+              :key="amount"
+              class="min-h-9 rounded-lg text-[11px] font-bold transition-colors"
+              :class="
+                monthlyLimit === amount
+                  ? 'bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+                  : 'bg-[#f2f5f6] text-[var(--color-text-secondary)] active:bg-[#e8edef]'
+              "
+              type="button"
+              @click="setMonthlyLimit(amount)"
             >
-              <input
-                class="min-w-0 flex-1 bg-transparent text-right text-[16px] font-bold outline-none"
-                inputmode="numeric"
-                :value="formatAmount(limits.monthly)"
-                aria-label="한 달 사용 한도"
-                @input="updateLimit('monthly', $event)"
-              />
-              <span class="ml-2 text-xs text-[var(--color-text-secondary)]">원</span>
-            </span>
-          </label>
+              {{ amount / 10000 }}만원
+            </button>
+          </div>
+
+          <p class="mt-3 text-[10px] leading-5 text-[var(--color-text-secondary)]">
+            한도를 초과하면 아이와 보호자에게 알림을 보내드려요.
+          </p>
         </div>
       </section>
 
       <button
-        class="mt-8 min-h-12 w-full rounded-xl border border-[#ffc9c9] bg-white text-[13px] font-bold text-[#ef6666] active:bg-[#fff6f6]"
+        class="mt-2 min-h-11 w-full text-[12px] font-semibold text-[#dc6b6b] underline decoration-[#efcaca] underline-offset-4"
         type="button"
         @click="disconnectChild"
       >
@@ -230,7 +215,7 @@ const disconnectChild = () => {
     </form>
 
     <div
-      class="fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-1/2 z-10 w-full max-w-[var(--app-max-width)] -translate-x-1/2 px-5"
+      class="fixed bottom-0 left-1/2 z-10 w-full max-w-[var(--app-max-width)] -translate-x-1/2 bg-gradient-to-t from-white via-white to-white/0 px-5 pt-7 pb-[calc(16px+env(safe-area-inset-bottom))]"
     >
       <button
         class="min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-[15px] font-bold text-white shadow-[0_8px_20px_rgba(85,192,244,0.22)] active:bg-[var(--color-brand-primary-pressed)]"
