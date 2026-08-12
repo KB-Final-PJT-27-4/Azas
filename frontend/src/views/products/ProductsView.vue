@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ChevronRight, Heart } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
 
-import { productRecommendationGoal, recommendedProducts } from '@/data/productDummyData'
+import { recommendedProducts } from '@/data/productDummyData'
 
-const router = useRouter()
 const favoriteProductIds = ref(new Set<string>(['kb-child-love-saving-1']))
+type ProductFilter = '전체' | '적금' | '입출금계좌'
 
-const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+const productFilters: ProductFilter[] = ['전체', '적금', '입출금계좌']
+const selectedProductFilter = ref<ProductFilter>('전체')
+
+const filteredProducts = computed(() => {
+  if (selectedProductFilter.value === '전체') return recommendedProducts
+
+  return recommendedProducts.filter((product) => product.type === selectedProductFilter.value)
+})
 
 const toggleFavorite = (productId: string) => {
   const nextFavorites = new Set(favoriteProductIds.value)
@@ -16,64 +22,40 @@ const toggleFavorite = (productId: string) => {
   else nextFavorites.add(productId)
   favoriteProductIds.value = nextFavorites
 }
-
-const editGoal = () => router.push({ name: 'Goals' })
 </script>
 
 <template>
   <main
     class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-[18px] pt-5 pb-6 text-[var(--color-text-primary)]"
   >
-    <!-- <section class="rounded-[20px] bg-[var(--color-brand-secondary)] px-[18px] py-5">
-      <div class="flex items-center gap-4">
-        <span
-          class="grid size-13 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--color-surface)]"
-          aria-hidden="true"
-        >
-          <img class="size-10 object-contain" :src="productRecommendationGoal.icon" alt="" />
-        </span>
-        <div class="min-w-0">
-          <span class="block text-[11px] text-[var(--color-text-secondary)]">현재 목표</span>
-          <h1 class="mt-0.5 mb-0 text-[20px] leading-tight font-extrabold">
-            {{ productRecommendationGoal.title }}
-          </h1>
-          <p class="mt-1 mb-0 text-[12px] text-[var(--color-text-secondary)]">
-            목표금액 {{ formatWon(productRecommendationGoal.targetAmount) }}
-          </p>
-        </div>
-      </div>
-
-      <div class="mt-5 grid grid-cols-2 border-t border-[var(--color-border)] pt-4">
-        <div>
-          <span class="block text-[11px] text-[var(--color-text-secondary)]">목표 달성 시기</span>
-          <strong class="mt-1 block text-[14px]">{{ productRecommendationGoal.targetDate }}</strong>
-        </div>
-        <div>
-          <span class="block text-[11px] text-[var(--color-text-secondary)]"
-            >월 저축 가능 금액</span
-          >
-          <strong class="mt-1 block text-[14px]">
-            {{ formatWon(productRecommendationGoal.monthlySavingAmount) }}
-          </strong>
-        </div>
-      </div>
-
-      <button
-        class="mt-4 h-10 w-full rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] font-medium active:bg-[var(--color-surface-muted)]"
-        type="button"
-        @click="editGoal"
-      >
-        수정하기
-      </button>
-    </section> -->
-
     <section>
-      <h2 class="m-0 px-1 text-[15px] font-extrabold">
-        추천 상품 {{ recommendedProducts.length }}개
+      <fieldset class="mt-4">
+        <legend class="sr-only">상품 유형 필터</legend>
+        <div class="flex gap-2 overflow-x-auto pb-1">
+          <button
+            v-for="filter in productFilters"
+            :key="filter"
+            class="h-9 shrink-0 rounded-full border px-4 text-[13px] font-bold transition-colors"
+            :class="
+              selectedProductFilter === filter
+                ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]'
+            "
+            type="button"
+            :aria-pressed="selectedProductFilter === filter"
+            @click="selectedProductFilter = filter"
+          >
+            {{ filter }}
+          </button>
+        </div>
+      </fieldset>
+
+      <h2 class="mt-1 px-1 text-[15px] font-extrabold">
+        추천 상품 {{ filteredProducts.length }}개
       </h2>
 
-      <ul class="mt-4 mb-0 grid list-none gap-4 p-0">
-        <li v-for="product in recommendedProducts" :key="product.id">
+      <ul v-if="filteredProducts.length" class="mt-3 mb-0 grid list-none gap-4 p-0">
+        <li v-for="product in filteredProducts" :key="product.id">
           <article
             class="relative rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[18px] py-5 shadow-sm"
           >
@@ -144,7 +126,19 @@ const editGoal = () => router.push({ name: 'Goals' })
         </li>
       </ul>
 
+      <div
+        v-else
+        class="mt-3 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-12 text-center"
+        role="status"
+      >
+        <p class="m-0 text-[14px] font-bold">해당 유형의 추천 상품이 없어요.</p>
+        <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">
+          다른 상품 유형을 선택해 주세요.
+        </p>
+      </div>
+
       <button
+        v-if="filteredProducts.length"
         class="mt-4 h-12 w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] font-extrabold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
         type="button"
       >
