@@ -99,6 +99,41 @@
           )
     </select>
 
+    <select id="findAccountTransactions"
+            resultType="com.azas.domain.finance.account.dto.AccountTransactionRow">
+        SELECT
+            tx.account_transaction_id,
+            tx.occurred_at,
+            tx.direction,
+            tx.amount,
+            tx.balance_after,
+            tx.description,
+            tx.counterparty_name,
+            cfa.financial_account_id AS counterparty_account_id,
+            cfa.bank_name AS counterparty_bank_name,
+            cfa.account_name AS counterparty_account_name,
+            cfa.account_number_ciphertext
+                AS counterparty_account_number_ciphertext
+        FROM account_transaction tx
+                 LEFT JOIN financial_account cfa
+                           ON cfa.financial_account_id =
+                              tx.counterparty_account_id
+        WHERE tx.financial_account_id = #{financialAccountId}
+        <if test="cursorOccurredAt != null and cursorTransactionId != null">
+          AND (
+              tx.occurred_at <![CDATA[<]]> #{cursorOccurredAt}
+              OR (
+                  tx.occurred_at = #{cursorOccurredAt}
+                  AND tx.account_transaction_id <![CDATA[<]]>
+                      #{cursorTransactionId}
+              )
+          )
+        </if>
+        ORDER BY tx.occurred_at DESC,
+                 tx.account_transaction_id DESC
+        LIMIT #{limit}
+    </select>
+
     <select id="findActiveParentAccounts"
             resultType="com.azas.domain.finance.account.dto.ParentAccountListRow">
         SELECT
