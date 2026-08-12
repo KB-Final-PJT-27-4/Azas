@@ -328,4 +328,62 @@
           AND link_status != 'UNLINKED'
     </update>
 
+    <!-- 대표 계좌 변경 전 대상 계좌와 소유 범위를 잠금 조회한다. -->
+    <select id="findAccountPrimaryTargetByIdForUpdate"
+            resultType="com.azas.domain.finance.account.dto.AccountPrimaryTargetRow">
+        SELECT
+            fa.financial_account_id AS account_id,
+            fc.owner_type,
+            fc.connected_by_member_id,
+            fc.child_id,
+            fa.account_status,
+            fa.link_status,
+            fc.consent_status,
+            fa.is_primary AS primary_account
+        FROM financial_account fa
+                 INNER JOIN financial_connection fc
+                            ON fc.financial_connection_id =
+                               fa.financial_connection_id
+        WHERE fa.financial_account_id = #{financialAccountId}
+          AND fc.revoked_at IS NULL
+          AND (
+              fc.consent_expires_at IS NULL
+              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
+          )
+        FOR UPDATE
+    </select>
+
+    <!-- 부모 본인 명의 계좌 범위에서 선택 계좌만 대표로 남긴다. -->
+    <update id="setPrimaryAccountForParentScope">
+        UPDATE financial_account fa
+            INNER JOIN financial_connection fc
+                    ON fc.financial_connection_id =
+                       fa.financial_connection_id
+        SET fa.is_primary = CASE
+                WHEN fa.financial_account_id = #{financialAccountId}
+                    THEN 1
+                ELSE 0
+            END,
+            fa.updated_at = UTC_TIMESTAMP(6)
+        WHERE fc.owner_type = 'PARENT'
+          AND fc.connected_by_member_id = #{connectedByMemberId}
+    </update>
+
+    <!-- 동일 자녀 명의 계좌 범위에서 선택 계좌만 대표로 남긴다. -->
+    <update id="setPrimaryAccountForChildScope">
+        UPDATE financial_account fa
+            INNER JOIN financial_connection fc
+                    ON fc.financial_connection_id =
+                       fa.financial_connection_id
+        SET fa.is_primary = CASE
+                WHEN fa.financial_account_id = #{financialAccountId}
+                    THEN 1
+                ELSE 0
+            END,
+            fa.updated_at = UTC_TIMESTAMP(6)
+        WHERE fc.owner_type = 'CHILD'
+          AND fc.child_id = #{childId}
+          AND fa.child_id = #{childId}
+    </update>
+
 </mapper>

@@ -4,6 +4,7 @@ import com.azas.domain.finance.account.dto.AccountDetailRow;
 import com.azas.domain.finance.account.dto.AccountBalanceHistorySnapshotRow;
 import com.azas.domain.finance.account.dto.AccountBalanceRow;
 import com.azas.domain.finance.account.dto.AccountUnlinkTargetRow;
+import com.azas.domain.finance.account.dto.AccountPrimaryTargetRow;
 import com.azas.domain.finance.account.dto.ChildAccountListRow;
 import com.azas.domain.finance.account.dto.ChildAvailableAmountAccountRow;
 import com.azas.domain.finance.account.dto.ParentAccountListRow;
@@ -120,5 +121,24 @@ public interface FinancialAccountMapper {
             long financialAccountId,
             @Param("unlinkedAt")
             LocalDateTime unlinkedAt
+    );
+
+    AccountPrimaryTargetRow findAccountPrimaryTargetByIdForUpdate(
+            @Param("financialAccountId")
+            long financialAccountId
+    );
+
+    int setPrimaryAccountForParentScope(
+            @Param("connectedByMemberId")
+            long connectedByMemberId,
+            @Param("financialAccountId")
+            long financialAccountId
+    );
+
+    int setPrimaryAccountForChildScope(
+            @Param("childId")
+            long childId,
+            @Param("financialAccountId")
+            long financialAccountId
     );
 }
