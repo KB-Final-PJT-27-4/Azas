@@ -62,7 +62,12 @@ const toggleFavorite = (productId: string) => {
             <div class="flex items-start gap-2 pr-10">
               <h3 class="m-0 truncate text-[17px] font-extrabold">{{ product.name }}</h3>
               <span
-                class="shrink-0 rounded-full bg-[var(--color-selected-background)] px-3 py-1 text-[10px] font-bold text-[var(--color-selected-text)]"
+                class="shrink-0 rounded-full px-3 py-1 text-[10px] font-bold"
+                :class="
+                  product.type === '입출금계좌'
+                    ? 'bg-[var(--color-brand-secondary)] text-[#a67d18]'
+                    : 'bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+                "
               >
                 {{ product.type }}
               </span>
