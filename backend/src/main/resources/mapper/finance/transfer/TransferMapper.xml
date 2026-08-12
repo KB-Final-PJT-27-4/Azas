@@ -112,6 +112,7 @@
             keyColumn="account_transaction_id">
         INSERT INTO account_transaction (
             financial_account_id,
+            counterparty_account_id,
             child_id,
             transaction_fingerprint,
             occurred_at,
@@ -124,6 +125,7 @@
             synced_at
         ) VALUES (
                      #{financialAccountId},
+                     #{counterpartyAccountId},
                      #{childId},
                      #{transactionFingerprint},
                      #{occurredAt},

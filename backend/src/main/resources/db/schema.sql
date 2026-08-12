@@ -434,6 +434,7 @@ CREATE TABLE account_balance_snapshot (
 CREATE TABLE account_transaction (
   account_transaction_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '계좌 거래 ID',
   financial_account_id BIGINT UNSIGNED NOT NULL COMMENT '거래 계좌 ID',
+  counterparty_account_id BIGINT UNSIGNED NULL COMMENT '서비스 내부 상대 계좌 ID',
   child_id BIGINT UNSIGNED NULL COMMENT '자녀 기준 거래 조회용 중복 FK',
   transaction_fingerprint CHAR(64) NOT NULL COMMENT '중복 방지 해시',
   occurred_at DATETIME(6) NOT NULL COMMENT '거래 발생 시각',
@@ -449,10 +450,13 @@ CREATE TABLE account_transaction (
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
   PRIMARY KEY (account_transaction_id),
   UNIQUE KEY uk_account_transaction_fingerprint (transaction_fingerprint),
-  KEY idx_account_transaction_account_occurred (financial_account_id, occurred_at),
+  KEY idx_account_transaction_account_occurred (financial_account_id, occurred_at, account_transaction_id),
+  KEY idx_account_transaction_counterparty (counterparty_account_id),
   KEY idx_account_transaction_child_occurred (child_id, occurred_at),
   CONSTRAINT fk_account_transaction_account
     FOREIGN KEY (financial_account_id) REFERENCES financial_account (financial_account_id),
+  CONSTRAINT fk_account_transaction_counterparty
+    FOREIGN KEY (counterparty_account_id) REFERENCES financial_account (financial_account_id),
   CONSTRAINT fk_account_transaction_child
     FOREIGN KEY (child_id) REFERENCES child (child_id),
   CONSTRAINT ck_account_transaction_direction CHECK (direction IN ('CREDIT', 'DEBIT'))
