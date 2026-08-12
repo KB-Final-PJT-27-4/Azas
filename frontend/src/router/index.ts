@@ -57,7 +57,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/accounts/AccountsView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '계좌등록',
+      headerTitle: '계좌 연동',
       showHeaderBack: true,
       showHeaderNotification: false,
     },
