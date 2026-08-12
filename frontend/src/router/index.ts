@@ -357,6 +357,30 @@ const routes: RouteRecordRaw[] = [
 
   // 금융상품
   {
+    path: '/savings-recommendations',
+    name: 'SavingsRecommendation',
+    component: () => import('@/views/products/SavingsRecommendationView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '적금 추천',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
+    path: '/savings-recommendations/complete',
+    name: 'SavingsOpenComplete',
+    component: () => import('@/views/products/SavingsOpenCompleteView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '적금 개설 완료',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
     path: '/products',
     name: 'Products',
     component: () => import('@/views/products/ProductsView.vue'),
