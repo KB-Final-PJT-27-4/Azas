@@ -99,6 +99,7 @@ public class TransferServiceImpl implements TransferService {
                 new TransferTransactionInsertCommand(
                         null,
                         source.getFinancialAccountId(),
+                        destination.getFinancialAccountId(),
                         null,
                         createTransactionFingerprint(),
                         requestedAt,
@@ -112,6 +113,7 @@ public class TransferServiceImpl implements TransferService {
                 new TransferTransactionInsertCommand(
                         null,
                         destination.getFinancialAccountId(),
+                        source.getFinancialAccountId(),
                         destination.getChildId(),
                         createTransactionFingerprint(),
                         requestedAt,

@@ -14,6 +14,7 @@ public class TransferTransactionInsertCommand {
 
     private Long accountTransactionId;
     private final Long financialAccountId;
+    private final Long counterpartyAccountId;
     private final Long childId;
     private final String transactionFingerprint;
     private final LocalDateTime occurredAt;
