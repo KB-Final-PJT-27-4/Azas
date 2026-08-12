@@ -26,16 +26,16 @@ const toggleFavorite = (productId: string) => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-[18px] pt-5 pb-6 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-5 pt-6 pb-8 text-[var(--color-text-primary)]"
   >
     <section>
-      <fieldset class="mt-4">
+      <fieldset>
         <legend class="sr-only">상품 유형 필터</legend>
-        <div class="flex gap-2 overflow-x-auto pb-1">
+        <div class="flex gap-2 overflow-x-auto">
           <button
             v-for="filter in productFilters"
             :key="filter"
-            class="h-9 shrink-0 rounded-full border px-4 text-[13px] font-bold transition-colors"
+            class="h-10 shrink-0 rounded-full border px-4 text-[13px] font-bold transition-colors"
             :class="
               selectedProductFilter === filter
                 ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
@@ -50,16 +50,16 @@ const toggleFavorite = (productId: string) => {
         </div>
       </fieldset>
 
-      <h2 class="mt-1 px-1 text-[15px] font-extrabold">
+      <h2 class="mt-6 mb-0 text-[15px] font-extrabold">
         추천 상품 {{ filteredProducts.length }}개
       </h2>
 
-      <ul v-if="filteredProducts.length" class="mt-3 mb-0 grid list-none gap-4 p-0">
+      <ul v-if="filteredProducts.length" class="mt-3 mb-0 grid list-none gap-3 p-0">
         <li v-for="product in filteredProducts" :key="product.id">
           <article
-            class="relative rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[18px] py-5 shadow-sm"
+            class="relative rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm"
           >
-            <div class="flex items-start gap-2">
+            <div class="flex items-start gap-2 pr-10">
               <h3 class="m-0 truncate text-[17px] font-extrabold">{{ product.name }}</h3>
               <span
                 class="shrink-0 rounded-full bg-[var(--color-selected-background)] px-3 py-1 text-[10px] font-bold text-[var(--color-selected-text)]"
@@ -67,7 +67,7 @@ const toggleFavorite = (productId: string) => {
                 {{ product.type }}
               </span>
             </div>
-            <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">
+            <p class="mt-1.5 mb-0 text-[12px] text-[var(--color-text-secondary)]">
               {{ product.bankName }}
             </p>
 
@@ -89,7 +89,7 @@ const toggleFavorite = (productId: string) => {
               />
             </button>
 
-            <div class="mt-4 grid grid-cols-[1fr_0.9fr_0.9fr_94px] items-start gap-1.5">
+            <div class="mt-5 grid grid-cols-[1fr_0.9fr_0.9fr_88px] items-start gap-2">
               <div>
                 <span class="block text-[10px] text-[var(--color-text-secondary)]">최고 연</span>
                 <strong class="mt-1 block text-[21px] text-[var(--color-selected-text)]">
@@ -116,7 +116,7 @@ const toggleFavorite = (productId: string) => {
             </div>
 
             <RouterLink
-              class="flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[var(--color-border)] text-[14px] font-bold active:bg-[var(--color-surface-muted)]"
+              class="mt-1 flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[var(--color-border)] text-[14px] font-bold active:bg-[var(--color-surface-muted)]"
               :to="{ name: 'ProductDetail', params: { productId: product.id } }"
             >
               상품 자세히 보기
@@ -128,7 +128,7 @@ const toggleFavorite = (productId: string) => {
 
       <div
         v-else
-        class="mt-3 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-12 text-center"
+        class="mt-3 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-16 text-center"
         role="status"
       >
         <p class="m-0 text-[14px] font-bold">해당 유형의 추천 상품이 없어요.</p>
@@ -139,7 +139,7 @@ const toggleFavorite = (productId: string) => {
 
       <button
         v-if="filteredProducts.length"
-        class="mt-4 h-12 w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] font-extrabold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
+        class="mt-3 h-12 w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] font-extrabold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
         type="button"
       >
         추천 상품 더 보기
@@ -147,7 +147,7 @@ const toggleFavorite = (productId: string) => {
     </section>
 
     <aside
-      class="mt-4 rounded-[14px] bg-[var(--color-surface-muted)] px-4 py-5 text-[10px] leading-[1.7] text-[var(--color-text-secondary)]"
+      class="mt-6 rounded-[14px] bg-[var(--color-surface-muted)] p-4 text-[10px] leading-[1.7] text-[var(--color-text-secondary)]"
     >
       위 금리는 기본금리 기준이며, 우대금리 적용 시 변동될 수 있습니다.<br />
       상품 가입 전 금융기관의 최신 안내를 확인해 주세요.
