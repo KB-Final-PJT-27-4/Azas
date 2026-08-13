@@ -5,16 +5,72 @@ import { useRouter } from 'vue-router'
 import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
 import lockImage from '@/assets/images/timeCapsules/archive/lock.png'
 import openImage from '@/assets/images/timeCapsules/archive/open.png'
+import avocadoImage from '@/assets/images/pregnancy/avocado.png'
+import bananaImage from '@/assets/images/pregnancy/banana.png'
+import blueberryImage from '@/assets/images/pregnancy/blueberry.png'
+import coconutImage from '@/assets/images/pregnancy/coconut.png'
+import eggplantImage from '@/assets/images/pregnancy/eggplant.png'
+import lemonImage from '@/assets/images/pregnancy/lemon.png'
+import mangoImage from '@/assets/images/pregnancy/mango.png'
+import melonImage from '@/assets/images/pregnancy/melon.png'
+import peachImage from '@/assets/images/pregnancy/peach.png'
+import pineappleImage from '@/assets/images/pregnancy/pineapple.png'
+import strawberryImage from '@/assets/images/pregnancy/strawberry.png'
+import watermelonImage from '@/assets/images/pregnancy/watermelon.png'
 import BaseDatePicker from '@/components/common/BaseDatePicker.vue'
 import { useToast } from '@/composables/useToast'
+import { loadRegistrationDraft } from '@/utils/registrationDraft'
 
 const router = useRouter()
 const { showToast } = useToast()
 const isFreeCapsuleSheetOpen = ref(false)
 const freeCapsuleOpenDate = ref('')
 const isFreeCapsuleCreated = ref(false)
+const registration = loadRegistrationDraft()
+
+const pregnancyStages = [
+  { week: 7, fruit: '블루베리', image: blueberryImage, color: '#777bdc' },
+  { week: 9, fruit: '딸기', image: strawberryImage, color: '#ef6d73' },
+  { week: 14, fruit: '레몬', image: lemonImage, color: '#e4b52b' },
+  { week: 16, fruit: '아보카도', image: avocadoImage, color: '#74a34b' },
+  { week: 20, fruit: '바나나', image: bananaImage, color: '#e9b52e' },
+  { week: 20, fruit: '복숭아', image: peachImage, color: '#ed8c96' },
+  { week: 24, fruit: '메론', image: melonImage, color: '#8db958' },
+  { week: 28, fruit: '가지', image: eggplantImage, color: '#7753c6' },
+  { week: 29, fruit: '망고', image: mangoImage, color: '#e39a33' },
+  { week: 31, fruit: '파인애플', image: pineappleImage, color: '#dca82a' },
+  { week: 35, fruit: '코코넛', image: coconutImage, color: '#a26e46' },
+  { week: 39, fruit: '수박', image: watermelonImage, color: '#599952' },
+] as const
 
 const today = new Date()
+today.setHours(0, 0, 0, 0)
+
+const pregnancyGrowth = computed(() => {
+  if (!registration?.birthDate) return null
+
+  const [year, month, day] = registration.birthDate.split('-').map(Number)
+  if (!year || !month || !day) return null
+
+  const dueDate = new Date(year, month - 1, day)
+  dueDate.setHours(0, 0, 0, 0)
+  if (dueDate <= today) return null
+
+  const remainingDays = Math.ceil((dueDate.getTime() - today.getTime()) / 86_400_000)
+  const currentWeek = Math.max(1, Math.min(40, 40 - Math.ceil(remainingDays / 7)))
+  const nearestDistance = Math.min(
+    ...pregnancyStages.map(({ week }) => Math.abs(week - currentWeek)),
+  )
+  const nearestStages = pregnancyStages.filter(
+    ({ week }) => Math.abs(week - currentWeek) === nearestDistance,
+  )
+  const stage =
+    nearestStages.length === 1
+      ? nearestStages[0]!
+      : nearestStages[(registration.childName.codePointAt(0) ?? 0) % nearestStages.length]!
+
+  return { ...stage, currentWeek }
+})
 const todayKey = [
   today.getFullYear(),
   String(today.getMonth() + 1).padStart(2, '0'),
@@ -95,31 +151,60 @@ const capsuleAccounts = computed(() => [
 ])
 
 const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
-  capsule.isFree ? isFreeCapsuleCreated.value && isReleased(capsule.createdAt) : isReleased(capsule.createdAt)
+  capsule.isFree
+    ? isFreeCapsuleCreated.value && isReleased(capsule.createdAt)
+    : isReleased(capsule.createdAt)
 </script>
 
 <template>
   <main
     class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col bg-white"
   >
-    <section class="px-5 pt-7 pb-6">
+    <section class="px-5 pt-7 pb-4">
       <div>
-        <h1
-          class="text-[24px] leading-tight font-bold tracking-[-0.025em] text-[var(--color-text-primary)]"
-        >
-          타임캡슐 보관함
-        </h1>
-        <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
-          깨비의 성장 순간과 금융 기록을 모아보세요.
-        </p>
+        <div class="relative min-h-[128px] overflow-visible">
+          <h1
+            class="relative z-10 pt-1 text-[24px] leading-tight font-bold tracking-[-0.025em] text-[var(--color-text-primary)]"
+          >
+            타임캡슐 보관함
+          </h1>
+          <p class="relative z-10 mt-2 text-sm leading-5 text-[var(--color-text-secondary)]">
+            깨비의 성장 순간과<br />금융 기록을 모아보세요.
+          </p>
+
+          <aside
+            v-if="pregnancyGrowth"
+            class="pregnancy-growth-card absolute top-1 right-0 h-[156px] w-[184px]"
+            :aria-label="`임신 ${pregnancyGrowth.currentWeek}주, ${pregnancyGrowth.fruit}만큼 자랐어요`"
+          >
+            <div class="absolute right-[116px] bottom-14 z-10 whitespace-nowrap text-right">
+              <strong
+                class="block text-[20px] leading-none font-extrabold tracking-[-0.03em]"
+                :style="{ color: pregnancyGrowth.color }"
+              >
+                {{ pregnancyGrowth.currentWeek }}주
+              </strong>
+              <span class="mt-1.5 block text-[10px] font-semibold text-[var(--color-text-secondary)]">
+                {{ pregnancyGrowth.fruit }}만큼 자랐어요
+              </span>
+            </div>
+            <img
+              class="pregnancy-growth-card__image absolute right-0 bottom-7 h-[142px] w-[116px] object-contain object-bottom "
+              :src="pregnancyGrowth.image"
+              :alt="`${pregnancyGrowth.fruit} 깨비`"
+            />
+          </aside>
+        </div>
 
         <article
-          class="mt-6 flex min-h-20 items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 shadow-[0_8px_24px_rgba(67,139,179,0.08)]"
+          class="mt-2 flex min-h-20 items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 shadow-[0_8px_24px_rgba(67,139,179,0.08)]"
         >
           <img class="size-14 shrink-0 object-contain" :src="calendarImage" alt="공개 예정일" />
           <div class="ml-3 min-w-0 flex-1">
             <p class="truncate text-sm font-bold text-[var(--color-text-primary)]">아이사랑적금</p>
-            <time class="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]">2026.08.08</time>
+            <time class="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]"
+              >2026.08.08</time
+            >
           </div>
           <strong class="ml-3 shrink-0 text-[30px] font-bold tracking-[-0.04em] text-[#27a9eb]">
             D-23
@@ -128,7 +213,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
       </div>
     </section>
 
-    <section class="grid grid-cols-2 gap-3 px-5 pt-1" aria-label="타임캡슐 계좌 목록">
+    <section class="grid grid-cols-2 gap-3 px-5 pt-1 pb-5" aria-label="타임캡슐 계좌 목록">
       <article
         v-for="capsule in capsuleAccounts"
         :key="capsule.id"
@@ -166,7 +251,11 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
           </strong>
           <time
             class="mt-1 block text-xs"
-            :class="capsule.isFree && !isFreeCapsuleCreated ? 'font-bold text-[#ef5b5b]' : 'text-[var(--color-text-secondary)]'"
+            :class="
+              capsule.isFree && !isFreeCapsuleCreated
+                ? 'font-bold text-[#ef5b5b]'
+                : 'text-[var(--color-text-secondary)]'
+            "
           >
             {{ capsule.createdAt }}
           </time>
@@ -174,9 +263,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
             저축 금액 {{ capsule.savedAmount.toLocaleString('ko-KR') }}원
           </p>
         </button>
-
       </article>
-
     </section>
 
     <button
@@ -192,18 +279,36 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 
     <Teleport to="body">
       <Transition name="free-capsule-sheet">
-        <div v-if="isFreeCapsuleSheetOpen" class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40" @click.self="isFreeCapsuleSheetOpen = false">
-          <section class="free-capsule-panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]" role="dialog" aria-modal="true" aria-labelledby="free-capsule-title">
+        <div
+          v-if="isFreeCapsuleSheetOpen"
+          class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40"
+          @click.self="isFreeCapsuleSheetOpen = false"
+        >
+          <section
+            class="free-capsule-panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="free-capsule-title"
+          >
             <span class="mx-auto block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
             <header class="mt-4 flex items-start justify-between gap-4">
               <div>
                 <h2 id="free-capsule-title" class="m-0 text-[20px] font-bold">언제 열어볼까요?</h2>
               </div>
-              <button class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f7]" type="button" aria-label="오픈 날짜 설정 닫기" @click="isFreeCapsuleSheetOpen = false"><X :size="20" /></button>
+              <button
+                class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f7]"
+                type="button"
+                aria-label="오픈 날짜 설정 닫기"
+                @click="isFreeCapsuleSheetOpen = false"
+              >
+                <X :size="20" />
+              </button>
             </header>
 
             <div class="mt-5 rounded-2xl bg-[#f6f8fa] p-4">
-              <div class="mb-3 flex items-center gap-2 text-xs font-bold text-[#5d7180]">타임캡슐 오픈 날짜</div>
+              <div class="mb-3 flex items-center gap-2 text-xs font-bold text-[#5d7180]">
+                타임캡슐 오픈 날짜
+              </div>
               <BaseDatePicker
                 v-model="freeCapsuleOpenDate"
                 class="free-capsule-date-picker"
@@ -214,7 +319,12 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
               />
             </div>
 
-            <button class="mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#cbd8df]" type="button" :disabled="!freeCapsuleOpenDate" @click="confirmFreeCapsule">
+            <button
+              class="mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#cbd8df]"
+              type="button"
+              :disabled="!freeCapsuleOpenDate"
+              @click="confirmFreeCapsule"
+            >
               <Check :size="17" :stroke-width="2.8" />
               이 날짜로 캡슐 만들기
             </button>
@@ -226,6 +336,23 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 </template>
 
 <style scoped>
+@media (prefers-reduced-motion: no-preference) {
+  .pregnancy-growth-card__image {
+    animation: pregnancy-character-float 3.2s ease-in-out infinite;
+    transform-origin: 50% 100%;
+  }
+}
+
+@keyframes pregnancy-character-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-3px) rotate(1.5deg);
+  }
+}
+
 .time-capsule-create-button {
   bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 1px);
   left: 50%;
@@ -262,7 +389,9 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
   background: var(--color-brand-primary);
   border-radius: 40px 40px 0 0;
   box-shadow: 0 -3px 10px rgb(39 169 235 / 18%);
-  transition: background-color 140ms ease, transform 140ms ease;
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .time-capsule-create-button:active .time-capsule-create-button__surface {
@@ -298,15 +427,34 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 }
 
 @keyframes open-date-alert-bounce {
-  0%, 10%, 24%, 100% { transform: translateY(0) scale(1); }
-  14% { transform: translateY(-2px) scale(1.12); }
-  19% { transform: translateY(0) scale(0.96); }
+  0%,
+  10%,
+  24%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  14% {
+    transform: translateY(-2px) scale(1.12);
+  }
+  19% {
+    transform: translateY(0) scale(0.96);
+  }
 }
 
 @keyframes open-date-alert-ripple {
-  0%, 12% { opacity: 0; transform: scale(0.85); }
-  16% { opacity: 0.62; }
-  34%, 100% { opacity: 0; transform: scale(2.15); }
+  0%,
+  12% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  16% {
+    opacity: 0.62;
+  }
+  34%,
+  100% {
+    opacity: 0;
+    transform: scale(2.15);
+  }
 }
 
 .capsule-card--released {
@@ -319,23 +467,42 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
   z-index: 1;
   padding: 2px;
   pointer-events: none;
-  background: linear-gradient(110deg, #9fddf5 5%, #d8c4f3 24%, #f5bfd9 42%, #fff0ae 60%, #b9efd9 78%, #9fddf5 96%);
+  background: linear-gradient(
+    110deg,
+    #9fddf5 5%,
+    #d8c4f3 24%,
+    #f5bfd9 42%,
+    #fff0ae 60%,
+    #b9efd9 78%,
+    #9fddf5 96%
+  );
   background-size: 260% 100%;
   border-radius: inherit;
   content: '';
   animation: silver-border-shimmer 5s ease-in-out infinite;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   filter: drop-shadow(0 0 4px rgb(174 218 241 / 32%));
 }
 
 @keyframes silver-border-shimmer {
-  0%, 18% { background-position: 100% 0; }
-  72%, 100% { background-position: -100% 0; }
+  0%,
+  18% {
+    background-position: 100% 0;
+  }
+  72%,
+  100% {
+    background-position: -100% 0;
+  }
 }
 
-.free-capsule-date-picker :deep(> button) { height: 52px; font-size: 14px; }
+.free-capsule-date-picker :deep(> button) {
+  height: 52px;
+  font-size: 14px;
+}
 .free-capsule-date-picker :deep(> div[role='dialog']) {
   top: auto;
   bottom: 100%;
@@ -346,22 +513,36 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
   overflow-y: auto;
 }
 .free-capsule-sheet-enter-active,
-.free-capsule-sheet-leave-active { transition: background-color 180ms ease; }
+.free-capsule-sheet-leave-active {
+  transition: background-color 180ms ease;
+}
 .free-capsule-sheet-enter-active .free-capsule-panel,
-.free-capsule-sheet-leave-active .free-capsule-panel { transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.free-capsule-sheet-leave-active .free-capsule-panel {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
 .free-capsule-sheet-enter-from,
-.free-capsule-sheet-leave-to { background-color: transparent; }
+.free-capsule-sheet-leave-to {
+  background-color: transparent;
+}
 .free-capsule-sheet-enter-from .free-capsule-panel,
-.free-capsule-sheet-leave-to .free-capsule-panel { transform: translateY(100%); }
+.free-capsule-sheet-leave-to .free-capsule-panel {
+  transform: translateY(100%);
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .capsule-card--released::before { animation: none; }
+  .capsule-card--released::before {
+    animation: none;
+  }
   .open-date-alert,
   .open-date-alert::before,
-  .open-date-alert::after { animation: none; }
+  .open-date-alert::after {
+    animation: none;
+  }
   .free-capsule-sheet-enter-active,
   .free-capsule-sheet-leave-active,
   .free-capsule-sheet-enter-active .free-capsule-panel,
-  .free-capsule-sheet-leave-active .free-capsule-panel { transition-duration: 1ms; }
+  .free-capsule-sheet-leave-active .free-capsule-panel {
+    transition-duration: 1ms;
+  }
 }
 </style>
