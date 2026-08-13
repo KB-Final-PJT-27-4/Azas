@@ -28,9 +28,12 @@ public class ChildAccountListController {
 
     @ApiOperation(
             value = "ACCOUNT-14 자녀 계좌 목록 조회",
-            notes = "해당 자녀와 연결된 부모 또는 자녀 본인이 활성 금융 계좌 목록을 조회합니다. "
-                    + "계좌번호는 저장 시 암호화하고 응답 시 전체 번호로 복호화합니다. "
-                    + "연결 계좌가 없으면 빈 목록을 반환합니다."
+            notes = "해당 자녀와 연결된 부모 또는 자녀 본인이 자녀 명의의 "
+                    + "활성 Mock 계좌 목록을 조회합니다. 자녀 계좌 카드에 표시할 "
+                    + "잔액 합계와 연결 계좌 수를 함께 반환합니다. 계좌별로 상세 "
+                    + "이동과 화면 표시에 필요한 계좌 ID, 계좌명, 전체 계좌번호, "
+                    + "상품 유형, 현재 잔액만 반환합니다. 연결 계좌가 없으면 잔액 "
+                    + "합계와 계좌 수가 0인 빈 목록을 반환합니다."
     )
     @ApiResponses({
             @ApiResponse(
@@ -50,7 +53,7 @@ public class ChildAccountListController {
             ),
             @ApiResponse(
                     code = 403,
-                    message = "해당 자녀에 접근할 권한이 없음",
+                    message = "해당 자녀에 접근할 권한 없음",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
@@ -60,7 +63,7 @@ public class ChildAccountListController {
             ),
             @ApiResponse(
                     code = 500,
-                    message = "계좌번호 복호화 실패 등 서버 내부 오류",
+                    message = "계좌번호 복호화 실패 또는 서버 오류",
                     response = ApiErrorResponse.class
             )
     })
@@ -68,21 +71,13 @@ public class ChildAccountListController {
     public ResponseEntity<ChildAccountListResponse> getChildAccounts(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
-            @PathVariable("child_id")
-            long childId
+            @PathVariable("child_id") long childId
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
                 authorizationHeader
         );
-
-        ChildAccountListResult result =
-                childAccountListService.getChildAccounts(
-                        memberId,
-                        childId
-                );
-
-        return ResponseEntity.ok(
-                ChildAccountListResponse.from(result)
-        );
+        ChildAccountListResult result = childAccountListService
+                .getChildAccounts(memberId, childId);
+        return ResponseEntity.ok(ChildAccountListResponse.from(result));
     }
 }
