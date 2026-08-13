@@ -344,7 +344,12 @@ const routes: RouteRecordRaw[] = [
     path: '/reports',
     name: 'Reports',
     component: () => import('@/views/reports/ReportsView.vue'),
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      headerTitle: '자산 리포트',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 체크리스트
