@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
-  AlertTriangle,
   Baby,
   CalendarClock,
   ChevronRight,
@@ -18,6 +17,7 @@ import AssetTransferResultSheet from '@/components/assets/AssetTransferResultShe
 import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
 import AutoTransferSheet from '@/components/assets/AutoTransferSheet.vue'
 import { useToast } from '@/composables/useToast'
+import { deletedLinkedAssetAccountIds } from '@/data/assetDummyData'
 
 type AccountType = '적금' | '입출금'
 type AssetsTab = 'accounts' | 'autoTransfers'
@@ -60,7 +60,7 @@ const route = useRoute()
 const { showToast } = useToast()
 const activeAssetsTab = ref<AssetsTab>('accounts')
 
-const accountGroups: AccountGroup[] = [
+const allAccountGroups: AccountGroup[] = [
   {
     id: 'parent',
     title: '부모 계좌',
@@ -109,6 +109,11 @@ const accountGroups: AccountGroup[] = [
     ],
   },
 ]
+
+const accountGroups = allAccountGroups.map((group) => ({
+  ...group,
+  accounts: group.accounts.filter(({ id }) => !deletedLinkedAssetAccountIds.has(id)),
+}))
 
 const accountOptions = accountGroups.flatMap((group) =>
   group.accounts.map((account) => ({
@@ -422,7 +427,7 @@ const retryTransfer = () => {
           <li v-for="account in group.accounts" :key="account.id">
             <RouterLink
               class="group/account flex min-h-[70px] items-center gap-3 rounded-[15px] border border-[#e5edf1] bg-white px-4 py-2.5 !text-[var(--color-text-primary)] shadow-[0_2px_8px_rgba(54,112,139,0.035)] transition-colors active:border-[#cfeaf7] active:bg-[#fbfeff]"
-              :to="{ name: 'Accounts' }"
+              :to="{ name: 'AssetDetail', params: { assetId: account.id } }"
               :aria-label="`${account.name} 계좌 관리`"
             >
               <span class="min-w-0 flex-1">
