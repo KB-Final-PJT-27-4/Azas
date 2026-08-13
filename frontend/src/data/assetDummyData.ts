@@ -113,3 +113,103 @@ export const assetTransactions: AssetTransaction[] = [
 
 export const getAssetTransaction = (assetId: string) =>
   assetTransactions.find(({ id }) => String(id) === assetId) ?? assetTransactions[0]!
+
+export type LinkedAssetAccount = {
+  id: string
+  name: string
+  accountNumber: string
+  bankName: string
+  ownerName: string
+  type: '적금' | '입출금'
+  balance: number
+}
+
+export type LinkedAssetTransfer = {
+  id: string
+  accountId: string
+  transactionId: number
+  transactedAt: string
+  counterparty: string
+  amount: number
+  direction: '입금' | '출금'
+}
+
+export const linkedAssetAccounts: LinkedAssetAccount[] = [
+  {
+    id: 'parent-saving-1',
+    name: '아이사랑적금1',
+    accountNumber: '952-17362605-43',
+    bankName: 'KB국민은행',
+    ownerName: '황현진',
+    type: '적금',
+    balance: 4_800_000,
+  },
+  {
+    id: 'parent-saving-2',
+    name: '아이사랑적금2',
+    accountNumber: '952-17362605-44',
+    bankName: 'KB국민은행',
+    ownerName: '황현진',
+    type: '적금',
+    balance: 4_800_000,
+  },
+  {
+    id: 'parent-account-1',
+    name: '아이사랑통장',
+    accountNumber: '952-17362605-45',
+    bankName: 'KB국민은행',
+    ownerName: '황현진',
+    type: '입출금',
+    balance: 5_000_000,
+  },
+  {
+    id: 'child-saving-1',
+    name: '아이사랑적금1',
+    accountNumber: '952-17362605-46',
+    bankName: 'KB국민은행',
+    ownerName: '깨비',
+    type: '적금',
+    balance: 9_600_000,
+  },
+  {
+    id: 'child-account-1',
+    name: '아이사랑통장',
+    accountNumber: '952-17362605-47',
+    bankName: 'KB국민은행',
+    ownerName: '깨비',
+    type: '입출금',
+    balance: 5_000_000,
+  },
+]
+
+export const deletedLinkedAssetAccountIds = new Set<string>()
+
+export const removeLinkedAssetAccount = (accountId: string) => {
+  deletedLinkedAssetAccountIds.add(accountId)
+
+  const accountIndex = linkedAssetAccounts.findIndex(({ id }) => id === accountId)
+  if (accountIndex >= 0) linkedAssetAccounts.splice(accountIndex, 1)
+
+  for (let index = linkedAssetTransfers.length - 1; index >= 0; index -= 1) {
+    if (linkedAssetTransfers[index]?.accountId === accountId) linkedAssetTransfers.splice(index, 1)
+  }
+}
+
+export const linkedAssetTransfers: LinkedAssetTransfer[] = linkedAssetAccounts.flatMap(
+  (account, accountIndex) =>
+    Array.from({ length: accountIndex === 0 ? 5 : 3 }, (_, index) => ({
+      id: `${account.id}-transfer-${index + 1}`,
+      accountId: account.id,
+      transactionId: (index % assetTransactions.length) + 1,
+      transactedAt: `2026.07.${String(21 - index).padStart(2, '0')} 11:01`,
+      counterparty: index % 2 === 0 ? 'KB국민 5678' : '아이사랑통장',
+      amount: index % 3 === 0 ? 100_000 : 50_000,
+      direction: index === 3 ? ('출금' as const) : ('입금' as const),
+    })),
+)
+
+export const getLinkedAssetAccount = (accountId: string) =>
+  linkedAssetAccounts.find(({ id }) => id === accountId) ?? linkedAssetAccounts[0]!
+
+export const getLinkedAssetTransfers = (accountId: string) =>
+  linkedAssetTransfers.filter((transfer) => transfer.accountId === accountId)

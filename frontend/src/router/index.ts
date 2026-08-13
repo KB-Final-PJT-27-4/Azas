@@ -75,7 +75,24 @@ const routes: RouteRecordRaw[] = [
     name: 'AssetDetail',
     component: () => import('@/views/assets/AssetDetailView.vue'),
     props: true,
-    meta: { requiresAuth: true },
+    meta: {
+      requiresAuth: true,
+      headerTitle: '계좌 상세',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
+    path: '/assets/:assetId/transactions/:transactionId',
+    name: 'AssetTransactionDetail',
+    component: () => import('@/views/assets/AssetTransactionDetailView.vue'),
+    props: true,
+    meta: {
+      requiresAuth: true,
+      headerTitle: '이체 상세',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
   },
 
   // 타임캡슐
