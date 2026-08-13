@@ -33,7 +33,6 @@ const { toastMessage, toastVariant } = useToast()
         v-else-if="!hideNavigation"
         title="깨비"
         profile-name="깨비"
-        :center-title="headerTitle"
         :show-notification="showHeaderNotification"
         :notification-count="notificationCount"
       />

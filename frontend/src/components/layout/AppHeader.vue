@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { Bell, Check, ChevronLeft, ChevronRight, Plus, UserRound, X } from 'lucide-vue-next'
+import { Bell, Check, ChevronLeft, ChevronRight, Plus, UserRound } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import defaultProfileImageUrl from '@/assets/images/home/home-profile-baby.png'
@@ -12,7 +12,6 @@ const { showToast } = useToast()
 const props = withDefaults(
   defineProps<{
     title?: string
-    centerTitle?: string
     profileName?: string
     profileImage?: string
     profileEmoji?: string
@@ -22,7 +21,6 @@ const props = withDefaults(
   }>(),
   {
     title: '깨비',
-    centerTitle: undefined,
     profileName: '깨비',
     profileImage: defaultProfileImageUrl,
     profileEmoji: '👶',
@@ -124,7 +122,7 @@ onBeforeUnmount(clearProfilePress)
         @keydown.space.prevent="openProfileSheet"
       >
         <span
-          class="grid size-[42px] flex-[0_0_42px] place-items-center overflow-hidden rounded-full bg-[var(--color-selected-background)] text-2xl"
+          class="grid size-[38px] flex-[0_0_38px] place-items-center overflow-hidden rounded-full bg-[var(--color-selected-background)] text-xl"
           aria-hidden="true"
         >
           <img
@@ -140,13 +138,6 @@ onBeforeUnmount(clearProfilePress)
         }}</strong>
       </button>
 
-      <strong
-        v-if="centerTitle"
-        class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
-      >
-        {{ centerTitle }}
-      </strong>
-
       <button
         v-if="showNotification"
         class="relative grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
@@ -154,7 +145,7 @@ onBeforeUnmount(clearProfilePress)
         aria-label="알림 보기"
         @click="goToAlarm"
       >
-        <Bell :size="28" :stroke-width="2.5" />
+        <Bell :size="25" :stroke-width="2.4" />
         <span
           v-if="notificationCount > 0"
           class="absolute top-1 right-0 grid size-[18px] place-items-center rounded-full bg-[#f04c5d] text-[10px] font-bold text-white"

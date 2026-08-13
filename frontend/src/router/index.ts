@@ -362,8 +362,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/menu/AllMenuView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '전체 메뉴',
-      showHeaderNotification: false,
     },
   },
 
