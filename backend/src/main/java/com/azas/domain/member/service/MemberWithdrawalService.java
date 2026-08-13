@@ -3,7 +3,9 @@ package com.azas.domain.member.service;
 import com.azas.domain.auth.service.RefreshTokenStore;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.entity.MemberStatus;
+import com.azas.domain.member.entity.MemberType;
 import com.azas.domain.member.mapper.MemberMapper;
+import com.azas.domain.member.mapper.MemberWithdrawalMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,8 @@ public class MemberWithdrawalService {
 
     private final MemberMapper memberMapper;
     private final RefreshTokenStore refreshTokenStore;
+    private final MemberWithdrawalMapper memberWithdrawalMapper;
+
 
     @Transactional
     public void withdrawMyMembership(long memberId) {
@@ -31,29 +35,52 @@ public class MemberWithdrawalService {
         }
 
         if (member.getStatus() == MemberStatus.WITHDRAWN) {
-            throw withdrawnMember();
+            throw new BusinessException(
+                    ErrorCode.WITHDRAWN_MEMBER
+            );
         }
 
-        int withdrawnCount =
-                memberMapper.withdrawIfActive(memberId);
-
-        // 조회 이후 다른 요청이 먼저 탈퇴했는지 조건부 UPDATE 결과로 다시 확인한다.
-        if (withdrawnCount != 1) {
-            throw withdrawnMember();
+        if (member.getMemberType() == MemberType.PARENT
+                && memberWithdrawalMapper
+                .countChildrenWithNoOtherActiveGuardian(memberId) > 0) {
+            throw new BusinessException(
+                    ErrorCode.LAST_GUARDIAN_WITHDRAWAL_NOT_ALLOWED
+            );
         }
 
-        LocalDateTime revokedAt =
+        LocalDateTime withdrawnAt =
                 LocalDateTime.now(ZoneOffset.UTC);
 
         refreshTokenStore.revokeAllActiveByMemberId(
                 memberId,
-                revokedAt
+                withdrawnAt
         );
-    }
 
-    private BusinessException withdrawnMember() {
-        return new BusinessException(
-                ErrorCode.WITHDRAWN_MEMBER
+        memberWithdrawalMapper.cancelPendingInvitationsByInviter(
+                memberId,
+                withdrawnAt
         );
+
+        memberWithdrawalMapper.revokeActiveFinancialConnections(
+                memberId,
+                withdrawnAt
+        );
+
+        memberWithdrawalMapper.unlinkChildMember(memberId);
+        memberWithdrawalMapper.deleteChildParentRelations(memberId);
+        memberWithdrawalMapper.deletePhoneVerifications(memberId);
+        memberWithdrawalMapper.deleteSocialAccounts(memberId);
+
+        int updatedCount =
+                memberMapper.anonymizeAndWithdrawIfActive(
+                        memberId,
+                        withdrawnAt
+                );
+
+        if (updatedCount != 1) {
+            throw new BusinessException(
+                    ErrorCode.WITHDRAWN_MEMBER
+            );
+        }
     }
 }
