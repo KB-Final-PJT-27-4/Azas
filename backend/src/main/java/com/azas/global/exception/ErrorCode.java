@@ -97,6 +97,10 @@ public enum ErrorCode {
             HttpStatus.CONFLICT,
             "이미 다른 회원이 사용 중인 휴대폰번호입니다."
     ),
+    LAST_GUARDIAN_WITHDRAWAL_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "다른 보호자를 연결한 후 탈퇴할 수 있습니다."
+    ),
 
     // Finance
     INVALID_CHILD_USAGE_POLICY(
