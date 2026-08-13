@@ -245,14 +245,12 @@ const retryTransfer = () => {
     </div>
 
     <button
-      class="asset-transfer-button group fixed z-[60] h-10 w-20 rounded-t-full bg-[var(--color-surface)]/80 shadow-sm"
+      class="asset-transfer-button fixed z-[40]"
       type="button"
       aria-label="이체하기"
       @click="isTransferSheetOpen = true"
     >
-      <span
-        class="absolute right-1 bottom-0 left-1 grid h-9 place-items-center rounded-t-full bg-[var(--color-brand-primary)] pt-1 text-[var(--color-text-inverse)] transition-colors group-active:bg-[var(--color-brand-primary-pressed)]"
-      >
+      <span class="asset-transfer-button__surface">
         <Plus :size="23" :stroke-width="3" aria-hidden="true" />
       </span>
     </button>
@@ -277,8 +275,43 @@ const retryTransfer = () => {
 
 <style scoped>
 .asset-transfer-button {
-  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 1px);
+  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 7px);
   left: 50%;
+  width: 88px;
+  height: 47px;
+  padding: 7px 8px 0;
+  color: var(--color-text-inverse);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-bottom: 0;
+  border-radius: 48px 48px 0 0;
+  box-shadow: 0 -5px 16px rgb(45 91 116 / 8%);
   transform: translateX(-50%);
+}
+
+.asset-transfer-button__surface {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  height: 40px;
+  padding-top: 3px;
+  place-items: center;
+  background: var(--color-brand-primary);
+  border-radius: 40px 40px 0 0;
+  box-shadow: 0 -3px 10px rgb(39 169 235 / 18%);
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.asset-transfer-button:active .asset-transfer-button__surface {
+  background: var(--color-brand-primary-pressed);
+  transform: translateY(2px);
+}
+
+.asset-transfer-button:focus-visible {
+  outline: 3px solid rgb(39 169 235 / 24%);
+  outline-offset: 3px;
 }
 </style>
