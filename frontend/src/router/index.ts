@@ -57,7 +57,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/accounts/AccountsView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '계좌등록',
+      headerTitle: '계좌 연동',
       showHeaderBack: true,
       showHeaderNotification: false,
     },
@@ -356,6 +356,30 @@ const routes: RouteRecordRaw[] = [
   },
 
   // 금융상품
+  {
+    path: '/savings-recommendations',
+    name: 'SavingsRecommendation',
+    component: () => import('@/views/products/SavingsRecommendationView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '적금 추천',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
+    path: '/savings-recommendations/complete',
+    name: 'SavingsOpenComplete',
+    component: () => import('@/views/products/SavingsOpenCompleteView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideBottomNavigation: true,
+      headerTitle: '적금 개설 완료',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
   {
     path: '/products',
     name: 'Products',

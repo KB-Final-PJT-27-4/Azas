@@ -1,6 +1,13 @@
 <script setup lang="ts">
+import { Landmark } from 'lucide-vue-next'
 import registrationCompleteImage from '@/assets/images/accounts/registration-complete.png'
-import walletIcon from '@/assets/images/accounts/wallet-icon.png'
+
+defineProps<{
+  bank: string
+  accountNumber: string
+  accountName: string
+  balance: number
+}>()
 
 const emit = defineEmits<{
   home: []
@@ -24,20 +31,27 @@ const emit = defineEmits<{
       </p>
 
       <img
-        class="mx-auto mt-6 aspect-square w-full max-w-[340px] object-contain"
+        class="mx-auto mt-5 size-[210px] object-contain"
         :src="registrationCompleteImage"
         alt="계좌 등록 완료를 나타내는 저금통"
       />
 
-      <div
-        class="mt-3 flex items-center gap-4 rounded-2xl bg-[#fff4cc] px-5 py-5 text-sm leading-relaxed text-[var(--color-text-primary)]"
-      >
-        <img class="size-12 shrink-0 object-contain" :src="walletIcon" alt="" aria-hidden="true" />
-        <p>
-          등록된 계좌로 목표 저축과<br />
-          저축 기록을 관리할 수 있어요.
-        </p>
-      </div>
+      <article class="mt-2 flex items-center rounded-2xl border border-[var(--color-border)] bg-white px-5 py-5 shadow-[0_5px_18px_rgba(43,83,105,0.04)]" aria-label="연결된 계좌 정보">
+        <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#e1e3e5] text-[#8a9298]">
+          <Landmark :size="25" :stroke-width="2" aria-hidden="true" />
+        </span>
+        <div class="ml-4 min-w-0">
+          <strong class="block truncate text-lg font-extrabold text-[var(--color-text-primary)]">
+            {{ accountName }}
+          </strong>
+          <span class="mt-1 block text-sm text-[var(--color-text-secondary)]">
+            {{ accountNumber }}
+          </span>
+          <span class="mt-1 block text-sm font-semibold text-[var(--color-text-secondary)]">
+            잔액 {{ balance.toLocaleString('ko-KR') }}원
+          </span>
+        </div>
+      </article>
 
       <div class="mt-auto grid grid-cols-2 gap-4">
         <button

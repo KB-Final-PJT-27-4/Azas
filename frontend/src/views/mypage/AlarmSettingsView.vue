@@ -9,37 +9,70 @@ type AlarmSetting = {
   enabled: boolean
 }
 
+type AlarmGroup = {
+  id: string
+  title: string
+  description: string
+  settings: AlarmSetting[]
+}
+
 const { showToast } = useToast()
-const alarmSettings = ref<AlarmSetting[]>([
+const alarmGroups = ref<AlarmGroup[]>([
   {
-    id: 'saving-day',
-    title: '저축일 알림',
-    description: '매월 설정한 저축일에 알려드려요',
-    enabled: true,
+    id: 'finance',
+    title: '금융·기록 알림',
+    description: '저축 일정과 가족의 금융 기록을 알려드려요.',
+    settings: [
+      {
+        id: 'saving-day',
+        title: '저축일 알림',
+        description: '설정한 저축일을 놓치지 않게 알려드려요.',
+        enabled: true,
+      },
+      {
+        id: 'automatic-transfer',
+        title: '자동이체 알림',
+        description: '자동이체 예정일과 처리 결과를 알려드려요.',
+        enabled: true,
+      },
+      {
+        id: 'time-capsule-release',
+        title: '타임캡슐 공개 알림',
+        description: '타임캡슐을 열 수 있는 날에 알려드려요.',
+        enabled: true,
+      },
+      {
+        id: 'allowance-request',
+        title: '용돈 요청 알림',
+        description: '아이가 용돈을 요청하면 바로 알려드려요.',
+        enabled: true,
+      },
+    ],
   },
   {
-    id: 'goal',
-    title: '목표 달성 알림',
-    description: '달성률이 변할 때 알려드려요',
-    enabled: true,
-  },
-  {
-    id: 'time-capsule',
-    title: '타임캡슐 D-Day',
-    description: '공개 예정일 전에 알려드려요',
-    enabled: true,
-  },
-  {
-    id: 'anniversary',
-    title: '생일·기념일',
-    description: '아이의 주요 기념일을 알려드려요',
-    enabled: false,
-  },
-  {
-    id: 'financial-product',
-    title: '금융상품 소식',
-    description: '연령에 맞는 새 상품을 알려드려요',
-    enabled: false,
+    id: 'child',
+    title: '아이 성장·활동 알림',
+    description: '아이의 성장 과정과 서비스 활동을 챙겨드려요.',
+    settings: [
+      {
+        id: 'pregnancy-week',
+        title: '임신 주차별 알림',
+        description: '주차별 아이의 성장 정보와 팁을 알려드려요.',
+        enabled: true,
+      },
+      {
+        id: 'child-limit-exceeded',
+        title: '아이 한도 초과 알림',
+        description: '아이가 설정한 사용 한도를 넘으면 알려드려요.',
+        enabled: true,
+      },
+      {
+        id: 'child-mission-success',
+        title: '아이 미션 성공 알림',
+        description: '아이가 미션을 완료한 순간을 알려드려요.',
+        enabled: true,
+      },
+    ],
   },
 ])
 
@@ -49,52 +82,69 @@ const saveSettings = () => {
 </script>
 
 <template>
-  <main class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-white px-5 pt-8 pb-5">
-    <h1 class="text-[22px] font-extrabold tracking-[-0.025em] text-[var(--color-text-primary)]">
-      알림 설정
-    </h1>
-
-    <form class="mt-7 flex flex-1 flex-col" @submit.prevent="saveSettings">
-      <ul class="m-0 list-none space-y-4 p-0">
-        <li
-          v-for="setting in alarmSettings"
-          :key="setting.id"
-          class="flex min-h-[84px] items-center gap-4 rounded-2xl border border-[#dce8ee] bg-white px-5 py-4"
-        >
-          <label class="min-w-0 flex-1 cursor-pointer" :for="`alarm-${setting.id}`">
-            <strong class="block text-[16px] font-bold tracking-[-0.015em] text-[var(--color-text-primary)]">
-              {{ setting.title }}
-            </strong>
-            <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">
-              {{ setting.description }}
-            </span>
-          </label>
-
-          <label class="relative h-8 w-[59px] shrink-0 cursor-pointer">
-            <input
-              :id="`alarm-${setting.id}`"
-              v-model="setting.enabled"
-              class="peer sr-only"
-              type="checkbox"
-              role="switch"
-              :aria-label="`${setting.title} ${setting.enabled ? '끄기' : '켜기'}`"
-            />
-            <span
-              class="absolute inset-0 rounded-full bg-[#e3edf2] transition-colors duration-200 peer-checked:bg-[#28a9e2] peer-focus-visible:ring-2 peer-focus-visible:ring-[#bcecff] peer-focus-visible:ring-offset-2"
-            ></span>
-            <span
-              class="absolute top-1 left-1 size-6 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-[27px]"
-            ></span>
-          </label>
-        </li>
-      </ul>
-
-      <button
-        class="mt-auto min-h-[60px] w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]"
-        type="submit"
+  <main class="min-h-[calc(100dvh-var(--app-header-height))] px-5 pb-0">
+    <form class="mt-5" @submit.prevent="saveSettings">
+      <section
+        v-for="(group, groupIndex) in alarmGroups"
+        :key="group.id"
+        :class="groupIndex ? 'mt-5' : ''"
+        :aria-labelledby="`alarm-group-${group.id}`"
       >
-        알림 설정 저장
-      </button>
+        <div class="px-1">
+          <h2
+            :id="`alarm-group-${group.id}`"
+            class="text-[18px] font-extrabold tracking-[-0.02em] text-[var(--color-text-primary)]"
+          >
+            {{ group.title }}
+          </h2>
+
+        </div>
+
+        <ul class="mt-3 overflow-hidden rounded-[20px] border border-[#e0e9ee] bg-white px-4 shadow-[0_6px_22px_rgba(49,87,108,0.04)]">
+          <li
+            v-for="(setting, settingIndex) in group.settings"
+            :key="setting.id"
+            class="flex min-h-[82px] items-center gap-4 py-4"
+            :class="settingIndex ? 'border-t border-[#edf1f3]' : ''"
+          >
+            <label
+              class="min-w-0 flex-1 cursor-pointer"
+              :for="`alarm-${setting.id}`"
+            >
+              <span class="block min-w-0">
+                <strong class="block text-[15px] font-bold tracking-[-0.01em] text-[var(--color-text-primary)]">
+                  {{ setting.title }}
+                </strong>
+                <span class="mt-1 block text-[11px] leading-[1.55] text-[var(--color-text-secondary)]">
+                  {{ setting.description }}
+                </span>
+              </span>
+            </label>
+
+            <label class="relative h-7 w-[52px] shrink-0 cursor-pointer">
+              <input
+                :id="`alarm-${setting.id}`"
+                v-model="setting.enabled"
+                class="peer sr-only"
+                type="checkbox"
+                role="switch"
+                :aria-label="`${setting.title} ${setting.enabled ? '끄기' : '켜기'}`"
+              />
+              <span class="absolute inset-0 rounded-full bg-[#dfe8ed] transition-colors duration-200 peer-checked:bg-[var(--color-brand-primary)] peer-focus-visible:ring-2 peer-focus-visible:ring-[#bcecff] peer-focus-visible:ring-offset-2"></span>
+              <span class="absolute top-1 left-1 size-5 rounded-full bg-white shadow-[0_1px_4px_rgba(42,70,84,0.22)] transition-transform duration-200 peer-checked:translate-x-6"></span>
+            </label>
+          </li>
+        </ul>
+      </section>
+
+      <div class="sticky bottom-0 z-10 -mx-5 bg-gradient-to-t from-white via-white to-white/0 px-5 pt-7 pb-[calc(16px+env(safe-area-inset-bottom))]">
+        <button
+          class="min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white shadow-[0_7px_18px_rgba(39,169,235,0.2)] transition-colors active:bg-[var(--color-brand-primary-pressed)]"
+          type="submit"
+        >
+          알림 설정 저장
+        </button>
+      </div>
     </form>
   </main>
 </template>
