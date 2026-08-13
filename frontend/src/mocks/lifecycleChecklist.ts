@@ -146,14 +146,19 @@ const infoItemsByCategory: Record<LifecycleCategory, ChecklistInfoItem[]> = {
   ],
   education: [
     {
-      title: '핵심 개념 읽기',
-      description: '아이의 나이에 맞춰 돈, 저축, 소비 개념을 간단히 정리해요.',
-      actionLabel: '개념 보기',
+      title: '필요 서류와 준비물 확인',
+      description: '아이 명의 계좌 개설, 증여 기록처럼 부모가 먼저 챙겨야 할 준비물을 정리해요.',
+      actionLabel: '준비물 확인하기',
     },
     {
-      title: '함께 이야기하기',
-      description: '부모가 먼저 이해한 뒤 아이와 쉬운 말로 대화해요.',
-      actionLabel: '대화 주제 보기',
+      title: '아이에게 설명할 금융 개념 정리',
+      description: '저축, 소비, 이자, 계좌처럼 아이가 나중에 이해할 개념을 쉬운 말로 정리해요.',
+      actionLabel: '개념 살펴보기',
+    },
+    {
+      title: '기록이 필요한 순간 확인',
+      description: '축하금, 세뱃돈, 증여금처럼 나중에 근거가 필요할 수 있는 기록 기준을 확인해요.',
+      actionLabel: '기록 기준 보기',
     },
   ],
   support: [

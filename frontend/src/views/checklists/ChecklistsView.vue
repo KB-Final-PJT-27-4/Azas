@@ -69,7 +69,15 @@ const getCategoryTone = (category: LifecycleCategory) => categoryToneMap[categor
 
 const isChecklistItemCompleted = (item: ChecklistItem) => checkedItemIds.value.has(item.id)
 
-const hasChecklistAction = (item: ChecklistItem) => Boolean(item.route) || item.category === 'support'
+const hasChecklistAction = (item: ChecklistItem) => item.actionType === 'info' || Boolean(item.route)
+
+const infoFullViewLabel = computed(() => {
+  if (!selectedInfoItem.value) return '전체 보기'
+
+  const categoryLabel = categoryLabelMap.value.get(selectedInfoItem.value.category)
+
+  return `${categoryLabel ?? '정보'} 전체 보기`
+})
 
 const toggleChecklistItem = (item: ChecklistItem) => {
   const nextCheckedItemIds = new Set(checkedItemIds.value)
@@ -97,6 +105,18 @@ const openChecklistAction = (item: ChecklistItem) => {
 const closeInfoSheet = () => {
   selectedInfoItem.value = null
   resetSheetDrag()
+}
+
+const openInfoFullView = () => {
+  if (!selectedInfoItem.value) return
+
+  if (selectedInfoItem.value.category === 'education') {
+    router.push('/checklists?category=education')
+    selectedInfoItem.value = null
+    return
+  }
+
+  closeInfoSheet()
 }
 
 const openCompleteSheet = () => {
@@ -277,12 +297,12 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
             </span>
             <button
               v-if="hasChecklistAction(item)"
-              class="inline-flex h-9 shrink-0 items-center gap-0.5 rounded-full border border-transparent bg-[#EBFAFF] px-3 text-[12px] font-extrabold whitespace-nowrap text-[#2BABE8]"
+              class="grid size-8 shrink-0 place-items-center rounded-full border-0 bg-transparent p-0 text-[#8A95A3] transition-colors active:bg-[#f7fbfe]"
               type="button"
+              :aria-label="`${item.title} 바로가기`"
               @click.stop="openChecklistAction(item)"
             >
-              바로가기
-              <ChevronRight :size="14" :stroke-width="2.8" />
+              <ChevronRight :size="22" :stroke-width="3" />
             </button>
             <span v-else class="size-[21px]" aria-hidden="true"></span>
           </div>
@@ -390,9 +410,14 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                 닫기
               </button>
               <button
-                class="h-[52px] rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-extrabold text-white"
+                class="relative h-[52px] rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-extrabold text-transparent"
                 type="button"
+                :aria-label="infoFullViewLabel"
+                @click="openInfoFullView"
               >
+                <span class="absolute inset-0 grid place-items-center text-white">
+                  {{ infoFullViewLabel }}
+                </span>
                 지원정보 전체 보기
               </button>
             </div>
