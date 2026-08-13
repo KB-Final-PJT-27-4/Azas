@@ -13,6 +13,7 @@ const props = withDefaults(
     disabled?: boolean
     minYear?: number
     maxYear?: number
+    inlinePanel?: boolean
     minDate?: string
     maxDate?: string
     selectionMode?: SelectionMode
@@ -23,6 +24,7 @@ const props = withDefaults(
     disabled: false,
     minYear: 1900,
     maxYear: 2100,
+    inlinePanel: false,
     minDate: undefined,
     maxDate: undefined,
     selectionMode: 'date',
@@ -172,7 +174,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside
 
     <div
       v-if="isOpen"
-      class="absolute top-full right-0 left-0 z-20 mt-2 min-h-[360px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[0_16px_40px_rgb(29_68_89_/_16%)]"
+      class="right-0 left-0 z-20 mt-2 min-h-[360px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[0_16px_40px_rgb(29_68_89_/_16%)]"
+      :class="inlinePanel ? 'relative' : 'absolute top-full'"
       role="dialog"
       aria-label="날짜 선택"
     >

@@ -2,10 +2,9 @@
 import { ref } from 'vue'
 
 import goalEducationIcon from '@/assets/images/goals/goals_1.png'
-import goalIndependenceIcon from '@/assets/images/goals/goals_2.png'
-import goalHousingIcon from '@/assets/images/goals/goals_3.png'
+import goalLumpSumIcon from '@/assets/images/goals/goal-lump-sum.png'
+import goalHousingIcon from '@/assets/images/goals/goals_2.png'
 import goalMarriageIcon from '@/assets/images/goals/goals_4.png'
-import goalInvestmentIcon from '@/assets/images/goals/goals_5.png'
 import goalCustomIcon from '@/assets/images/goals/goals_6.png'
 
 type GoalPlan = {
@@ -23,10 +22,9 @@ const carousel = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)
 const icons: Record<string, string> = {
   education: goalEducationIcon,
-  independence: goalIndependenceIcon,
+  'lump-sum': goalLumpSumIcon,
   housing: goalHousingIcon,
   marriage: goalMarriageIcon,
-  investment: goalInvestmentIcon,
   custom: goalCustomIcon,
 }
 const cardStyles = [
