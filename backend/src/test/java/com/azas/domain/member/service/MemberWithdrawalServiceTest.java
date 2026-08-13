@@ -4,6 +4,7 @@ import com.azas.domain.auth.service.RefreshTokenStore;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.entity.MemberStatus;
 import com.azas.domain.member.mapper.MemberMapper;
+import com.azas.domain.member.mapper.MemberWithdrawalMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,96 +31,211 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MemberWithdrawalServiceTest {
 
+    private static final long MEMBER_ID = 1L;
+
     @Mock
     private MemberMapper memberMapper;
 
     @Mock
+    private MemberWithdrawalMapper memberWithdrawalMapper;
+
+    @Mock
     private RefreshTokenStore refreshTokenStore;
 
-    private MemberWithdrawalService
-            memberWithdrawalService;
+    private MemberWithdrawalService memberWithdrawalService;
 
     @BeforeEach
     void setUp() {
         memberWithdrawalService =
                 new MemberWithdrawalService(
                         memberMapper,
-                        refreshTokenStore
+                        refreshTokenStore,
+                        memberWithdrawalMapper
                 );
     }
 
     @Test
-    void withdrawsActiveMemberAndRevokesAllTokens() {
-        Member member = activeMember();
+    void withdrawsParentAndRemovesLoginInformation() {
+        Member member = activeParent();
 
-        when(memberMapper.findById(1L))
+        when(memberMapper.findById(MEMBER_ID))
                 .thenReturn(member);
-        when(memberMapper.withdrawIfActive(1L))
-                .thenReturn(1);
-        when(
-                refreshTokenStore
-                        .revokeAllActiveByMemberId(
-                                eq(1L),
-                                any(LocalDateTime.class)
-                        )
-        ).thenReturn(2);
 
-        memberWithdrawalService
-                .withdrawMyMembership(1L);
+        when(memberWithdrawalMapper
+                .countChildrenWithNoOtherActiveGuardian(MEMBER_ID))
+                .thenReturn(0);
+
+        when(refreshTokenStore.revokeAllActiveByMemberId(
+                eq(MEMBER_ID),
+                any(LocalDateTime.class)
+        )).thenReturn(2);
+
+        when(memberMapper.anonymizeAndWithdrawIfActive(
+                eq(MEMBER_ID),
+                any(LocalDateTime.class)
+        )).thenReturn(1);
+
+        memberWithdrawalService.withdrawMyMembership(MEMBER_ID);
 
         InOrder callOrder = inOrder(
                 memberMapper,
+                memberWithdrawalMapper,
                 refreshTokenStore
         );
 
         callOrder.verify(memberMapper)
-                .findById(1L);
-        callOrder.verify(memberMapper)
-                .withdrawIfActive(1L);
+                .findById(MEMBER_ID);
+
+        callOrder.verify(memberWithdrawalMapper)
+                .countChildrenWithNoOtherActiveGuardian(MEMBER_ID);
+
         callOrder.verify(refreshTokenStore)
                 .revokeAllActiveByMemberId(
-                        eq(1L),
+                        eq(MEMBER_ID),
+                        any(LocalDateTime.class)
+                );
+
+        callOrder.verify(memberWithdrawalMapper)
+                .cancelPendingInvitationsByInviter(
+                        eq(MEMBER_ID),
+                        any(LocalDateTime.class)
+                );
+
+        callOrder.verify(memberWithdrawalMapper)
+                .revokeActiveFinancialConnections(
+                        eq(MEMBER_ID),
+                        any(LocalDateTime.class)
+                );
+
+        callOrder.verify(memberWithdrawalMapper)
+                .unlinkChildMember(MEMBER_ID);
+
+        callOrder.verify(memberWithdrawalMapper)
+                .deleteChildParentRelations(MEMBER_ID);
+
+        callOrder.verify(memberWithdrawalMapper)
+                .deletePhoneVerifications(MEMBER_ID);
+
+        callOrder.verify(memberWithdrawalMapper)
+                .deleteSocialAccounts(MEMBER_ID);
+
+        callOrder.verify(memberMapper)
+                .anonymizeAndWithdrawIfActive(
+                        eq(MEMBER_ID),
                         any(LocalDateTime.class)
                 );
     }
 
     @Test
-    void completesWhenMemberHasNoActiveRefreshToken() {
-        Member member = activeMember();
+    void withdrawsChildAndUnlinksChildProfile() {
+        Member member = activeChild();
 
-        when(memberMapper.findById(1L))
+        when(memberMapper.findById(MEMBER_ID))
                 .thenReturn(member);
-        when(memberMapper.withdrawIfActive(1L))
-                .thenReturn(1);
-        when(
-                refreshTokenStore
-                        .revokeAllActiveByMemberId(
-                                eq(1L),
-                                any(LocalDateTime.class)
-                        )
-        ).thenReturn(0);
+
+        when(memberMapper.anonymizeAndWithdrawIfActive(
+                eq(MEMBER_ID),
+                any(LocalDateTime.class)
+        )).thenReturn(1);
+
+        memberWithdrawalService.withdrawMyMembership(MEMBER_ID);
+
+        verify(memberWithdrawalMapper)
+                .unlinkChildMember(MEMBER_ID);
+
+        verify(memberWithdrawalMapper)
+                .deleteSocialAccounts(MEMBER_ID);
+
+        verify(memberMapper)
+                .anonymizeAndWithdrawIfActive(
+                        eq(MEMBER_ID),
+                        any(LocalDateTime.class)
+                );
+
+        // 자녀 회원은 보호자 고립 여부를 검사하지 않는다.
+        verify(memberWithdrawalMapper, never())
+                .countChildrenWithNoOtherActiveGuardian(MEMBER_ID);
+    }
+
+    @Test
+    void completesWhenMemberHasNoActiveRefreshToken() {
+        Member member = activeParent();
+
+        when(memberMapper.findById(MEMBER_ID))
+                .thenReturn(member);
+
+        when(memberWithdrawalMapper
+                .countChildrenWithNoOtherActiveGuardian(MEMBER_ID))
+                .thenReturn(0);
+
+        when(refreshTokenStore.revokeAllActiveByMemberId(
+                eq(MEMBER_ID),
+                any(LocalDateTime.class)
+        )).thenReturn(0);
+
+        when(memberMapper.anonymizeAndWithdrawIfActive(
+                eq(MEMBER_ID),
+                any(LocalDateTime.class)
+        )).thenReturn(1);
 
         assertDoesNotThrow(
                 () -> memberWithdrawalService
-                        .withdrawMyMembership(1L)
+                        .withdrawMyMembership(MEMBER_ID)
         );
 
-        verify(refreshTokenStore)
-                .revokeAllActiveByMemberId(
-                        eq(1L),
+        verify(memberMapper)
+                .anonymizeAndWithdrawIfActive(
+                        eq(MEMBER_ID),
+                        any(LocalDateTime.class)
+                );
+    }
+
+    @Test
+    void rejectsLastActiveGuardianWithdrawal() {
+        Member member = activeParent();
+
+        when(memberMapper.findById(MEMBER_ID))
+                .thenReturn(member);
+
+        when(memberWithdrawalMapper
+                .countChildrenWithNoOtherActiveGuardian(MEMBER_ID))
+                .thenReturn(1);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> memberWithdrawalService
+                        .withdrawMyMembership(MEMBER_ID)
+        );
+
+        assertEquals(
+                ErrorCode.LAST_GUARDIAN_WITHDRAWAL_NOT_ALLOWED,
+                exception.getErrorCode()
+        );
+
+        verifyNoInteractions(refreshTokenStore);
+
+        verify(memberWithdrawalMapper, never())
+                .deleteSocialAccounts(MEMBER_ID);
+
+        verify(memberWithdrawalMapper, never())
+                .deleteChildParentRelations(MEMBER_ID);
+
+        verify(memberMapper, never())
+                .anonymizeAndWithdrawIfActive(
+                        eq(MEMBER_ID),
                         any(LocalDateTime.class)
                 );
     }
 
     @Test
     void rejectsMissingMember() {
-        when(memberMapper.findById(1L))
+        when(memberMapper.findById(MEMBER_ID))
                 .thenReturn(null);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> memberWithdrawalService
-                        .withdrawMyMembership(1L)
+                        .withdrawMyMembership(MEMBER_ID)
         );
 
         assertEquals(
@@ -127,14 +243,21 @@ class MemberWithdrawalServiceTest {
                 exception.getErrorCode()
         );
 
+        verifyNoInteractions(
+                memberWithdrawalMapper,
+                refreshTokenStore
+        );
+
         verify(memberMapper, never())
-                .withdrawIfActive(1L);
-        verifyNoInteractions(refreshTokenStore);
+                .anonymizeAndWithdrawIfActive(
+                        eq(MEMBER_ID),
+                        any(LocalDateTime.class)
+                );
     }
 
     @Test
     void rejectsAlreadyWithdrawnMember() {
-        Member member = activeMember();
+        Member member = activeParent();
 
         ReflectionTestUtils.setField(
                 member,
@@ -142,38 +265,52 @@ class MemberWithdrawalServiceTest {
                 MemberStatus.WITHDRAWN
         );
 
-        when(memberMapper.findById(1L))
+        when(memberMapper.findById(MEMBER_ID))
                 .thenReturn(member);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> memberWithdrawalService
-                        .withdrawMyMembership(1L)
+                        .withdrawMyMembership(MEMBER_ID)
         );
 
         assertEquals(
                 ErrorCode.WITHDRAWN_MEMBER,
                 exception.getErrorCode()
+        );
+
+        verifyNoInteractions(
+                memberWithdrawalMapper,
+                refreshTokenStore
         );
 
         verify(memberMapper, never())
-                .withdrawIfActive(1L);
-        verifyNoInteractions(refreshTokenStore);
+                .anonymizeAndWithdrawIfActive(
+                        eq(MEMBER_ID),
+                        any(LocalDateTime.class)
+                );
     }
 
     @Test
-    void rejectsMemberWithdrawnByConcurrentRequest() {
-        Member member = activeMember();
+    void rejectsConcurrentWithdrawal() {
+        Member member = activeParent();
 
-        when(memberMapper.findById(1L))
+        when(memberMapper.findById(MEMBER_ID))
                 .thenReturn(member);
-        when(memberMapper.withdrawIfActive(1L))
+
+        when(memberWithdrawalMapper
+                .countChildrenWithNoOtherActiveGuardian(MEMBER_ID))
                 .thenReturn(0);
+
+        when(memberMapper.anonymizeAndWithdrawIfActive(
+                eq(MEMBER_ID),
+                any(LocalDateTime.class)
+        )).thenReturn(0);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> memberWithdrawalService
-                        .withdrawMyMembership(1L)
+                        .withdrawMyMembership(MEMBER_ID)
         );
 
         assertEquals(
@@ -181,10 +318,14 @@ class MemberWithdrawalServiceTest {
                 exception.getErrorCode()
         );
 
-        verifyNoInteractions(refreshTokenStore);
+        verify(memberMapper)
+                .anonymizeAndWithdrawIfActive(
+                        eq(MEMBER_ID),
+                        any(LocalDateTime.class)
+                );
     }
 
-    private Member activeMember() {
+    private Member activeParent() {
         Member member = Member.createParent(
                 "parent@example.com",
                 "김하나",
@@ -194,7 +335,23 @@ class MemberWithdrawalServiceTest {
         ReflectionTestUtils.setField(
                 member,
                 "memberId",
-                1L
+                MEMBER_ID
+        );
+
+        return member;
+    }
+
+    private Member activeChild() {
+        Member member = Member.createChild(
+                "child@example.com",
+                "김자녀",
+                null
+        );
+
+        ReflectionTestUtils.setField(
+                member,
+                "memberId",
+                MEMBER_ID
         );
 
         return member;
