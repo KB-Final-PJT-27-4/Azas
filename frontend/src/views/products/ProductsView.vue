@@ -26,20 +26,46 @@ const toggleFavorite = (productId: string) => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-5 pt-6 pb-8 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-5 pt-4 pb-8 text-[var(--color-text-primary)]"
   >
     <section>
-      <fieldset>
+      <header
+        class="relative overflow-hidden rounded-[22px] bg-[var(--color-selected-background)] p-5"
+      >
+        <div class="relative flex items-start gap-3">
+          <div>
+            <p class="m-0 text-[11px] font-bold text-[var(--color-selected-text)]">
+              우리 아이를 위한 금융상품
+            </p>
+            <h1 class="mt-1 mb-0 text-[21px] leading-[1.35] font-bold tracking-[-0.025em]">
+              조건에 맞는 상품을<br />한눈에 비교해 보세요
+            </h1>
+          </div>
+        </div>
+      </header>
+
+      <h2 class="mt-5 mb-0 flex items-center gap-2 text-[16px] font-extrabold">
+        <span>추천 상품</span>
+        <span
+          class="rounded-full bg-[var(--color-selected-background)] px-2.5 py-1 text-[11px] font-bold text-[var(--color-selected-text)]"
+        >
+          {{ filteredProducts.length }}개
+        </span>
+      </h2>
+
+      <fieldset class="mt-3">
         <legend class="sr-only">상품 유형 필터</legend>
-        <div class="flex gap-2 overflow-x-auto">
+        <div
+          class="grid grid-cols-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1"
+        >
           <button
             v-for="filter in productFilters"
             :key="filter"
-            class="h-10 shrink-0 rounded-full border px-4 text-[13px] font-bold transition-colors"
+            class="h-10 min-w-0 rounded-[10px] px-2 text-[13px] font-bold transition-all duration-200"
             :class="
               selectedProductFilter === filter
-                ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
-                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)]'
+                ? 'bg-[var(--color-surface)] text-[var(--color-selected-text)] shadow-[0_2px_8px_rgb(43_171_232_/_16%)]'
+                : 'text-[var(--color-text-secondary)] active:bg-[var(--color-surface)]'
             "
             type="button"
             :aria-pressed="selectedProductFilter === filter"
@@ -50,15 +76,17 @@ const toggleFavorite = (productId: string) => {
         </div>
       </fieldset>
 
-      <h2 class="mt-6 mb-0 text-[15px] font-extrabold">
-        추천 상품 {{ filteredProducts.length }}개
-      </h2>
-
-      <ul v-if="filteredProducts.length" class="mt-3 mb-0 grid list-none gap-3 p-0">
+      <ul v-if="filteredProducts.length" class="mt-4 mb-0 grid list-none gap-3 p-0">
         <li v-for="product in filteredProducts" :key="product.id">
           <article
-            class="relative rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm"
+            class="relative overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm transition-shadow hover:shadow-md"
           >
+            <RouterLink
+              class="absolute inset-0 z-10 rounded-[18px] transition-colors outline-none active:bg-[rgb(43_171_232_/_5%)] focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-inset"
+              :to="{ name: 'ProductDetail', params: { productId: product.id } }"
+              :aria-label="`${product.name} 상세 보기`"
+            />
+
             <div class="flex items-start gap-2 pr-10">
               <h3 class="m-0 truncate text-[17px] font-extrabold">{{ product.name }}</h3>
               <span
@@ -77,7 +105,7 @@ const toggleFavorite = (productId: string) => {
             </p>
 
             <button
-              class="absolute top-5 right-5 grid size-8 place-items-center rounded-full active:bg-[var(--color-selected-background)]"
+              class="absolute top-5 right-5 z-20 grid size-8 place-items-center rounded-full active:bg-[var(--color-selected-background)]"
               type="button"
               :aria-label="`${product.name} 찜하기`"
               :aria-pressed="favoriteProductIds.has(product.id)"
@@ -120,20 +148,24 @@ const toggleFavorite = (productId: string) => {
               </div>
             </div>
 
-            <RouterLink
-              class="mt-1 flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[var(--color-border)] text-[14px] font-bold active:bg-[var(--color-surface-muted)]"
-              :to="{ name: 'ProductDetail', params: { productId: product.id } }"
+            <div
+              class="mt-1 flex items-center justify-between border-t border-[var(--color-border)] pt-3 text-[11px] font-semibold text-[var(--color-text-secondary)]"
             >
-              상품 자세히 보기
-              <ChevronRight :size="15" />
-            </RouterLink>
+              <span>카드를 눌러 상세 정보를 확인하세요</span>
+              <span
+                class="grid size-7 place-items-center rounded-full bg-[var(--color-selected-background)] text-[var(--color-selected-text)]"
+                aria-hidden="true"
+              >
+                <ChevronRight :size="16" :stroke-width="2.2" />
+              </span>
+            </div>
           </article>
         </li>
       </ul>
 
       <div
         v-else
-        class="mt-3 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-16 text-center"
+        class="mt-4 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-16 text-center"
         role="status"
       >
         <p class="m-0 text-[14px] font-bold">해당 유형의 추천 상품이 없어요.</p>
