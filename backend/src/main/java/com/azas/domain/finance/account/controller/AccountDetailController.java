@@ -28,10 +28,12 @@ public class AccountDetailController {
 
     @ApiOperation(
             value = "ACCOUNT-15 계좌 상세 조회",
-            notes = "부모 명의 계좌는 연결한 부모 본인만 조회할 수 있습니다. "
-                    + "자녀 명의 계좌는 해당 자녀와 연결된 부모 또는 자녀 본인이 조회할 수 있습니다. "
-                    + "유효한 금융정보 제공 동의와 활성 연결이 있는 계좌만 반환하며, "
-                    + "계좌번호는 복호화한 전체 번호를 제공합니다."
+            notes = "부모 명의 활성 Mock 계좌는 소유 부모 본인만 조회할 수 "
+                    + "있습니다. 자녀 명의 활성 Mock 계좌는 해당 자녀와 연결된 "
+                    + "부모 또는 자녀 본인이 조회할 수 있습니다. 계좌 상세 "
+                    + "화면에 필요한 은행명, 계좌명, 복호화된 전체 계좌번호, "
+                    + "예금주명, 상품 유형과 현재 잔액을 반환합니다. 최근 "
+                    + "거래내역은 ACCOUNT-22를 별도로 호출합니다."
     )
     @ApiResponses({
             @ApiResponse(
@@ -56,7 +58,7 @@ public class AccountDetailController {
             ),
             @ApiResponse(
                     code = 404,
-                    message = "계좌가 없거나 유효한 금융 연결 대상이 아님",
+                    message = "계좌가 없거나 서비스 연결이 해제됨",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
