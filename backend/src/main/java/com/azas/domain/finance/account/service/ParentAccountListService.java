@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -42,7 +43,11 @@ public class ParentAccountListService {
                         .map(this::toResult)
                         .toList();
 
-        return new ParentAccountListResult(accounts);
+        BigDecimal totalBalance = accounts.stream()
+                .map(ParentAccountListItemResult::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new ParentAccountListResult(totalBalance, accounts);
     }
 
     private void validateParentMember(long memberId) {
@@ -67,17 +72,12 @@ public class ParentAccountListService {
     ) {
         return new ParentAccountListItemResult(
                 row.getAccountId(),
-                row.getOrganizationCode(),
-                row.getBankName(),
                 row.getAccountName(),
                 decryptAccountNumber(
                         row.getAccountNumberCiphertext()
                 ),
                 row.getAccountProductType(),
-                row.getBalance(),
-                row.getBalanceUpdatedAt(),
-                row.getAccountStatus(),
-                row.isPrimaryAccount()
+                row.getBalance()
         );
     }
 

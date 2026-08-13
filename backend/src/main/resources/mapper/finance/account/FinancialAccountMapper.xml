@@ -116,17 +116,12 @@
 
     <select id="findActiveParentAccounts"
             resultType="com.azas.domain.finance.account.dto.ParentAccountListRow">
-        SELECT
-            fa.financial_account_id AS account_id,
-            fa.organization_code,
-            fa.bank_name,
-            fa.account_name,
-            fa.account_number_ciphertext,
-            fa.account_product_type,
-            fa.balance,
-            fa.balance_updated_at,
-            fa.account_status,
-            fa.is_primary AS primary_account
+          SELECT
+              fa.financial_account_id AS account_id,
+              fa.account_name,
+              fa.account_number_ciphertext,
+              fa.account_product_type,
+              fa.balance
         FROM financial_account fa
         WHERE fa.owner_member_id = #{memberId}
           AND fa.owner_type = 'PARENT'
