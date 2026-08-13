@@ -2,10 +2,9 @@
 import { X } from 'lucide-vue-next'
 
 import goalEducationIcon from '@/assets/images/goals/goals_1.png'
-import goalIndependenceIcon from '@/assets/images/goals/goals_2.png'
-import goalHousingIcon from '@/assets/images/goals/goals_3.png'
+import goalLumpSumIcon from '@/assets/images/goals/goal-lump-sum.png'
+import goalHousingIcon from '@/assets/images/goals/goals_2.png'
 import goalMarriageIcon from '@/assets/images/goals/goals_4.png'
-import goalInvestmentIcon from '@/assets/images/goals/goals_5.png'
 import goalCustomIcon from '@/assets/images/goals/goals_6.png'
 
 type GoalOption = {
@@ -26,12 +25,12 @@ const emit = defineEmits<{
 }>()
 
 const customGoalSuggestions = [
-  '첫 걸음마 기념',
-  '첫 생일 기념',
-  '유치원 입학 기념',
-  '초등학교 입학 기념',
-  '첫 가족 여행',
-  '자전거 선물',
+  '생일 기념',
+  '학교 입학',
+  '가족 여행',
+  '교육비 마련',
+  '아이 미래 자금',
+  '첫 독립 준비',
 ]
 
 const goals: GoalOption[] = [
@@ -40,12 +39,6 @@ const goals: GoalOption[] = [
     icon: goalEducationIcon,
     title: '대학자금',
     description: '대학 등록금과 교육비',
-  },
-  {
-    id: 'independence',
-    icon: goalIndependenceIcon,
-    title: '독립자금',
-    description: '사회초년생을 위한 자금',
   },
   {
     id: 'housing',
@@ -59,17 +52,17 @@ const goals: GoalOption[] = [
     title: '결혼자금',
     description: '미래 자녀의 결혼을 위한 자금',
   },
-  {
-    id: 'investment',
-    icon: goalInvestmentIcon,
-    title: '투자자금',
-    description: '미래 재테크를 위한 자금',
+    {
+    id: 'lump-sum',
+    icon: goalLumpSumIcon,
+    title: '목돈 마련',
+    description: '아이의 미래를 위한 든든한 목돈',
   },
   {
     id: 'custom',
     icon: goalCustomIcon,
     title: '직접 설정',
-    description: '추천받거나 원하는 목표를 입력해요',
+    description: '원하는 목표를 직접 입력해요',
   },
 ]
 </script>
@@ -85,7 +78,7 @@ const goals: GoalOption[] = [
       <button
         v-for="goal in goals"
         :key="goal.id"
-        class="flex min-h-[74px] items-center gap-4 rounded-2xl border px-5 text-left transition-colors"
+        class="flex min-h-[74px] items-center gap-3 rounded-2xl border px-4 text-left transition-colors"
         :class="
           selectedGoals.includes(goal.id)
             ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)]'
@@ -98,7 +91,7 @@ const goals: GoalOption[] = [
         <img class="size-11 object-contain" :src="goal.icon" alt="" />
         <span class="min-w-0 flex-1">
           <strong class="block text-base">{{ goal.title }}</strong>
-          <span class="mt-1 block text-sm text-[var(--color-text-secondary)]">
+          <span class="mt-1 block break-keep text-sm leading-5 text-[var(--color-text-secondary)]">
             {{ goal.description }}
           </span>
         </span>
