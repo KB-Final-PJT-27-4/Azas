@@ -16,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,88 +50,67 @@ class ParentAccountListServiceTest {
     }
 
     @Test
-    void returnsActiveParentAccountsWithDecryptedNumbers() {
-        byte[] ciphertext = new byte[]{1, 2, 3};
-        ParentAccountListRow row = accountRow(
-                10L,
-                ciphertext,
-                true
-        );
+    void returnsActiveParentAccountsAndTotalBalance() {
+        byte[] firstCiphertext = new byte[]{1, 2, 3};
+        byte[] secondCiphertext = new byte[]{4, 5, 6};
 
-        when(memberMapper.findById(MEMBER_ID))
-                .thenReturn(parentMember());
-        when(financialAccountMapper
-                .findActiveParentAccounts(MEMBER_ID))
-                .thenReturn(List.of(row));
-        when(accountNumberProtector.decrypt(ciphertext))
+        when(memberMapper.findById(MEMBER_ID)).thenReturn(parentMember());
+        when(financialAccountMapper.findActiveParentAccounts(MEMBER_ID))
+                .thenReturn(List.of(
+                        accountRow(10L, firstCiphertext, "1000000.00"),
+                        accountRow(11L, secondCiphertext, "250000.00")
+                ));
+        when(accountNumberProtector.decrypt(firstCiphertext))
                 .thenReturn("987-6543-5678");
+        when(accountNumberProtector.decrypt(secondCiphertext))
+                .thenReturn("987-6543-9999");
 
-        ParentAccountListResult result =
-                service.getMyAccounts(MEMBER_ID);
+        ParentAccountListResult result = service.getMyAccounts(MEMBER_ID);
 
-        assertEquals(1, result.getAccounts().size());
-        assertEquals(
-                "987-6543-5678",
-                result.getAccounts().get(0)
-                        .getAccountNumber()
-        );
-        assertEquals(
-                new BigDecimal("1250000.00"),
-                result.getAccounts().get(0).getBalance()
-        );
+        assertEquals(2, result.getAccounts().size());
+        assertEquals("987-6543-5678",
+                result.getAccounts().get(0).getAccountNumber());
+        assertEquals(new BigDecimal("1250000.00"),
+                result.getTotalBalance());
     }
 
     @Test
-    void returnsEmptyListWhenNoAccountIsConnected() {
-        when(memberMapper.findById(MEMBER_ID))
-                .thenReturn(parentMember());
-        when(financialAccountMapper
-                .findActiveParentAccounts(MEMBER_ID))
+    void returnsZeroTotalAndEmptyListWhenNoAccountIsConnected() {
+        when(memberMapper.findById(MEMBER_ID)).thenReturn(parentMember());
+        when(financialAccountMapper.findActiveParentAccounts(MEMBER_ID))
                 .thenReturn(List.of());
 
-        ParentAccountListResult result =
-                service.getMyAccounts(MEMBER_ID);
+        ParentAccountListResult result = service.getMyAccounts(MEMBER_ID);
 
         assertEquals(0, result.getAccounts().size());
+        assertEquals(BigDecimal.ZERO, result.getTotalBalance());
     }
 
     @Test
     void rejectsChildMember() {
-        when(memberMapper.findById(MEMBER_ID))
-                .thenReturn(Member.createChild(
-                        "child@example.com",
-                        "child",
-                        null
-                ));
+        when(memberMapper.findById(MEMBER_ID)).thenReturn(Member.createChild(
+                "child@example.com", "child", null
+        ));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> service.getMyAccounts(MEMBER_ID)
         );
 
-        assertEquals(
-                ErrorCode.PARENT_ACCESS_REQUIRED,
-                exception.getErrorCode()
-        );
-        verify(
-                financialAccountMapper,
-                never()
-        ).findActiveParentAccounts(MEMBER_ID);
+        assertEquals(ErrorCode.PARENT_ACCESS_REQUIRED,
+                exception.getErrorCode());
+        verify(financialAccountMapper, never())
+                .findActiveParentAccounts(MEMBER_ID);
     }
 
     @Test
     void hidesCiphertextWhenDecryptionFails() {
         byte[] ciphertext = new byte[]{1, 2, 3};
-
-        when(memberMapper.findById(MEMBER_ID))
-                .thenReturn(parentMember());
-        when(financialAccountMapper
-                .findActiveParentAccounts(MEMBER_ID))
-                .thenReturn(List.of(accountRow(
-                        10L,
-                        ciphertext,
-                        true
-                )));
+        when(memberMapper.findById(MEMBER_ID)).thenReturn(parentMember());
+        when(financialAccountMapper.findActiveParentAccounts(MEMBER_ID))
+                .thenReturn(List.of(
+                        accountRow(10L, ciphertext, "1250000.00")
+                ));
         when(accountNumberProtector.decrypt(ciphertext))
                 .thenThrow(new IllegalArgumentException());
 
@@ -141,59 +119,31 @@ class ParentAccountListServiceTest {
                 () -> service.getMyAccounts(MEMBER_ID)
         );
 
-        assertEquals(
-                ErrorCode.INTERNAL_SERVER_ERROR,
-                exception.getErrorCode()
-        );
+        assertEquals(ErrorCode.INTERNAL_SERVER_ERROR,
+                exception.getErrorCode());
     }
 
     private Member parentMember() {
-        return Member.createParent(
-                "parent@example.com",
-                "parent",
-                null
-        );
+        return Member.createParent("parent@example.com", "parent", null);
     }
 
     private ParentAccountListRow accountRow(
             long accountId,
             byte[] ciphertext,
-            boolean primary
+            String balance
     ) {
-        ParentAccountListRow row =
-                new ParentAccountListRow();
-
+        ParentAccountListRow row = new ParentAccountListRow();
         ReflectionTestUtils.setField(row, "accountId", accountId);
-        ReflectionTestUtils.setField(row, "organizationCode", "004");
-        ReflectionTestUtils.setField(row, "bankName", "KB국민은행");
-        ReflectionTestUtils.setField(row, "accountName", "부모 생활비 통장");
+        ReflectionTestUtils.setField(row, "accountName", "생활비 통장");
         ReflectionTestUtils.setField(
-                row,
-                "accountNumberCiphertext",
-                ciphertext
+                row, "accountNumberCiphertext", ciphertext
         );
         ReflectionTestUtils.setField(
-                row,
-                "accountProductType",
-                "DEMAND_DEPOSIT"
+                row, "accountProductType", "DEMAND_DEPOSIT"
         );
         ReflectionTestUtils.setField(
-                row,
-                "balance",
-                new BigDecimal("1250000.00")
+                row, "balance", new BigDecimal(balance)
         );
-        ReflectionTestUtils.setField(
-                row,
-                "balanceUpdatedAt",
-                LocalDateTime.of(2026, 8, 8, 5, 30)
-        );
-        ReflectionTestUtils.setField(row, "accountStatus", "ACTIVE");
-        ReflectionTestUtils.setField(
-                row,
-                "primaryAccount",
-                primary
-        );
-
         return row;
     }
 }
