@@ -13,7 +13,7 @@ public class AccountDetailRow {
 
     private Long accountId;
     private String ownerType;
-    private Long connectedByMemberId;
+    private Long ownerMemberId;
     private Long childId;
     private String childName;
     private String organizationCode;

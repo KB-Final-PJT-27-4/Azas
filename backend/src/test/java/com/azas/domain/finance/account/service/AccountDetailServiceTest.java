@@ -250,7 +250,7 @@ class AccountDetailServiceTest {
         ReflectionTestUtils.setField(row, "ownerType", "PARENT");
         ReflectionTestUtils.setField(
                 row,
-                "connectedByMemberId",
+                "ownerMemberId",
                 MEMBER_ID
         );
         return row;

@@ -28,13 +28,9 @@
                fa.account_product_type AS accountProductType,
                fa.balance AS balance
         FROM financial_account fa
-                 INNER JOIN financial_connection fc
-                            ON fc.financial_connection_id =
-                               fa.financial_connection_id
         WHERE fa.financial_account_id = #{accountId}
-          AND fc.connected_by_member_id = #{memberId}
-          AND fc.owner_type = 'PARENT'
-          AND fc.consent_status = 'ACTIVE'
+          AND fa.owner_member_id = #{memberId}
+          AND fa.owner_type = 'PARENT'
           AND fa.account_status = 'ACTIVE'
           AND fa.link_status = 'ACTIVE'
             FOR UPDATE
@@ -50,12 +46,8 @@
                fa.account_product_type AS accountProductType,
                fa.balance AS balance
         FROM financial_account fa
-                 INNER JOIN financial_connection fc
-                            ON fc.financial_connection_id =
-                               fa.financial_connection_id
         WHERE fa.financial_account_id = #{accountId}
-          AND fc.owner_type = 'CHILD'
-          AND fc.consent_status = 'ACTIVE'
+          AND fa.owner_type = 'CHILD'
           AND fa.child_id IS NOT NULL
           AND fa.financial_goal_template_id IS NOT NULL
           AND fa.account_product_type = 'SAVINGS'

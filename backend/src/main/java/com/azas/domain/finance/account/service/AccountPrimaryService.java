@@ -47,7 +47,7 @@ public class AccountPrimaryService {
         if (PARENT.equals(target.getOwnerType())) {
             updatedRows = financialAccountMapper
                     .setPrimaryAccountForParentScope(
-                            target.getConnectedByMemberId(),
+                            target.getOwnerMemberId(),
                             financialAccountId
                     );
         } else if (CHILD.equals(target.getOwnerType())) {
@@ -77,8 +77,7 @@ public class AccountPrimaryService {
 
     private void validateActiveTarget(AccountPrimaryTargetRow target) {
         if (!ACTIVE.equals(target.getAccountStatus())
-                || !ACTIVE.equals(target.getLinkStatus())
-                || !ACTIVE.equals(target.getConsentStatus())) {
+                || !ACTIVE.equals(target.getLinkStatus())) {
             throw new BusinessException(
                     ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND
             );
@@ -90,8 +89,8 @@ public class AccountPrimaryService {
             AccountPrimaryTargetRow target
     ) {
         if (PARENT.equals(target.getOwnerType())) {
-            if (target.getConnectedByMemberId() == null
-                    || target.getConnectedByMemberId()
+            if (target.getOwnerMemberId() == null
+                    || target.getOwnerMemberId()
                     != requesterMemberId) {
                 throw new BusinessException(
                         ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED

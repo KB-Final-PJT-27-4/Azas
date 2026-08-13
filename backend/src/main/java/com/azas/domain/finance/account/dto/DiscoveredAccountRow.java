@@ -4,16 +4,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
-public class AccountBalanceRow {
+public class DiscoveredAccountRow {
 
     private Long accountId;
-    private String ownerType;
-    private Long ownerMemberId;
-    private Long childId;
+    private String bankName;
+    private byte[] accountNumberCiphertext;
+    private String accountProductType;
     private BigDecimal balance;
-    private LocalDateTime balanceUpdatedAt;
 }

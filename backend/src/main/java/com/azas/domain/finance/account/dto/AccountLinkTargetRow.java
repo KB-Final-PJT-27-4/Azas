@@ -8,12 +8,18 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
-public class AccountBalanceRow {
-
+public class AccountLinkTargetRow {
     private Long accountId;
     private String ownerType;
     private Long ownerMemberId;
     private Long childId;
+    private String bankName;
+    private String accountName;
+    private byte[] accountNumberCiphertext;
+    private String accountProductType;
     private BigDecimal balance;
-    private LocalDateTime balanceUpdatedAt;
+    private String accountStatus;
+    private String linkStatus;
+    private boolean primaryAccount;
+    private LocalDateTime linkedAt;
 }
