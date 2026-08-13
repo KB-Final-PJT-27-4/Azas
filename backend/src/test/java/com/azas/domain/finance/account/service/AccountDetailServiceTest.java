@@ -14,12 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,13 +45,11 @@ class AccountDetailServiceTest {
     }
 
     @Test
-    void returnsParentOwnedAccountForConnectionOwner() {
+    void returnsParentAccountWithMemberNameAsHolder() {
         byte[] ciphertext = {1, 2, 3};
         AccountDetailRow row = parentAccountRow(ciphertext);
-
-        when(financialAccountMapper.findLinkedAccountDetailById(
-                ACCOUNT_ID
-        )).thenReturn(row);
+        when(financialAccountMapper.findLinkedAccountDetailById(ACCOUNT_ID))
+                .thenReturn(row);
         when(accountNumberProtector.decrypt(ciphertext))
                 .thenReturn("987-6543-5678");
 
@@ -65,22 +59,19 @@ class AccountDetailServiceTest {
         );
 
         assertEquals("PARENT", result.getOwnerType());
-        assertNull(result.getChild());
-        assertNull(result.getFinancialGoal());
+        assertEquals("송준수", result.getAccountHolderName());
         assertEquals("987-6543-5678", result.getAccountNumber());
-
+        assertEquals(new BigDecimal("2000000.00"), result.getBalance());
         verify(financialAccountMapper, never())
                 .countActiveParentAccess(MEMBER_ID, CHILD_ID);
     }
 
     @Test
-    void returnsChildAccountForAccessibleParent() {
+    void returnsChildAccountWithChildNameForAccessibleParent() {
         byte[] ciphertext = {4, 5, 6};
         AccountDetailRow row = childAccountRow(ciphertext);
-
-        when(financialAccountMapper.findLinkedAccountDetailById(
-                ACCOUNT_ID
-        )).thenReturn(row);
+        when(financialAccountMapper.findLinkedAccountDetailById(ACCOUNT_ID))
+                .thenReturn(row);
         when(financialAccountMapper.countActiveParentAccess(
                 MEMBER_ID,
                 CHILD_ID
@@ -93,27 +84,16 @@ class AccountDetailServiceTest {
                 ACCOUNT_ID
         );
 
-        assertEquals(CHILD_ID, result.getChild().getChildId());
-        assertEquals("깨비", result.getChild().getName());
-        assertEquals(
-                "대학자금 마련",
-                result.getFinancialGoal().getGoalName()
-        );
-        assertEquals(
-                new BigDecimal("30000000.00"),
-                result.getFinancialGoal().getTargetAmount()
-        );
-        assertFalse(result.isPrimary());
+        assertEquals("CHILD", result.getOwnerType());
+        assertEquals("깨비", result.getAccountHolderName());
+        assertEquals("SAVINGS", result.getAccountProductType());
     }
 
     @Test
     void returnsChildAccountForLinkedChildMember() {
-        byte[] ciphertext = {7, 8, 9};
-        AccountDetailRow row = childAccountRow(ciphertext);
-
-        when(financialAccountMapper.findLinkedAccountDetailById(
-                ACCOUNT_ID
-        )).thenReturn(row);
+        AccountDetailRow row = childAccountRow(new byte[]{7});
+        when(financialAccountMapper.findLinkedAccountDetailById(ACCOUNT_ID))
+                .thenReturn(row);
         when(financialAccountMapper.countActiveParentAccess(
                 MEMBER_ID,
                 CHILD_ID
@@ -122,7 +102,7 @@ class AccountDetailServiceTest {
                 MEMBER_ID,
                 CHILD_ID
         )).thenReturn(1);
-        when(accountNumberProtector.decrypt(ciphertext))
+        when(accountNumberProtector.decrypt(row.getAccountNumberCiphertext()))
                 .thenReturn("123-4567-2001");
 
         AccountDetailResult result = service.getAccountDetail(
@@ -147,9 +127,8 @@ class AccountDetailServiceTest {
 
     @Test
     void returnsNotFoundForMissingOrUnlinkedAccount() {
-        when(financialAccountMapper.findLinkedAccountDetailById(
-                ACCOUNT_ID
-        )).thenReturn(null);
+        when(financialAccountMapper.findLinkedAccountDetailById(ACCOUNT_ID))
+                .thenReturn(null);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -164,9 +143,8 @@ class AccountDetailServiceTest {
 
     @Test
     void rejectsDifferentMemberForParentAccount() {
-        when(financialAccountMapper.findLinkedAccountDetailById(
-                ACCOUNT_ID
-        )).thenReturn(parentAccountRow(new byte[]{1}));
+        when(financialAccountMapper.findLinkedAccountDetailById(ACCOUNT_ID))
+                .thenReturn(parentAccountRow(new byte[]{1}));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -181,9 +159,8 @@ class AccountDetailServiceTest {
 
     @Test
     void rejectsMemberWithoutChildAccountAccess() {
-        when(financialAccountMapper.findLinkedAccountDetailById(
-                ACCOUNT_ID
-        )).thenReturn(childAccountRow(new byte[]{1}));
+        when(financialAccountMapper.findLinkedAccountDetailById(ACCOUNT_ID))
+                .thenReturn(childAccountRow(new byte[]{1}));
         when(financialAccountMapper.countActiveParentAccess(
                 MEMBER_ID,
                 CHILD_ID
@@ -205,13 +182,11 @@ class AccountDetailServiceTest {
     }
 
     @Test
-    void rejectsInconsistentChildOwnershipData() {
+    void rejectsChildAccountWithoutHolderName() {
         AccountDetailRow row = childAccountRow(new byte[]{1});
-        ReflectionTestUtils.setField(row, "childName", null);
-
-        when(financialAccountMapper.findLinkedAccountDetailById(
-                ACCOUNT_ID
-        )).thenReturn(row);
+        ReflectionTestUtils.setField(row, "accountHolderName", null);
+        when(financialAccountMapper.findLinkedAccountDetailById(ACCOUNT_ID))
+                .thenReturn(row);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -227,10 +202,8 @@ class AccountDetailServiceTest {
     @Test
     void hidesAccountNumberDecryptionFailure() {
         byte[] ciphertext = {9, 9, 9};
-
-        when(financialAccountMapper.findLinkedAccountDetailById(
-                ACCOUNT_ID
-        )).thenReturn(parentAccountRow(ciphertext));
+        when(financialAccountMapper.findLinkedAccountDetailById(ACCOUNT_ID))
+                .thenReturn(parentAccountRow(ciphertext));
         when(accountNumberProtector.decrypt(ciphertext))
                 .thenThrow(new IllegalArgumentException("secret"));
 
@@ -248,11 +221,12 @@ class AccountDetailServiceTest {
     private AccountDetailRow parentAccountRow(byte[] ciphertext) {
         AccountDetailRow row = baseRow(ciphertext);
         ReflectionTestUtils.setField(row, "ownerType", "PARENT");
-        ReflectionTestUtils.setField(
-                row,
-                "ownerMemberId",
-                MEMBER_ID
-        );
+        ReflectionTestUtils.setField(row, "ownerMemberId", MEMBER_ID);
+        ReflectionTestUtils.setField(row, "accountHolderName", "송준수");
+        ReflectionTestUtils.setField(row, "accountProductType",
+                "DEMAND_DEPOSIT");
+        ReflectionTestUtils.setField(row, "balance",
+                new BigDecimal("2000000.00"));
         return row;
     }
 
@@ -260,72 +234,20 @@ class AccountDetailServiceTest {
         AccountDetailRow row = baseRow(ciphertext);
         ReflectionTestUtils.setField(row, "ownerType", "CHILD");
         ReflectionTestUtils.setField(row, "childId", CHILD_ID);
-        ReflectionTestUtils.setField(row, "childName", "깨비");
-        ReflectionTestUtils.setField(
-                row,
-                "goalNameSnapshot",
-                "대학자금 마련"
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "goalTargetAmount",
-                new BigDecimal("30000000.00")
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "goalTargetDate",
-                LocalDate.of(2038, 1, 12)
-        );
+        ReflectionTestUtils.setField(row, "accountHolderName", "깨비");
         return row;
     }
 
     private AccountDetailRow baseRow(byte[] ciphertext) {
         AccountDetailRow row = new AccountDetailRow();
         ReflectionTestUtils.setField(row, "accountId", ACCOUNT_ID);
-        ReflectionTestUtils.setField(row, "organizationCode", "004");
         ReflectionTestUtils.setField(row, "bankName", "KB국민은행");
-        ReflectionTestUtils.setField(
-                row,
-                "accountName",
-                "KB Young Youth 적금"
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "accountNumberCiphertext",
-                ciphertext
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "accountProductType",
-                "SAVINGS"
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "balance",
-                new BigDecimal("14600000.00")
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "balanceUpdatedAt",
-                LocalDateTime.of(2026, 8, 10, 5, 30)
-        );
-        ReflectionTestUtils.setField(row, "accountStatus", "ACTIVE");
-        ReflectionTestUtils.setField(row, "primaryAccount", false);
-        ReflectionTestUtils.setField(
-                row,
-                "openedAt",
-                LocalDateTime.of(2024, 1, 12, 9, 0)
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "maturityDate",
-                LocalDate.of(2038, 1, 12)
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "linkedAt",
-                LocalDateTime.of(2026, 8, 4, 7, 29, 20)
-        );
+        ReflectionTestUtils.setField(row, "accountName", "아이사랑적금1");
+        ReflectionTestUtils.setField(row, "accountNumberCiphertext",
+                ciphertext);
+        ReflectionTestUtils.setField(row, "accountProductType", "SAVINGS");
+        ReflectionTestUtils.setField(row, "balance",
+                new BigDecimal("100000.00"));
         return row;
     }
 }

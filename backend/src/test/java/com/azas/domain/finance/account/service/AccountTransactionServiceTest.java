@@ -245,20 +245,12 @@ class AccountTransactionServiceTest {
         return new AccountDetailResult(
                 ACCOUNT_ID,
                 "CHILD",
-                null,
-                "004",
                 "KB국민은행",
                 "KB국민 5678",
                 "987-6543-5678",
+                "깨비",
                 "DEMAND_DEPOSIT",
-                new BigDecimal("500000.00"),
-                null,
-                "ACTIVE",
-                true,
-                null,
-                null,
-                null,
-                null
+                new BigDecimal("500000.00")
         );
     }
 
