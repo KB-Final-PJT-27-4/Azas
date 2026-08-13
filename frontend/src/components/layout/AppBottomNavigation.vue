@@ -18,10 +18,10 @@ const navigationItems = [
     <RouterLink
       v-for="item in navigationItems"
       :key="item.path"
-      class="grid min-w-0 place-items-center gap-[3px] text-[10px] leading-none font-bold whitespace-nowrap !text-[var(--color-unselected-text)] [&.router-link-active]:!text-[var(--color-selected-text)]"
+      class="grid min-w-0 place-items-center gap-[3px] text-[11px] leading-none font-medium whitespace-nowrap !text-[var(--color-unselected-text)] [&.router-link-active]:font-semibold [&.router-link-active]:!text-[var(--color-selected-text)]"
       :to="item.path"
     >
-      <component :is="item.icon" class="block" :size="20" :stroke-width="2.5" />
+      <component :is="item.icon" class="block" :size="22" :stroke-width="2.5" />
       <span>{{ item.label }}</span>
     </RouterLink>
   </nav>

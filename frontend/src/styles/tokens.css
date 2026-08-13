@@ -39,7 +39,7 @@
 
   --app-max-width: 430px;
   --app-header-height: 56px;
-  --app-bottom-nav-height: 56px;
+  --app-bottom-nav-height: 60px;
   --z-index-header: 50;
   --z-index-bottom-nav: 50;
   --z-index-overlay: 100;
