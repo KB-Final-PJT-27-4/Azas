@@ -55,8 +55,8 @@ public class AccountBalanceService {
             AccountBalanceRow row
     ) {
         if (PARENT_OWNER_TYPE.equals(row.getOwnerType())) {
-            if (row.getConnectedByMemberId() != null
-                    && row.getConnectedByMemberId()
+            if (row.getOwnerMemberId() != null
+                    && row.getOwnerMemberId()
                     == requesterMemberId) {
                 return;
             }

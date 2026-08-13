@@ -96,10 +96,10 @@ public class AccountUnlinkService {
             long requesterMemberId,
             AccountUnlinkTargetRow target
     ) {
-        Long connectedByMemberId = target.getConnectedByMemberId();
+        Long ownerMemberId = target.getOwnerMemberId();
 
-        if (connectedByMemberId == null
-                || connectedByMemberId != requesterMemberId) {
+        if (ownerMemberId == null
+                || ownerMemberId != requesterMemberId) {
             throw new BusinessException(
                     ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED
             );
