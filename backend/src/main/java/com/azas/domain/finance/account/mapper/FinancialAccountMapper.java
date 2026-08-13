@@ -8,6 +8,7 @@ import com.azas.domain.finance.account.dto.AccountUnlinkTargetRow;
 import com.azas.domain.finance.account.dto.AccountPrimaryTargetRow;
 import com.azas.domain.finance.account.dto.ChildAccountListRow;
 import com.azas.domain.finance.account.dto.ChildAvailableAmountAccountRow;
+import com.azas.domain.finance.account.dto.DiscoveredAccountRow;
 import com.azas.domain.finance.account.dto.ParentAccountListRow;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
 import com.azas.domain.finance.account.entity.FinancialAccountUsagePolicy;
@@ -54,6 +55,16 @@ public interface FinancialAccountMapper {
     List<ParentAccountListRow> findActiveParentAccounts(
             @Param("memberId")
             long memberId
+    );
+
+    List<DiscoveredAccountRow> findDiscoveredAccounts(
+            @Param("memberId") long memberId,
+            @Param("ownerType") String ownerType,
+            @Param("childId") Long childId
+    );
+
+    int countActiveParentDemandDeposit(
+            @Param("memberId") long memberId
     );
 
     List<ChildAccountListRow> findActiveChildAccounts(

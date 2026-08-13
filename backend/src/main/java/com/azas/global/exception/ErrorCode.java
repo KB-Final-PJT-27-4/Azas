@@ -107,6 +107,14 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "해당 자녀의 부모 권한이 필요합니다."
     ),
+    INVALID_ACCOUNT_DISCOVERY_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "Mock 계좌 조회 조건이 올바르지 않습니다."
+    ),
+    PARENT_DEMAND_DEPOSIT_REQUIRED(
+            HttpStatus.CONFLICT,
+            "자녀 계좌 이용 전 부모 입출금계좌 연결이 필요합니다."
+    ),
     INELIGIBLE_CHILD_USAGE_POLICY_ACCOUNT(
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자녀 명의의 활성 입출금 계좌에만 사용 관리 정책을 설정할 수 있습니다."
