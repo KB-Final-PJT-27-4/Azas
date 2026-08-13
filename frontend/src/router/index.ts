@@ -355,6 +355,16 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
 
+  // 전체 메뉴
+  {
+    path: '/menu',
+    name: 'AllMenu',
+    component: () => import('@/views/menu/AllMenuView.vue'),
+    meta: {
+      requiresAuth: true,
+    },
+  },
+
   // 금융상품
   {
     path: '/savings-recommendations',

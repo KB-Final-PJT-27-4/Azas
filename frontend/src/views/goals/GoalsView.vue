@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ChevronLeft } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
 import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import GoalPlanStep from '@/components/goals/GoalPlanStep.vue'
@@ -72,9 +72,6 @@ const progressStep = computed(() =>
       : selectedGoals.value.length + 1,
 )
 const progressTotal = computed(() => selectedGoals.value.length + 1)
-const headerTitle = computed(() =>
-  currentStep.value === 3 ? '목표 설정 완료' : currentStep.value === 4 ? '목표와 적금 연결' : '목표 설정',
-)
 const plans = computed(() =>
   selectedGoals.value.map((id) => ({
     id,
@@ -162,19 +159,7 @@ const toggleLinkedSaving = (goalId: string, savingsId: string) => {
   <main
     class="flex h-dvh flex-col overflow-hidden bg-[var(--color-surface)] text-[var(--color-text-primary)]"
   >
-    <header
-      class="relative flex h-16 shrink-0 items-center justify-center border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur"
-    >
-      <button
-        class="absolute left-2 grid size-11 place-items-center rounded-full text-[var(--color-text-secondary)] transition-colors active:bg-[var(--color-surface-muted)]"
-        type="button"
-        aria-label="이전"
-        @click="goBack"
-      >
-        <ChevronLeft :size="28" />
-      </button>
-      <strong class="text-[17px] tracking-[-0.02em]">{{ headerTitle }}</strong>
-    </header>
+    <AppSubHeader title="목표" :fixed="false" back-label="이전" @back="goBack" />
 
     <div v-if="currentStep < 3" class="flex shrink-0 gap-2 px-6 pt-7" aria-hidden="true">
       <span
@@ -262,7 +247,9 @@ const toggleLinkedSaving = (goalId: string, savingsId: string) => {
 .goal-slide-forward-leave-active,
 .goal-slide-backward-enter-active,
 .goal-slide-backward-leave-active {
-  transition: transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity 120ms ease-out;
+  transition:
+    transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 120ms ease-out;
 }
 
 .goal-slide-forward-enter-from,
