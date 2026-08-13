@@ -17,9 +17,7 @@ TRUNCATE TABLE auto_transfer_schedule;
 TRUNCATE TABLE financial_transfer;
 TRUNCATE TABLE account_transaction;
 TRUNCATE TABLE account_balance_snapshot;
-TRUNCATE TABLE financial_sync_job;
 TRUNCATE TABLE financial_account;
-TRUNCATE TABLE financial_connection;
 TRUNCATE TABLE financial_product_bookmark;
 TRUNCATE TABLE financial_product;
 TRUNCATE TABLE child_checklist_item;
@@ -192,26 +190,12 @@ INSERT INTO financial_product_bookmark (
 ) VALUES
   (1, 1, 1, 1);
 
-INSERT INTO financial_connection (
-  financial_connection_id,
-  connected_by_member_id,
-  child_id,
-  owner_type,
-  provider,
-  external_connection_ciphertext,
-  external_connection_hash,
-  consent_status,
-  consented_at,
-  consent_expires_at,
-  last_synced_at
-) VALUES
-  (1, 1, NULL, 'PARENT', 'CODEF', UNHEX(SHA2('parent-connected-id', 256)), SHA2('parent-connected-id', 256), 'ACTIVE', NOW(6), DATE_ADD(NOW(6), INTERVAL 1 YEAR), NOW(6)),
-  (2, 1, 1, 'CHILD', 'CODEF', UNHEX(SHA2('child-connected-id', 256)), SHA2('child-connected-id', 256), 'ACTIVE', NOW(6), DATE_ADD(NOW(6), INTERVAL 1 YEAR), NOW(6));
-
 INSERT INTO financial_account (
   financial_account_id,
-  financial_connection_id,
+  owner_type,
+  owner_member_id,
   child_id,
+  financial_product_id,
   financial_goal_template_id,
   organization_code,
   bank_name,
@@ -237,7 +221,9 @@ INSERT INTO financial_account (
 ) VALUES
   (
     1,
+    'PARENT',
     1,
+    NULL,
     NULL,
     NULL,
     '004',
@@ -264,8 +250,10 @@ INSERT INTO financial_account (
   ),
   (
     2,
+    'CHILD',
     2,
     1,
+    NULL,
     NULL,
     '004',
     'KB국민은행',
@@ -291,7 +279,9 @@ INSERT INTO financial_account (
   ),
   (
     3,
+    'CHILD',
     2,
+    1,
     1,
     1,
     '004',
