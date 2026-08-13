@@ -5,7 +5,8 @@ import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import { BaseToast } from '@/components/feedback'
 import { useToast } from '@/composables/useToast'
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()

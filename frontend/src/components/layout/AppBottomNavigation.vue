@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ChartNoAxesCombined, ClipboardCheck, House, UserRound, WalletCards } from 'lucide-vue-next'
+import { ClipboardCheck, House, Menu, UserRound, WalletCards } from 'lucide-vue-next'
 
 const navigationItems = [
   { label: '홈', path: '/home', icon: House },
   { label: '계좌', path: '/assets', icon: WalletCards },
   { label: '체크리스트', path: '/checklists', icon: ClipboardCheck },
-  { label: '자산 관리', path: '/reports', icon: ChartNoAxesCombined },
   { label: '마이페이지', path: '/mypage', icon: UserRound },
+  { label: '전체', path: '/menu', icon: Menu },
 ]
 </script>
 
