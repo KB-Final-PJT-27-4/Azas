@@ -14,12 +14,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,7 +26,7 @@ import static org.mockito.Mockito.when;
 class ChildAccountListServiceTest {
 
     private static final long MEMBER_ID = 8L;
-    private static final long CHILD_ID = 3L;
+    private static final long CHILD_ID = 6L;
 
     @Mock
     private FinancialAccountMapper financialAccountMapper;
@@ -47,24 +45,19 @@ class ChildAccountListServiceTest {
     }
 
     @Test
-    void returnsActiveChildAccountsForAccessibleParent() {
-        byte[] ciphertext = {1, 2, 3};
-        ChildAccountListRow row = accountRow(ciphertext);
-
-        when(financialAccountMapper.countActiveChildById(CHILD_ID))
-                .thenReturn(1);
-        when(financialAccountMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(1);
-        when(financialAccountMapper.countActiveChildMemberAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(0);
+    void accessibleParentReadsChildAccountsAndTotalBalance() {
+        byte[] firstCiphertext = {1, 2, 3};
+        byte[] secondCiphertext = {4, 5, 6};
+        allowParentAccess();
         when(financialAccountMapper.findActiveChildAccounts(CHILD_ID))
-                .thenReturn(List.of(row));
-        when(accountNumberProtector.decrypt(ciphertext))
-                .thenReturn("123-4567-8901");
+                .thenReturn(List.of(
+                        accountRow(2L, firstCiphertext, "9600000.00"),
+                        accountRow(3L, secondCiphertext, "5000000.00")
+                ));
+        when(accountNumberProtector.decrypt(firstCiphertext))
+                .thenReturn("952-17362605-43");
+        when(accountNumberProtector.decrypt(secondCiphertext))
+                .thenReturn("123-456-789012");
 
         ChildAccountListResult result = service.getChildAccounts(
                 MEMBER_ID,
@@ -72,25 +65,22 @@ class ChildAccountListServiceTest {
         );
 
         assertEquals(CHILD_ID, result.getChildId());
-        assertEquals(1, result.getAccounts().size());
-        assertEquals(
-                "123-4567-8901",
-                result.getAccounts().get(0).getAccountNumber()
-        );
-        assertTrue(result.getAccounts().get(0).isPrimary());
+        assertEquals(2, result.getAccounts().size());
+        assertEquals("952-17362605-43",
+                result.getAccounts().get(0).getAccountNumber());
+        assertEquals(new BigDecimal("14600000.00"),
+                result.getTotalBalance());
     }
 
     @Test
-    void returnsAccountsForLinkedChildMember() {
+    void linkedChildMemberCanReadOwnEmptyAccountList() {
         when(financialAccountMapper.countActiveChildById(CHILD_ID))
                 .thenReturn(1);
         when(financialAccountMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
+                MEMBER_ID, CHILD_ID
         )).thenReturn(0);
         when(financialAccountMapper.countActiveChildMemberAccess(
-                MEMBER_ID,
-                CHILD_ID
+                MEMBER_ID, CHILD_ID
         )).thenReturn(1);
         when(financialAccountMapper.findActiveChildAccounts(CHILD_ID))
                 .thenReturn(List.of());
@@ -100,21 +90,13 @@ class ChildAccountListServiceTest {
                 CHILD_ID
         );
 
-        assertTrue(result.getAccounts().isEmpty());
+        assertEquals(BigDecimal.ZERO, result.getTotalBalance());
+        assertEquals(0, result.getAccounts().size());
     }
 
     @Test
-    void returnsEmptyListWhenChildHasNoAccounts() {
-        when(financialAccountMapper.countActiveChildById(CHILD_ID))
-                .thenReturn(1);
-        when(financialAccountMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(1);
-        when(financialAccountMapper.countActiveChildMemberAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(0);
+    void nullRowsBecomeZeroTotalAndEmptyList() {
+        allowParentAccess();
         when(financialAccountMapper.findActiveChildAccounts(CHILD_ID))
                 .thenReturn(null);
 
@@ -123,7 +105,8 @@ class ChildAccountListServiceTest {
                 CHILD_ID
         );
 
-        assertTrue(result.getAccounts().isEmpty());
+        assertEquals(BigDecimal.ZERO, result.getTotalBalance());
+        assertEquals(0, result.getAccounts().size());
     }
 
     @Test
@@ -137,7 +120,6 @@ class ChildAccountListServiceTest {
         );
 
         assertEquals(ErrorCode.CHILD_NOT_FOUND, exception.getErrorCode());
-
         verify(financialAccountMapper, never())
                 .findActiveChildAccounts(CHILD_ID);
     }
@@ -150,8 +132,7 @@ class ChildAccountListServiceTest {
         );
 
         assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
-        verify(financialAccountMapper, never())
-                .countActiveChildById(0L);
+        verify(financialAccountMapper, never()).countActiveChildById(0L);
     }
 
     @Test
@@ -159,12 +140,10 @@ class ChildAccountListServiceTest {
         when(financialAccountMapper.countActiveChildById(CHILD_ID))
                 .thenReturn(1);
         when(financialAccountMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
+                MEMBER_ID, CHILD_ID
         )).thenReturn(0);
         when(financialAccountMapper.countActiveChildMemberAccess(
-                MEMBER_ID,
-                CHILD_ID
+                MEMBER_ID, CHILD_ID
         )).thenReturn(0);
 
         BusinessException exception = assertThrows(
@@ -172,28 +151,18 @@ class ChildAccountListServiceTest {
                 () -> service.getChildAccounts(MEMBER_ID, CHILD_ID)
         );
 
-        assertEquals(
-                ErrorCode.CHILD_ACCESS_DENIED,
-                exception.getErrorCode()
-        );
+        assertEquals(ErrorCode.CHILD_ACCESS_DENIED,
+                exception.getErrorCode());
     }
 
     @Test
     void hidesAccountNumberDecryptionFailure() {
         byte[] ciphertext = {9, 9, 9};
-
-        when(financialAccountMapper.countActiveChildById(CHILD_ID))
-                .thenReturn(1);
-        when(financialAccountMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(1);
-        when(financialAccountMapper.countActiveChildMemberAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(0);
+        allowParentAccess();
         when(financialAccountMapper.findActiveChildAccounts(CHILD_ID))
-                .thenReturn(List.of(accountRow(ciphertext)));
+                .thenReturn(List.of(
+                        accountRow(2L, ciphertext, "1250000.00")
+                ));
         when(accountNumberProtector.decrypt(ciphertext))
                 .thenThrow(new IllegalArgumentException("secret"));
 
@@ -202,42 +171,36 @@ class ChildAccountListServiceTest {
                 () -> service.getChildAccounts(MEMBER_ID, CHILD_ID)
         );
 
-        assertEquals(
-                ErrorCode.INTERNAL_SERVER_ERROR,
-                exception.getErrorCode()
-        );
+        assertEquals(ErrorCode.INTERNAL_SERVER_ERROR,
+                exception.getErrorCode());
     }
 
-    private ChildAccountListRow accountRow(byte[] ciphertext) {
+    private void allowParentAccess() {
+        when(financialAccountMapper.countActiveChildById(CHILD_ID))
+                .thenReturn(1);
+        when(financialAccountMapper.countActiveParentAccess(
+                MEMBER_ID, CHILD_ID
+        )).thenReturn(1);
+        when(financialAccountMapper.countActiveChildMemberAccess(
+                MEMBER_ID, CHILD_ID
+        )).thenReturn(0);
+    }
+
+    private ChildAccountListRow accountRow(
+            long accountId,
+            byte[] ciphertext,
+            String balance
+    ) {
         ChildAccountListRow row = new ChildAccountListRow();
-        ReflectionTestUtils.setField(row, "accountId", 2L);
-        ReflectionTestUtils.setField(row, "organizationCode", "004");
-        ReflectionTestUtils.setField(row, "bankName", "KB국민은행");
+        ReflectionTestUtils.setField(row, "accountId", accountId);
+        ReflectionTestUtils.setField(row, "accountName", "아이사랑적금1");
         ReflectionTestUtils.setField(
-                row,
-                "accountName",
-                "KB Young Youth 입출금통장"
+                row, "accountNumberCiphertext", ciphertext
         );
+        ReflectionTestUtils.setField(row, "accountProductType", "SAVINGS");
         ReflectionTestUtils.setField(
-                row,
-                "accountNumberCiphertext",
-                ciphertext
+                row, "balance", new BigDecimal(balance)
         );
-        ReflectionTestUtils.setField(
-                row,
-                "accountProductType",
-                "DEMAND_DEPOSIT"
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "balance",
-                new BigDecimal("1250000.00")
-        );
-        ReflectionTestUtils.setField(row, "balanceUpdatedAt", LocalDateTime.of(
-                2026, 8, 9, 5, 30
-        ));
-        ReflectionTestUtils.setField(row, "accountStatus", "ACTIVE");
-        ReflectionTestUtils.setField(row, "primaryAccount", true);
         return row;
     }
 }
