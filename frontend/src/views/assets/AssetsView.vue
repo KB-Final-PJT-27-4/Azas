@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { Baby, CalendarClock, ChevronRight, Pencil, Plus, UserRound } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import {
+  Baby,
+  CalendarClock,
+  ChevronRight,
+  EllipsisVertical,
+  Pencil,
+  Plus,
+  Trash2,
+  UserRound,
+} from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 
 import AssetTransferResultSheet from '@/components/assets/AssetTransferResultSheet.vue'
 import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
+import AutoTransferSheet from '@/components/assets/AutoTransferSheet.vue'
 
 type AccountType = '적금' | '입출금'
 type AssetsTab = 'accounts' | 'autoTransfers'
@@ -26,11 +36,21 @@ type AccountGroup = {
 type AutoTransfer = {
   id: string
   title: string
+  sourceAccountId: string
   sourceAccount: string
+  targetAccountId: string
   targetAccount: string
   amount: number
   transferDay: number
   enabled: boolean
+}
+
+type AutoTransferSheetData = {
+  title: string
+  sourceAccountId: string
+  targetAccountId: string
+  amount: number
+  transferDay: number
 }
 
 const route = useRoute()
@@ -89,8 +109,11 @@ const accountGroups: AccountGroup[] = [
 const accountOptions = accountGroups.flatMap((group) =>
   group.accounts.map((account) => ({
     id: account.id,
-    label: `${group.title} · ${account.name}`,
+    label: account.name,
+    tag: group.id === 'parent' ? '부모' : '자녀',
     name: account.name,
+    number: account.accountNumber,
+    balance: account.balance,
     type: account.type,
   })),
 )
@@ -103,7 +126,9 @@ const autoTransfers = ref<AutoTransfer[]>([
   {
     id: 'saving-transfer',
     title: '적금 자동저축',
+    sourceAccountId: 'parent-account-1',
     sourceAccount: '아이사랑통장',
+    targetAccountId: 'parent-saving-1',
     targetAccount: '아이사랑적금1',
     amount: 200_000,
     transferDay: 20,
@@ -112,52 +137,35 @@ const autoTransfers = ref<AutoTransfer[]>([
   {
     id: 'allowance-transfer',
     title: '깨비 용돈',
+    sourceAccountId: 'parent-account-1',
     sourceAccount: '아이사랑통장',
-    targetAccount: '깨비 입출금계좌',
+    targetAccountId: 'child-account-1',
+    targetAccount: '아이사랑통장',
     amount: 100_000,
     transferDay: 1,
     enabled: true,
   },
 ])
 
-const editingAutoTransferId = ref<string | null>(null)
-const editingAmount = ref(0)
-const editingTransferDay = ref(1)
-const isAddingAutoTransfer = ref(false)
-const newAutoTransfer = reactive({
-  title: '',
-  sourceAccount: defaultSourceAccount.name,
-  targetAccount: defaultTargetAccount.name,
-  amount: 0,
-  transferDay: 1,
-})
-const activeAutoTransferCount = computed(
-  () => autoTransfers.value.filter((transfer) => transfer.enabled).length,
+const autoTransferSheetMode = ref<'create' | 'edit'>('create')
+const selectedAutoTransferId = ref<string | null>(null)
+const isAutoTransferSheetOpen = ref(false)
+const openAutoTransferMenuId = ref<string | null>(null)
+const selectedAutoTransfer = computed(() =>
+  autoTransfers.value.find(({ id }) => id === selectedAutoTransferId.value),
 )
-const isAutoTransferEditValid = computed(
-  () =>
-    Number.isFinite(editingAmount.value) &&
-    editingAmount.value > 0 &&
-    Number.isInteger(editingTransferDay.value) &&
-    editingTransferDay.value >= 1 &&
-    editingTransferDay.value <= 28,
-)
-const isNewAutoTransferValid = computed(
-  () =>
-    newAutoTransfer.title.trim().length > 0 &&
-    newAutoTransfer.sourceAccount.length > 0 &&
-    newAutoTransfer.targetAccount.length > 0 &&
-    Number.isFinite(newAutoTransfer.amount) &&
-    newAutoTransfer.amount > 0 &&
-    Number.isInteger(newAutoTransfer.transferDay) &&
-    newAutoTransfer.transferDay >= 1 &&
-    newAutoTransfer.transferDay <= 28,
-)
+const autoTransferSheetInitialData = computed(() => ({
+  title: selectedAutoTransfer.value?.title ?? '',
+  sourceAccountId: selectedAutoTransfer.value?.sourceAccountId ?? defaultSourceAccount.id,
+  targetAccountId: selectedAutoTransfer.value?.targetAccountId ?? defaultTargetAccount.id,
+  amount: selectedAutoTransfer.value?.amount ?? 0,
+  transferDay: selectedAutoTransfer.value?.transferDay ?? 1,
+}))
 
 const isTransferSheetOpen = ref(Boolean(route.query.allowanceRequest))
 const transferResult = ref<'success' | 'failure' | null>(null)
 const isAnyTransferSheetOpen = computed(
-  () => isTransferSheetOpen.value || transferResult.value !== null,
+  () => isTransferSheetOpen.value || isAutoTransferSheetOpen.value || transferResult.value !== null,
 )
 const requestedTransferAmount = computed(() => Number(route.query.amount) || 0)
 const requestedTransferMemo = computed(() => String(route.query.memo ?? ''))
@@ -191,60 +199,62 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const getGroupBalance = (group: AccountGroup) =>
   group.accounts.reduce((total, account) => total + account.balance, 0)
 
-const toggleAutoTransfer = (transferId: string) => {
-  const transfer = autoTransfers.value.find(({ id }) => id === transferId)
-  if (transfer) transfer.enabled = !transfer.enabled
-}
-
 const startEditingAutoTransfer = (transfer: AutoTransfer) => {
-  editingAutoTransferId.value = transfer.id
-  editingAmount.value = transfer.amount
-  editingTransferDay.value = transfer.transferDay
-}
-
-const cancelEditingAutoTransfer = () => {
-  editingAutoTransferId.value = null
-}
-
-const saveAutoTransfer = () => {
-  if (!isAutoTransferEditValid.value || editingAutoTransferId.value === null) return
-
-  const transfer = autoTransfers.value.find(({ id }) => id === editingAutoTransferId.value)
-  if (!transfer) return
-
-  transfer.amount = Math.trunc(editingAmount.value)
-  transfer.transferDay = editingTransferDay.value
-  editingAutoTransferId.value = null
+  openAutoTransferMenuId.value = null
+  selectedAutoTransferId.value = transfer.id
+  autoTransferSheetMode.value = 'edit'
+  isAutoTransferSheetOpen.value = true
 }
 
 const openAutoTransferForm = () => {
-  editingAutoTransferId.value = null
-  isAddingAutoTransfer.value = true
+  openAutoTransferMenuId.value = null
+  selectedAutoTransferId.value = null
+  autoTransferSheetMode.value = 'create'
+  isAutoTransferSheetOpen.value = true
 }
 
 const closeAutoTransferForm = () => {
-  isAddingAutoTransfer.value = false
+  isAutoTransferSheetOpen.value = false
 }
 
-const addAutoTransfer = () => {
-  if (!isNewAutoTransferValid.value) return
+const toggleAutoTransferMenu = (transferId: string) => {
+  openAutoTransferMenuId.value = openAutoTransferMenuId.value === transferId ? null : transferId
+}
+
+const closeAutoTransferMenuOnFocusOut = (event: FocusEvent) => {
+  const currentTarget = event.currentTarget as HTMLElement
+  const nextTarget = event.relatedTarget as Node | null
+  if (!nextTarget || !currentTarget.contains(nextTarget)) openAutoTransferMenuId.value = null
+}
+
+const deleteAutoTransfer = (transferId: string) => {
+  autoTransfers.value = autoTransfers.value.filter(({ id }) => id !== transferId)
+  openAutoTransferMenuId.value = null
+}
+
+const saveAutoTransfer = (payload: AutoTransferSheetData) => {
+  const source = accountOptions.find(({ id }) => id === payload.sourceAccountId)
+  const target = accountOptions.find(({ id }) => id === payload.targetAccountId)
+  if (!source || !target) return
+
+  const transferData = {
+    ...payload,
+    sourceAccount: source.name,
+    targetAccount: target.name,
+  }
+
+  if (autoTransferSheetMode.value === 'edit' && selectedAutoTransfer.value) {
+    Object.assign(selectedAutoTransfer.value, transferData)
+    isAutoTransferSheetOpen.value = false
+    return
+  }
 
   autoTransfers.value.push({
     id: `auto-transfer-${Date.now()}`,
-    title: newAutoTransfer.title.trim(),
-    sourceAccount: newAutoTransfer.sourceAccount,
-    targetAccount: newAutoTransfer.targetAccount,
-    amount: Math.trunc(newAutoTransfer.amount),
-    transferDay: newAutoTransfer.transferDay,
+    ...transferData,
     enabled: true,
   })
-
-  newAutoTransfer.title = ''
-  newAutoTransfer.sourceAccount = defaultSourceAccount.name
-  newAutoTransfer.targetAccount = defaultTargetAccount.name
-  newAutoTransfer.amount = 0
-  newAutoTransfer.transferDay = 1
-  isAddingAutoTransfer.value = false
+  isAutoTransferSheetOpen.value = false
 }
 
 const completeTransfer = ({ success }: { success: boolean }) => {
@@ -353,7 +363,7 @@ const retryTransfer = () => {
             </div>
 
             <RouterLink
-              class="flex h-8 shrink-0 items-center gap-0.5 rounded-[10px] border border-[#cdebf9] bg-white px-3 text-[11px] font-bold !text-[var(--color-selected-text)] shadow-[0_2px_7px_rgba(43,171,232,0.08)] active:bg-[#edf9ff]"
+              class="flex h-8 w-[82px] shrink-0 items-center justify-center gap-0.5 rounded-[10px] border border-[#cdebf9] bg-white text-[11px] font-bold !text-[var(--color-selected-text)] shadow-[0_2px_7px_rgba(43,171,232,0.08)] active:bg-[#edf9ff]"
               :to="{ name: 'Accounts' }"
             >
               <Plus :size="13" :stroke-width="2.8" aria-hidden="true" />
@@ -436,7 +446,7 @@ const retryTransfer = () => {
         class="overflow-hidden rounded-[22px] border border-[#e2edf2] bg-white shadow-[0_8px_24px_rgba(54,112,139,0.07)]"
         aria-labelledby="auto-transfer-title"
       >
-        <header class="flex items-start justify-between gap-3 bg-[#f7fcff] px-5 py-[18px]">
+        <header class="flex items-center justify-between gap-3 bg-[#f7fcff] px-5 py-[18px]">
           <div class="flex min-w-0 items-center gap-3">
             <span
               class="grid size-10 shrink-0 place-items-center rounded-[13px] bg-[#e5f6ff] text-[var(--color-selected-text)]"
@@ -452,7 +462,7 @@ const retryTransfer = () => {
                 <span
                   class="rounded-full bg-[#e5f6ff] px-2 py-0.5 text-[10px] font-bold text-[var(--color-selected-text)]"
                 >
-                  {{ activeAutoTransferCount }}건 사용 중
+                  총 {{ autoTransfers.length }}건
                 </span>
               </div>
               <p class="mt-1 mb-0 text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -461,146 +471,20 @@ const retryTransfer = () => {
             </div>
           </div>
           <button
-            class="flex h-8 shrink-0 items-center gap-0.5 rounded-[10px] border border-[#cdebf9] bg-white px-3 text-[11px] font-bold text-[var(--color-selected-text)] shadow-[0_2px_7px_rgba(43,171,232,0.08)] active:bg-[#edf9ff]"
+            class="flex h-8 w-[82px] shrink-0 items-center justify-center gap-0.5 rounded-[10px] border border-[#cdebf9] bg-white text-[11px] font-bold text-[var(--color-selected-text)] shadow-[0_2px_7px_rgba(43,171,232,0.08)] active:bg-[#edf9ff]"
             type="button"
-            :aria-expanded="isAddingAutoTransfer"
-            @click="isAddingAutoTransfer ? closeAutoTransferForm() : openAutoTransferForm()"
+            :aria-expanded="isAutoTransferSheetOpen && autoTransferSheetMode === 'create'"
+            @click="openAutoTransferForm"
           >
             <Plus :size="13" :stroke-width="2.8" aria-hidden="true" />
             자동이체
           </button>
         </header>
 
-        <form
-          v-if="isAddingAutoTransfer"
-          class="border-t border-[#e4edf2] bg-[#f7fbfd] px-4 py-4"
-          @submit.prevent="addAutoTransfer"
-        >
-          <h3 class="m-0 text-[13px] font-extrabold">새 자동이체</h3>
-          <p class="mt-1 mb-0 text-[10px] text-[var(--color-text-secondary)]">
-            자동으로 보낼 계좌와 일정을 설정해 주세요.
-          </p>
-
-          <label class="mt-3 block">
-            <span class="block text-[10px] font-bold text-[var(--color-text-secondary)]">
-              자동이체 이름
-            </span>
-            <input
-              v-model="newAutoTransfer.title"
-              class="mt-1.5 h-10 w-full rounded-[10px] border border-[#dce8ee] bg-white px-3 text-[12px] font-bold outline-none focus:border-[var(--color-brand-primary)]"
-              type="text"
-              maxlength="20"
-              placeholder="예: 매달 적금"
-            />
-          </label>
-
-          <div class="mt-3 grid gap-2.5">
-            <label>
-              <span class="block text-[10px] font-bold text-[var(--color-text-secondary)]">
-                출금 계좌
-              </span>
-              <select
-                v-model="newAutoTransfer.sourceAccount"
-                class="mt-1.5 h-10 w-full rounded-[10px] border border-[#dce8ee] bg-white px-3 text-[11px] font-bold outline-none focus:border-[var(--color-brand-primary)]"
-              >
-                <option
-                  v-for="account in accountOptions"
-                  :key="`source-${account.id}`"
-                  :value="account.name"
-                >
-                  {{ account.label }}
-                </option>
-              </select>
-            </label>
-
-            <label>
-              <span class="block text-[10px] font-bold text-[var(--color-text-secondary)]">
-                입금 계좌
-              </span>
-              <select
-                v-model="newAutoTransfer.targetAccount"
-                class="mt-1.5 h-10 w-full rounded-[10px] border border-[#dce8ee] bg-white px-3 text-[11px] font-bold outline-none focus:border-[var(--color-brand-primary)]"
-              >
-                <option
-                  v-for="account in accountOptions"
-                  :key="`target-${account.id}`"
-                  :value="account.name"
-                >
-                  {{ account.label }}
-                </option>
-              </select>
-            </label>
-          </div>
-
-          <div class="mt-3 grid grid-cols-[minmax(0,1fr)_92px] gap-2.5">
-            <label class="min-w-0">
-              <span class="block text-[10px] font-bold text-[var(--color-text-secondary)]">
-                이체 금액
-              </span>
-              <span
-                class="mt-1.5 flex h-10 items-center rounded-[10px] border border-[#dce8ee] bg-white px-3 focus-within:border-[var(--color-brand-primary)]"
-              >
-                <input
-                  v-model.number="newAutoTransfer.amount"
-                  class="min-w-0 flex-1 bg-transparent text-[12px] font-bold outline-none"
-                  type="number"
-                  inputmode="numeric"
-                  min="1"
-                  step="1000"
-                  aria-label="새 자동이체 금액"
-                />
-                <span class="ml-1 text-[11px] text-[var(--color-text-secondary)]">원</span>
-              </span>
-            </label>
-
-            <label>
-              <span class="block text-[10px] font-bold text-[var(--color-text-secondary)]">
-                이체일
-              </span>
-              <span
-                class="mt-1.5 flex h-10 items-center rounded-[10px] border border-[#dce8ee] bg-white px-3 focus-within:border-[var(--color-brand-primary)]"
-              >
-                <input
-                  v-model.number="newAutoTransfer.transferDay"
-                  class="min-w-0 flex-1 bg-transparent text-[12px] font-bold outline-none"
-                  type="number"
-                  inputmode="numeric"
-                  min="1"
-                  max="28"
-                  aria-label="새 자동이체 이체일"
-                />
-                <span class="ml-1 text-[11px] text-[var(--color-text-secondary)]">일</span>
-              </span>
-            </label>
-          </div>
-
-          <p class="mt-2 mb-0 text-[9px] leading-relaxed text-[var(--color-text-secondary)]">
-            자동이체일은 매월 1일부터 28일 사이로 설정할 수 있어요.
-          </p>
-
-          <div class="mt-3 grid grid-cols-2 gap-2">
-            <button
-              class="h-9 rounded-[10px] border border-[#dce8ee] bg-white text-[11px] font-bold text-[var(--color-text-secondary)] active:bg-[#f2f6f8]"
-              type="button"
-              @click="closeAutoTransferForm"
-            >
-              취소
-            </button>
-            <button
-              class="h-9 rounded-[10px] bg-[var(--color-brand-primary)] text-[11px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:bg-[#cad8df]"
-              type="submit"
-              :disabled="!isNewAutoTransferValid"
-            >
-              자동이체 추가
-            </button>
-          </div>
-        </form>
-
         <ul class="m-0 grid list-none gap-2.5 bg-[#f8fbfd] p-3">
           <li v-for="transfer in autoTransfers" :key="transfer.id">
             <article
-              class="overflow-hidden rounded-[15px] border border-[#e5edf1] bg-white shadow-[0_2px_8px_rgba(54,112,139,0.035)]"
-              :class="!transfer.enabled ? 'opacity-65' : ''"
+              class="relative rounded-[15px] border border-[#e5edf1] bg-white shadow-[0_2px_8px_rgba(54,112,139,0.035)]"
             >
               <div class="px-4 py-3.5">
                 <div class="flex items-start justify-between gap-3">
@@ -613,20 +497,50 @@ const retryTransfer = () => {
                     </span>
                   </div>
 
-                  <button
-                    class="relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand-primary)]"
-                    :class="transfer.enabled ? 'bg-[var(--color-brand-primary)]' : 'bg-[#dfe8ed]'"
-                    type="button"
-                    role="switch"
-                    :aria-label="`${transfer.title} 자동이체 사용`"
-                    :aria-checked="transfer.enabled"
-                    @click="toggleAutoTransfer(transfer.id)"
-                  >
-                    <span
-                      class="absolute top-1 size-5 rounded-full bg-white shadow-[0_1px_4px_rgba(31,52,62,0.18)] transition-transform"
-                      :class="transfer.enabled ? 'left-6' : 'left-1'"
-                    ></span>
-                  </button>
+                  <div class="relative shrink-0" @focusout="closeAutoTransferMenuOnFocusOut">
+                    <button
+                      class="grid size-8 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#eef4f7]"
+                      type="button"
+                      :aria-label="`${transfer.title} 관리 메뉴`"
+                      :aria-expanded="openAutoTransferMenuId === transfer.id"
+                      aria-haspopup="menu"
+                      @click="toggleAutoTransferMenu(transfer.id)"
+                    >
+                      <EllipsisVertical :size="20" :stroke-width="2.3" aria-hidden="true" />
+                    </button>
+
+                    <Transition
+                      enter-active-class="transition duration-150 ease-out"
+                      enter-from-class="-translate-y-1 opacity-0"
+                      leave-active-class="transition duration-100 ease-in"
+                      leave-to-class="-translate-y-1 opacity-0"
+                    >
+                      <div
+                        v-if="openAutoTransferMenuId === transfer.id"
+                        class="absolute top-[calc(100%+4px)] right-0 z-20 w-[112px] overflow-hidden rounded-[12px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+                        role="menu"
+                      >
+                        <button
+                          class="flex h-9 w-full items-center gap-2 rounded-[8px] px-2.5 text-left text-[11px] font-bold text-[var(--color-text-primary)] active:bg-[#f1f6f8]"
+                          type="button"
+                          role="menuitem"
+                          @click="startEditingAutoTransfer(transfer)"
+                        >
+                          <Pencil :size="14" :stroke-width="2.1" aria-hidden="true" />
+                          수정
+                        </button>
+                        <button
+                          class="flex h-9 w-full items-center gap-2 rounded-[8px] px-2.5 text-left text-[11px] font-bold text-[#ef4f5f] active:bg-[#fff1f3]"
+                          type="button"
+                          role="menuitem"
+                          @click="deleteAutoTransfer(transfer.id)"
+                        >
+                          <Trash2 :size="14" :stroke-width="2.1" aria-hidden="true" />
+                          삭제
+                        </button>
+                      </div>
+                    </Transition>
+                  </div>
                 </div>
 
                 <strong
@@ -635,96 +549,16 @@ const retryTransfer = () => {
                   {{ formatWon(transfer.amount) }}
                 </strong>
 
-                <div
-                  class="mt-3 flex items-end justify-between gap-3 border-t border-[#edf2f5] pt-3"
-                >
+                <div class="mt-3 border-t border-[#edf2f5] pt-3">
                   <p
-                    class="m-0 min-w-0 truncate text-[10px] font-medium text-[var(--color-text-secondary)]"
+                    class="m-0 truncate text-[10px] font-medium text-[var(--color-text-secondary)]"
                   >
                     {{ transfer.sourceAccount }}
                     <span class="mx-1 text-[#a8b5bd]" aria-hidden="true">→</span>
                     {{ transfer.targetAccount }}
                   </p>
-                  <button
-                    class="flex h-7 shrink-0 items-center gap-1 rounded-lg bg-[#f1f8fc] px-2.5 text-[10px] font-bold text-[var(--color-selected-text)] active:bg-[#e5f4fb]"
-                    type="button"
-                    :aria-expanded="editingAutoTransferId === transfer.id"
-                    @click="startEditingAutoTransfer(transfer)"
-                  >
-                    <Pencil :size="12" :stroke-width="2.2" aria-hidden="true" />
-                    수정
-                  </button>
                 </div>
               </div>
-
-              <form
-                v-if="editingAutoTransferId === transfer.id"
-                class="border-t border-[#e4edf2] bg-[#f7fbfd] px-4 py-4"
-                @submit.prevent="saveAutoTransfer"
-              >
-                <div class="grid grid-cols-[minmax(0,1fr)_92px] gap-2.5">
-                  <label class="min-w-0">
-                    <span class="block text-[10px] font-bold text-[var(--color-text-secondary)]">
-                      이체 금액
-                    </span>
-                    <span
-                      class="mt-1.5 flex h-10 items-center rounded-[10px] border border-[#dce8ee] bg-white px-3 focus-within:border-[var(--color-brand-primary)]"
-                    >
-                      <input
-                        v-model.number="editingAmount"
-                        class="min-w-0 flex-1 bg-transparent text-[12px] font-bold outline-none"
-                        type="number"
-                        inputmode="numeric"
-                        min="1"
-                        step="1000"
-                        aria-label="이체 금액"
-                      />
-                      <span class="ml-1 text-[11px] text-[var(--color-text-secondary)]">원</span>
-                    </span>
-                  </label>
-
-                  <label>
-                    <span class="block text-[10px] font-bold text-[var(--color-text-secondary)]">
-                      이체일
-                    </span>
-                    <span
-                      class="mt-1.5 flex h-10 items-center rounded-[10px] border border-[#dce8ee] bg-white px-3 focus-within:border-[var(--color-brand-primary)]"
-                    >
-                      <input
-                        v-model.number="editingTransferDay"
-                        class="min-w-0 flex-1 bg-transparent text-[12px] font-bold outline-none"
-                        type="number"
-                        inputmode="numeric"
-                        min="1"
-                        max="28"
-                        aria-label="매월 이체일"
-                      />
-                      <span class="ml-1 text-[11px] text-[var(--color-text-secondary)]">일</span>
-                    </span>
-                  </label>
-                </div>
-
-                <p class="mt-2 mb-0 text-[9px] leading-relaxed text-[var(--color-text-secondary)]">
-                  자동이체일은 매월 1일부터 28일 사이로 설정할 수 있어요.
-                </p>
-
-                <div class="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    class="h-9 rounded-[10px] border border-[#dce8ee] bg-white text-[11px] font-bold text-[var(--color-text-secondary)] active:bg-[#f2f6f8]"
-                    type="button"
-                    @click="cancelEditingAutoTransfer"
-                  >
-                    취소
-                  </button>
-                  <button
-                    class="h-9 rounded-[10px] bg-[var(--color-brand-primary)] text-[11px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:bg-[#cad8df]"
-                    type="submit"
-                    :disabled="!isAutoTransferEditValid"
-                  >
-                    변경 저장
-                  </button>
-                </div>
-              </form>
             </article>
           </li>
         </ul>
@@ -750,6 +584,14 @@ const retryTransfer = () => {
       :initial-memo="requestedTransferMemo"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"
+    />
+    <AutoTransferSheet
+      :open="isAutoTransferSheetOpen"
+      :mode="autoTransferSheetMode"
+      :account-options="accountOptions"
+      :initial-data="autoTransferSheetInitialData"
+      @close="closeAutoTransferForm"
+      @save="saveAutoTransfer"
     />
     <AssetTransferResultSheet
       :open="transferResult !== null"

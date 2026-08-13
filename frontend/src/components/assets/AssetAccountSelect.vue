@@ -7,6 +7,7 @@ export type AssetAccountSelectOption = {
   name: string
   number: string
   balance?: number
+  tag?: string
 }
 
 const props = withDefaults(
@@ -61,8 +62,19 @@ const handleFocusOut = (event: FocusEvent) => {
         <Landmark :size="15" />
       </span>
       <span v-if="selectedOption" class="min-w-0 flex-1">
-        <span class="block truncate text-[14px] font-semibold">
-          {{ selectedOption.name }}
+        <span class="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
+          <span
+            v-if="selectedOption.tag"
+            class="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold"
+            :class="
+              selectedOption.tag === '부모'
+                ? 'bg-[#e5f6ff] text-[var(--color-selected-text)]'
+                : 'bg-[#fff4cd] text-[#a9780b]'
+            "
+          >
+            {{ selectedOption.tag }}
+          </span>
+          <span class="truncate">{{ selectedOption.name }}</span>
           <span class="ml-1 font-normal text-[var(--color-text-secondary)]">
             {{ selectedOption.number }}
           </span>
@@ -115,7 +127,20 @@ const handleFocusOut = (event: FocusEvent) => {
               <Landmark :size="14" />
             </span>
             <span class="min-w-0 flex-1">
-              <strong class="block truncate text-[13px]">{{ option.name }}</strong>
+              <span class="flex min-w-0 items-center gap-1.5">
+                <span
+                  v-if="option.tag"
+                  class="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold"
+                  :class="
+                    option.tag === '부모'
+                      ? 'bg-[#e5f6ff] text-[var(--color-selected-text)]'
+                      : 'bg-[#fff4cd] text-[#a9780b]'
+                  "
+                >
+                  {{ option.tag }}
+                </span>
+                <strong class="truncate text-[13px]">{{ option.name }}</strong>
+              </span>
               <span class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]">
                 {{ option.number }}
                 <template v-if="showBalance && option.balance !== undefined">
