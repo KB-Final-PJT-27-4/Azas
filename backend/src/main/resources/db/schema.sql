@@ -25,6 +25,8 @@ DROP TABLE IF EXISTS financial_sync_job;
 DROP TABLE IF EXISTS financial_account;
 DROP TABLE IF EXISTS financial_connection;
 DROP TABLE IF EXISTS financial_product_bookmark;
+DROP TABLE IF EXISTS financial_goal_checkpoint;
+DROP TABLE IF EXISTS financial_goal;
 DROP TABLE IF EXISTS financial_product;
 DROP TABLE IF EXISTS child_checklist_item;
 DROP TABLE IF EXISTS checklist_item_template;
@@ -380,6 +382,42 @@ CREATE TABLE financial_account (
   CONSTRAINT ck_financial_account_primary
     CHECK (is_primary = 0 OR account_product_type = 'DEMAND_DEPOSIT')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Mock 금융계좌';
+
+CREATE TABLE financial_goal (
+  financial_goal_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '금융 목표 ID',
+  child_id BIGINT UNSIGNED NOT NULL COMMENT '자녀 ID',
+  financial_account_id BIGINT UNSIGNED NOT NULL COMMENT '연결 자녀 적금계좌 ID',
+  financial_goal_template_id BIGINT UNSIGNED NULL COMMENT '선택 목표 템플릿 ID',
+  title VARCHAR(100) NOT NULL COMMENT '목표명 스냅샷',
+  target_amount DECIMAL(19, 2) NOT NULL COMMENT '목표 금액',
+  target_date DATE NOT NULL COMMENT '목표일',
+  monthly_saving_amount DECIMAL(19, 2) NOT NULL COMMENT '월 저축 계획 금액',
+  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, ACHIEVED, ARCHIVED',
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+  updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+  PRIMARY KEY (financial_goal_id),
+  UNIQUE KEY uk_financial_goal_account (financial_account_id),
+  KEY idx_financial_goal_child_status (child_id, status),
+  CONSTRAINT fk_financial_goal_child FOREIGN KEY (child_id) REFERENCES child (child_id),
+  CONSTRAINT fk_financial_goal_account FOREIGN KEY (financial_account_id) REFERENCES financial_account (financial_account_id),
+  CONSTRAINT fk_financial_goal_template FOREIGN KEY (financial_goal_template_id) REFERENCES financial_goal_template (financial_goal_template_id),
+  CONSTRAINT ck_financial_goal_amount CHECK (target_amount > 0 AND monthly_saving_amount > 0),
+  CONSTRAINT ck_financial_goal_status CHECK (status IN ('ACTIVE', 'ACHIEVED', 'ARCHIVED'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='자녀 적금 금융 목표';
+
+CREATE TABLE financial_goal_checkpoint (
+  financial_goal_checkpoint_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '목표 체크포인트 ID',
+  financial_goal_id BIGINT UNSIGNED NOT NULL COMMENT '금융 목표 ID',
+  percentage INT NOT NULL COMMENT '달성 비율',
+  target_amount DECIMAL(19, 2) NOT NULL COMMENT '체크포인트 금액',
+  reached_at DATETIME(6) NULL COMMENT '달성 시각',
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+  PRIMARY KEY (financial_goal_checkpoint_id),
+  UNIQUE KEY uk_goal_checkpoint_percentage (financial_goal_id, percentage),
+  CONSTRAINT fk_goal_checkpoint_goal FOREIGN KEY (financial_goal_id) REFERENCES financial_goal (financial_goal_id),
+  CONSTRAINT ck_goal_checkpoint_percentage CHECK (percentage IN (10, 25, 50, 75, 100)),
+  CONSTRAINT ck_goal_checkpoint_amount CHECK (target_amount > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='금융 목표 달성 체크포인트';
 
 CREATE TABLE account_balance_snapshot (
   account_balance_snapshot_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '잔액 스냅샷 ID',

@@ -17,6 +17,8 @@ TRUNCATE TABLE auto_transfer_schedule;
 TRUNCATE TABLE financial_transfer;
 TRUNCATE TABLE account_transaction;
 TRUNCATE TABLE account_balance_snapshot;
+TRUNCATE TABLE financial_goal_checkpoint;
+TRUNCATE TABLE financial_goal;
 TRUNCATE TABLE financial_account;
 TRUNCATE TABLE financial_product_bookmark;
 TRUNCATE TABLE financial_product;
