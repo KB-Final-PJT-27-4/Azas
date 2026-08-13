@@ -160,7 +160,7 @@ class AccountUnlinkServiceTest {
         AccountUnlinkTargetRow target = target("ACTIVE");
         ReflectionTestUtils.setField(
                 target,
-                "connectedByMemberId",
+                "ownerMemberId",
                 null
         );
 
@@ -222,7 +222,7 @@ class AccountUnlinkServiceTest {
         ReflectionTestUtils.setField(target, "accountId", ACCOUNT_ID);
         ReflectionTestUtils.setField(
                 target,
-                "connectedByMemberId",
+                "ownerMemberId",
                 MEMBER_ID
         );
         ReflectionTestUtils.setField(

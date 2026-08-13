@@ -7,10 +7,10 @@ import java.math.BigDecimal;
 
 @Getter
 @RequiredArgsConstructor
-public final class ParentAccountListItemResult {
+public class DiscoveredAccountResult {
 
     private final Long accountId;
-    private final String accountName;
+    private final String bankName;
     private final String accountNumber;
     private final String accountProductType;
     private final BigDecimal balance;

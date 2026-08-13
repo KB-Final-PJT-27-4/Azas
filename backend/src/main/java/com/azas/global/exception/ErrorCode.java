@@ -111,6 +111,30 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "해당 자녀의 부모 권한이 필요합니다."
     ),
+    INVALID_ACCOUNT_DISCOVERY_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "Mock 계좌 조회 조건이 올바르지 않습니다."
+    ),
+    INVALID_ACCOUNT_LINK_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "Mock 계좌 연결 요청이 올바르지 않습니다."
+    ),
+    FINANCIAL_ACCOUNT_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "이미 연결된 금융 계좌가 포함되어 있습니다."
+    ),
+    INVALID_ACCOUNT_OPEN_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "Mock 계좌 개설 요청이 올바르지 않습니다."
+    ),
+    SAVINGS_GOAL_REQUIRED(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "자녀 적금 개설에는 금융 목표가 필요합니다."
+    ),
+    PARENT_DEMAND_DEPOSIT_REQUIRED(
+            HttpStatus.CONFLICT,
+            "자녀 계좌 이용 전 부모 입출금계좌 연결이 필요합니다."
+    ),
     INELIGIBLE_CHILD_USAGE_POLICY_ACCOUNT(
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자녀 명의의 활성 입출금 계좌에만 사용 관리 정책을 설정할 수 있습니다."

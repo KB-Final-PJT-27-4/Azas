@@ -9,10 +9,9 @@ public class AccountPrimaryTargetRow {
 
     private Long accountId;
     private String ownerType;
-    private Long connectedByMemberId;
+    private Long ownerMemberId;
     private Long childId;
     private String accountStatus;
     private String linkStatus;
-    private String consentStatus;
     private Boolean primaryAccount;
 }

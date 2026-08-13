@@ -25,6 +25,8 @@ DROP TABLE IF EXISTS financial_sync_job;
 DROP TABLE IF EXISTS financial_account;
 DROP TABLE IF EXISTS financial_connection;
 DROP TABLE IF EXISTS financial_product_bookmark;
+DROP TABLE IF EXISTS financial_goal_checkpoint;
+DROP TABLE IF EXISTS financial_goal;
 DROP TABLE IF EXISTS financial_product;
 DROP TABLE IF EXISTS child_checklist_item;
 DROP TABLE IF EXISTS checklist_item_template;
@@ -279,37 +281,12 @@ CREATE TABLE financial_product_bookmark (
     FOREIGN KEY (financial_product_id) REFERENCES financial_product (financial_product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='관심 금융상품';
 
-CREATE TABLE financial_connection (
-  financial_connection_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '금융 연결 ID',
-  connected_by_member_id BIGINT UNSIGNED NOT NULL COMMENT '연결·동의한 회원 ID',
-  child_id BIGINT UNSIGNED NULL COMMENT '자녀 계좌 연결 시 자녀 ID',
-  owner_type VARCHAR(20) NOT NULL COMMENT 'PARENT, CHILD',
-  provider VARCHAR(30) NOT NULL DEFAULT 'CODEF' COMMENT '금융 API 제공기관',
-  external_connection_ciphertext VARBINARY(1000) NOT NULL COMMENT '외부 연결 식별자 암호문',
-  external_connection_hash CHAR(64) NOT NULL COMMENT '외부 연결 식별자 해시',
-  consent_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, EXPIRED, REVOKED',
-  consented_at DATETIME(6) NOT NULL COMMENT '동의 시각',
-  consent_expires_at DATETIME(6) NULL COMMENT '동의 만료 시각',
-  revoked_at DATETIME(6) NULL COMMENT '철회 시각',
-  last_synced_at DATETIME(6) NULL COMMENT '최종 동기화 시각',
-  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-  updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
-  PRIMARY KEY (financial_connection_id),
-  UNIQUE KEY uk_financial_connection_hash (external_connection_hash),
-  KEY idx_financial_connection_member_id (connected_by_member_id),
-  KEY idx_financial_connection_child_id (child_id),
-  CONSTRAINT fk_financial_connection_member
-    FOREIGN KEY (connected_by_member_id) REFERENCES member (member_id),
-  CONSTRAINT fk_financial_connection_child
-    FOREIGN KEY (child_id) REFERENCES child (child_id),
-  CONSTRAINT ck_financial_connection_owner_type CHECK (owner_type IN ('PARENT', 'CHILD')),
-  CONSTRAINT ck_financial_connection_consent_status CHECK (consent_status IN ('ACTIVE', 'EXPIRED', 'REVOKED'))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='외부 금융 API 연결';
-
 CREATE TABLE financial_account (
   financial_account_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '금융 계좌 ID',
-  financial_connection_id BIGINT UNSIGNED NOT NULL COMMENT '금융 연결 ID',
-  child_id BIGINT UNSIGNED NULL COMMENT '자녀별 계좌 조회용 반정규화',
+  owner_type VARCHAR(20) NOT NULL COMMENT 'PARENT, CHILD',
+  owner_member_id BIGINT UNSIGNED NULL COMMENT '계좌 소유 회원 ID. 자녀 가입 전 자녀 계좌는 NULL 가능',
+  child_id BIGINT UNSIGNED NULL COMMENT '자녀 계좌 소유 범위 및 조회용 자녀 ID',
+  financial_product_id BIGINT UNSIGNED NULL COMMENT 'Mock 개설에 사용한 KB 금융상품 ID',
   financial_goal_template_id BIGINT UNSIGNED NULL COMMENT '선택 목표 템플릿 ID',
   organization_code VARCHAR(20) NOT NULL COMMENT '금융기관 코드',
   bank_name VARCHAR(50) NOT NULL COMMENT '은행명',
@@ -338,20 +315,29 @@ CREATE TABLE financial_account (
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
   PRIMARY KEY (financial_account_id),
   UNIQUE KEY uk_financial_account_number_hash (account_number_hash),
-  KEY idx_financial_account_connection_id (financial_connection_id),
+  KEY idx_financial_account_owner_member (owner_type, owner_member_id, link_status),
   KEY idx_financial_account_child_type (child_id, account_product_type),
+  KEY idx_financial_account_product_id (financial_product_id),
   KEY idx_financial_account_access_updated_by (access_updated_by_member_id),
   KEY idx_financial_account_goal_template_id (financial_goal_template_id),
-  CONSTRAINT fk_financial_account_connection
-    FOREIGN KEY (financial_connection_id) REFERENCES financial_connection (financial_connection_id),
+  CONSTRAINT fk_financial_account_owner_member
+    FOREIGN KEY (owner_member_id) REFERENCES member (member_id),
   CONSTRAINT fk_financial_account_child
     FOREIGN KEY (child_id) REFERENCES child (child_id),
+  CONSTRAINT fk_financial_account_product
+    FOREIGN KEY (financial_product_id) REFERENCES financial_product (financial_product_id),
   CONSTRAINT fk_financial_account_access_updated_by
     FOREIGN KEY (access_updated_by_member_id) REFERENCES member (member_id),
   CONSTRAINT fk_financial_account_goal_template
     FOREIGN KEY (financial_goal_template_id) REFERENCES financial_goal_template (financial_goal_template_id),
   CONSTRAINT ck_financial_account_product_type
     CHECK (account_product_type IN ('DEMAND_DEPOSIT', 'SAVINGS', 'SUBSCRIPTION')),
+  CONSTRAINT ck_financial_account_owner
+    CHECK (
+      (owner_type = 'PARENT' AND owner_member_id IS NOT NULL AND child_id IS NULL)
+      OR
+      (owner_type = 'CHILD' AND child_id IS NOT NULL)
+    ),
   CONSTRAINT ck_financial_account_status
     CHECK (account_status IN ('ACTIVE', 'MATURED', 'CLOSED')),
   CONSTRAINT ck_financial_account_link_status
@@ -384,36 +370,54 @@ CREATE TABLE financial_account (
         child_access_mode = 'UNRESTRICTED'
         AND child_available_amount IS NULL
       )
-    )
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='연결 금융계좌';
+    ),
+  CONSTRAINT ck_financial_account_maturity
+    CHECK (
+      (account_product_type = 'SAVINGS' AND maturity_date IS NOT NULL)
+      OR
+      (account_product_type <> 'SAVINGS' AND maturity_date IS NULL)
+    ),
+  CONSTRAINT ck_financial_account_linked_at
+    CHECK (link_status <> 'ACTIVE' OR linked_at IS NOT NULL),
+  CONSTRAINT ck_financial_account_primary
+    CHECK (is_primary = 0 OR account_product_type = 'DEMAND_DEPOSIT')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Mock 금융계좌';
 
-CREATE TABLE financial_sync_job (
-  financial_sync_job_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '금융 동기화 작업 ID',
-  financial_connection_id BIGINT UNSIGNED NOT NULL COMMENT '금융 연결 ID',
-  member_id BIGINT UNSIGNED NOT NULL COMMENT '동기화 요청 회원 ID',
-  idempotency_key CHAR(36) NOT NULL COMMENT '멱등성 키',
-  sync_targets JSON NOT NULL COMMENT '동기화 대상 배열',
-  transaction_start_date DATE NULL COMMENT '거래 조회 시작일',
-  transaction_end_date DATE NULL COMMENT '거래 조회 종료일',
-  status VARCHAR(30) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, PROCESSING, SUCCEEDED, PARTIAL_SUCCESS, FAILED',
-  synced_account_count INT NOT NULL DEFAULT 0 COMMENT '동기화 계좌 수',
-  synced_balance_count INT NOT NULL DEFAULT 0 COMMENT '동기화 잔액 수',
-  synced_transaction_count INT NOT NULL DEFAULT 0 COMMENT '동기화 거래 수',
-  error_code VARCHAR(100) NULL COMMENT '오류 코드',
-  error_message VARCHAR(500) NULL COMMENT '오류 메시지',
-  started_at DATETIME(6) NULL COMMENT '작업 시작 시각',
-  completed_at DATETIME(6) NULL COMMENT '작업 완료 시각',
-  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '요청 접수 시각',
+CREATE TABLE financial_goal (
+  financial_goal_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '금융 목표 ID',
+  child_id BIGINT UNSIGNED NOT NULL COMMENT '자녀 ID',
+  financial_account_id BIGINT UNSIGNED NOT NULL COMMENT '연결 자녀 적금계좌 ID',
+  financial_goal_template_id BIGINT UNSIGNED NULL COMMENT '선택 목표 템플릿 ID',
+  title VARCHAR(100) NOT NULL COMMENT '목표명 스냅샷',
+  target_amount DECIMAL(19, 2) NOT NULL COMMENT '목표 금액',
+  target_date DATE NOT NULL COMMENT '목표일',
+  monthly_saving_amount DECIMAL(19, 2) NOT NULL COMMENT '월 저축 계획 금액',
+  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, ACHIEVED, ARCHIVED',
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
-  PRIMARY KEY (financial_sync_job_id),
-  UNIQUE KEY uk_financial_sync_job_idempotency_key (idempotency_key),
-  KEY idx_sync_job_connection_id (financial_connection_id),
-  KEY idx_sync_job_member_id (member_id),
-  CONSTRAINT fk_sync_job_connection
-    FOREIGN KEY (financial_connection_id) REFERENCES financial_connection (financial_connection_id),
-  CONSTRAINT fk_sync_job_member
-    FOREIGN KEY (member_id) REFERENCES member (member_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='금융 동기화 작업';
+  PRIMARY KEY (financial_goal_id),
+  UNIQUE KEY uk_financial_goal_account (financial_account_id),
+  KEY idx_financial_goal_child_status (child_id, status),
+  CONSTRAINT fk_financial_goal_child FOREIGN KEY (child_id) REFERENCES child (child_id),
+  CONSTRAINT fk_financial_goal_account FOREIGN KEY (financial_account_id) REFERENCES financial_account (financial_account_id),
+  CONSTRAINT fk_financial_goal_template FOREIGN KEY (financial_goal_template_id) REFERENCES financial_goal_template (financial_goal_template_id),
+  CONSTRAINT ck_financial_goal_amount CHECK (target_amount > 0 AND monthly_saving_amount > 0),
+  CONSTRAINT ck_financial_goal_status CHECK (status IN ('ACTIVE', 'ACHIEVED', 'ARCHIVED'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='자녀 적금 금융 목표';
+
+CREATE TABLE financial_goal_checkpoint (
+  financial_goal_checkpoint_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '목표 체크포인트 ID',
+  financial_goal_id BIGINT UNSIGNED NOT NULL COMMENT '금융 목표 ID',
+  percentage INT NOT NULL COMMENT '달성 비율',
+  target_amount DECIMAL(19, 2) NOT NULL COMMENT '체크포인트 금액',
+  reached_at DATETIME(6) NULL COMMENT '달성 시각',
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+  PRIMARY KEY (financial_goal_checkpoint_id),
+  UNIQUE KEY uk_goal_checkpoint_percentage (financial_goal_id, percentage),
+  CONSTRAINT fk_goal_checkpoint_goal FOREIGN KEY (financial_goal_id) REFERENCES financial_goal (financial_goal_id),
+  CONSTRAINT ck_goal_checkpoint_percentage CHECK (percentage IN (10, 25, 50, 75, 100)),
+  CONSTRAINT ck_goal_checkpoint_amount CHECK (target_amount > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='금융 목표 달성 체크포인트';
 
 CREATE TABLE account_balance_snapshot (
   account_balance_snapshot_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '잔액 스냅샷 ID',

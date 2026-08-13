@@ -7,10 +7,10 @@ import java.math.BigDecimal;
 
 @Getter
 @NoArgsConstructor
-public class ParentAccountListRow {
+public class DiscoveredAccountRow {
 
     private Long accountId;
-    private String accountName;
+    private String bankName;
     private byte[] accountNumberCiphertext;
     private String accountProductType;
     private BigDecimal balance;
