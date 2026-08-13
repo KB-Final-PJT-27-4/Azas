@@ -220,26 +220,6 @@ class AccountPrimaryServiceTest {
     }
 
     @Test
-    void rejectsInactiveConsent() {
-        AccountPrimaryTargetRow target = target(
-                "PARENT",
-                MEMBER_ID,
-                null,
-                false
-        );
-        ReflectionTestUtils.setField(
-                target,
-                "consentStatus",
-                "REVOKED"
-        );
-        when(financialAccountMapper
-                .findAccountPrimaryTargetByIdForUpdate(ACCOUNT_ID))
-                .thenReturn(target);
-
-        assertNotFound(target);
-    }
-
-    @Test
     void rejectsDifferentParentAccountOwner() {
         when(financialAccountMapper
                 .findAccountPrimaryTargetByIdForUpdate(ACCOUNT_ID))
@@ -367,7 +347,7 @@ class AccountPrimaryServiceTest {
 
     private AccountPrimaryTargetRow target(
             String ownerType,
-            Long connectedByMemberId,
+            Long ownerMemberId,
             Long childId,
             boolean primaryAccount
     ) {
@@ -385,8 +365,8 @@ class AccountPrimaryServiceTest {
         );
         ReflectionTestUtils.setField(
                 target,
-                "connectedByMemberId",
-                connectedByMemberId
+                "ownerMemberId",
+                ownerMemberId
         );
         ReflectionTestUtils.setField(
                 target,
@@ -401,11 +381,6 @@ class AccountPrimaryServiceTest {
         ReflectionTestUtils.setField(
                 target,
                 "linkStatus",
-                "ACTIVE"
-        );
-        ReflectionTestUtils.setField(
-                target,
-                "consentStatus",
                 "ACTIVE"
         );
         ReflectionTestUtils.setField(

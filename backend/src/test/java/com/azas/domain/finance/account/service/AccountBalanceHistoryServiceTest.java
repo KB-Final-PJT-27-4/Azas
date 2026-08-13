@@ -368,7 +368,7 @@ class AccountBalanceHistoryServiceTest {
         ReflectionTestUtils.setField(row, "ownerType", "PARENT");
         ReflectionTestUtils.setField(
                 row,
-                "connectedByMemberId",
+                "ownerMemberId",
                 MEMBER_ID
         );
         ReflectionTestUtils.setField(row, "balance", BigDecimal.ZERO);
@@ -381,7 +381,7 @@ class AccountBalanceHistoryServiceTest {
         ReflectionTestUtils.setField(row, "ownerType", "CHILD");
         ReflectionTestUtils.setField(
                 row,
-                "connectedByMemberId",
+                "ownerMemberId",
                 MEMBER_ID
         );
         ReflectionTestUtils.setField(row, "childId", CHILD_ID);

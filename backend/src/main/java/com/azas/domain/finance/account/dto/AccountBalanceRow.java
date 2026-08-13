@@ -12,7 +12,7 @@ public class AccountBalanceRow {
 
     private Long accountId;
     private String ownerType;
-    private Long connectedByMemberId;
+    private Long ownerMemberId;
     private Long childId;
     private BigDecimal balance;
     private LocalDateTime balanceUpdatedAt;

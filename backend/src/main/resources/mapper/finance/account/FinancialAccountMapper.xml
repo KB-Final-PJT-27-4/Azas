@@ -9,32 +9,22 @@
             resultType="com.azas.domain.finance.account.dto.AccountBalanceRow">
         SELECT
             fa.financial_account_id AS account_id,
-            fc.owner_type,
-            fc.connected_by_member_id,
-            fc.child_id,
+            fa.owner_type,
+            fa.owner_member_id,
+            fa.child_id,
             fa.balance,
             fa.balance_updated_at
         FROM financial_account fa
-                 INNER JOIN financial_connection fc
-                            ON fc.financial_connection_id =
-                               fa.financial_connection_id
                  LEFT JOIN child c
-                           ON c.child_id = fc.child_id
+                           ON c.child_id = fa.child_id
                           AND c.status = 'ACTIVE'
         WHERE fa.financial_account_id = #{financialAccountId}
           AND fa.link_status = 'ACTIVE'
-          AND fc.consent_status = 'ACTIVE'
-          AND fc.revoked_at IS NULL
           AND (
-              fc.consent_expires_at IS NULL
-              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
-          )
-          AND (
-              fc.owner_type = 'PARENT'
+              fa.owner_type = 'PARENT'
               OR (
-                  fc.owner_type = 'CHILD'
+                  fa.owner_type = 'CHILD'
                   AND c.child_id IS NOT NULL
-                  AND fa.child_id = fc.child_id
               )
           )
     </select>
@@ -55,9 +45,9 @@
             resultType="com.azas.domain.finance.account.dto.AccountDetailRow">
         SELECT
             fa.financial_account_id AS account_id,
-            fc.owner_type,
-            fc.connected_by_member_id,
-            fc.child_id,
+            fa.owner_type,
+            fa.owner_member_id,
+            fa.child_id,
             c.name AS child_name,
             fa.organization_code,
             fa.bank_name,
@@ -75,26 +65,16 @@
             fa.goal_target_amount,
             fa.goal_target_date
         FROM financial_account fa
-                 INNER JOIN financial_connection fc
-                            ON fc.financial_connection_id =
-                               fa.financial_connection_id
                  LEFT JOIN child c
-                           ON c.child_id = fc.child_id
+                           ON c.child_id = fa.child_id
                           AND c.status = 'ACTIVE'
         WHERE fa.financial_account_id = #{financialAccountId}
           AND fa.link_status = 'ACTIVE'
-          AND fc.consent_status = 'ACTIVE'
-          AND fc.revoked_at IS NULL
           AND (
-              fc.consent_expires_at IS NULL
-              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
-          )
-          AND (
-              fc.owner_type = 'PARENT'
+              fa.owner_type = 'PARENT'
               OR (
-                  fc.owner_type = 'CHILD'
+                  fa.owner_type = 'CHILD'
                   AND c.child_id IS NOT NULL
-                  AND fa.child_id = fc.child_id
               )
           )
     </select>
@@ -148,17 +128,8 @@
             fa.account_status,
             fa.is_primary AS primary_account
         FROM financial_account fa
-                 INNER JOIN financial_connection fc
-                            ON fc.financial_connection_id =
-                               fa.financial_connection_id
-        WHERE fc.connected_by_member_id = #{memberId}
-          AND fc.owner_type = 'PARENT'
-          AND fc.consent_status = 'ACTIVE'
-          AND fc.revoked_at IS NULL
-          AND (
-              fc.consent_expires_at IS NULL
-              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
-          )
+        WHERE fa.owner_member_id = #{memberId}
+          AND fa.owner_type = 'PARENT'
           AND fa.account_status = 'ACTIVE'
           AND fa.link_status = 'ACTIVE'
         ORDER BY fa.is_primary DESC,
@@ -180,17 +151,7 @@
             fa.account_status,
             fa.is_primary AS primary_account
         FROM financial_account fa
-                 INNER JOIN financial_connection fc
-                            ON fc.financial_connection_id =
-                               fa.financial_connection_id
-        WHERE fc.owner_type = 'CHILD'
-          AND fc.child_id = #{childId}
-          AND fc.consent_status = 'ACTIVE'
-          AND fc.revoked_at IS NULL
-          AND (
-              fc.consent_expires_at IS NULL
-              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
-          )
+        WHERE fa.owner_type = 'CHILD'
           AND fa.child_id = #{childId}
           AND fa.account_status = 'ACTIVE'
           AND fa.link_status = 'ACTIVE'
@@ -210,23 +171,13 @@
         FROM child c
                  INNER JOIN member m
                             ON m.member_id = c.member_id
-                 INNER JOIN financial_connection fc
-                            ON fc.child_id = c.child_id
-                           AND fc.owner_type = 'CHILD'
                  INNER JOIN financial_account fa
-                            ON fa.financial_connection_id =
-                               fc.financial_connection_id
-                           AND fa.child_id = c.child_id
+                            ON fa.child_id = c.child_id
+                           AND fa.owner_type = 'CHILD'
         WHERE c.member_id = #{memberId}
           AND c.status = 'ACTIVE'
           AND m.status = 'ACTIVE'
           AND m.member_type = 'CHILD'
-          AND fc.consent_status = 'ACTIVE'
-          AND fc.revoked_at IS NULL
-          AND (
-              fc.consent_expires_at IS NULL
-              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
-          )
           AND fa.account_product_type = 'DEMAND_DEPOSIT'
           AND fa.account_status = 'ACTIVE'
           AND fa.link_status = 'ACTIVE'
@@ -342,13 +293,10 @@
             resultType="com.azas.domain.finance.account.dto.AccountUnlinkTargetRow">
         SELECT
             fa.financial_account_id AS account_id,
-            fc.connected_by_member_id,
+            fa.owner_member_id,
             fa.link_status,
             fa.unlinked_at
         FROM financial_account fa
-                 INNER JOIN financial_connection fc
-                            ON fc.financial_connection_id =
-                               fa.financial_connection_id
         WHERE fa.financial_account_id = #{financialAccountId}
         FOR UPDATE
     </select>
@@ -368,57 +316,41 @@
             resultType="com.azas.domain.finance.account.dto.AccountPrimaryTargetRow">
         SELECT
             fa.financial_account_id AS account_id,
-            fc.owner_type,
-            fc.connected_by_member_id,
-            fc.child_id,
+            fa.owner_type,
+            fa.owner_member_id,
+            fa.child_id,
             fa.account_status,
             fa.link_status,
-            fc.consent_status,
             fa.is_primary AS primary_account
         FROM financial_account fa
-                 INNER JOIN financial_connection fc
-                            ON fc.financial_connection_id =
-                               fa.financial_connection_id
         WHERE fa.financial_account_id = #{financialAccountId}
-          AND fc.revoked_at IS NULL
-          AND (
-              fc.consent_expires_at IS NULL
-              OR fc.consent_expires_at > UTC_TIMESTAMP(6)
-          )
         FOR UPDATE
     </select>
 
     <!-- 부모 본인 명의 계좌 범위에서 선택 계좌만 대표로 남긴다. -->
     <update id="setPrimaryAccountForParentScope">
-        UPDATE financial_account fa
-            INNER JOIN financial_connection fc
-                    ON fc.financial_connection_id =
-                       fa.financial_connection_id
-        SET fa.is_primary = CASE
-                WHEN fa.financial_account_id = #{financialAccountId}
+        UPDATE financial_account
+        SET is_primary = CASE
+                WHEN financial_account_id = #{financialAccountId}
                     THEN 1
                 ELSE 0
             END,
-            fa.updated_at = UTC_TIMESTAMP(6)
-        WHERE fc.owner_type = 'PARENT'
-          AND fc.connected_by_member_id = #{connectedByMemberId}
+            updated_at = UTC_TIMESTAMP(6)
+        WHERE owner_type = 'PARENT'
+          AND owner_member_id = #{ownerMemberId}
     </update>
 
     <!-- 동일 자녀 명의 계좌 범위에서 선택 계좌만 대표로 남긴다. -->
     <update id="setPrimaryAccountForChildScope">
-        UPDATE financial_account fa
-            INNER JOIN financial_connection fc
-                    ON fc.financial_connection_id =
-                       fa.financial_connection_id
-        SET fa.is_primary = CASE
-                WHEN fa.financial_account_id = #{financialAccountId}
+        UPDATE financial_account
+        SET is_primary = CASE
+                WHEN financial_account_id = #{financialAccountId}
                     THEN 1
                 ELSE 0
             END,
-            fa.updated_at = UTC_TIMESTAMP(6)
-        WHERE fc.owner_type = 'CHILD'
-          AND fc.child_id = #{childId}
-          AND fa.child_id = #{childId}
+            updated_at = UTC_TIMESTAMP(6)
+        WHERE owner_type = 'CHILD'
+          AND child_id = #{childId}
     </update>
 
 </mapper>

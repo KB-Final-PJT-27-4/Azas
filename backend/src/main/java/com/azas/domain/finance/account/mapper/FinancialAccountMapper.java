@@ -141,8 +141,8 @@ public interface FinancialAccountMapper {
     );
 
     int setPrimaryAccountForParentScope(
-            @Param("connectedByMemberId")
-            long connectedByMemberId,
+            @Param("ownerMemberId")
+            long ownerMemberId,
             @Param("financialAccountId")
             long financialAccountId
     );

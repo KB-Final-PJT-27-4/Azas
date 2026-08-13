@@ -112,8 +112,8 @@ public class AccountBalanceHistoryService {
             AccountBalanceRow account
     ) {
         if (PARENT_OWNER_TYPE.equals(account.getOwnerType())) {
-            if (account.getConnectedByMemberId() != null
-                    && account.getConnectedByMemberId()
+            if (account.getOwnerMemberId() != null
+                    && account.getOwnerMemberId()
                     == requesterMemberId) {
                 return;
             }
