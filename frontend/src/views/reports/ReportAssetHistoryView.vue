@@ -210,6 +210,6 @@ watch(selectedPeriod, () => {
         {{ showAllHistory ? '접기' : `${visibleData.length - 4}개월 더보기` }}
         <ChevronDown :size="17" class="transition-transform" :class="showAllHistory ? 'rotate-180' : ''" />
       </button>
-    </section>ㅁ
+    </section>
   </main>
 </template>
