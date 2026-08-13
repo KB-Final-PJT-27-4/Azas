@@ -182,6 +182,33 @@ INSERT INTO financial_product (
     JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', '상품 가입 전 약관과 상품설명서를 확인하세요.')),
     1,
     '2026-07-01'
+  ),
+  (
+    2,
+    'KB국민은행',
+    'kb-mock-demand-deposit',
+    'ACCOUNT',
+    '입출금통장',
+    'KB Mock 입출금통장',
+    'Mock 금융 온보딩과 용돈 관리를 위한 입출금계좌입니다.',
+    'https://www.kbstar.com/',
+    'wallet',
+    0.1000,
+    0.1000,
+    0,
+    NULL,
+    0,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    JSON_ARRAY(JSON_OBJECT('label', '가입 대상', 'content', 'Azas Mock 금융 사용자')),
+    JSON_ARRAY(JSON_OBJECT('label', '초기 금액', 'content', '0원 이상')),
+    JSON_ARRAY(),
+    JSON_ARRAY(),
+    JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', '실제 금융기관 계좌가 아닌 Mock 계좌입니다.')),
+    1,
+    '2026-08-13'
   );
 
 INSERT INTO financial_product_bookmark (
@@ -308,6 +335,31 @@ INSERT INTO financial_account (
     'ACTIVE',
     NOW(6)
   );
+
+INSERT INTO financial_goal (
+  financial_goal_id,
+  child_id,
+  financial_account_id,
+  financial_goal_template_id,
+  title,
+  target_amount,
+  target_date,
+  monthly_saving_amount,
+  status
+) VALUES
+  (1, 1, 3, 1, '대학자금 마련', 30000000, '2038-01-12', 100000, 'ACTIVE');
+
+INSERT INTO financial_goal_checkpoint (
+  financial_goal_checkpoint_id,
+  financial_goal_id,
+  percentage,
+  target_amount
+) VALUES
+  (1, 1, 10, 3000000),
+  (2, 1, 25, 7500000),
+  (3, 1, 50, 15000000),
+  (4, 1, 75, 22500000),
+  (5, 1, 100, 30000000);
 
 INSERT INTO account_balance_snapshot (
   account_balance_snapshot_id,
