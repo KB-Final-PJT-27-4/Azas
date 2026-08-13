@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import { BaseToast } from '@/components/feedback'
 import { useToast } from '@/composables/useToast'
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 const hideNavigation = computed(() => route.meta.hideNavigation === true)
 const hideBottomNavigation = computed(
   () => hideNavigation.value || route.meta.hideBottomNavigation === true,
@@ -21,12 +23,16 @@ const { toastMessage, toastVariant } = useToast()
 <template>
   <div class="default-layout">
     <div class="default-layout__shell">
+      <AppSubHeader
+        v-if="!hideNavigation && showHeaderBack"
+        :title="headerTitle"
+        @back="router.back()"
+      />
       <AppHeader
-        v-if="!hideNavigation"
+        v-else-if="!hideNavigation"
         title="깨비"
         profile-name="깨비"
         :center-title="headerTitle"
-        :show-back="showHeaderBack"
         :show-notification="showHeaderNotification"
         :notification-count="notificationCount"
       />
@@ -41,11 +47,7 @@ const { toastMessage, toastVariant } = useToast()
       </div>
       <AppBottomNavigation v-if="!hideBottomNavigation" />
       <Transition name="global-toast">
-        <BaseToast
-          v-if="toastMessage"
-          :message="toastMessage"
-          :variant="toastVariant"
-        />
+        <BaseToast v-if="toastMessage" :message="toastMessage" :variant="toastVariant" />
       </Transition>
     </div>
   </div>
@@ -88,7 +90,9 @@ const { toastMessage, toastVariant } = useToast()
 
 .global-toast-enter-active,
 .global-toast-leave-active {
-  transition: transform 180ms ease, opacity 180ms ease;
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
 }
 
 .global-toast-enter-from,

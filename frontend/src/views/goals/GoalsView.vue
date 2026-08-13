@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ChevronLeft } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
 import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import GoalPlanStep from '@/components/goals/GoalPlanStep.vue'
@@ -128,19 +128,7 @@ const selectRecommendation = (value: number) => {
   <main
     class="flex h-dvh flex-col overflow-hidden bg-[var(--color-surface)] text-[var(--color-text-primary)]"
   >
-    <header
-      class="relative flex h-16 shrink-0 items-center justify-center border-b border-[var(--color-border)]"
-    >
-      <button
-        class="absolute left-4 grid size-10 place-items-center text-[var(--color-text-secondary)]"
-        type="button"
-        aria-label="이전"
-        @click="goBack"
-      >
-        <ChevronLeft :size="28" />
-      </button>
-      <strong>목표</strong>
-    </header>
+    <AppSubHeader title="목표" :fixed="false" back-label="이전" @back="goBack" />
 
     <div v-if="currentStep < 3" class="flex shrink-0 gap-2 px-6 pt-7" aria-hidden="true">
       <span
@@ -217,7 +205,9 @@ const selectRecommendation = (value: number) => {
 .goal-slide-forward-leave-active,
 .goal-slide-backward-enter-active,
 .goal-slide-backward-leave-active {
-  transition: transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity 120ms ease-out;
+  transition:
+    transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 120ms ease-out;
 }
 
 .goal-slide-forward-enter-from,

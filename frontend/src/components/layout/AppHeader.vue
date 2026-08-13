@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { Bell, Check, ChevronLeft, ChevronRight, Plus, UserRound, X } from 'lucide-vue-next'
+import { Bell, Check, ChevronRight, Plus, UserRound } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import defaultProfileImageUrl from '@/assets/images/home/home-profile-baby.png'
@@ -16,7 +16,6 @@ const props = withDefaults(
     profileName?: string
     profileImage?: string
     profileEmoji?: string
-    showBack?: boolean
     showNotification?: boolean
     notificationCount?: number
   }>(),
@@ -26,7 +25,6 @@ const props = withDefaults(
     profileName: '깨비',
     profileImage: defaultProfileImageUrl,
     profileEmoji: '👶',
-    showBack: false,
     showNotification: true,
     notificationCount: 0,
   },
@@ -86,10 +84,6 @@ const goToAddChild = () => {
   router.push('/mypage/family')
 }
 
-const goBack = () => {
-  router.back()
-}
-
 onBeforeUnmount(clearProfilePress)
 </script>
 
@@ -101,17 +95,6 @@ onBeforeUnmount(clearProfilePress)
       class="relative flex h-[var(--app-header-height)] items-center justify-between px-[var(--space-5)] pt-[env(safe-area-inset-top)]"
     >
       <button
-        v-if="showBack"
-        class="-ml-3 grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
-        type="button"
-        aria-label="뒤로가기"
-        @click="goBack"
-      >
-        <ChevronLeft :size="28" :stroke-width="2.5" />
-      </button>
-
-      <button
-        v-else
         class="flex min-w-0 select-none items-center gap-[var(--space-3)] rounded-xl border-0 bg-transparent p-0 pr-2 text-left active:bg-[var(--color-unselected-background)]"
         type="button"
         aria-label="프로필 전환 메뉴 열기"
@@ -186,7 +169,6 @@ onBeforeUnmount(clearProfilePress)
           aria-labelledby="profile-sheet-title"
         >
           <div class="mx-auto h-1.5 w-10 rounded-full bg-[#d8e0e5]" aria-hidden="true"></div>
-
 
           <ul class="mt-5 m-0 list-none space-y-2 p-0">
             <li v-for="profile in profiles" :key="profile.id">
