@@ -197,6 +197,42 @@
           AND link_status = 'ACTIVE'
     </select>
 
+    <select id="findAccountLinkTargetsForUpdate"
+            resultType="com.azas.domain.finance.account.dto.AccountLinkTargetRow">
+        SELECT
+            financial_account_id AS account_id,
+            owner_type,
+            owner_member_id,
+            child_id,
+            bank_name,
+            account_name,
+            account_number_ciphertext,
+            account_product_type,
+            balance,
+            account_status,
+            link_status,
+            is_primary AS primary_account,
+            linked_at
+        FROM financial_account
+        WHERE financial_account_id IN
+        <foreach collection="accountIds" item="accountId"
+                 open="(" separator="," close=")">
+            #{accountId}
+        </foreach>
+        FOR UPDATE
+    </select>
+
+    <update id="linkAccount">
+        UPDATE financial_account
+        SET link_status = 'ACTIVE',
+            linked_at = #{linkedAt},
+            unlinked_at = NULL,
+            is_primary = #{primaryAccount},
+            updated_at = #{linkedAt}
+        WHERE financial_account_id = #{financialAccountId}
+          AND link_status IN ('DISCOVERED', 'UNLINKED')
+    </update>
+
     <select id="findActivePrimaryChildDemandDepositByMemberId"
             resultType="com.azas.domain.finance.account.dto.ChildAvailableAmountAccountRow">
         SELECT

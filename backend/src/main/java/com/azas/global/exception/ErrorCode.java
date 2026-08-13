@@ -111,6 +111,14 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "Mock 계좌 조회 조건이 올바르지 않습니다."
     ),
+    INVALID_ACCOUNT_LINK_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "Mock 계좌 연결 요청이 올바르지 않습니다."
+    ),
+    FINANCIAL_ACCOUNT_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "이미 연결된 금융 계좌가 포함되어 있습니다."
+    ),
     PARENT_DEMAND_DEPOSIT_REQUIRED(
             HttpStatus.CONFLICT,
             "자녀 계좌 이용 전 부모 입출금계좌 연결이 필요합니다."
