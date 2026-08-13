@@ -46,7 +46,7 @@ const handleFocusOut = (event: FocusEvent) => {
     <button
       class="flex w-full items-center gap-3 rounded-[12px] border bg-white px-3 text-left transition-colors"
       :class="[
-        showBalance ? 'h-14' : 'h-12',
+        showBalance ? 'h-14 max-[390px]:h-[72px]' : 'h-12 max-[390px]:h-[60px]',
         isOpen ? 'border-[var(--color-brand-primary)] ring-2 ring-[#e5f7ff]' : 'border-[#dce8ee]',
       ]"
       type="button"
@@ -62,20 +62,24 @@ const handleFocusOut = (event: FocusEvent) => {
         <Landmark :size="15" />
       </span>
       <span v-if="selectedOption" class="min-w-0 flex-1">
-        <span class="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
-          <span
-            v-if="selectedOption.tag"
-            class="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold"
-            :class="
-              selectedOption.tag === '부모'
-                ? 'bg-[#e5f6ff] text-[var(--color-selected-text)]'
-                : 'bg-[#fff4cd] text-[#a9780b]'
-            "
-          >
-            {{ selectedOption.tag }}
+        <span class="account-select__summary flex min-w-0 items-center gap-1.5">
+          <span class="flex min-w-0 flex-1 items-center gap-1.5 text-[14px] font-semibold">
+            <span
+              v-if="selectedOption.tag"
+              class="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold"
+              :class="
+                selectedOption.tag === '부모'
+                  ? 'bg-[#e5f6ff] text-[var(--color-selected-text)]'
+                  : 'bg-[#fff4cd] text-[#a9780b]'
+              "
+            >
+              {{ selectedOption.tag }}
+            </span>
+            <span class="truncate">{{ selectedOption.name }}</span>
           </span>
-          <span class="truncate">{{ selectedOption.name }}</span>
-          <span class="ml-1 font-normal text-[var(--color-text-secondary)]">
+          <span
+            class="account-select__number shrink-0 text-[12px] font-normal whitespace-nowrap text-[var(--color-text-secondary)]"
+          >
             {{ selectedOption.number }}
           </span>
         </span>
@@ -141,7 +145,9 @@ const handleFocusOut = (event: FocusEvent) => {
                 </span>
                 <strong class="truncate text-[13px]">{{ option.name }}</strong>
               </span>
-              <span class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]">
+              <span
+                class="mt-0.5 block truncate text-[11px] whitespace-nowrap text-[var(--color-text-secondary)]"
+              >
                 {{ option.number }}
                 <template v-if="showBalance && option.balance !== undefined">
                   · {{ option.balance.toLocaleString('ko-KR') }}원
@@ -165,3 +171,17 @@ const handleFocusOut = (event: FocusEvent) => {
     </Transition>
   </div>
 </template>
+
+<style scoped>
+@media (max-width: 390px) {
+  .account-select__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .account-select__number {
+    font-size: 11px;
+  }
+}
+</style>
