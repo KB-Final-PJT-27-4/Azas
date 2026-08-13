@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
+  AlertTriangle,
   Baby,
   CalendarClock,
   ChevronRight,
@@ -9,12 +10,14 @@ import {
   Plus,
   Trash2,
   UserRound,
+  X,
 } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 
 import AssetTransferResultSheet from '@/components/assets/AssetTransferResultSheet.vue'
 import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
 import AutoTransferSheet from '@/components/assets/AutoTransferSheet.vue'
+import { useToast } from '@/composables/useToast'
 
 type AccountType = '적금' | '입출금'
 type AssetsTab = 'accounts' | 'autoTransfers'
@@ -54,6 +57,7 @@ type AutoTransferSheetData = {
 }
 
 const route = useRoute()
+const { showToast } = useToast()
 const activeAssetsTab = ref<AssetsTab>('accounts')
 
 const accountGroups: AccountGroup[] = [
@@ -151,8 +155,13 @@ const autoTransferSheetMode = ref<'create' | 'edit'>('create')
 const selectedAutoTransferId = ref<string | null>(null)
 const isAutoTransferSheetOpen = ref(false)
 const openAutoTransferMenuId = ref<string | null>(null)
+const pendingDeleteAutoTransferId = ref<string | null>(null)
+const isDeleteAutoTransferDialogOpen = ref(false)
 const selectedAutoTransfer = computed(() =>
   autoTransfers.value.find(({ id }) => id === selectedAutoTransferId.value),
+)
+const pendingDeleteAutoTransfer = computed(() =>
+  autoTransfers.value.find(({ id }) => id === pendingDeleteAutoTransferId.value),
 )
 const autoTransferSheetInitialData = computed(() => ({
   title: selectedAutoTransfer.value?.title ?? '',
@@ -165,7 +174,11 @@ const autoTransferSheetInitialData = computed(() => ({
 const isTransferSheetOpen = ref(Boolean(route.query.allowanceRequest))
 const transferResult = ref<'success' | 'failure' | null>(null)
 const isAnyTransferSheetOpen = computed(
-  () => isTransferSheetOpen.value || isAutoTransferSheetOpen.value || transferResult.value !== null,
+  () =>
+    isTransferSheetOpen.value ||
+    isAutoTransferSheetOpen.value ||
+    isDeleteAutoTransferDialogOpen.value ||
+    transferResult.value !== null,
 )
 const requestedTransferAmount = computed(() => Number(route.query.amount) || 0)
 const requestedTransferMemo = computed(() => String(route.query.memo ?? ''))
@@ -227,9 +240,24 @@ const closeAutoTransferMenuOnFocusOut = (event: FocusEvent) => {
   if (!nextTarget || !currentTarget.contains(nextTarget)) openAutoTransferMenuId.value = null
 }
 
-const deleteAutoTransfer = (transferId: string) => {
-  autoTransfers.value = autoTransfers.value.filter(({ id }) => id !== transferId)
+const requestDeleteAutoTransfer = (transferId: string) => {
+  pendingDeleteAutoTransferId.value = transferId
+  isDeleteAutoTransferDialogOpen.value = true
   openAutoTransferMenuId.value = null
+}
+
+const closeDeleteAutoTransferDialog = () => {
+  isDeleteAutoTransferDialogOpen.value = false
+  pendingDeleteAutoTransferId.value = null
+}
+
+const deleteAutoTransfer = () => {
+  const transfer = pendingDeleteAutoTransfer.value
+  if (!transfer) return
+
+  autoTransfers.value = autoTransfers.value.filter(({ id }) => id !== transfer.id)
+  closeDeleteAutoTransferDialog()
+  showToast('자동이체를 삭제했어요.', 'success')
 }
 
 const saveAutoTransfer = (payload: AutoTransferSheetData) => {
@@ -246,6 +274,7 @@ const saveAutoTransfer = (payload: AutoTransferSheetData) => {
   if (autoTransferSheetMode.value === 'edit' && selectedAutoTransfer.value) {
     Object.assign(selectedAutoTransfer.value, transferData)
     isAutoTransferSheetOpen.value = false
+    showToast('자동이체를 수정했어요.', 'success')
     return
   }
 
@@ -255,6 +284,7 @@ const saveAutoTransfer = (payload: AutoTransferSheetData) => {
     enabled: true,
   })
   isAutoTransferSheetOpen.value = false
+  showToast('자동이체를 등록했어요.', 'success')
 }
 
 const completeTransfer = ({ success }: { success: boolean }) => {
@@ -533,7 +563,7 @@ const retryTransfer = () => {
                           class="flex h-9 w-full items-center gap-2 rounded-[8px] px-2.5 text-left text-[11px] font-bold text-[#ef4f5f] active:bg-[#fff1f3]"
                           type="button"
                           role="menuitem"
-                          @click="deleteAutoTransfer(transfer.id)"
+                          @click="requestDeleteAutoTransfer(transfer.id)"
                         >
                           <Trash2 :size="14" :stroke-width="2.1" aria-hidden="true" />
                           삭제
@@ -564,6 +594,75 @@ const retryTransfer = () => {
         </ul>
       </section>
     </div>
+
+    <Teleport to="body">
+      <Transition name="auto-transfer-delete">
+        <div
+          v-if="isDeleteAutoTransferDialogOpen && pendingDeleteAutoTransfer"
+          class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40"
+          @click.self="closeDeleteAutoTransferDialog"
+        >
+          <section
+            class="auto-transfer-delete-panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="auto-transfer-delete-title"
+            aria-describedby="auto-transfer-delete-description"
+          >
+            <span class="mx-auto block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
+
+            <div class="mt-5 flex items-start gap-3.5">
+              <div class="min-w-0 flex-1 pt-0.5">
+                <h2 id="auto-transfer-delete-title" class="m-0 text-[19px] font-bold">
+                  자동이체를 삭제할까요?
+                </h2>
+                <p
+                  id="auto-transfer-delete-description"
+                  class="mt-1.5 mb-0 text-xs leading-relaxed text-[var(--color-text-secondary)]"
+                >
+                  삭제한 자동이체 설정은 다시 복구할 수 없어요.
+                </p>
+              </div>
+              <button
+                class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f7]"
+                type="button"
+                aria-label="자동이체 삭제 확인창 닫기"
+                @click="closeDeleteAutoTransferDialog"
+              >
+                <X :size="20" :stroke-width="2.3" />
+              </button>
+            </div>
+
+            <div
+              class="mt-5 rounded-2xl bg-[#f7f9fa] px-4 py-3.5 flex items-center justify-between"
+            >
+              <strong class="block truncate text-sm">{{ pendingDeleteAutoTransfer.title }}</strong>
+              <span class="block text-[11px] text-[var(--color-text-secondary)]">
+                매월 {{ pendingDeleteAutoTransfer.transferDay }}일 ·
+                {{ formatWon(pendingDeleteAutoTransfer.amount) }}
+              </span>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-3">
+              <button
+                class="h-[52px] rounded-xl border border-[var(--color-border)] bg-white text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]"
+                type="button"
+                @click="closeDeleteAutoTransferDialog"
+              >
+                취소
+              </button>
+              <button
+                class="flex h-[52px] items-center justify-center gap-1.5 rounded-xl bg-[#e85b61] text-sm font-bold text-white active:bg-[#cf484e]"
+                type="button"
+                @click="deleteAutoTransfer"
+              >
+                삭제하기
+              </button>
+            </div>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
 
     <button
       class="asset-transfer-button fixed z-[40]"
@@ -642,5 +741,25 @@ const retryTransfer = () => {
 .asset-transfer-button:focus-visible {
   outline: 3px solid rgb(39 169 235 / 24%);
   outline-offset: 3px;
+}
+
+.auto-transfer-delete-enter-active,
+.auto-transfer-delete-leave-active {
+  transition: background-color 180ms ease;
+}
+
+.auto-transfer-delete-enter-active .auto-transfer-delete-panel,
+.auto-transfer-delete-leave-active .auto-transfer-delete-panel {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auto-transfer-delete-enter-from,
+.auto-transfer-delete-leave-to {
+  background-color: transparent;
+}
+
+.auto-transfer-delete-enter-from .auto-transfer-delete-panel,
+.auto-transfer-delete-leave-to .auto-transfer-delete-panel {
+  transform: translateY(100%);
 }
 </style>
