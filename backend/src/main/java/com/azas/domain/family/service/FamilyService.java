@@ -15,8 +15,6 @@ public interface FamilyService {
 
     ChildMemberLinkResponse getChildMemberLink(Long memberId, Long childId);
 
-    AllowanceRequestResponse requestAllowance(Long memberId, Long childId);
-
     FamilyInvitationCreateResponse createFamilyInvitation(
             Long memberId,
             Long childId,

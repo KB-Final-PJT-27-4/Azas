@@ -36,6 +36,7 @@ DROP TABLE IF EXISTS refresh_token;
 DROP TABLE IF EXISTS social_account;
 DROP TABLE IF EXISTS phone_verification;
 DROP TABLE IF EXISTS member;
+DROP TABLE IF EXISTS allowance_request;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -165,6 +166,37 @@ CREATE TABLE child_parent (
     FOREIGN KEY (member_id) REFERENCES member (member_id),
   CONSTRAINT ck_child_parent_relation_type CHECK (relation_type IN ('MOTHER', 'FATHER', 'GUARDIAN'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='부모와 자녀 연결';
+
+CREATE TABLE allowance_request (
+    allowance_request_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '용돈 요청 ID',
+    child_id BIGINT UNSIGNED NOT NULL COMMENT '요청한 자녀 ID',
+    requested_amount DECIMAL(18, 0) NOT NULL COMMENT '요청 금액',
+    message VARCHAR(200) NOT NULL COMMENT '부모에게 전달할 메시지',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, APPROVED, REJECTED, CANCELED',
+    requested_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '요청 시각',
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 시각',
+    PRIMARY KEY (allowance_request_id),
+
+    KEY idx_allowance_request_child_status_requested_at (
+        child_id,
+        status,
+        requested_at
+    ),
+    CONSTRAINT fk_allowance_request_child
+        FOREIGN KEY (child_id)
+         REFERENCES child (child_id),
+
+    CONSTRAINT ck_allowance_request_amount
+        CHECK (requested_amount > 0),
+
+    CONSTRAINT ck_allowance_request_status
+        CHECK (
+            status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELED')
+        )
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='자녀 용돈 요청';
 
 CREATE TABLE family_invitation (
   family_invitation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '가족 초대 ID',

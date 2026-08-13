@@ -67,21 +67,6 @@ public class FamilyController {
         );
     }
 
-    @ApiOperation("용돈 요청")
-    @PostMapping("/children/{child_id}/allowance-requests")
-    public ResponseEntity<AllowanceRequestResponse> requestAllowance(
-            @RequestHeader(value = "Authorization", required = false)
-            String authorizationHeader,
-            @PathVariable("child_id") Long childId
-    ) {
-        long memberId = accessTokenMemberResolver.resolveMemberId(
-                authorizationHeader
-        );
-
-        return ResponseEntity.ok(
-                familyService.requestAllowance(memberId, childId)
-        );
-    }
 
     @ApiOperation("가족/아이 초대코드 발급")
     @PostMapping("/children/{child_id}/family-invitations")
