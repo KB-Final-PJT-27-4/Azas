@@ -28,6 +28,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false, hideNavigation: true },
   },
   {
+    path: '/register/child',
+    name: 'ChildInvitation',
+    component: () => import('@/views/auth/ChildInvitationView.vue'),
+    meta: { requiresAuth: false, hideNavigation: true },
+  },
+  {
     path: '/onboarding',
     name: 'Onboarding',
     component: () => import('@/views/auth/OnboardingView.vue'),
