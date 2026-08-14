@@ -235,6 +235,7 @@ CREATE TABLE financial_product (
   bank_name VARCHAR(50) NOT NULL COMMENT '상품 제공 기관',
   external_product_id VARCHAR(255) NOT NULL COMMENT '제공기관 상품 고유번호',
   product_type VARCHAR(30) NOT NULL COMMENT 'SAVING, DEPOSIT, ACCOUNT, CARD, SUBSCRIPTION',
+  target_owner_type VARCHAR(20) NOT NULL DEFAULT 'BOTH' COMMENT '가입 대상: PARENT, CHILD, BOTH',
   product_subtype VARCHAR(50) NULL COMMENT '상품 세부유형',
   name VARCHAR(150) NOT NULL COMMENT '상품명',
   summary VARCHAR(2000) NULL COMMENT '주요 특징 요약',
@@ -260,7 +261,9 @@ CREATE TABLE financial_product (
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '상품 캐시 갱신일',
   PRIMARY KEY (financial_product_id),
   UNIQUE KEY uk_financial_product_external_product_id (external_product_id),
-  KEY idx_financial_product_type_active (product_type, is_active)
+  KEY idx_financial_product_type_owner_active (product_type, target_owner_type, is_active),
+  CONSTRAINT ck_financial_product_target_owner_type
+    CHECK (target_owner_type IN ('PARENT', 'CHILD', 'BOTH'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='추천 금융상품';
 
 CREATE TABLE financial_product_bookmark (
