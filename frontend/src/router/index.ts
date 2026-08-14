@@ -412,6 +412,17 @@ const routes: RouteRecordRaw[] = [
       showHeaderNotification: false,
     },
   },
+  {
+    path: '/reports/assets',
+    name: 'ReportAssetHistory',
+    component: () => import('@/views/reports/ReportAssetHistoryView.vue'),
+    meta: {
+      requiresAuth: true,
+      headerTitle: '자산 변화 리포트',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
 
   // 체크리스트
   {
