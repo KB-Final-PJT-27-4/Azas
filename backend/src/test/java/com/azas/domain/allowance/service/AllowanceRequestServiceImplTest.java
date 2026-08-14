@@ -1,11 +1,10 @@
-package com.azas.domain.allowance;
+package com.azas.domain.allowance.service;
 
 import com.azas.domain.allowance.dto.AllowanceRequestInsertCommand;
 import com.azas.domain.allowance.dto.AllowanceRequestResponse;
 import com.azas.domain.allowance.dto.CreateAllowanceRequest;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
-import com.azas.domain.allowance.service.AllowanceRequestServiceImpl;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
