@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { LockKeyhole } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useToast } from '@/composables/useToast'
@@ -37,17 +36,27 @@ const approveRequest = () => {
 </script>
 
 <template>
-  <main class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-[#f7fbfd] px-[18px] pt-[18px] pb-[calc(18px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]">
+  <main
+    class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-[#f7fbfd] px-[18px] pt-[18px] pb-[calc(18px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]"
+  >
     <template v-if="request">
-      <section class="allowance-receipt relative mx-1 mt-2 bg-white px-5 pt-7 pb-8 shadow-[0_14px_38px_rgba(72,115,137,0.13)]">
+      <section
+        class="allowance-receipt relative mx-1 mt-2 bg-white px-5 pt-7 pb-8 shadow-[0_14px_38px_rgba(72,115,137,0.13)]"
+      >
         <header class="text-center">
-          <span class="mx-auto grid size-11 place-items-center rounded-full bg-[var(--color-selected-background)] text-[17px] font-black text-[var(--color-selected-text)]">
+          <span
+            class="mx-auto grid size-11 place-items-center rounded-full bg-[var(--color-selected-background)] text-[17px] font-black text-[var(--color-selected-text)]"
+          >
             ₩
           </span>
-          <p class="mt-3 mb-0 text-[10px] font-bold tracking-[0.18em] text-[var(--color-selected-text)]">
+          <p
+            class="mt-3 mb-0 text-[10px] font-bold tracking-[0.18em] text-[var(--color-selected-text)]"
+          >
             ALLOWANCE REQUEST
           </p>
-          <h1 class="mt-1.5 mb-0 text-[18px] font-extrabold">{{ request.childName }}의 용돈 요청서</h1>
+          <h1 class="mt-1.5 mb-0 text-[18px] font-extrabold">
+            {{ request.childName }}의 용돈 요청서
+          </h1>
         </header>
 
         <div class="receipt-divider my-5" aria-hidden="true">
@@ -87,13 +96,17 @@ const approveRequest = () => {
 
         <div>
           <p class="m-0 text-[11px] font-bold text-[var(--color-text-secondary)]">요청 사유</p>
-          <p class="mt-2 mb-0 whitespace-pre-line rounded-[14px] bg-[#f4f9fc] px-4 py-[14px] text-[13px] leading-[1.65]">
+          <p
+            class="mt-2 mb-0 whitespace-pre-line rounded-[14px] bg-[#f4f9fc] px-4 py-[14px] text-[13px] leading-[1.65]"
+          >
             {{ request.reason }}
           </p>
         </div>
 
         <div class="mt-8 text-center">
-          <span class="inline-flex rounded-lg border-[3px] border-[#8fd5f4] px-5 py-2 text-[13px] font-extrabold tracking-[0.08em] text-[var(--color-selected-text)]">
+          <span
+            class="inline-flex rounded-lg border-[3px] border-[#8fd5f4] px-5 py-2 text-[13px] font-extrabold tracking-[0.08em] text-[var(--color-selected-text)]"
+          >
             확인 대기 중
           </span>
         </div>
@@ -122,7 +135,11 @@ const approveRequest = () => {
     <section v-else class="grid min-h-[60vh] place-items-center text-center">
       <div>
         <h1 class="m-0 text-lg font-extrabold">요청을 찾을 수 없어요</h1>
-        <button class="mt-4 text-sm font-bold text-[var(--color-selected-text)]" type="button" @click="router.push({ name: 'Alarm' })">
+        <button
+          class="mt-4 text-sm font-bold text-[var(--color-selected-text)]"
+          type="button"
+          @click="router.push({ name: 'Alarm' })"
+        >
           알림으로 돌아가기
         </button>
       </div>
@@ -137,7 +154,8 @@ const approveRequest = () => {
   left: 0;
   width: 100%;
   height: 10px;
-  background: radial-gradient(circle at 7px 5px, #f7fbfd 0 5px, transparent 5.4px) 0 0 / 14px 10px repeat-x;
+  background: radial-gradient(circle at 7px 5px, #f7fbfd 0 5px, transparent 5.4px) 0 0 / 14px 10px
+    repeat-x;
   content: '';
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowUpRight, ChevronDown, Target, TrendingUp } from 'lucide-vue-next'
+import { ArrowUpRight, ChevronDown, Target } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 type Period = '6개월' | '1년'
@@ -35,11 +35,17 @@ const visibleData = computed(() => {
   return allMonthlyData.slice(-12)
 })
 const selectedMonth = computed(
-  () => visibleData.value.find(({ key }) => key === selectedMonthKey.value) ?? visibleData.value.at(-1)!,
+  () =>
+    visibleData.value.find(({ key }) => key === selectedMonthKey.value) ??
+    visibleData.value.at(-1)!,
 )
 const maxSaving = computed(() => Math.max(...visibleData.value.map(({ saving }) => saving)))
-const periodSaving = computed(() => visibleData.value.reduce((total, { saving }) => total + saving, 0))
-const periodIncrease = computed(() => visibleData.value.reduce((total, { increase }) => total + increase, 0))
+const periodSaving = computed(() =>
+  visibleData.value.reduce((total, { saving }) => total + saving, 0),
+)
+const periodIncrease = computed(() =>
+  visibleData.value.reduce((total, { increase }) => total + increase, 0),
+)
 const averageSaving = computed(() => Math.round(periodSaving.value / visibleData.value.length))
 const bestMonth = computed(() =>
   visibleData.value.reduce((best, item) => (item.saving > best.saving ? item : best)),
@@ -94,12 +100,18 @@ watch(selectedPeriod, () => {
 
     <section class="mt-5 rounded-[22px] border border-[var(--color-border)] bg-white p-5">
       <p class="text-sm font-bold">월별 저축 금액</p>
-      <strong class="mt-3 block text-[27px] tracking-[-0.04em]">{{ formatWon(selectedMonth.saving) }}</strong>
-      <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ selectedMonth.month }} 저축 금액 · 막대를 눌러 확인해보세요</p>
+      <strong class="mt-3 block text-[27px] tracking-[-0.04em]">{{
+        formatWon(selectedMonth.saving)
+      }}</strong>
+      <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+        {{ selectedMonth.month }} 저축 금액 · 막대를 눌러 확인해보세요
+      </p>
 
-      <div class="mt-7 flex h-48 items-end justify-between gap-0.5 border-b border-[#e5ebef] px-0.5">
+      <div
+        class="mt-7 flex h-48 items-end justify-between gap-0.5 border-b border-[#e5ebef] px-0.5"
+      >
         <button
-          v-for="(item, index) in visibleData"
+          v-for="item in visibleData"
           :key="item.key"
           class="flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-t-lg focus-visible:outline-2 focus-visible:outline-[var(--color-brand-primary)]"
           type="button"
@@ -118,7 +130,9 @@ watch(selectedPeriod, () => {
             :class="selectedMonth.key === item.key ? 'bg-[#218ced]' : 'bg-[#9bc7f4]'"
             :style="{ height: `${Math.max(18, (item.saving / maxSaving) * 128)}px` }"
           ></span>
-          <span class="mt-2 -mb-6 whitespace-nowrap text-[8px] font-medium tracking-[-0.05em] text-[var(--color-text-secondary)]">
+          <span
+            class="mt-2 -mb-6 whitespace-nowrap text-[8px] font-medium tracking-[-0.05em] text-[var(--color-text-secondary)]"
+          >
             {{ item.month }}
           </span>
         </button>
@@ -133,19 +147,25 @@ watch(selectedPeriod, () => {
     <section class="mt-4 rounded-[22px] border border-[var(--color-border)] bg-white p-5">
       <div>
         <p class="text-sm font-bold">자산 변화 요약</p>
-        <strong class="mt-2 block text-[25px] text-[var(--color-selected-text)]">+{{ formatWon(periodIncrease) }}</strong>
+        <strong class="mt-2 block text-[25px] text-[var(--color-selected-text)]"
+          >+{{ formatWon(periodIncrease) }}</strong
+        >
         <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ periodLabel }} 기준</p>
       </div>
 
       <div class="mt-5 grid grid-cols-2 gap-3">
         <article class="rounded-2xl bg-[#eef8fd] p-4">
           <span class="text-xs text-[var(--color-text-secondary)]">월평균 저축</span>
-          <strong class="mt-2 block text-lg text-[var(--color-selected-text)]">{{ formatWon(averageSaving) }}</strong>
+          <strong class="mt-2 block text-lg text-[var(--color-selected-text)]">{{
+            formatWon(averageSaving)
+          }}</strong>
         </article>
         <article class="rounded-2xl bg-[#fff8dc] p-4">
           <span class="text-xs text-[var(--color-text-secondary)]">가장 많이 저축한 달</span>
           <strong class="mt-2 block text-lg">{{ bestMonth.month }}</strong>
-          <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">{{ formatWon(bestMonth.saving) }}</span>
+          <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">{{
+            formatWon(bestMonth.saving)
+          }}</span>
         </article>
       </div>
     </section>
@@ -159,7 +179,10 @@ watch(selectedPeriod, () => {
         현재 자산이 어떤 목표에 모여 있는지 확인해보세요.
       </p>
 
-      <div class="mt-5 flex h-3 overflow-hidden rounded-full bg-[#edf2f5]" aria-label="목표별 자산 비중">
+      <div
+        class="mt-5 flex h-3 overflow-hidden rounded-full bg-[#edf2f5]"
+        aria-label="목표별 자산 비중"
+      >
         <span
           v-for="goal in goalAssets"
           :key="goal.name"
@@ -169,9 +192,16 @@ watch(selectedPeriod, () => {
       </div>
 
       <ul class="mt-4 grid gap-3">
-        <li v-for="goal in goalAssets" :key="goal.name" class="flex items-center justify-between gap-3">
+        <li
+          v-for="goal in goalAssets"
+          :key="goal.name"
+          class="flex items-center justify-between gap-3"
+        >
           <span class="flex min-w-0 items-center gap-2.5">
-            <span class="size-2.5 shrink-0 rounded-full" :style="{ backgroundColor: goal.color }"></span>
+            <span
+              class="size-2.5 shrink-0 rounded-full"
+              :style="{ backgroundColor: goal.color }"
+            ></span>
             <strong class="truncate text-sm">{{ goal.name }}</strong>
           </span>
           <span class="shrink-0 text-right">
@@ -184,20 +214,35 @@ watch(selectedPeriod, () => {
       </ul>
     </section>
 
-    <section class="mt-4 overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-white">
+    <section
+      class="mt-4 overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-white"
+    >
       <header class="flex items-center justify-between px-5 py-4">
         <h2 class="text-base font-bold">자산 증감 내역</h2>
         <span class="text-xs text-[var(--color-text-secondary)]">{{ periodLabel }}</span>
       </header>
       <ul class="divide-y divide-[#edf1f3] border-t border-[#edf1f3]">
-        <li v-for="item in historyItems" :key="item.key" class="flex items-center justify-between px-5 py-4">
+        <li
+          v-for="item in historyItems"
+          :key="item.key"
+          class="flex items-center justify-between px-5 py-4"
+        >
           <div class="flex items-center gap-3">
-            <span class="grid size-9 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
+            <span
+              class="grid size-9 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]"
+            >
               <ArrowUpRight :size="18" :stroke-width="2.4" />
             </span>
-            <span><strong class="block text-sm">{{ item.month }}</strong><span class="text-xs text-[var(--color-text-secondary)]">저축 및 이자 반영</span></span>
+            <span
+              ><strong class="block text-sm">{{ item.month }}</strong
+              ><span class="text-xs text-[var(--color-text-secondary)]"
+                >저축 및 이자 반영</span
+              ></span
+            >
           </div>
-          <strong class="text-sm text-[var(--color-selected-text)]">+{{ formatWon(item.increase) }}</strong>
+          <strong class="text-sm text-[var(--color-selected-text)]"
+            >+{{ formatWon(item.increase) }}</strong
+          >
         </li>
       </ul>
       <button
@@ -208,7 +253,11 @@ watch(selectedPeriod, () => {
         @click="showAllHistory = !showAllHistory"
       >
         {{ showAllHistory ? '접기' : `${visibleData.length - 4}개월 더보기` }}
-        <ChevronDown :size="17" class="transition-transform" :class="showAllHistory ? 'rotate-180' : ''" />
+        <ChevronDown
+          :size="17"
+          class="transition-transform"
+          :class="showAllHistory ? 'rotate-180' : ''"
+        />
       </button>
     </section>
   </main>

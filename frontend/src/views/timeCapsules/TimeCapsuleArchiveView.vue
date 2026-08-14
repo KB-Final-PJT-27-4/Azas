@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { CalendarClock, Check, Plus, X } from 'lucide-vue-next'
+import { Check, Plus, X } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
 import lockImage from '@/assets/images/timeCapsules/archive/lock.png'
@@ -184,12 +184,14 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
               >
                 {{ pregnancyGrowth.currentWeek }}주
               </strong>
-              <span class="mt-1.5 block text-[10px] font-semibold text-[var(--color-text-secondary)]">
+              <span
+                class="mt-1.5 block text-[10px] font-semibold text-[var(--color-text-secondary)]"
+              >
                 {{ pregnancyGrowth.fruit }}만큼 자랐어요
               </span>
             </div>
             <img
-              class="pregnancy-growth-card__image absolute right-0 bottom-7 h-[142px] w-[116px] object-contain object-bottom "
+              class="pregnancy-growth-card__image absolute right-0 bottom-7 h-[142px] w-[116px] object-contain object-bottom"
               :src="pregnancyGrowth.image"
               :alt="`${pregnancyGrowth.fruit} 깨비`"
             />

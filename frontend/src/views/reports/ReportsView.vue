@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { CalendarDays, CheckCircle2, ChevronRight, Landmark, PiggyBank, Sparkles, TrendingUp } from 'lucide-vue-next'
+import { CalendarDays, CheckCircle2, ChevronRight, Landmark, TrendingUp } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+import ChildcareReportOverview from './ChildcareReportOverview.vue'
 
 type ReportTab = 'assets' | 'allowance'
 
@@ -16,10 +19,17 @@ type GoalReport = {
   }>
 }
 
-const activeTab = ref<ReportTab>('assets')
+const route = useRoute()
+const router = useRouter()
+const activeTab = ref<ReportTab>(route.query.tab === 'allowance' ? 'allowance' : 'assets')
 const activeGoalIndex = ref(0)
 const goalCarousel = ref<HTMLElement | null>(null)
 const goalCarouselHeight = ref<number | null>(null)
+
+const setReportTab = (tab: ReportTab) => {
+  activeTab.value = tab
+  void router.replace({ query: tab === 'allowance' ? { tab } : {} })
+}
 
 const goalReports: GoalReport[] = [
   {
@@ -56,7 +66,8 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
 const syncGoalCarouselHeight = () => {
   nextTick(() => {
-    const activeCard = goalCarousel.value?.children[activeGoalIndex.value] as HTMLElement | undefined
+    const activeCard = goalCarousel.value?.children[activeGoalIndex.value] as
+      HTMLElement | undefined
     if (activeCard) goalCarouselHeight.value = activeCard.offsetHeight
   })
 }
@@ -78,24 +89,41 @@ onMounted(syncGoalCarouselHeight)
 
 <template>
   <main class="min-h-full text-[var(--color-text-primary)]">
-    <nav class="sticky top-[var(--app-header-height)] z-10 grid grid-cols-2 border-b border-[var(--color-border)] bg-white" aria-label="리포트 종류">
+    <nav
+      class="sticky top-[var(--app-header-height)] z-10 grid grid-cols-2 border-b border-[var(--color-border)] bg-white"
+      aria-label="리포트 종류"
+    >
       <button
         class="relative h-12 text-sm font-semibold transition-colors"
-        :class="activeTab === 'assets' ? 'text-[var(--color-selected-text)]' : 'text-[var(--color-text-secondary)]'"
+        :class="
+          activeTab === 'assets'
+            ? 'text-[var(--color-selected-text)]'
+            : 'text-[var(--color-text-secondary)]'
+        "
         type="button"
-        @click="activeTab = 'assets'"
+        @click="setReportTab('assets')"
       >
         자산 리포트
-        <span v-if="activeTab === 'assets'" class="absolute right-5 bottom-0 left-5 h-0.5 rounded-full bg-[var(--color-brand-primary)]"></span>
+        <span
+          v-if="activeTab === 'assets'"
+          class="absolute right-5 bottom-0 left-5 h-0.5 rounded-full bg-[var(--color-brand-primary)]"
+        ></span>
       </button>
       <button
         class="relative h-12 text-sm font-semibold transition-colors"
-        :class="activeTab === 'allowance' ? 'text-[var(--color-selected-text)]' : 'text-[var(--color-text-secondary)]'"
+        :class="
+          activeTab === 'allowance'
+            ? 'text-[var(--color-accent-yellow-text)]'
+            : 'text-[var(--color-text-secondary)]'
+        "
         type="button"
-        @click="activeTab = 'allowance'"
+        @click="setReportTab('allowance')"
       >
         양육비 리포트
-        <span v-if="activeTab === 'allowance'" class="absolute right-5 bottom-0 left-5 h-0.5 rounded-full bg-[var(--color-brand-primary)]"></span>
+        <span
+          v-if="activeTab === 'allowance'"
+          class="absolute right-5 bottom-0 left-5 h-0.5 rounded-full bg-[var(--color-accent-yellow)]"
+        ></span>
       </button>
     </nav>
 
@@ -108,26 +136,42 @@ onMounted(syncGoalCarouselHeight)
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-sm font-semibold text-[var(--color-text-secondary)]">총 자산</p>
-            <strong class="mt-2 block text-[28px] leading-none tracking-[-0.04em]">{{ formatWon(totalAssets) }}</strong>
-            <p class="mt-3 text-xs text-[var(--color-text-secondary)]">지난달보다 <strong class="text-[var(--color-selected-text)]">350,000원</strong> 늘었어요</p>
+            <strong class="mt-2 block text-[28px] leading-none tracking-[-0.04em]">{{
+              formatWon(totalAssets)
+            }}</strong>
+            <p class="mt-3 text-xs text-[var(--color-text-secondary)]">
+              지난달보다
+              <strong class="text-[var(--color-selected-text)]">350,000원</strong> 늘었어요
+            </p>
           </div>
-          <span class="grid size-11 place-items-center rounded-2xl bg-white/80 text-[var(--color-selected-text)]">
+          <span
+            class="grid size-11 place-items-center rounded-2xl bg-white/80 text-[var(--color-selected-text)]"
+          >
             <ChevronRight :size="23" :stroke-width="2.4" aria-hidden="true" />
           </span>
         </div>
         <div class="mt-5 h-2 overflow-hidden rounded-full bg-white/90">
-          <div class="h-full rounded-full bg-[var(--color-brand-primary)]" :style="{ width: `${totalRate}%` }"></div>
+          <div
+            class="h-full rounded-full bg-[var(--color-brand-primary)]"
+            :style="{ width: `${totalRate}%` }"
+          ></div>
         </div>
         <div class="mt-2 flex justify-between text-xs text-[var(--color-text-secondary)]">
           <span>전체 목표 달성률</span><strong>{{ totalRate.toFixed(1) }}%</strong>
         </div>
       </RouterLink>
 
-      <section class="mt-3 flex items-center justify-between rounded-[20px] border border-[var(--color-border)] bg-white p-5">
+      <section
+        class="mt-3 flex items-center justify-between rounded-[20px] border border-[var(--color-border)] bg-white p-5"
+      >
         <div>
           <p class="text-sm font-bold">이번 달 저축</p>
-          <strong class="mt-2 block text-[23px] text-[var(--color-selected-text)]">+1,250,000원</strong>
-          <p class="mt-1 text-xs text-[var(--color-text-secondary)]">이번 달 목표의 25%를 채웠어요</p>
+          <strong class="mt-2 block text-[23px] text-[var(--color-selected-text)]"
+            >+1,250,000원</strong
+          >
+          <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+            이번 달 목표의 25%를 채웠어요
+          </p>
         </div>
         <div class="flex h-16 items-end gap-2" aria-hidden="true">
           <span class="h-7 w-3 rounded-t-full bg-[#73cbd5]"></span>
@@ -140,7 +184,9 @@ onMounted(syncGoalCarouselHeight)
         <div>
           <div>
             <h1 class="text-[21px] font-extrabold tracking-[-0.03em]">목표별 달성률</h1>
-            <p class="mt-1 text-xs text-[var(--color-text-secondary)]">연결된 적금별 잔액을 함께 확인해보세요.</p>
+            <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+              연결된 적금별 잔액을 함께 확인해보세요.
+            </p>
           </div>
         </div>
 
@@ -169,31 +215,53 @@ onMounted(syncGoalCarouselHeight)
                 </strong>
               </div>
               <div class="mt-3 h-2 overflow-hidden rounded-full bg-[#eaf0f3]">
-                <div class="h-full rounded-full bg-[var(--color-brand-primary)] transition-[width] duration-500" :style="{ width: `${achievementRate(goal)}%` }"></div>
+                <div
+                  class="h-full rounded-full bg-[var(--color-brand-primary)] transition-[width] duration-500"
+                  :style="{ width: `${achievementRate(goal)}%` }"
+                ></div>
               </div>
             </div>
 
             <div class="border-t border-[#edf1f3] bg-[#fbfcfd] px-5 py-4">
               <div class="mb-3 flex items-center justify-between">
                 <h3 class="text-sm font-bold">연결된 적금</h3>
-                <span class="rounded-full bg-[#eaf8ff] px-2.5 py-1 text-xs font-semibold text-[var(--color-selected-text)]">{{ goal.accounts.length }}개</span>
+                <span
+                  class="rounded-full bg-[#eaf8ff] px-2.5 py-1 text-xs font-semibold text-[var(--color-selected-text)]"
+                  >{{ goal.accounts.length }}개</span
+                >
               </div>
-              <ul class="divide-y divide-[#e8edf0] overflow-hidden rounded-2xl border border-[#e2e9ed] bg-white">
-                <li v-for="account in goal.accounts" :key="account.id" class="flex items-center gap-3 px-4 py-3.5">
-                  <span class="grid size-9 shrink-0 place-items-center rounded-full bg-[#fff5cf] text-[#e2a300]">
+              <ul
+                class="divide-y divide-[#e8edf0] overflow-hidden rounded-2xl border border-[#e2e9ed] bg-white"
+              >
+                <li
+                  v-for="account in goal.accounts"
+                  :key="account.id"
+                  class="flex items-center gap-3 px-4 py-3.5"
+                >
+                  <span
+                    class="grid size-9 shrink-0 place-items-center rounded-full bg-[#fff5cf] text-[#e2a300]"
+                  >
                     <Landmark :size="18" :stroke-width="2.2" aria-hidden="true" />
                   </span>
                   <span class="min-w-0 flex-1">
                     <strong class="block truncate text-sm">{{ account.name }}</strong>
-                    <span class="mt-0.5 block text-xs text-[var(--color-text-secondary)]">{{ account.number }}</span>
+                    <span class="mt-0.5 block text-xs text-[var(--color-text-secondary)]">{{
+                      account.number
+                    }}</span>
                   </span>
-                  <strong class="shrink-0 text-sm text-[var(--color-selected-text)]">{{ formatWon(account.balance) }}</strong>
+                  <strong class="shrink-0 text-sm text-[var(--color-selected-text)]">{{
+                    formatWon(account.balance)
+                  }}</strong>
                 </li>
               </ul>
             </div>
           </article>
         </div>
-        <div v-if="goalReports.length > 1" class="mt-3 flex justify-center gap-2" aria-label="목표 카드 위치">
+        <div
+          v-if="goalReports.length > 1"
+          class="mt-3 flex justify-center gap-2"
+          aria-label="목표 카드 위치"
+        >
           <span
             v-for="(_, index) in goalReports"
             :key="index"
@@ -208,21 +276,45 @@ onMounted(syncGoalCarouselHeight)
       </section>
 
       <section class="mt-7 pb-2">
-        <div class="flex items-center gap-2"><h2 class="text-[21px] font-extrabold tracking-[-0.03em]">이번 달 인사이트</h2></div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-[21px] font-extrabold tracking-[-0.03em]">이번 달 인사이트</h2>
+        </div>
         <div class="mt-4 grid gap-3">
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4"><TrendingUp class="shrink-0 text-[#ef6c8f]" :size="27" :stroke-width="2.2" /><div><strong class="text-sm">지난달보다 90,000원을 더 저축했어요.</strong><p class="mt-1 text-xs text-[var(--color-text-secondary)]">꾸준한 저축 흐름이 아주 좋아요.</p></div></article>
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4"><CheckCircle2 class="shrink-0 text-[var(--color-selected-text)]" :size="27" :stroke-width="2.2" /><div><strong class="text-sm">대학자금 목표의 절반에 가까워졌어요.</strong><p class="mt-1 text-xs text-[var(--color-text-secondary)]">현재 속도라면 계획대로 달성할 수 있어요.</p></div></article>
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4"><CalendarDays class="shrink-0 text-[#65bd73]" :size="27" :stroke-width="2.2" /><div><strong class="text-sm">목표 달성 시기를 4개월 앞당길 수 있어요.</strong><p class="mt-1 text-xs text-[var(--color-text-secondary)]">지금처럼 저축을 이어가 보세요.</p></div></article>
+          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
+            <TrendingUp class="shrink-0 text-[#ef6c8f]" :size="27" :stroke-width="2.2" />
+            <div>
+              <strong class="text-sm">지난달보다 90,000원을 더 저축했어요.</strong>
+              <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+                꾸준한 저축 흐름이 아주 좋아요.
+              </p>
+            </div>
+          </article>
+          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
+            <CheckCircle2
+              class="shrink-0 text-[var(--color-selected-text)]"
+              :size="27"
+              :stroke-width="2.2"
+            />
+            <div>
+              <strong class="text-sm">대학자금 목표의 절반에 가까워졌어요.</strong>
+              <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+                현재 속도라면 계획대로 달성할 수 있어요.
+              </p>
+            </div>
+          </article>
+          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
+            <CalendarDays class="shrink-0 text-[#65bd73]" :size="27" :stroke-width="2.2" />
+            <div>
+              <strong class="text-sm">목표 달성 시기를 4개월 앞당길 수 있어요.</strong>
+              <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+                지금처럼 저축을 이어가 보세요.
+              </p>
+            </div>
+          </article>
         </div>
       </section>
     </div>
 
-    <section v-else class="px-[18px] py-8 text-center">
-      <div class="rounded-[22px] border border-[var(--color-border)] bg-white px-5 py-12">
-        <span class="mx-auto grid size-14 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]"><PiggyBank :size="27" /></span>
-        <h1 class="mt-4 text-xl font-bold">양육비 리포트를 준비하고 있어요</h1>
-        <p class="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">아이를 위해 사용한 금액과 월별 변화를<br />곧 한눈에 확인할 수 있어요.</p>
-      </div>
-    </section>
+    <ChildcareReportOverview v-else />
   </main>
 </template>
