@@ -189,7 +189,7 @@ INSERT INTO financial_product (
     'kb-mock-demand-deposit',
     'ACCOUNT',
     '입출금통장',
-    'KB Mock 입출금통장',
+    'KB국민 입출금통장',
     'Mock 금융 온보딩과 용돈 관리를 위한 입출금계좌입니다.',
     'https://www.kbstar.com/',
     'wallet',
