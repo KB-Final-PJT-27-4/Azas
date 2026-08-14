@@ -105,68 +105,6 @@ public class FamilyServiceImplTest {
         assertEquals(20L, response.getChildMemberId());
     }
 
-    @Test
-    void requestAllowanceCreatesFirstRequestForChildMember() {
-        given(familyMapper.countChildMemberAccess(10L, 20L)).willReturn(1);
-        given(familyMapper.findLastAllowanceRequestMonth(10L))
-                .willReturn(null);
-        given(familyMapper.updateAllowanceRequest(eq(10L), any(LocalDate.class)))
-                .willReturn(1);
-        given(familyMapper.findChildAvailableAmount(10L))
-                .willReturn(new BigDecimal("50000"));
-
-        AllowanceRequestResponse response =
-                familyService.requestAllowance(20L, 10L);
-
-        assertEquals(10L, response.getChildId());
-        assertTrue(response.getRequested());
-        assertEquals(
-                LocalDate.now().withDayOfMonth(1),
-                response.getRequestMonth()
-        );
-        assertEquals(new BigDecimal("50000"),
-                response.getChildAvailableAmount());
-        verify(familyMapper).updateAllowanceRequest(
-                eq(10L),
-                eq(LocalDate.now().withDayOfMonth(1))
-        );
-    }
-
-    @Test
-    void requestAllowanceRejectsDuplicateRequestInSameMonth() {
-        LocalDate thisMonth = LocalDate.now().withDayOfMonth(1);
-
-        given(familyMapper.countChildMemberAccess(10L, 20L)).willReturn(1);
-        given(familyMapper.findLastAllowanceRequestMonth(10L))
-                .willReturn(thisMonth);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> familyService.requestAllowance(20L, 10L)
-        );
-
-        assertEquals(
-                ErrorCode.ALLOWANCE_REQUEST_ALREADY_EXISTS,
-                exception.getErrorCode()
-        );
-        verify(familyMapper, never()).updateAllowanceRequest(
-                anyLong(),
-                any(LocalDate.class)
-        );
-    }
-
-    @Test
-    void requestAllowanceRejectsParentAccount() {
-        given(familyMapper.countChildMemberAccess(10L, 7L)).willReturn(0);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> familyService.requestAllowance(7L, 10L)
-        );
-
-        assertEquals(ErrorCode.CHILD_ACCESS_DENIED, exception.getErrorCode());
-    }
-
     private ChildMemberLinkResponse childMemberLink(
             Long childId,
             boolean linked,

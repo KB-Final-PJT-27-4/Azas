@@ -24,6 +24,7 @@ TRUNCATE TABLE financial_product_bookmark;
 TRUNCATE TABLE financial_product;
 TRUNCATE TABLE child_checklist_item;
 TRUNCATE TABLE checklist_item_template;
+TRUNCATE TABLE allowance_request;
 TRUNCATE TABLE family_invitation;
 TRUNCATE TABLE child_parent;
 TRUNCATE TABLE child;

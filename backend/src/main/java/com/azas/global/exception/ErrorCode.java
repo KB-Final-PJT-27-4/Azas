@@ -281,13 +281,10 @@ public enum ErrorCode {
     ),
 
     //Family
-    ALLOWANCE_REQUEST_ALREADY_EXISTS(
-            HttpStatus.CONFLICT,
-            "이번 달에는 이미 용돈을 요청했습니다."
-    ),
+
     FAMILY_INVITATION_NOT_FOUND(
             HttpStatus.NOT_FOUND,
-            "가족 초대를 찾을 수 없습니다."
+            "가족 초대를 찾을 수 없s습니다."
     ),
     FAMILY_INVITATION_ALREADY_EXISTS(
             HttpStatus.CONFLICT,
