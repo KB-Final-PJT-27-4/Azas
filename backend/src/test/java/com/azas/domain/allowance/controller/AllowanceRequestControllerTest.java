@@ -1,6 +1,5 @@
-package com.azas.domain.allowance;
+package com.azas.domain.allowance.controller;
 
-import com.azas.domain.allowance.controller.AllowanceRequestController;
 import com.azas.domain.allowance.dto.AllowanceRequestResponse;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.service.AllowanceRequestService;

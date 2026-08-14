@@ -1,4 +1,4 @@
-package com.azas.domain.allowance;
+package com.azas.domain.allowance.mapper;
 
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.io.Resources;
