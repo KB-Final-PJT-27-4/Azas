@@ -1,5 +1,6 @@
 package com.azas.domain.allowance.controller;
 
+import com.azas.domain.allowance.dto.AllowanceRequestListResponse;
 import com.azas.domain.allowance.dto.AllowanceRequestResponse;
 import com.azas.domain.allowance.dto.CreateAllowanceRequest;
 import com.azas.domain.allowance.service.AllowanceRequestService;
@@ -9,17 +10,13 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
 @Api(tags = "용돈 요청")
 @RestController
-@RequestMapping("/api/v1/children/me/allowance-requests")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class AllowanceRequestController {
 
@@ -27,13 +24,15 @@ public class AllowanceRequestController {
     private final AccessTokenMemberResolver accessTokenMemberResolver;
 
     @ApiOperation("자녀 본인 용돈 요청")
-    @PostMapping
-    public ResponseEntity<AllowanceRequestResponse> createAllowanceRequest(
+    @PostMapping("/children/me/allowance-requests")
+    public ResponseEntity<AllowanceRequestResponse>
+    createAllowanceRequest(
             @RequestHeader(
                     value = "Authorization",
                     required = false
             ) String authorizationHeader,
-            @Valid @RequestBody CreateAllowanceRequest request
+            @Valid @RequestBody
+            CreateAllowanceRequest request
     ) {
         long memberId =
                 accessTokenMemberResolver.resolveMemberId(
@@ -49,5 +48,44 @@ public class AllowanceRequestController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+
+    @ApiOperation("자녀 용돈 요청 목록 조회")
+    @GetMapping("/children/{child_id}/allowance-requests")
+    public ResponseEntity<AllowanceRequestListResponse>
+    getAllowanceRequests(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader,
+            @PathVariable("child_id") Long childId,
+            @RequestParam(
+                    value = "status",
+                    required = false
+            ) String status,
+            @RequestParam(
+                    value = "cursor",
+                    required = false
+            ) String cursor,
+            @RequestParam(
+                    value = "size",
+                    required = false
+            ) String size
+    ) {
+        long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        return ResponseEntity.ok(
+                allowanceRequestService.getAllowanceRequests(
+                        memberId,
+                        childId,
+                        status,
+                        cursor,
+                        size
+                )
+        );
     }
 }

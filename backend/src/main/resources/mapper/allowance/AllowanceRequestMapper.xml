@@ -40,4 +40,68 @@
         )
     </insert>
 
+    <resultMap id="allowanceRequestListRowMap"
+               type="com.azas.domain.allowance.dto.AllowanceRequestListRow">
+        <id property="allowanceRequestId"
+            column="allowance_request_id"/>
+        <result property="childId"
+                column="child_id"/>
+        <result property="requestedAmount"
+                column="requested_amount"/>
+        <result property="status"
+                column="status"/>
+        <result property="requestedAt"
+                column="requested_at"/>
+    </resultMap>
+
+    <select id="findActiveChildIdById"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="countAllowanceRequestAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND (
+            c.member_id = #{memberId}
+                OR EXISTS (
+                SELECT 1
+                FROM child_parent cp
+                WHERE cp.child_id = c.child_id
+                  AND cp.member_id = #{memberId}
+            )
+            )
+    </select>
+
+    <select id="findAllowanceRequests"
+            parameterType=
+                    "com.azas.domain.allowance.dto.AllowanceRequestListQuery"
+            resultMap="allowanceRequestListRowMap">
+        SELECT
+        ar.allowance_request_id,
+        ar.child_id,
+        ar.requested_amount,
+        ar.status,
+        ar.requested_at
+        FROM allowance_request ar
+        WHERE ar.child_id = #{childId}
+
+        <if test="status != null">
+            AND ar.status = #{status}
+        </if>
+
+        <if test="cursorId != null">
+            AND ar.allowance_request_id
+            <![CDATA[<]]> #{cursorId}
+        </if>
+
+        ORDER BY ar.allowance_request_id DESC
+        LIMIT #{limit}
+    </select>
 </mapper>
