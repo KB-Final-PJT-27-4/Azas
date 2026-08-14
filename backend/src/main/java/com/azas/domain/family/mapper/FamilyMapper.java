@@ -30,23 +30,6 @@ public interface FamilyMapper {
             @Param("childId") Long childId
     );
 
-    int countChildMemberAccess(
-            @Param("childId") Long childId,
-            @Param("memberId") Long memberId
-    );
-
-    LocalDate findLastAllowanceRequestMonth(
-            @Param("childId") Long childId
-    );
-
-    int updateAllowanceRequest(
-            @Param("childId") Long childId,
-            @Param("requestMonth") LocalDate requestMonth
-    );
-
-    BigDecimal findChildAvailableAmount(
-            @Param("childId") Long childId
-    );
 
     Long lockActiveChild(
             @Param("childId") Long childId
