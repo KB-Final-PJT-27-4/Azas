@@ -39,7 +39,7 @@ const declineInvitation = () => {
     <div class="flex flex-1 flex-col px-5 pt-1 pb-[max(24px,env(safe-area-inset-bottom))]">
       <section aria-labelledby="child-invitation-title">
         <h1 id="child-invitation-title" class="mt-5 break-keep text-[27px] leading-[1.35] font-extrabold tracking-[-0.04em]">
-          <span class="text-[var(--color-selected-text)]">{{ guardian.name }}님</span>이<br />당신을 자녀로 초대했어요
+          <span class="text-[var(--color-selected-text)]">{{ guardian.name }}</span>님이<br />당신을 자녀로 초대했어요
         </h1>
         <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
           아래 가족 정보를 확인하고 초대를 수락해주세요.
