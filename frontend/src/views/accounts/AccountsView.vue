@@ -7,12 +7,10 @@ import AccountRegistrationComplete from '@/components/accounts/AccountRegistrati
 import AccountRegistrationForm from '@/components/accounts/AccountRegistrationForm.vue'
 import AccountRegistrationConfirmation from '@/components/accounts/AccountRegistrationConfirmation.vue'
 import BankSelectionSheet from '@/components/accounts/BankSelectionSheet.vue'
-import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
-const { showToast } = useToast()
 const isBankSelectorOpen = ref(false)
-const registrationStep = ref<'method' | 'import' | 'form' | 'confirmation' | 'complete'>('method')
+const registrationStep = ref<'method' | 'import' | 'empty' | 'form' | 'confirmation' | 'complete'>('method')
 const selectedBank = ref('')
 const accountNumber = ref('')
 const accountAlias = ref('')
@@ -39,6 +37,11 @@ const startManualRegistration = () => {
   registrationStep.value = 'form'
 }
 
+const showAccountOpeningGuide = () => {
+  slideDirection.value = 'forward'
+  registrationStep.value = 'empty'
+}
+
 const connectImportedAccount = (account: (typeof importedAccounts.value)[number]) => {
   registeredAccount.value = {
     bank: account.bank,
@@ -51,7 +54,14 @@ const connectImportedAccount = (account: (typeof importedAccounts.value)[number]
 }
 
 const createKbAccount = () => {
-  showToast('KB국민은행 계좌 개설 화면으로 연결할게요.', 'info')
+  registeredAccount.value = {
+    bank: 'KB국민은행',
+    accountNumber: '123-456-789012',
+    accountName: 'KB국민은행 자녀 계좌',
+    balance: 0,
+  }
+  slideDirection.value = 'forward'
+  registrationStep.value = 'complete'
 }
 
 const selectBank = (bank: string) => {
@@ -88,7 +98,7 @@ const completeRegistration = () => {
         <AccountConnectionMethod
           v-if="registrationStep === 'method'"
           @import="startAccountImport"
-          @manual="startManualRegistration"
+          @create="showAccountOpeningGuide"
         />
 
         <AccountRegistrationForm
@@ -105,6 +115,13 @@ const completeRegistration = () => {
           v-else-if="registrationStep === 'import'"
           :accounts="importedAccounts"
           @connect="connectImportedAccount"
+          @create-account="createKbAccount"
+          @later="router.push('/home')"
+        />
+
+        <AccountImportSelection
+          v-else-if="registrationStep === 'empty'"
+          :accounts="[]"
           @create-account="createKbAccount"
           @later="router.push('/home')"
         />
