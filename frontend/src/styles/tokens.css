@@ -2,6 +2,11 @@
   --color-brand-primary: #55c0f4;
   --color-brand-primary-pressed: #2babe8;
   --color-brand-secondary: #fff5d2;
+  --color-accent-yellow: #ffcf4a;
+  --color-accent-yellow-pressed: #f5c43c;
+  --color-accent-yellow-surface: #fffbeb;
+  --color-accent-yellow-border: #f7e7a8;
+  --color-accent-yellow-text: #806812;
   --color-app-background: #f6f8fa;
   --color-surface: #ffffff;
   --color-surface-muted: #f6f8fa;

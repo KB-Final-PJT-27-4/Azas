@@ -11,7 +11,6 @@ import {
   House,
   Landmark,
   Search,
-  Settings2,
   ShieldCheck,
   Sparkles,
   Target,
@@ -71,6 +70,13 @@ const menuGroups: MenuGroup[] = [
         keywords: ['자산 관리', '분석', '리포트'],
         icon: ChartNoAxesCombined,
         to: { name: 'Reports' },
+      },
+      {
+        label: '양육비 리포트',
+        description: '아이 관련 지출과 또래 평균을 비교해요.',
+        keywords: ['양육비', '소비', '평균', '지출 리포트'],
+        icon: ChartNoAxesCombined,
+        to: { name: 'Reports', query: { tab: 'allowance' } },
       },
       {
         label: '마이페이지',
