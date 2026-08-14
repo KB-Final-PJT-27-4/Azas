@@ -6,6 +6,9 @@ import com.azas.domain.allowance.dto.AllowanceRequestListRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import com.azas.domain.allowance.dto.AllowanceRequestDetailRow;
+import com.azas.domain.allowance.entity.AllowanceRequestStatus;
+
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -35,5 +38,21 @@ public interface AllowanceRequestMapper {
 
     AllowanceRequestDetailRow findAllowanceRequestDetail(
             @Param("allowanceRequestId") Long allowanceRequestId
+    );
+
+    int countAllowanceRequestParentAccess(
+            @Param("memberId") Long memberId,
+            @Param("childId") Long childId
+    );
+
+    int countAllowanceRequestChildAccess(
+            @Param("memberId") Long memberId,
+            @Param("childId") Long childId
+    );
+
+    int updateAllowanceRequestStatus(
+            @Param("allowanceRequestId") Long allowanceRequestId,
+            @Param("status") AllowanceRequestStatus status,
+            @Param("updatedAt") LocalDateTime updatedAt
     );
 }

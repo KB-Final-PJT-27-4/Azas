@@ -136,4 +136,40 @@
         <result property="requestedAt"
                 column="requested_at"/>
     </resultMap>
+
+    <select id="countAllowanceRequestParentAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                                AND c.status = 'ACTIVE'
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.member_id = #{memberId}
+          AND cp.child_id = #{childId}
+    </select>
+
+    <select id="countAllowanceRequestChildAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'CHILD'
+        WHERE c.child_id = #{childId}
+          AND c.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <update id="updateAllowanceRequestStatus">
+        UPDATE allowance_request
+        SET status = #{status},
+            updated_at = #{updatedAt}
+        WHERE allowance_request_id = #{allowanceRequestId}
+          AND status = 'PENDING'
+    </update>
 </mapper>

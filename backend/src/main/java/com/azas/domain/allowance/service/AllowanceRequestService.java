@@ -1,9 +1,6 @@
 package com.azas.domain.allowance.service;
 
-import com.azas.domain.allowance.dto.AllowanceRequestListResponse;
-import com.azas.domain.allowance.dto.AllowanceRequestResponse;
-import com.azas.domain.allowance.dto.CreateAllowanceRequest;
-import com.azas.domain.allowance.dto.AllowanceRequestDetailResponse;
+import com.azas.domain.allowance.dto.*;
 
 public interface AllowanceRequestService {
 
@@ -23,5 +20,11 @@ public interface AllowanceRequestService {
     AllowanceRequestDetailResponse getAllowanceRequestDetail(
             Long memberId,
             Long allowanceRequestId
+    );
+
+    AllowanceRequestDetailResponse updateAllowanceRequestStatus(
+            Long memberId,
+            Long allowanceRequestId,
+            UpdateAllowanceRequestStatus request
     );
 }

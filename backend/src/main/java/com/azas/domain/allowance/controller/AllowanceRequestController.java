@@ -1,9 +1,6 @@
 package com.azas.domain.allowance.controller;
 
-import com.azas.domain.allowance.dto.AllowanceRequestDetailResponse;
-import com.azas.domain.allowance.dto.AllowanceRequestListResponse;
-import com.azas.domain.allowance.dto.AllowanceRequestResponse;
-import com.azas.domain.allowance.dto.CreateAllowanceRequest;
+import com.azas.domain.allowance.dto.*;
 import com.azas.domain.allowance.service.AllowanceRequestService;
 import com.azas.global.security.AccessTokenMemberResolver;
 import io.swagger.annotations.Api;
@@ -110,6 +107,33 @@ public class AllowanceRequestController {
                 allowanceRequestService.getAllowanceRequestDetail(
                         memberId,
                         allowanceRequestId
+                )
+        );
+    }
+
+    @ApiOperation("용돈 요청 상태 변경")
+    @PatchMapping("/allowance-requests/{allowance_request_id}")
+    public ResponseEntity<AllowanceRequestDetailResponse>
+    updateAllowanceRequestStatus(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader,
+            @PathVariable("allowance_request_id")
+            Long allowanceRequestId,
+            @RequestBody
+            UpdateAllowanceRequestStatus request
+    ) {
+        long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        return ResponseEntity.ok(
+                allowanceRequestService.updateAllowanceRequestStatus(
+                        memberId,
+                        allowanceRequestId,
+                        request
                 )
         );
     }

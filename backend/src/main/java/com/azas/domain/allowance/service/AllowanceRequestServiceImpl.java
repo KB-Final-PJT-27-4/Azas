@@ -1,6 +1,7 @@
 package com.azas.domain.allowance.service;
 
 import com.azas.domain.allowance.dto.*;
+import com.azas.domain.allowance.entity.AllowanceRequestAction;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
 import com.azas.global.exception.BusinessException;
@@ -234,5 +235,146 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
         }
 
         return AllowanceRequestDetailResponse.from(row);
+    }
+
+    @Override
+    @Transactional
+    public AllowanceRequestDetailResponse updateAllowanceRequestStatus(
+            Long memberId,
+            Long allowanceRequestId,
+            UpdateAllowanceRequestStatus request
+    ) {
+        if (allowanceRequestId == null || allowanceRequestId <= 0) {
+            throw new BusinessException(
+                    ErrorCode.BADREQUEST
+            );
+        }
+
+        AllowanceRequestAction action =
+                parseAllowanceRequestAction(request);
+
+        AllowanceRequestDetailRow current =
+                allowanceRequestMapper.findAllowanceRequestDetail(
+                        allowanceRequestId
+                );
+
+        if (current == null) {
+            throw new BusinessException(
+                    ErrorCode.ALLOWANCE_REQUEST_NOT_FOUND
+            );
+        }
+
+        validateStatusChangeAccess(
+                memberId,
+                current.getChildId(),
+                action
+        );
+
+        if (current.getStatus()
+                != AllowanceRequestStatus.PENDING) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_ALLOWANCE_STATUS_TRANSITION
+            );
+        }
+
+        AllowanceRequestStatus nextStatus =
+                getNextStatus(action);
+
+        int updatedCount =
+                allowanceRequestMapper.updateAllowanceRequestStatus(
+                        allowanceRequestId,
+                        nextStatus,
+                        LocalDateTime.now()
+                );
+
+        if (updatedCount != 1) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_ALLOWANCE_STATUS_TRANSITION
+            );
+        }
+
+        AllowanceRequestDetailRow updated =
+                allowanceRequestMapper.findAllowanceRequestDetail(
+                        allowanceRequestId
+                );
+
+        if (updated == null) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        return AllowanceRequestDetailResponse.from(updated);
+    }
+
+    private AllowanceRequestAction parseAllowanceRequestAction(
+            UpdateAllowanceRequestStatus request
+    ) {
+        if (request == null
+                || request.getAction() == null
+                || request.getAction().isBlank()) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_ALLOWANCE_ACTION
+            );
+        }
+
+        try {
+            return AllowanceRequestAction.valueOf(
+                    request.getAction()
+                            .trim()
+                            .toUpperCase(Locale.ROOT)
+            );
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_ALLOWANCE_ACTION
+            );
+        }
+    }
+
+    private void validateStatusChangeAccess(
+            Long memberId,
+            Long childId,
+            AllowanceRequestAction action
+    ) {
+        boolean hasAccess;
+
+        if (action == AllowanceRequestAction.CANCEL) {
+            hasAccess =
+                    allowanceRequestMapper
+                            .countAllowanceRequestChildAccess(
+                                    memberId,
+                                    childId
+                            ) > 0;
+        } else {
+            hasAccess =
+                    allowanceRequestMapper
+                            .countAllowanceRequestParentAccess(
+                                    memberId,
+                                    childId
+                            ) > 0;
+        }
+
+        if (!hasAccess) {
+            throw new BusinessException(
+                    ErrorCode.ALLOWANCE_REQUEST_ACCESS_DENIED
+            );
+        }
+    }
+
+    private AllowanceRequestStatus getNextStatus(
+            AllowanceRequestAction action
+    ) {
+        switch (action) {
+            case APPROVE:
+                return AllowanceRequestStatus.APPROVED;
+            case REJECT:
+                return AllowanceRequestStatus.REJECTED;
+            case CANCEL:
+                return AllowanceRequestStatus.CANCELED;
+            default:
+                throw new BusinessException(
+                        ErrorCode.INVALID_ALLOWANCE_ACTION
+                );
+        }
     }
 }

@@ -303,6 +303,18 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "용돈 요청을 찾을 수 없습니다."
     ),
+    INVALID_ALLOWANCE_ACTION(
+            HttpStatus.BAD_REQUEST,
+            "용돈 요청 처리 방식이 올바르지 않습니다."
+    ),
+    ALLOWANCE_REQUEST_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "용돈 요청을 처리할 권한이 없습니다."
+    ),
+    INVALID_ALLOWANCE_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "현재 상태에서는 용돈 요청을 처리할 수 없습니다."
+    ),
 
     // Transfer
     TRANSFER_NOT_FOUND(
