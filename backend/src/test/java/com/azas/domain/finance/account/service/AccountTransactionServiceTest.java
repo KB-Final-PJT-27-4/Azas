@@ -7,7 +7,6 @@ import com.azas.domain.finance.account.dto.AccountTransactionRow;
 import com.azas.domain.finance.account.mapper.FinancialAccountMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
-import com.azas.global.security.AccountNumberProtector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,8 +33,6 @@ class AccountTransactionServiceTest {
 
     private static final long MEMBER_ID = 8L;
     private static final long ACCOUNT_ID = 3L;
-    private static final byte[] COUNTERPARTY_CIPHERTEXT =
-            new byte[]{1, 2, 3};
 
     @Mock
     private FinancialAccountMapper financialAccountMapper;
@@ -43,22 +40,18 @@ class AccountTransactionServiceTest {
     @Mock
     private AccountDetailService accountDetailService;
 
-    @Mock
-    private AccountNumberProtector accountNumberProtector;
-
     private AccountTransactionService service;
 
     @BeforeEach
     void setUp() {
         service = new AccountTransactionService(
                 financialAccountMapper,
-                accountDetailService,
-                accountNumberProtector
+                accountDetailService
         );
     }
 
     @Test
-    void returnsCreditAndDebitTransactionsForAccessibleAccount() {
+    void returnsMinimalTransactionItemsForAccessibleAccount() {
         when(accountDetailService.getAccountDetail(MEMBER_ID, ACCOUNT_ID))
                 .thenReturn(currentAccount());
         when(financialAccountMapper.findAccountTransactions(
@@ -67,8 +60,6 @@ class AccountTransactionServiceTest {
                 transaction(902L, "DEBIT", 11, 0),
                 transaction(901L, "CREDIT", 10, 0)
         ));
-        when(accountNumberProtector.decrypt(COUNTERPARTY_CIPHERTEXT))
-                .thenReturn("123-456-789");
 
         AccountTransactionListResult result = service.getTransactions(
                 MEMBER_ID, ACCOUNT_ID, null, null
@@ -81,18 +72,10 @@ class AccountTransactionServiceTest {
 
         AccountTransactionItemResult debit =
                 result.getTransactions().get(0);
-        assertEquals(ACCOUNT_ID,
-                debit.getWithdrawalAccount().getAccountId());
-        assertEquals(7L, debit.getDepositAccount().getAccountId());
-        assertEquals("상대 계좌",
-                debit.getDepositAccount().getAccountName());
-
-        AccountTransactionItemResult credit =
-                result.getTransactions().get(1);
-        assertEquals(ACCOUNT_ID, credit.getDepositAccount().getAccountId());
-        assertEquals(7L, credit.getWithdrawalAccount().getAccountId());
-        assertEquals("123-456-789",
-                credit.getWithdrawalAccount().getAccountNumber());
+        assertEquals(902L, debit.getAccountTransactionId());
+        assertEquals("상대 계좌", debit.getCounterpartyName());
+        assertEquals("DEBIT", debit.getDirection());
+        assertEquals(new BigDecimal("100000.00"), debit.getAmount());
     }
 
     @Test
@@ -100,12 +83,9 @@ class AccountTransactionServiceTest {
         AccountTransactionRow row = transaction(
                 901L, "CREDIT", 10, 0
         );
-        ReflectionTestUtils.setField(row, "counterpartyAccountId", null);
-        ReflectionTestUtils.setField(row, "counterpartyBankName", null);
-        ReflectionTestUtils.setField(row, "counterpartyAccountName", null);
         ReflectionTestUtils.setField(
                 row,
-                "counterpartyAccountNumberCiphertext",
+                "counterpartyAccountName",
                 null
         );
 
@@ -121,11 +101,29 @@ class AccountTransactionServiceTest {
 
         assertEquals(
                 "외부 상대방",
-                result.getTransactions().get(0)
-                        .getWithdrawalAccount().getAccountName()
+                result.getTransactions().get(0).getCounterpartyName()
         );
-        assertNull(result.getTransactions().get(0)
-                .getWithdrawalAccount().getAccountId());
+    }
+
+    @Test
+    void returnsNullCounterpartyNameWhenItCannotBeResolved() {
+        AccountTransactionRow row = transaction(
+                901L, "CREDIT", 10, 0
+        );
+        ReflectionTestUtils.setField(row, "counterpartyAccountName", null);
+        ReflectionTestUtils.setField(row, "counterpartyName", null);
+
+        when(accountDetailService.getAccountDetail(MEMBER_ID, ACCOUNT_ID))
+                .thenReturn(currentAccount());
+        when(financialAccountMapper.findAccountTransactions(
+                ACCOUNT_ID, null, null, 21
+        )).thenReturn(List.of(row));
+
+        AccountTransactionListResult result = service.getTransactions(
+                MEMBER_ID, ACCOUNT_ID, null, 20
+        );
+
+        assertNull(result.getTransactions().get(0).getCounterpartyName());
     }
 
     @Test
@@ -148,8 +146,6 @@ class AccountTransactionServiceTest {
         when(financialAccountMapper.findAccountTransactions(
                 ACCOUNT_ID, cursorTime, 902L, 2
         )).thenReturn(List.of(extra));
-        when(accountNumberProtector.decrypt(COUNTERPARTY_CIPHERTEXT))
-                .thenReturn("123-456-789");
 
         AccountTransactionListResult firstPage = service.getTransactions(
                 MEMBER_ID, ACCOUNT_ID, null, 1
@@ -211,16 +207,15 @@ class AccountTransactionServiceTest {
     }
 
     @Test
-    void returnsInternalErrorWhenCounterpartyAccountCannotBeDecrypted() {
+    void returnsInternalErrorForMalformedStoredTransaction() {
+        AccountTransactionRow row = transaction(
+                901L, "INVALID", 10, 0
+        );
         when(accountDetailService.getAccountDetail(MEMBER_ID, ACCOUNT_ID))
                 .thenReturn(currentAccount());
         when(financialAccountMapper.findAccountTransactions(
                 ACCOUNT_ID, null, null, 21
-        )).thenReturn(List.of(
-                transaction(901L, "CREDIT", 10, 0)
-        ));
-        when(accountNumberProtector.decrypt(COUNTERPARTY_CIPHERTEXT))
-                .thenThrow(new IllegalArgumentException());
+        )).thenReturn(List.of(row));
 
         assertError(
                 ErrorCode.INTERNAL_SERVER_ERROR,
@@ -288,21 +283,10 @@ class AccountTransactionServiceTest {
                 "counterpartyName",
                 "외부 상대방"
         );
-        ReflectionTestUtils.setField(row, "counterpartyAccountId", 7L);
-        ReflectionTestUtils.setField(
-                row,
-                "counterpartyBankName",
-                "KB국민은행"
-        );
         ReflectionTestUtils.setField(
                 row,
                 "counterpartyAccountName",
                 "상대 계좌"
-        );
-        ReflectionTestUtils.setField(
-                row,
-                "counterpartyAccountNumberCiphertext",
-                COUNTERPARTY_CIPHERTEXT
         );
         return row;
     }

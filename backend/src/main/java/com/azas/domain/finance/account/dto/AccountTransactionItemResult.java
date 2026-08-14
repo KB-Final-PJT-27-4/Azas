@@ -12,10 +12,7 @@ public final class AccountTransactionItemResult {
 
     private final Long accountTransactionId;
     private final LocalDateTime occurredAt;
+    private final String counterpartyName;
     private final String direction;
     private final BigDecimal amount;
-    private final String memo;
-    private final AccountTransactionAccountResult depositAccount;
-    private final AccountTransactionAccountResult withdrawalAccount;
-    private final BigDecimal balanceAfter;
 }
