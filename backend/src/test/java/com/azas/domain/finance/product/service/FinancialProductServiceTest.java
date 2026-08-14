@@ -116,6 +116,53 @@ class FinancialProductServiceTest {
     }
 
     @Test
+    void rejectsParentOnlyProductBookmarkInChildContext() {
+        authorizeChild();
+        FinancialProduct product = product(3L);
+        product.setTargetOwnerType("PARENT");
+        when(financialProductMapper.findActiveProductById(3L))
+                .thenReturn(product);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> financialProductService.updateBookmark(
+                        1L, 1L, 3L, true
+                )
+        );
+
+        assertEquals(
+                ErrorCode.FINANCIAL_PRODUCT_NOT_FOUND,
+                exception.getErrorCode()
+        );
+        verify(financialProductMapper, never()).insertBookmarkIfAbsent(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyLong()
+        );
+    }
+
+    @Test
+    void rejectsParentOnlyProductDetailInChildContext() {
+        authorizeChild();
+        FinancialProduct product = product(3L);
+        product.setTargetOwnerType("PARENT");
+        when(financialProductMapper.findActiveProductById(3L))
+                .thenReturn(product);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> financialProductService.getProductDetail(
+                        1L, 3L, 1L, null
+                )
+        );
+
+        assertEquals(
+                ErrorCode.FINANCIAL_PRODUCT_NOT_FOUND,
+                exception.getErrorCode()
+        );
+    }
+
+    @Test
     void rejectsAccountContextWithoutChildContext() {
         when(financialProductMapper.findActiveProductById(1L))
                 .thenReturn(product(1L));
@@ -152,6 +199,7 @@ class FinancialProductServiceTest {
         FinancialProduct product = new FinancialProduct();
         product.setFinancialProductId(productId);
         product.setProductType("SAVING");
+        product.setTargetOwnerType("CHILD");
         product.setName("Product " + productId);
         product.setBaseInterestRate(new BigDecimal("2.1"));
         product.setMaxInterestRate(new BigDecimal("3.4"));
