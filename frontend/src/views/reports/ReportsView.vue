@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { CalendarDays, CheckCircle2, ChevronRight, Landmark, PiggyBank, Sparkles, TrendingUp } from 'lucide-vue-next'
+import { CalendarDays, CheckCircle2, ChevronRight, Landmark, TrendingUp } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
+import ChildcareReportOverview from './ChildcareReportOverview.vue'
 
 type ReportTab = 'assets' | 'allowance'
 
@@ -64,7 +66,8 @@ const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
 const syncGoalCarouselHeight = () => {
   nextTick(() => {
-    const activeCard = goalCarousel.value?.children[activeGoalIndex.value] as HTMLElement | undefined
+    const activeCard = goalCarousel.value?.children[activeGoalIndex.value] as
+      HTMLElement | undefined
     if (activeCard) goalCarouselHeight.value = activeCard.offsetHeight
   })
 }
@@ -141,7 +144,9 @@ onMounted(syncGoalCarouselHeight)
               <strong class="text-[var(--color-selected-text)]">350,000원</strong> 늘었어요
             </p>
           </div>
-          <span class="grid size-11 place-items-center rounded-2xl bg-white/80 text-[var(--color-selected-text)]">
+          <span
+            class="grid size-11 place-items-center rounded-2xl bg-white/80 text-[var(--color-selected-text)]"
+          >
             <ChevronRight :size="23" :stroke-width="2.4" aria-hidden="true" />
           </span>
         </div>
@@ -275,9 +280,37 @@ onMounted(syncGoalCarouselHeight)
           <h2 class="text-[21px] font-extrabold tracking-[-0.03em]">이번 달 인사이트</h2>
         </div>
         <div class="mt-4 grid gap-3">
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4"><TrendingUp class="shrink-0 text-[#ef6c8f]" :size="27" :stroke-width="2.2" /><div><strong class="text-sm">지난달보다 90,000원을 더 저축했어요.</strong><p class="mt-1 text-xs text-[var(--color-text-secondary)]">꾸준한 저축 흐름이 아주 좋아요.</p></div></article>
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4"><CheckCircle2 class="shrink-0 text-[var(--color-selected-text)]" :size="27" :stroke-width="2.2" /><div><strong class="text-sm">대학자금 목표의 절반에 가까워졌어요.</strong><p class="mt-1 text-xs text-[var(--color-text-secondary)]">현재 속도라면 계획대로 달성할 수 있어요.</p></div></article>
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4"><CalendarDays class="shrink-0 text-[#65bd73]" :size="27" :stroke-width="2.2" /><div><strong class="text-sm">목표 달성 시기를 4개월 앞당길 수 있어요.</strong><p class="mt-1 text-xs text-[var(--color-text-secondary)]">지금처럼 저축을 이어가 보세요.</p></div></article>
+          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
+            <TrendingUp class="shrink-0 text-[#ef6c8f]" :size="27" :stroke-width="2.2" />
+            <div>
+              <strong class="text-sm">지난달보다 90,000원을 더 저축했어요.</strong>
+              <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+                꾸준한 저축 흐름이 아주 좋아요.
+              </p>
+            </div>
+          </article>
+          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
+            <CheckCircle2
+              class="shrink-0 text-[var(--color-selected-text)]"
+              :size="27"
+              :stroke-width="2.2"
+            />
+            <div>
+              <strong class="text-sm">대학자금 목표의 절반에 가까워졌어요.</strong>
+              <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+                현재 속도라면 계획대로 달성할 수 있어요.
+              </p>
+            </div>
+          </article>
+          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
+            <CalendarDays class="shrink-0 text-[#65bd73]" :size="27" :stroke-width="2.2" />
+            <div>
+              <strong class="text-sm">목표 달성 시기를 4개월 앞당길 수 있어요.</strong>
+              <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+                지금처럼 저축을 이어가 보세요.
+              </p>
+            </div>
+          </article>
         </div>
       </section>
     </div>

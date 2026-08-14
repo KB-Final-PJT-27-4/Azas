@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 import {
   childcareCategories,
   childcareReportSummary,
@@ -11,7 +13,8 @@ const maxAmount = Math.max(
 )
 const difference =
   childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount
-const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 100, 5)}%`
+const selectedCategoryId = ref(childcareCategories[0]?.id ?? '')
+const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 74, 5)}%`
 </script>
 
 <template>
@@ -20,7 +23,7 @@ const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 100, 5)
   >
     <section>
       <span
-        class="inline-flex rounded-full bg-[var(--color-brand-secondary)] px-3 py-1.5 text-[10px] font-bold text-[var(--color-accent-yellow-text)]"
+        class="inline-flex rounded-full bg-[var(--color-accent-yellow-surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--color-accent-yellow-text)]"
         >이번 달 비교</span
       >
       <h1 class="mt-3 mb-0 text-[19px] font-extrabold">동일 연령 평균과 함께 살펴보세요</h1>
@@ -31,7 +34,7 @@ const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 100, 5)
 
     <section class="mt-5 grid grid-cols-2 gap-3" aria-label="총 지출 비교">
       <div
-        class="rounded-[18px] border border-[var(--color-accent-yellow-border)] bg-[var(--color-brand-secondary)] p-4"
+        class="rounded-[18px] border border-[var(--color-accent-yellow-border)] bg-[var(--color-accent-yellow-surface)] p-4"
       >
         <span class="text-[11px] font-bold text-[var(--color-text-secondary)]"
           >우리 집 이번 달</span
@@ -67,7 +70,7 @@ const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 100, 5)
         항목별 지출 흐름
       </h2>
       <p class="mt-1.5 mb-0 text-[11px] leading-5 text-[var(--color-text-secondary)]">
-        우리 집 지출은 노란색, 평균은 회색으로 표시했어요.
+        우리 집 지출은 노란색, 평균은 회색으로 표시했어요. 막대를 눌러 금액을 확인해보세요.
       </p>
 
       <div
@@ -83,21 +86,48 @@ const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 100, 5)
 
       <div
         class="mt-5 grid h-[240px] grid-cols-6 gap-2 border-b border-[#dfe4e7] bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_59px,#edf0f2_60px)] px-1"
-        role="img"
+        role="group"
         aria-label="항목별 우리 집 지출과 동일 연령 평균 막대그래프"
       >
-        <div
+        <button
           v-for="category in childcareCategories"
           :key="category.id"
-          class="flex min-w-0 flex-col justify-end"
+          class="relative flex min-w-0 flex-col justify-end border-0 bg-transparent p-0 text-inherit outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-[var(--color-accent-yellow-border)]"
+          type="button"
+          :aria-label="`${category.label}, 우리 집 ${formatReportWon(category.amount)}, 동일 연령 평균 ${formatReportWon(category.averageAmount)}`"
+          :aria-pressed="selectedCategoryId === category.id"
+          @click="selectedCategoryId = category.id"
         >
-          <div class="flex h-[205px] items-end justify-center gap-1">
+          <div class="relative flex h-[205px] items-end justify-center gap-1">
+            <div
+              v-if="selectedCategoryId === category.id"
+              class="absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap"
+              :style="{
+                bottom: `calc(${barHeight(Math.max(category.amount, category.averageAmount))} + 8px)`,
+              }"
+            >
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-accent-yellow-border)] bg-white px-2.5 py-1 text-[8px] font-extrabold shadow-[0_3px_8px_rgba(126,99,0,0.12)]"
+              >
+                <b class="text-[var(--color-accent-yellow-text)]">{{
+                  formatReportManwon(category.amount)
+                }}</b>
+                <i class="not-italic text-[#c8ced3]" aria-hidden="true">|</i>
+                <b class="text-[#596873]">{{ formatReportManwon(category.averageAmount) }}</b>
+              </span>
+            </div>
             <span
-              class="w-[11px] rounded-t-[5px] bg-[var(--color-accent-yellow)]"
+              class="w-[11px] rounded-t-[5px] transition-[height,background-color] duration-200"
+              :class="
+                selectedCategoryId === category.id
+                  ? 'bg-[var(--color-accent-yellow)]'
+                  : 'bg-[#ffe990]'
+              "
               :style="{ height: barHeight(category.amount) }"
             ></span>
             <span
-              class="w-[11px] rounded-t-[5px] bg-[#d8dde1]"
+              class="w-[11px] rounded-t-[5px] transition-[height,background-color] duration-200"
+              :class="selectedCategoryId === category.id ? 'bg-[#c8ced3]' : 'bg-[#d8dde1]'"
               :style="{ height: barHeight(category.averageAmount) }"
             ></span>
           </div>
@@ -105,7 +135,7 @@ const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 100, 5)
             class="mt-2 h-7 break-keep text-center text-[9px] leading-3 font-semibold text-[var(--color-text-secondary)]"
             >{{ category.label.replace('/', '/\u200b') }}</span
           >
-        </div>
+        </button>
       </div>
     </section>
   </main>

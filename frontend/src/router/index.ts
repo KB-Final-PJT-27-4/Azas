@@ -407,7 +407,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/reports/ChildcareMonthlyTrendView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '월별 지출 추이',
+      headerTitle: '양육비 상세 리포트',
       showHeaderBack: true,
       showHeaderNotification: false,
     },

@@ -14,9 +14,7 @@ import {
       class="overflow-hidden rounded-[22px] border border-[#e3e7ea] bg-white shadow-[0_6px_20px_rgba(71,77,82,0.04)]"
       aria-labelledby="age-average-title"
     >
-      <div
-        class="bg-[linear-gradient(135deg,var(--color-brand-secondary),var(--color-accent-yellow-surface))] px-5 py-5"
-      >
+      <div class="bg-[var(--color-accent-yellow-surface)] px-5 py-5">
         <span
           class="inline-flex rounded-full bg-white/75 px-2.5 py-1 text-[10px] font-bold text-[var(--color-accent-yellow-text)]"
           >공공 통계 기반</span
