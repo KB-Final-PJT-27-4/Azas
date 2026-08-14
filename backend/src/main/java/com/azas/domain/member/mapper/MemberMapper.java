@@ -4,6 +4,8 @@ import com.azas.domain.member.entity.Member;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
+
 @Mapper
 public interface MemberMapper {
 
@@ -16,7 +18,8 @@ public interface MemberMapper {
 
     int updateProfile(Member member);
 
-    int withdrawIfActive(
-            @Param("memberId") long memberId
+    int anonymizeAndWithdrawIfActive(
+            @Param("memberId") long memberId,
+            @Param("withdrawnAt") LocalDateTime withdrawnAt
     );
 }

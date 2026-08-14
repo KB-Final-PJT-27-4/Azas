@@ -17,9 +17,9 @@ TRUNCATE TABLE auto_transfer_schedule;
 TRUNCATE TABLE financial_transfer;
 TRUNCATE TABLE account_transaction;
 TRUNCATE TABLE account_balance_snapshot;
-TRUNCATE TABLE financial_sync_job;
+TRUNCATE TABLE financial_goal_checkpoint;
+TRUNCATE TABLE financial_goal;
 TRUNCATE TABLE financial_account;
-TRUNCATE TABLE financial_connection;
 TRUNCATE TABLE financial_product_bookmark;
 TRUNCATE TABLE financial_product;
 TRUNCATE TABLE child_checklist_item;
@@ -182,6 +182,33 @@ INSERT INTO financial_product (
     JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', '상품 가입 전 약관과 상품설명서를 확인하세요.')),
     1,
     '2026-07-01'
+  ),
+  (
+    2,
+    'KB국민은행',
+    'kb-mock-demand-deposit',
+    'ACCOUNT',
+    '입출금통장',
+    'KB Mock 입출금통장',
+    'Mock 금융 온보딩과 용돈 관리를 위한 입출금계좌입니다.',
+    'https://www.kbstar.com/',
+    'wallet',
+    0.1000,
+    0.1000,
+    0,
+    NULL,
+    0,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    JSON_ARRAY(JSON_OBJECT('label', '가입 대상', 'content', 'Azas Mock 금융 사용자')),
+    JSON_ARRAY(JSON_OBJECT('label', '초기 금액', 'content', '0원 이상')),
+    JSON_ARRAY(),
+    JSON_ARRAY(),
+    JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', '실제 금융기관 계좌가 아닌 Mock 계좌입니다.')),
+    1,
+    '2026-08-13'
   );
 
 INSERT INTO financial_product_bookmark (
@@ -192,26 +219,12 @@ INSERT INTO financial_product_bookmark (
 ) VALUES
   (1, 1, 1, 1);
 
-INSERT INTO financial_connection (
-  financial_connection_id,
-  connected_by_member_id,
-  child_id,
-  owner_type,
-  provider,
-  external_connection_ciphertext,
-  external_connection_hash,
-  consent_status,
-  consented_at,
-  consent_expires_at,
-  last_synced_at
-) VALUES
-  (1, 1, NULL, 'PARENT', 'CODEF', UNHEX(SHA2('parent-connected-id', 256)), SHA2('parent-connected-id', 256), 'ACTIVE', NOW(6), DATE_ADD(NOW(6), INTERVAL 1 YEAR), NOW(6)),
-  (2, 1, 1, 'CHILD', 'CODEF', UNHEX(SHA2('child-connected-id', 256)), SHA2('child-connected-id', 256), 'ACTIVE', NOW(6), DATE_ADD(NOW(6), INTERVAL 1 YEAR), NOW(6));
-
 INSERT INTO financial_account (
   financial_account_id,
-  financial_connection_id,
+  owner_type,
+  owner_member_id,
   child_id,
+  financial_product_id,
   financial_goal_template_id,
   organization_code,
   bank_name,
@@ -237,7 +250,9 @@ INSERT INTO financial_account (
 ) VALUES
   (
     1,
+    'PARENT',
     1,
+    NULL,
     NULL,
     NULL,
     '004',
@@ -264,8 +279,10 @@ INSERT INTO financial_account (
   ),
   (
     2,
+    'CHILD',
     2,
     1,
+    NULL,
     NULL,
     '004',
     'KB국민은행',
@@ -291,7 +308,9 @@ INSERT INTO financial_account (
   ),
   (
     3,
+    'CHILD',
     2,
+    1,
     1,
     1,
     '004',
@@ -316,6 +335,31 @@ INSERT INTO financial_account (
     'ACTIVE',
     NOW(6)
   );
+
+INSERT INTO financial_goal (
+  financial_goal_id,
+  child_id,
+  financial_account_id,
+  financial_goal_template_id,
+  title,
+  target_amount,
+  target_date,
+  monthly_saving_amount,
+  status
+) VALUES
+  (1, 1, 3, 1, '대학자금 마련', 30000000, '2038-01-12', 100000, 'ACTIVE');
+
+INSERT INTO financial_goal_checkpoint (
+  financial_goal_checkpoint_id,
+  financial_goal_id,
+  percentage,
+  target_amount
+) VALUES
+  (1, 1, 10, 3000000),
+  (2, 1, 25, 7500000),
+  (3, 1, 50, 15000000),
+  (4, 1, 75, 22500000),
+  (5, 1, 100, 30000000);
 
 INSERT INTO account_balance_snapshot (
   account_balance_snapshot_id,

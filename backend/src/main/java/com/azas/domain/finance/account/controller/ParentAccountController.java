@@ -27,48 +27,44 @@ public class ParentAccountController {
 
     @ApiOperation(
             value = "ACCOUNT-13 부모 계좌 목록 조회",
-            notes = "로그인한 부모가 연결한 본인 명의의 활성 계좌 목록을 조회합니다. "
-                    + "잔액은 마지막 금융정보 동기화 기준이며 실시간 금융기관 조회를 수행하지 않습니다. "
-                    + "계좌번호는 DB에 암호화하여 저장하고 본인 권한 검증 후 전체 값을 반환합니다."
+            notes = "로그인한 부모 본인 명의의 활성 Mock 계좌를 조회합니다. "
+                    + "부모 계좌 카드에 표시할 잔액 합계와 연결 계좌 수를 함께 "
+                    + "반환합니다. 계좌별로 상세 이동과 화면 표시에 필요한 계좌 ID, "
+                    + "계좌명, 전체 계좌번호, 상품 유형, 현재 잔액만 반환합니다. "
+                    + "연결 계좌가 없으면 잔액 합계와 계좌 수가 0인 빈 목록을 반환합니다."
     )
     @ApiResponses({
             @ApiResponse(
                     code = 200,
-                    message = "부모 계좌 목록 조회 성공. 연결 계좌가 없으면 빈 목록 반환",
+                    message = "부모 계좌 목록 조회 성공",
                     response = ParentAccountListResponse.class
             ),
             @ApiResponse(
                     code = 401,
-                    message = "Access Token 누락·만료·유효하지 않음 또는 탈퇴 회원",
+                    message = "Access Token 누락·만료·위조 또는 탈퇴 회원",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
                     code = 403,
-                    message = "부모 회원 권한이 없음",
+                    message = "부모 회원 권한 없음",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
+                    code = 500,
+                    message = "계좌번호 복호화 실패 또는 서버 오류",
                     response = ApiErrorResponse.class
             )
     })
     @GetMapping
-    public ResponseEntity<ParentAccountListResponse>
-    getMyAccounts(
-            @RequestHeader(
-                    value = "Authorization",
-                    required = false
-            )
+    public ResponseEntity<ParentAccountListResponse> getMyAccounts(
+            @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader
     ) {
-        long memberId =
-                accessTokenMemberResolver.resolveMemberId(
-                        authorizationHeader
-                );
-
-        ParentAccountListResult result =
-                parentAccountListService.getMyAccounts(
-                        memberId
-                );
-
-        return ResponseEntity.ok(
-                ParentAccountListResponse.from(result)
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
         );
+        ParentAccountListResult result = parentAccountListService
+                .getMyAccounts(memberId);
+        return ResponseEntity.ok(ParentAccountListResponse.from(result));
     }
 }
