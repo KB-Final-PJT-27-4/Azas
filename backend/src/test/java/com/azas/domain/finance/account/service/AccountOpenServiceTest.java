@@ -51,7 +51,34 @@ class AccountOpenServiceTest {
         AccountOpenResult result = service.open(1L, request);
         assertTrue(result.isPrimary());
         assertEquals("DEMAND_DEPOSIT", result.getAccountProductType());
+        assertEquals("KB국민 입출금통장", result.getAccountName());
         assertNull(result.getFinancialGoal());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(AccountOpenRecord.class);
+        verify(accountMapper).insertOpenedAccount(captor.capture());
+        assertEquals("KB국민 입출금통장", captor.getValue().getAccountName());
+    }
+
+    @Test void opensChildDemandWithYoungYouthAccountName() {
+        AccountOpenRequest request = request("CHILD", 6L, 2L, null);
+        when(accountMapper.countActiveChildById(6L)).thenReturn(1);
+        when(accountMapper.countActiveParentAccess(1L, 6L)).thenReturn(1);
+        when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
+        when(accountMapper.findActiveChildMemberIdByChildId(6L)).thenReturn(9L);
+        when(productMapper.findActiveProductById(2L)).thenReturn(product(2L, "ACCOUNT", null));
+        prepareNumber();
+        doAnswer(invocation -> {
+            AccountOpenRecord record = invocation.getArgument(0);
+            record.setAccountId(11L);
+            return 1;
+        }).when(accountMapper).insertOpenedAccount(any());
+
+        AccountOpenResult result = service.open(1L, request);
+
+        assertEquals("KB Young Youth 입출금통장", result.getAccountName());
+        var captor = org.mockito.ArgumentCaptor.forClass(AccountOpenRecord.class);
+        verify(accountMapper).insertOpenedAccount(captor.capture());
+        assertEquals("KB Young Youth 입출금통장", captor.getValue().getAccountName());
     }
 
     @Test void opensChildSavingsAndGoalInOneTransaction() {
@@ -79,8 +106,72 @@ class AccountOpenServiceTest {
 
         AccountOpenResult result = service.open(1L, request);
         assertEquals(31L, result.getFinancialGoal().getFinancialGoalId());
+        assertEquals("KB Mock 상품", result.getAccountName());
         verify(accountMapper).insertFinancialGoalCheckpoints(
                 31L, new BigDecimal("3000000"));
+    }
+
+    @Test void opensParentSavingsForParentTargetProduct() {
+        AccountOpenRequest request = request("PARENT", null, 3L, null);
+        when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
+        FinancialProduct product = product(3L, "SAVING", 12);
+        product.setTargetOwnerType("PARENT");
+        product.setName("KB스타적금Ⅲ");
+        when(productMapper.findActiveProductById(3L)).thenReturn(product);
+        prepareNumber();
+        doAnswer(invocation -> {
+            AccountOpenRecord record = invocation.getArgument(0);
+            record.setAccountId(30L);
+            return 1;
+        }).when(accountMapper).insertOpenedAccount(any());
+
+        AccountOpenResult result = service.open(1L, request);
+
+        assertEquals("PARENT", result.getOwnerType());
+        assertEquals("SAVINGS", result.getAccountProductType());
+        assertEquals("KB스타적금Ⅲ", result.getAccountName());
+        assertNull(result.getFinancialGoal());
+    }
+
+    @Test void rejectsParentOpeningChildTargetProduct() {
+        AccountOpenRequest request = request("PARENT", null, 1L, null);
+        FinancialProduct product = product(1L, "SAVING", 12);
+        product.setTargetOwnerType("CHILD");
+        when(productMapper.findActiveProductById(1L)).thenReturn(product);
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> service.open(1L, request));
+
+        assertEquals(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST, exception.getErrorCode());
+        verify(accountMapper, never()).insertOpenedAccount(any());
+    }
+
+    @Test void rejectsChildOpeningParentTargetProduct() {
+        AccountOpenRequest request = request("CHILD", 6L, 3L, null);
+        when(accountMapper.countActiveChildById(6L)).thenReturn(1);
+        when(accountMapper.countActiveParentAccess(1L, 6L)).thenReturn(1);
+        FinancialProduct product = product(3L, "SAVING", 12);
+        product.setTargetOwnerType("PARENT");
+        when(productMapper.findActiveProductById(3L)).thenReturn(product);
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> service.open(1L, request));
+
+        assertEquals(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST, exception.getErrorCode());
+        verify(accountMapper, never()).insertOpenedAccount(any());
+    }
+
+    @Test void rejectsUnknownProductTargetOwnerType() {
+        AccountOpenRequest request = request("PARENT", null, 2L, null);
+        FinancialProduct product = product(2L, "ACCOUNT", null);
+        product.setTargetOwnerType("UNKNOWN");
+        when(productMapper.findActiveProductById(2L)).thenReturn(product);
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> service.open(1L, request));
+
+        assertEquals(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST, exception.getErrorCode());
+        verify(accountMapper, never()).insertOpenedAccount(any());
     }
 
     @Test void rejectsChildSavingsWithoutGoal() {
@@ -112,6 +203,7 @@ class AccountOpenServiceTest {
         FinancialProduct product = new FinancialProduct();
         product.setFinancialProductId(id); product.setProductType(type);
         product.setBankName("KB국민은행"); product.setName("KB Mock 상품");
+        product.setTargetOwnerType("ACCOUNT".equals(type) ? "BOTH" : "CHILD");
         product.setContractPeriodMonths(months); return product;
     }
     private AccountOpenRequest request(String type, Long childId, Long productId,

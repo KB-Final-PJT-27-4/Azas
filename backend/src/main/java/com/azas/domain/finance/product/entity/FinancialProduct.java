@@ -16,6 +16,7 @@ public class FinancialProduct {
     private String bankName;
     private String externalProductId;
     private String productType;
+    private String targetOwnerType;
     private String productSubtype;
     private String name;
     private String summary;
