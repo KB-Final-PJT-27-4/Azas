@@ -6,11 +6,12 @@ export interface ChildTransaction {
   time: string
   amount: number
   type: 'income' | 'expense'
+  icon: string
 }
 
 interface TransferRecordPayload {
   amount: number
-  bankName: string
+  receiverName?: string
 }
 
 export const childAccountSummary = reactive({
@@ -18,7 +19,7 @@ export const childAccountSummary = reactive({
   accountName: '깨비 돈',
   balance: 96_000,
   monthlySpent: 14_000,
-  dailyLimit: 20_000,
+  monthlyLimit: 20_000,
   usageProgress: 70,
 })
 
@@ -29,6 +30,7 @@ export const childTransactions = reactive<ChildTransaction[]>([
     time: '오늘 오후 2:30',
     amount: 30_000,
     type: 'income',
+    icon: '💰',
   },
   {
     id: 'stationery-1',
@@ -36,55 +38,55 @@ export const childTransactions = reactive<ChildTransaction[]>([
     time: '어제 오후 4:12',
     amount: -4_000,
     type: 'expense',
+    icon: '🛍️',
   },
   {
-    id: 'stationery-2',
-    title: '문구점',
-    time: '어제 오후 4:12',
-    amount: -4_000,
+    id: 'icecream',
+    title: '아이스크림 가게',
+    time: '어제 오후 3:15',
+    amount: -2_500,
     type: 'expense',
+    icon: '🍦',
   },
   {
-    id: 'snack-store',
-    title: '분식집',
-    time: '그제 오후 3:20',
-    amount: -3_500,
+    id: 'convenience',
+    title: '편의점',
+    time: '어제 오후 1:20',
+    amount: -2_000,
     type: 'expense',
-  },
-  {
-    id: 'bookstore',
-    title: '서점',
-    time: '지난주 금요일',
-    amount: -8_500,
-    type: 'expense',
+    icon: '🧃',
   },
 ])
 
 export const transferDefaults = {
-  bankName: '국민은행',
   get balance() {
     return childAccountSummary.balance
   },
-  quickAmounts: [5_000, 10_000, 20_000],
+  contacts: [
+    { id: 'mom', name: '엄마', bankName: '국민은행', accountNumber: '123-456-789' },
+    { id: 'friend', name: '민준', bankName: '국민은행', accountNumber: '987-654-321' },
+  ],
+  quickAmounts: [1_000, 5_000, 10_000],
 }
 
 export const allowanceOptions = [5_000, 10_000, 20_000]
 
-export const recordChildTransfer = ({ amount, bankName }: TransferRecordPayload) => {
+export const recordChildTransfer = ({ amount, receiverName = '국민은행' }: TransferRecordPayload) => {
   const transferAmount = Math.abs(amount)
 
   childAccountSummary.balance -= transferAmount
   childAccountSummary.monthlySpent += transferAmount
   childAccountSummary.usageProgress = Math.min(
     100,
-    Math.round((childAccountSummary.monthlySpent / childAccountSummary.dailyLimit) * 100),
+    Math.round((childAccountSummary.monthlySpent / childAccountSummary.monthlyLimit) * 100),
   )
 
   childTransactions.unshift({
     id: `transfer-${Date.now()}`,
-    title: `${bankName} 이체`,
+    title: `${receiverName} 이체`,
     time: '방금 전',
     amount: -transferAmount,
     type: 'expense',
+    icon: '🎒',
   })
 }

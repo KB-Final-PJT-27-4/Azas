@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import confetti from 'canvas-confetti'
 import { computed, nextTick, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -188,7 +188,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
         <button
           v-for="stage in lifecycleStages"
           :key="stage.id"
-          class="shrink-0 rounded-[16px] border-0 px-3 py-2 text-[12px] font-extrabold whitespace-nowrap"
+          class="shrink-0 rounded-[16px] border-0 px-3 py-2 text-[12px] font-bold whitespace-nowrap"
           :class="
             stage.id === currentStage.id
               ? 'bg-white text-[var(--color-selected-text)] shadow-[0_8px_18px_rgb(85_192_244_/_16%)]'
@@ -208,23 +208,23 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
       >
         <div class="grid grid-cols-[1fr_auto] items-center gap-4">
           <div class="min-w-0">
-            <span class="block text-[12px] font-extrabold text-[var(--color-text-secondary)]">
+            <span class="block text-[12px] font-bold text-[var(--color-text-secondary)]">
               현재 단계
             </span>
-            <strong class="mt-1 block text-[18px] leading-[1.35] font-black text-[#55C0F4]">
+            <strong class="mt-1 block text-[18px] leading-[1.35] font-bold text-[#55C0F4]">
               {{ currentStage.ageRange }} · {{ currentStage.title }}
             </strong>
             <span class="mt-2 block text-[13px] leading-[1.45] text-[var(--color-text-secondary)]">
               {{ currentStage.description }}
             </span>
           </div>
-          <strong class="self-end text-[22px] font-black text-[#2BABE8]">
+          <strong class="self-end text-[22px] font-bold text-[#2BABE8]">
             {{ progressPercent }}%
           </strong>
         </div>
 
         <div class="mt-4 grid grid-cols-[auto_1fr] items-center gap-4">
-          <strong class="text-[17px] font-black text-[var(--color-text-primary)]">
+          <strong class="text-[17px] font-bold text-[var(--color-text-primary)]">
             {{ completedCount }} / {{ totalCount }} 완료
           </strong>
           <div class="h-2 overflow-hidden rounded-full bg-[#e9eef3]">
@@ -240,7 +240,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
     <section class="px-5 pb-7">
       <div class="flex items-end justify-between gap-4">
         <div>
-          <h2 class="m-0 text-[24px] font-black text-[var(--color-text-primary)]">
+          <h2 class="m-0 text-[24px] font-bold text-[var(--color-text-primary)]">
             체크리스트
           </h2>
           <p class="mt-1 mb-0 text-[13px] text-[var(--color-text-secondary)]">
@@ -281,13 +281,13 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
             </button>
             <span class="min-w-0">
               <span
-                class="mb-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-extrabold"
+                class="mb-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold"
                 :class="getCategoryTone(item.category)"
               >
                 {{ categoryLabelMap.get(item.category) }}
               </span>
               <strong
-                class="block text-[14px] leading-[1.35] font-black text-[var(--color-text-primary)]"
+                class="block text-[14px] leading-[1.35] font-bold text-[var(--color-text-primary)]"
               >
                 {{ item.title }}
               </strong>
@@ -310,7 +310,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
       </ul>
 
       <button
-        class="mt-5 h-12 w-full rounded-[16px] border border-[#55C0F4] bg-[#55C0F4] text-[15px] font-extrabold text-white"
+        class="mt-5 h-12 w-full rounded-[16px] border border-[#55C0F4] bg-[#55C0F4] text-[15px] font-bold text-white"
         type="button"
         @click="openCompleteSheet"
       >
@@ -343,14 +343,14 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
             </button>
             <div class="mt-6">
               <span
-                class="inline-flex rounded-full px-3 py-1 text-[12px] font-extrabold"
+                class="inline-flex rounded-full px-3 py-1 text-[12px] font-bold"
                 :class="getCategoryTone(selectedInfoItem.category)"
               >
                 {{ categoryLabelMap.get(selectedInfoItem.category) }}
               </span>
               <h2
                 :id="`${selectedInfoItem.id}-title`"
-                class="mt-3 mb-0 text-[25px] leading-[1.22] font-black text-[var(--color-text-primary)]"
+                class="mt-3 mb-0 text-[25px] leading-[1.22] font-bold text-[var(--color-text-primary)]"
               >
                 {{ selectedInfoItem.infoTitle }}
               </h2>
@@ -360,7 +360,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
             </div>
 
             <div class="mt-6">
-              <strong class="text-[16px] font-black text-[var(--color-text-primary)]">
+              <strong class="text-[16px] font-bold text-[var(--color-text-primary)]">
                 지금 확인해볼 지원
               </strong>
               <ul class="mt-3 m-0 list-none space-y-3 p-0">
@@ -376,7 +376,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                       <FileText :size="20" />
                     </span>
                     <span class="min-w-0">
-                      <strong class="block text-[15px] font-black text-[var(--color-text-primary)]">
+                      <strong class="block text-[15px] font-bold text-[var(--color-text-primary)]">
                         {{ info.title }}
                       </strong>
                       <span
@@ -384,7 +384,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                       >
                         {{ info.description }}
                       </span>
-                      <span class="mt-1 block text-[12px] font-extrabold text-[var(--color-selected-text)]">
+                      <span class="mt-1 block text-[12px] font-bold text-[var(--color-selected-text)]">
                         {{ info.actionLabel }}
                       </span>
                     </span>
@@ -403,14 +403,14 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
 
             <div class="mt-5 grid grid-cols-[0.9fr_1.4fr] gap-3">
               <button
-                class="h-[52px] rounded-[14px] border-0 bg-[#f1f5f8] text-[15px] font-extrabold text-[var(--color-text-secondary)]"
+                class="h-[52px] rounded-[14px] border-0 bg-[#f1f5f8] text-[15px] font-bold text-[var(--color-text-secondary)]"
                 type="button"
                 @click="closeInfoSheet"
               >
                 닫기
               </button>
               <button
-                class="relative h-[52px] rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-extrabold text-transparent"
+                class="relative h-[52px] rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-bold text-transparent"
                 type="button"
                 :aria-label="infoFullViewLabel"
                 @click="openInfoFullView"
@@ -456,11 +456,11 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
             </div>
             <h2
               id="stage-complete-title"
-              class="mt-8 mb-0 text-[28px] font-black text-[var(--color-text-primary)]"
+              class="mt-8 mb-0 text-[28px] font-bold text-[var(--color-text-primary)]"
             >
               축하해요!
             </h2>
-            <p class="mt-4 mb-0 text-[19px] leading-[1.45] font-black text-[var(--color-text-primary)]">
+            <p class="mt-4 mb-0 text-[19px] leading-[1.45] font-bold text-[var(--color-text-primary)]">
               {{ currentStage.ageRange }} 단계 체크리스트를<br />
               모두 완료했어요
             </p>
@@ -478,7 +478,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                   다음 단계 미리보기
                 </span>
                 <strong
-                  class="mt-1 block text-[19px] leading-[1.35] font-black text-[#55C0F4]"
+                  class="mt-1 block text-[19px] leading-[1.35] font-bold text-[#55C0F4]"
                 >
                   {{ nextStage.ageRange }} · {{ nextStage.title }}
                 </strong>
@@ -491,14 +491,14 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
 
             <div class="mt-6 grid grid-cols-1 gap-3">
               <button
-                class="h-[52px] rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-extrabold text-white"
+                class="h-[52px] rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-bold text-white"
                 type="button"
                 @click="closeCompleteSheet"
               >
                 다음 단계 미리보기
               </button>
               <button
-                class="h-12 rounded-[14px] border border-[var(--color-border)] bg-white text-[15px] font-extrabold text-[var(--color-text-secondary)]"
+                class="h-12 rounded-[14px] border border-[var(--color-border)] bg-white text-[15px] font-bold text-[var(--color-text-secondary)]"
                 type="button"
                 @click="router.push('/home')"
               >
@@ -533,3 +533,4 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
   transform: translateY(100%);
 }
 </style>
+
