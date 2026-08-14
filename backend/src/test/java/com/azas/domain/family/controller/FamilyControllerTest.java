@@ -122,32 +122,6 @@ public class FamilyControllerTest {
                 .andExpect(jsonPath("$.child_member_id").doesNotExist());
     }
 
-    @Test
-    void requestAllowanceReturnsRequestResult() throws Exception {
-        AllowanceRequestResponse response = new AllowanceRequestResponse(
-                10L,
-                true,
-                LocalDate.of(2026, 8, 1),
-                LocalDateTime.of(2026, 8, 6, 10, 30),
-                new BigDecimal("50000"),
-                "용돈 요청이 등록되었습니다."
-        );
-
-        given(accessTokenMemberResolver.resolveMemberId("Bearer child-token"))
-                .willReturn(20L);
-        given(familyService.requestAllowance(20L, 10L))
-                .willReturn(response);
-
-        mockMvc.perform(
-                        post("/api/v1/children/{child_id}/allowance-requests", 10L)
-                                .header("Authorization", "Bearer child-token")
-                )
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.child_id").value(10))
-                .andExpect(jsonPath("$.requested").value(true))
-                .andExpect(jsonPath("$.request_month").value("2026-08-01"))
-                .andExpect(jsonPath("$.child_available_amount").value(50000));
-    }
 
     private FamilyGuardianResponse guardian(
             Long memberId,

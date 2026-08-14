@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC
+        "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.allowance.mapper.AllowanceRequestMapper">
+
+    <select id="findActiveChildIdByMemberId"
+            resultType="long">
+        SELECT c.child_id
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+        WHERE c.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND m.member_type = 'CHILD'
+    </select>
+
+    <insert id="insertAllowanceRequest"
+            parameterType=
+              "com.azas.domain.allowance.dto.AllowanceRequestInsertCommand"
+            useGeneratedKeys="true"
+            keyProperty="allowanceRequestId"
+            keyColumn="allowance_request_id">
+        INSERT INTO allowance_request (
+            child_id,
+            requested_amount,
+            message,
+            status,
+            requested_at,
+            updated_at
+        ) VALUES (
+            #{childId},
+            #{requestedAmount},
+            #{message},
+            'PENDING',
+            #{requestedAt},
+            #{requestedAt}
+        )
+    </insert>
+
+</mapper>
