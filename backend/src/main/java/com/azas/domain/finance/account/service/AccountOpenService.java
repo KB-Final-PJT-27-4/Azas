@@ -64,6 +64,7 @@ public class AccountOpenService {
         FinancialAccountOwnerType ownerType = parseOwner(request);
         validateScope(memberId, ownerType, request.getChildId());
         FinancialProduct product = findProduct(request.getFinancialProductId());
+        validateTargetOwner(ownerType, product.getTargetOwnerType());
         String accountProductType = mapProductType(product.getProductType());
         AccountOpenGoalRequest goal = validateGoal(
                 ownerType, accountProductType, request.getGoal()
@@ -174,6 +175,13 @@ public class AccountOpenService {
     private String mapProductType(String type) {
         if ("ACCOUNT".equals(type)) return "DEMAND_DEPOSIT";
         if ("SAVING".equals(type)) return "SAVINGS";
+        throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
+    }
+
+    private void validateTargetOwner(FinancialAccountOwnerType ownerType,
+                                     String targetOwnerType) {
+        if ("BOTH".equals(targetOwnerType)) return;
+        if (ownerType.name().equals(targetOwnerType)) return;
         throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
     }
 
