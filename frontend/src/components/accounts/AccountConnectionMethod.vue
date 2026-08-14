@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ChevronRight, Landmark, Pencil } from 'lucide-vue-next'
+import { ChevronRight, Landmark, Plus } from 'lucide-vue-next'
 
 defineEmits<{
   import: []
-  manual: []
+  create: []
 }>()
 </script>
 
@@ -49,17 +49,17 @@ defineEmits<{
       <button
         class="connection-option group flex min-h-[92px] w-full items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 text-left"
         type="button"
-        @click="$emit('manual')"
+        @click="$emit('create')"
       >
         <span class="grid size-12 shrink-0 place-items-center rounded-full bg-[#fff7df] text-[#f1ad36]">
-          <Pencil :size="24" :stroke-width="2.2" aria-hidden="true" />
+          <Plus :size="25" :stroke-width="2.5" aria-hidden="true" />
         </span>
         <span class="ml-4 min-w-0 flex-1">
           <strong class="block text-base font-bold text-[var(--color-text-primary)]">
-            직접 계좌 정보 입력
+            계좌 개설하기
           </strong>
           <span class="mt-1 block text-xs leading-5 text-[var(--color-text-secondary)]">
-            다른 은행 계좌도<br />직접 입력하여 추가할 수 있어요
+            계좌가 없다면<br />KB국민은행 계좌를 만들어요
           </span>
         </span>
         <ChevronRight

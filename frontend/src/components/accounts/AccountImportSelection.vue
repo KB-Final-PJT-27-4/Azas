@@ -96,7 +96,7 @@ const selectedAccount = computed(() =>
 
   <section
     v-else
-    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col px-5 pt-10 pb-6"
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col px-5 pt-5 pb-6"
     aria-labelledby="empty-account-title"
   >
     <div>
@@ -135,9 +135,6 @@ const selectedAccount = computed(() =>
     <div class="mt-auto grid gap-2">
       <button class="min-h-[54px] rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-white shadow-[0_6px_16px_rgba(39,169,235,0.2)] active:bg-[var(--color-brand-primary-pressed)]" type="button" @click="emit('createAccount')">
         KB국민은행 계좌 만들기
-      </button>
-      <button class="min-h-11 text-sm font-medium text-[var(--color-text-secondary)]" type="button" @click="emit('later')">
-        나중에 할게요
       </button>
     </div>
   </section>

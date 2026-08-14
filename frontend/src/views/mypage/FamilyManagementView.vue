@@ -39,9 +39,10 @@ const invitationDescription = computed(() =>
 )
 const invitationLink = computed(() => {
   if (!inviteType.value) return ''
-  const query =
-    inviteType.value === 'guardian' ? 'invited=true&role=guardian' : 'invited=true&role=child'
-  return `${window.location.origin}/register?${query}`
+  if (inviteType.value === 'guardian') {
+    return `${window.location.origin}/register?invited=true&role=guardian`
+  }
+  return `${window.location.origin}/register/child?invited=true`
 })
 
 const openInvitation = (type: InviteType) => {
