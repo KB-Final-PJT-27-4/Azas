@@ -51,7 +51,34 @@ class AccountOpenServiceTest {
         AccountOpenResult result = service.open(1L, request);
         assertTrue(result.isPrimary());
         assertEquals("DEMAND_DEPOSIT", result.getAccountProductType());
+        assertEquals("KB국민 입출금통장", result.getAccountName());
         assertNull(result.getFinancialGoal());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(AccountOpenRecord.class);
+        verify(accountMapper).insertOpenedAccount(captor.capture());
+        assertEquals("KB국민 입출금통장", captor.getValue().getAccountName());
+    }
+
+    @Test void opensChildDemandWithYoungYouthAccountName() {
+        AccountOpenRequest request = request("CHILD", 6L, 2L, null);
+        when(accountMapper.countActiveChildById(6L)).thenReturn(1);
+        when(accountMapper.countActiveParentAccess(1L, 6L)).thenReturn(1);
+        when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
+        when(accountMapper.findActiveChildMemberIdByChildId(6L)).thenReturn(9L);
+        when(productMapper.findActiveProductById(2L)).thenReturn(product(2L, "ACCOUNT", null));
+        prepareNumber();
+        doAnswer(invocation -> {
+            AccountOpenRecord record = invocation.getArgument(0);
+            record.setAccountId(11L);
+            return 1;
+        }).when(accountMapper).insertOpenedAccount(any());
+
+        AccountOpenResult result = service.open(1L, request);
+
+        assertEquals("KB Young Youth 입출금통장", result.getAccountName());
+        var captor = org.mockito.ArgumentCaptor.forClass(AccountOpenRecord.class);
+        verify(accountMapper).insertOpenedAccount(captor.capture());
+        assertEquals("KB Young Youth 입출금통장", captor.getValue().getAccountName());
     }
 
     @Test void opensChildSavingsAndGoalInOneTransaction() {
@@ -79,6 +106,7 @@ class AccountOpenServiceTest {
 
         AccountOpenResult result = service.open(1L, request);
         assertEquals(31L, result.getFinancialGoal().getFinancialGoalId());
+        assertEquals("KB Mock 상품", result.getAccountName());
         verify(accountMapper).insertFinancialGoalCheckpoints(
                 31L, new BigDecimal("3000000"));
     }

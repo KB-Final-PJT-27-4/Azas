@@ -23,6 +23,10 @@ import java.util.HexFormat;
 @Service
 public class AccountOpenService {
     private static final int MAX_NUMBER_ATTEMPTS = 10;
+    private static final String PARENT_DEMAND_DEPOSIT_ACCOUNT_NAME =
+            "KB국민 입출금통장";
+    private static final String CHILD_DEMAND_DEPOSIT_ACCOUNT_NAME =
+            "KB Young Youth 입출금통장";
     private final MemberMapper memberMapper;
     private final FinancialAccountMapper accountMapper;
     private final FinancialProductMapper productMapper;
@@ -86,6 +90,9 @@ public class AccountOpenService {
         LocalDate maturityDate = "SAVINGS".equals(accountProductType)
                 ? now.toLocalDate().plusMonths(product.getContractPeriodMonths())
                 : null;
+        String accountName = resolveAccountName(
+                ownerType, accountProductType, product.getName()
+        );
         boolean primary = ownerType == FinancialAccountOwnerType.PARENT
                 && "DEMAND_DEPOSIT".equals(accountProductType)
                 && !hasParentDemand;
@@ -93,7 +100,7 @@ public class AccountOpenService {
                 ownerType.name(), ownerMemberId, request.getChildId(),
                 product.getFinancialProductId(), goal == null ? null : goal.getFinancialGoalTemplateId(),
                 product.getBankName(), protector.encrypt(accountNumber), hash(accountNumber),
-                product.getName(), accountProductType, deposit,
+                accountName, accountProductType, deposit,
                 goal == null ? null : goal.getTitle(),
                 goal == null ? null : goal.getTargetAmount(),
                 goal == null ? null : goal.getTargetDate(),
@@ -122,7 +129,7 @@ public class AccountOpenService {
         }
         return new AccountOpenResult(
                 account.getAccountId(), ownerType.name(), request.getChildId(),
-                product.getFinancialProductId(), product.getBankName(), product.getName(),
+                product.getFinancialProductId(), product.getBankName(), accountName,
                 accountNumber, accountProductType, deposit, primary, goalResult, now
         );
     }
@@ -168,6 +175,15 @@ public class AccountOpenService {
         if ("ACCOUNT".equals(type)) return "DEMAND_DEPOSIT";
         if ("SAVING".equals(type)) return "SAVINGS";
         throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
+    }
+
+    private String resolveAccountName(FinancialAccountOwnerType ownerType,
+                                      String accountProductType,
+                                      String productName) {
+        if (!"DEMAND_DEPOSIT".equals(accountProductType)) return productName;
+        return ownerType == FinancialAccountOwnerType.PARENT
+                ? PARENT_DEMAND_DEPOSIT_ACCOUNT_NAME
+                : CHILD_DEMAND_DEPOSIT_ACCOUNT_NAME;
     }
 
     private BigDecimal validateDeposit(BigDecimal value) {
