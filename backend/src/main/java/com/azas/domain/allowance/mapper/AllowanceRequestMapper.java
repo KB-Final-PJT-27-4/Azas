@@ -5,6 +5,7 @@ import com.azas.domain.allowance.dto.AllowanceRequestListQuery;
 import com.azas.domain.allowance.dto.AllowanceRequestListRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import com.azas.domain.allowance.dto.AllowanceRequestDetailRow;
 
 import java.util.List;
 
@@ -30,5 +31,9 @@ public interface AllowanceRequestMapper {
 
     List<AllowanceRequestListRow> findAllowanceRequests(
             AllowanceRequestListQuery query
+    );
+
+    AllowanceRequestDetailRow findAllowanceRequestDetail(
+            @Param("allowanceRequestId") Long allowanceRequestId
     );
 }

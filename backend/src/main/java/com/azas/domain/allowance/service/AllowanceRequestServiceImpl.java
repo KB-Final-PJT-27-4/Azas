@@ -201,4 +201,38 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                 ErrorCode.INVALID_QUERY_PARAMETER
         );
     }
+    @Override
+    @Transactional(readOnly = true)
+    public AllowanceRequestDetailResponse getAllowanceRequestDetail(
+            Long memberId,
+            Long allowanceRequestId
+    ) {
+        if (allowanceRequestId == null || allowanceRequestId <= 0) {
+            throw new BusinessException(
+                    ErrorCode.BADREQUEST
+            );
+        }
+
+        AllowanceRequestDetailRow row =
+                allowanceRequestMapper.findAllowanceRequestDetail(
+                        allowanceRequestId
+                );
+
+        if (row == null) {
+            throw new BusinessException(
+                    ErrorCode.ALLOWANCE_REQUEST_NOT_FOUND
+            );
+        }
+
+        if (allowanceRequestMapper.countAllowanceRequestAccess(
+                memberId,
+                row.getChildId()
+        ) == 0) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_ACCESS_DENIED
+            );
+        }
+
+        return AllowanceRequestDetailResponse.from(row);
+    }
 }

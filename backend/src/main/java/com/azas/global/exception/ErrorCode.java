@@ -172,6 +172,7 @@ public enum ErrorCode {
             "조회 조건이 올바르지 않습니다."
     ),
 
+
     // Time Capsule
     TIME_CAPSULE_ACCESS_DENIED(
             HttpStatus.FORBIDDEN,
@@ -284,7 +285,7 @@ public enum ErrorCode {
 
     FAMILY_INVITATION_NOT_FOUND(
             HttpStatus.NOT_FOUND,
-            "가족 초대를 찾을 수 없s습니다."
+            "가족 초대를 찾을 수 없습니다."
     ),
     FAMILY_INVITATION_ALREADY_EXISTS(
             HttpStatus.CONFLICT,
@@ -297,6 +298,10 @@ public enum ErrorCode {
     FAMILY_INVITATION_RELATION_TYPE_REQUIRED(
             HttpStatus.BAD_REQUEST,
             "부모 초대 수락에는 관계 유형이 필요합니다."
+    ),
+    ALLOWANCE_REQUEST_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "용돈 요청을 찾을 수 없습니다."
     ),
 
     // Transfer

@@ -1,5 +1,6 @@
 package com.azas.domain.allowance.controller;
 
+import com.azas.domain.allowance.dto.AllowanceRequestDetailResponse;
 import com.azas.domain.allowance.dto.AllowanceRequestListResponse;
 import com.azas.domain.allowance.dto.AllowanceRequestResponse;
 import com.azas.domain.allowance.dto.CreateAllowanceRequest;
@@ -85,6 +86,30 @@ public class AllowanceRequestController {
                         status,
                         cursor,
                         size
+                )
+        );
+    }
+
+    @ApiOperation("용돈 요청 상세 조회")
+    @GetMapping("/allowance-requests/{allowance_request_id}")
+    public ResponseEntity<AllowanceRequestDetailResponse>
+    getAllowanceRequestDetail(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader,
+            @PathVariable("allowance_request_id")
+            Long allowanceRequestId
+    ) {
+        long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        return ResponseEntity.ok(
+                allowanceRequestService.getAllowanceRequestDetail(
+                        memberId,
+                        allowanceRequestId
                 )
         );
     }

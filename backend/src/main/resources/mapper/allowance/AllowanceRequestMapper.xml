@@ -104,4 +104,36 @@
         ORDER BY ar.allowance_request_id DESC
         LIMIT #{limit}
     </select>
+
+    <select id="findAllowanceRequestDetail"
+            resultMap="allowanceRequestDetailRowMap">
+        SELECT
+            ar.allowance_request_id,
+            ar.child_id,
+            ar.requested_amount,
+            ar.message,
+            ar.status,
+            ar.requested_at
+        FROM allowance_request ar
+                 INNER JOIN child c
+                            ON c.child_id = ar.child_id
+                                AND c.status = 'ACTIVE'
+        WHERE ar.allowance_request_id = #{allowanceRequestId}
+    </select>
+
+    <resultMap id="allowanceRequestDetailRowMap"
+               type="com.azas.domain.allowance.dto.AllowanceRequestDetailRow">
+        <id property="allowanceRequestId"
+            column="allowance_request_id"/>
+        <result property="childId"
+                column="child_id"/>
+        <result property="requestedAmount"
+                column="requested_amount"/>
+        <result property="message"
+                column="message"/>
+        <result property="status"
+                column="status"/>
+        <result property="requestedAt"
+                column="requested_at"/>
+    </resultMap>
 </mapper>
