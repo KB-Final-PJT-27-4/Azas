@@ -146,7 +146,8 @@ public class FinancialProductService {
             boolean bookmarked
     ) {
         assertChildAccess(requesterMemberId, childId);
-        getActiveProductOrThrow(financialProductId);
+        FinancialProduct product = getActiveProductOrThrow(financialProductId);
+        assertChildEligibleProduct(product);
 
         if (bookmarked) {
             financialProductMapper.insertBookmarkIfAbsent(
@@ -183,6 +184,7 @@ public class FinancialProductService {
 
         if (childId != null) {
             assertChildAccess(requesterMemberId, childId);
+            assertChildEligibleProduct(product);
             bookmarked = financialProductMapper.countBookmark(
                     requesterMemberId,
                     childId,
@@ -230,6 +232,13 @@ public class FinancialProductService {
             throw new BusinessException(ErrorCode.FINANCIAL_PRODUCT_NOT_FOUND);
         }
         return product;
+    }
+
+    private void assertChildEligibleProduct(FinancialProduct product) {
+        if (!"CHILD".equals(product.getTargetOwnerType())
+                && !"BOTH".equals(product.getTargetOwnerType())) {
+            throw new BusinessException(ErrorCode.FINANCIAL_PRODUCT_NOT_FOUND);
+        }
     }
 
     private void assertChildAccess(long requesterMemberId, long childId) {

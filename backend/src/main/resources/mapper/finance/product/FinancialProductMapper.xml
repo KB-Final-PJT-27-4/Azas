@@ -10,6 +10,7 @@
         bank_name,
         external_product_id,
         product_type,
+        target_owner_type,
         product_subtype,
         name,
         summary,
@@ -73,6 +74,7 @@
         SELECT <include refid="productColumns"/>
         FROM financial_product
         WHERE is_active = 1
+          AND target_owner_type IN ('CHILD', 'BOTH')
         <if test="productType != null and productType != ''">
             AND product_type = #{productType}
         </if>
@@ -142,6 +144,7 @@
         WHERE b.member_id = #{memberId}
           AND b.child_id = #{childId}
           AND p.is_active = 1
+          AND p.target_owner_type IN ('CHILD', 'BOTH')
         <if test="productType != null and productType != ''">
             AND p.product_type = #{productType}
         </if>
@@ -156,6 +159,7 @@
             p.bank_name,
             p.external_product_id,
             p.product_type,
+            p.target_owner_type,
             p.product_subtype,
             p.name,
             p.summary,
@@ -184,6 +188,7 @@
         WHERE b.member_id = #{memberId}
           AND b.child_id = #{childId}
           AND p.is_active = 1
+          AND p.target_owner_type IN ('CHILD', 'BOTH')
         <if test="productType != null and productType != ''">
             AND p.product_type = #{productType}
         </if>
