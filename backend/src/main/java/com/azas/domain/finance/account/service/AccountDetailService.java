@@ -1,9 +1,7 @@
 package com.azas.domain.finance.account.service;
 
-import com.azas.domain.finance.account.dto.AccountDetailChildResult;
 import com.azas.domain.finance.account.dto.AccountDetailResult;
 import com.azas.domain.finance.account.dto.AccountDetailRow;
-import com.azas.domain.finance.account.dto.AccountFinancialGoalResult;
 import com.azas.domain.finance.account.mapper.FinancialAccountMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
@@ -77,7 +75,7 @@ public class AccountDetailService {
     ) {
         Long childId = row.getChildId();
 
-        if (childId == null || row.getChildName() == null) {
+        if (childId == null || row.getAccountHolderName() == null) {
             throw new BusinessException(
                     ErrorCode.INTERNAL_SERVER_ERROR
             );
@@ -108,51 +106,14 @@ public class AccountDetailService {
         return new AccountDetailResult(
                 row.getAccountId(),
                 row.getOwnerType(),
-                toChildResult(row),
-                row.getOrganizationCode(),
                 row.getBankName(),
                 row.getAccountName(),
                 decryptAccountNumber(
                         row.getAccountNumberCiphertext()
                 ),
+                row.getAccountHolderName(),
                 row.getAccountProductType(),
-                row.getBalance(),
-                row.getBalanceUpdatedAt(),
-                row.getAccountStatus(),
-                row.isPrimaryAccount(),
-                row.getOpenedAt(),
-                row.getMaturityDate(),
-                row.getLinkedAt(),
-                toFinancialGoal(row)
-        );
-    }
-
-    private AccountDetailChildResult toChildResult(
-            AccountDetailRow row
-    ) {
-        if (!CHILD_OWNER_TYPE.equals(row.getOwnerType())) {
-            return null;
-        }
-
-        return new AccountDetailChildResult(
-                row.getChildId(),
-                row.getChildName()
-        );
-    }
-
-    private AccountFinancialGoalResult toFinancialGoal(
-            AccountDetailRow row
-    ) {
-        if (row.getGoalNameSnapshot() == null
-                && row.getGoalTargetAmount() == null
-                && row.getGoalTargetDate() == null) {
-            return null;
-        }
-
-        return new AccountFinancialGoalResult(
-                row.getGoalNameSnapshot(),
-                row.getGoalTargetAmount(),
-                row.getGoalTargetDate()
+                row.getBalance()
         );
     }
 
