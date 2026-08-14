@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { Camera, CheckCircle2, ChevronRight, ShieldCheck, UserRound } from 'lucide-vue-next'
+import { Camera, CheckCircle2, ShieldCheck, UserRound } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import BaseDatePicker from '@/components/common/BaseDatePicker.vue'

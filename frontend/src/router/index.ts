@@ -427,14 +427,58 @@ const routes: RouteRecordRaw[] = [
     },
   },
 
-  // 자산 리포트
+  // 가족 리포트
   {
     path: '/reports',
     name: 'Reports',
     component: () => import('@/views/reports/ReportsView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '자산 리포트',
+      headerTitle: '리포트',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
+    path: '/reports/childcare/age-average',
+    name: 'ChildcareAgeAverage',
+    component: () => import('@/views/reports/ChildcareAgeAverageView.vue'),
+    meta: {
+      requiresAuth: true,
+      headerTitle: '연령별 평균 정보',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
+    path: '/reports/childcare/age-comparison',
+    name: 'ChildcareAgeComparison',
+    component: () => import('@/views/reports/ChildcareAgeComparisonView.vue'),
+    meta: {
+      requiresAuth: true,
+      headerTitle: '연령별 평균 비교',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
+    path: '/reports/childcare/category-analysis',
+    name: 'ChildcareCategoryAnalysis',
+    component: () => import('@/views/reports/ChildcareCategoryAnalysisView.vue'),
+    meta: {
+      requiresAuth: true,
+      headerTitle: '항목별 소비 분석',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+    },
+  },
+  {
+    path: '/reports/childcare/monthly-trend',
+    name: 'ChildcareMonthlyTrend',
+    component: () => import('@/views/reports/ChildcareMonthlyTrendView.vue'),
+    meta: {
+      requiresAuth: true,
+      headerTitle: '양육비 상세 리포트',
       showHeaderBack: true,
       showHeaderNotification: false,
     },
