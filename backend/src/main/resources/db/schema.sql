@@ -30,6 +30,7 @@ DROP TABLE IF EXISTS financial_goal;
 DROP TABLE IF EXISTS financial_product;
 DROP TABLE IF EXISTS child_checklist_item;
 DROP TABLE IF EXISTS checklist_item_template;
+DROP TABLE IF EXISTS allowance_request;
 DROP TABLE IF EXISTS family_invitation;
 DROP TABLE IF EXISTS child_parent;
 DROP TABLE IF EXISTS child;
@@ -38,7 +39,6 @@ DROP TABLE IF EXISTS refresh_token;
 DROP TABLE IF EXISTS social_account;
 DROP TABLE IF EXISTS phone_verification;
 DROP TABLE IF EXISTS member;
-DROP TABLE IF EXISTS allowance_request;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
