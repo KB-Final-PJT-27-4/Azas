@@ -320,6 +320,7 @@ class FinancialProductServiceTest {
                 new BigDecimal("2.1"),
                 response.getAppliedInterestRate().getAnnualRate()
         );
+        assertTrue(response.getDisclaimer().contains("기본금리"));
     }
 
     @Test

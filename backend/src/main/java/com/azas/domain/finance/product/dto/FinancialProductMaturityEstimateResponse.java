@@ -11,11 +11,6 @@ public class FinancialProductMaturityEstimateResponse {
     private static final BigDecimal TAX_RATE = new BigDecimal("15.4");
     private static final String CALCULATION_BASIS =
             "MONTHLY_BEGINNING_SIMPLE_INTEREST";
-    private static final String DISCLAIMER =
-            "월초에 동일 금액을 납입하고 최고금리와 일반과세 15.4%를 "
-                    + "적용한 예상값입니다. 실제 만기금액은 납입일, "
-                    + "우대조건, 세금 및 상품 약관에 따라 달라질 수 있습니다.";
-
     @JsonProperty("financial_product_id")
     private final long financialProductId;
 
@@ -79,7 +74,11 @@ public class FinancialProductMaturityEstimateResponse {
         this.estimatedInterestAfterTax = estimatedInterestAfterTax;
         this.estimatedMaturityAmount = estimatedMaturityAmount;
         this.calculationBasis = CALCULATION_BASIS;
-        this.disclaimer = DISCLAIMER;
+        this.disclaimer = "월초에 동일 금액을 납입하고 "
+                + rateLabel
+                + "와 일반과세 15.4%를 적용한 예상값입니다. "
+                + "실제 만기금액은 납입일, 우대조건, 세금 및 상품 약관에 "
+                + "따라 달라질 수 있습니다.";
     }
 
     @Getter
