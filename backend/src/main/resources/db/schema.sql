@@ -271,6 +271,8 @@ CREATE TABLE financial_product (
   product_subtype VARCHAR(50) NULL COMMENT '상품 세부유형',
   name VARCHAR(150) NOT NULL COMMENT '상품명',
   summary VARCHAR(2000) NULL COMMENT '주요 특징 요약',
+  highlight_label VARCHAR(50) NULL COMMENT '목록 강조 문구',
+  display_badges_json JSON NOT NULL COMMENT '목록 표시 해시태그',
   detail_url VARCHAR(1000) NULL COMMENT '상품 상세 URL',
   product_image_key VARCHAR(255) NULL COMMENT '프론트 상품 이미지 키',
   base_interest_rate DECIMAL(7, 4) NULL COMMENT '기본 금리',
@@ -280,6 +282,8 @@ CREATE TABLE financial_product (
   min_monthly_amount DECIMAL(19, 2) NULL COMMENT '월 최소 납입액',
   max_monthly_amount DECIMAL(19, 2) NULL COMMENT '월 최대 납입액',
   contract_period_months INT NULL COMMENT '계약 기간 개월 수',
+  min_contract_period_months INT NULL COMMENT '최소 계약 기간 개월 수',
+  max_contract_period_months INT NULL COMMENT '최대 계약 기간 개월 수',
   renewal_description VARCHAR(500) NULL COMMENT '만기·재예치 안내',
   interest_payment_method VARCHAR(50) NULL COMMENT '이자 지급 방식',
   eligibility_conditions_json JSON NOT NULL COMMENT '가입 조건',
@@ -295,8 +299,18 @@ CREATE TABLE financial_product (
   UNIQUE KEY uk_financial_product_external_product_id (external_product_id),
   KEY idx_financial_product_type_owner_active (product_type, target_owner_type, is_active),
   CONSTRAINT ck_financial_product_target_owner_type
-    CHECK (target_owner_type IN ('PARENT', 'CHILD', 'BOTH'))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='추천 금융상품';
+    CHECK (target_owner_type IN ('PARENT', 'CHILD', 'BOTH')),
+  CONSTRAINT ck_financial_product_contract_period
+    CHECK (
+      (min_contract_period_months IS NULL AND max_contract_period_months IS NULL)
+      OR (
+        min_contract_period_months IS NOT NULL
+        AND max_contract_period_months IS NOT NULL
+        AND min_contract_period_months > 0
+        AND max_contract_period_months >= min_contract_period_months
+      )
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='KB 금융상품';
 
 CREATE TABLE financial_product_bookmark (
   financial_product_bookmark_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '관심상품 ID',

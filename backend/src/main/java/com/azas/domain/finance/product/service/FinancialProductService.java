@@ -3,12 +3,14 @@ package com.azas.domain.finance.product.service;
 import com.azas.domain.finance.product.dto.FinancialProductBookmarkListResponse;
 import com.azas.domain.finance.product.dto.FinancialProductBookmarkResponse;
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
-import com.azas.domain.finance.product.dto.FinancialProductRecommendationResponse;
+import com.azas.domain.finance.product.dto.FinancialProductListResponse;
 import com.azas.domain.finance.product.entity.FinancialProduct;
 import com.azas.domain.finance.product.entity.RecommendationAccountBasis;
 import com.azas.domain.finance.product.mapper.FinancialProductMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,7 +21,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -28,7 +29,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class FinancialProductService {
 
-    private static final int DEFAULT_RECOMMENDATION_SIZE = 10;
+    private static final int DEFAULT_PRODUCT_LIST_SIZE = 20;
     private static final int DEFAULT_BOOKMARK_SIZE = 20;
     private static final int MAX_PAGE_SIZE = 50;
     private static final Set<String> PRODUCT_TYPES = Set.of(
@@ -39,36 +40,14 @@ public class FinancialProductService {
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
-    public FinancialProductRecommendationResponse getRecommendations(
-            long requesterMemberId,
-            long childId,
-            Long financialAccountId,
-            BigDecimal monthlyAmount,
+    public FinancialProductListResponse getProducts(
             String productType,
             String cursor,
             Integer size
     ) {
-        assertChildAccess(requesterMemberId, childId);
-
         String normalizedProductType = normalizeProductType(productType);
         Long lastProductId = parseCursor(cursor);
-        int pageSize = normalizeSize(size, DEFAULT_RECOMMENDATION_SIZE);
-        BigDecimal normalizedMonthlyAmount = normalizeMonthlyAmount(
-                monthlyAmount
-        );
-
-        RecommendationAccountBasis accountBasis = null;
-        if (financialAccountId != null) {
-            accountBasis = financialProductMapper.findSavingsAccountBasis(
-                    financialAccountId,
-                    childId
-            );
-            if (accountBasis == null) {
-                throw new BusinessException(
-                        ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND
-                );
-            }
-        }
+        int pageSize = normalizeSize(size, DEFAULT_PRODUCT_LIST_SIZE);
 
         List<FinancialProduct> candidates =
                 financialProductMapper.findActiveProducts(
@@ -85,23 +64,15 @@ public class FinancialProductService {
                 .getFinancialProductId())
                 : null;
 
-        Set<Long> bookmarkedProductIds = new HashSet<>(
-                financialProductMapper.findBookmarkedProductIds(
-                        requesterMemberId,
-                        childId
-                )
-        );
-        Integer childAge = financialProductMapper.findChildAge(childId);
+        List<FinancialProductListResponse.Item> items = new ArrayList<>();
+        for (FinancialProduct product : pageItems) {
+            items.add(FinancialProductListResponse.Item.from(
+                    product,
+                    parseDisplayBadges(product.getDisplayBadgesJson())
+            ));
+        }
 
-        return new FinancialProductRecommendationResponse(
-                childId,
-                accountBasis,
-                normalizedMonthlyAmount,
-                pageItems,
-                bookmarkedProductIds,
-                childAge,
-                nextCursor
-        );
+        return new FinancialProductListResponse(items, nextCursor, hasNext);
     }
 
     @Transactional(readOnly = true)
@@ -295,14 +266,18 @@ public class FinancialProductService {
         return normalized;
     }
 
-    private BigDecimal normalizeMonthlyAmount(BigDecimal monthlyAmount) {
-        if (monthlyAmount == null) {
-            return null;
+    private List<String> parseDisplayBadges(String displayBadgesJson) {
+        if (displayBadgesJson == null || displayBadgesJson.isBlank()) {
+            return List.of();
         }
-        if (monthlyAmount.signum() <= 0) {
-            throw new BusinessException(ErrorCode.INVALID_QUERY_PARAMETER);
+        try {
+            return objectMapper.readValue(
+                    displayBadgesJson,
+                    new TypeReference<List<String>>() { }
+            );
+        } catch (JsonProcessingException exception) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
-        return monthlyAmount;
     }
 
     private BigDecimal calculateMonthlyAmount(

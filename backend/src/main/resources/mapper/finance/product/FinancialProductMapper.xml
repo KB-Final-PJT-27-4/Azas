@@ -14,6 +14,8 @@
         product_subtype,
         name,
         summary,
+        highlight_label,
+        display_badges_json,
         detail_url,
         product_image_key,
         base_interest_rate,
@@ -23,6 +25,8 @@
         min_monthly_amount,
         max_monthly_amount,
         contract_period_months,
+        min_contract_period_months,
+        max_contract_period_months,
         renewal_description,
         interest_payment_method,
         eligibility_conditions_json,
@@ -74,7 +78,6 @@
         SELECT <include refid="productColumns"/>
         FROM financial_product
         WHERE is_active = 1
-          AND target_owner_type IN ('CHILD', 'BOTH')
         <if test="productType != null and productType != ''">
             AND product_type = #{productType}
         </if>
@@ -163,6 +166,8 @@
             p.product_subtype,
             p.name,
             p.summary,
+            p.highlight_label,
+            p.display_badges_json,
             p.detail_url,
             p.product_image_key,
             p.base_interest_rate,
@@ -172,6 +177,8 @@
             p.min_monthly_amount,
             p.max_monthly_amount,
             p.contract_period_months,
+            p.min_contract_period_months,
+            p.max_contract_period_months,
             p.renewal_description,
             p.interest_payment_method,
             p.eligibility_conditions_json,
