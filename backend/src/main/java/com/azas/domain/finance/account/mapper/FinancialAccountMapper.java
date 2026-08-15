@@ -2,6 +2,7 @@ package com.azas.domain.finance.account.mapper;
 
 import com.azas.domain.finance.account.dto.AccountDetailRow;
 import com.azas.domain.finance.account.dto.AccountTransactionRow;
+import com.azas.domain.finance.account.dto.AccountTransactionDetailRow;
 import com.azas.domain.finance.account.dto.AccountBalanceHistorySnapshotRow;
 import com.azas.domain.finance.account.dto.AccountBalanceRow;
 import com.azas.domain.finance.account.dto.AccountUnlinkTargetRow;
@@ -53,6 +54,11 @@ public interface FinancialAccountMapper {
             Long cursorTransactionId,
             @Param("limit")
             int limit
+    );
+
+    AccountTransactionDetailRow findAccountTransactionById(
+            @Param("accountTransactionId")
+            long accountTransactionId
     );
 
     List<ParentAccountListRow> findActiveParentAccounts(

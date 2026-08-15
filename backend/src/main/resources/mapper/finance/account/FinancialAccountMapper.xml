@@ -110,6 +110,29 @@
         LIMIT #{limit}
     </select>
 
+    <select id="findAccountTransactionById"
+            resultType="com.azas.domain.finance.account.dto.AccountTransactionDetailRow">
+        SELECT
+            tx.account_transaction_id,
+            tx.financial_account_id,
+            tx.occurred_at,
+            tx.direction,
+            tx.amount,
+            tx.balance_after,
+            tx.description,
+            tx.counterparty_name,
+            cfa.bank_name AS counterparty_bank_name,
+            cfa.account_name AS counterparty_account_name,
+            cfa.account_number_ciphertext
+                AS counterparty_account_number_ciphertext
+        FROM account_transaction tx
+                 LEFT JOIN financial_account cfa
+                           ON cfa.financial_account_id =
+                              tx.counterparty_account_id
+        WHERE tx.account_transaction_id = #{accountTransactionId}
+        LIMIT 1
+    </select>
+
     <select id="findActiveParentAccounts"
             resultType="com.azas.domain.finance.account.dto.ParentAccountListRow">
           SELECT
