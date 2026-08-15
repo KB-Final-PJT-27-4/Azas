@@ -5,6 +5,8 @@ import com.azas.domain.finance.product.dto.FinancialProductBookmarkRequest;
 import com.azas.domain.finance.product.dto.FinancialProductBookmarkResponse;
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
 import com.azas.domain.finance.product.dto.FinancialProductListResponse;
+import com.azas.domain.finance.product.dto.FinancialProductMaturityEstimateRequest;
+import com.azas.domain.finance.product.dto.FinancialProductMaturityEstimateResponse;
 import com.azas.domain.finance.product.service.FinancialProductService;
 import com.azas.global.security.AccessTokenMemberResolver;
 import io.swagger.annotations.Api;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -110,6 +113,22 @@ public class FinancialProductController {
                 memberId,
                 financialProductId,
                 childId
+        ));
+    }
+
+    @ApiOperation("PRODUCT-5 예상 만기금액 계산")
+    @PostMapping("/financial-products/{financial_product_id}/maturity-estimate")
+    public ResponseEntity<FinancialProductMaturityEstimateResponse>
+    estimateMaturity(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @PathVariable("financial_product_id") long financialProductId,
+            @Valid @RequestBody FinancialProductMaturityEstimateRequest request
+    ) {
+        accessTokenMemberResolver.resolveMemberId(authorizationHeader);
+        return ResponseEntity.ok(financialProductService.estimateMaturity(
+                financialProductId,
+                request
         ));
     }
 }

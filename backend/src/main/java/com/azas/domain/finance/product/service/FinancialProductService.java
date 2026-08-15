@@ -4,6 +4,8 @@ import com.azas.domain.finance.product.dto.FinancialProductBookmarkListResponse;
 import com.azas.domain.finance.product.dto.FinancialProductBookmarkResponse;
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
 import com.azas.domain.finance.product.dto.FinancialProductListResponse;
+import com.azas.domain.finance.product.dto.FinancialProductMaturityEstimateRequest;
+import com.azas.domain.finance.product.dto.FinancialProductMaturityEstimateResponse;
 import com.azas.domain.finance.product.entity.FinancialProduct;
 import com.azas.domain.finance.product.mapper.FinancialProductMapper;
 import com.azas.global.exception.BusinessException;
@@ -19,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +36,7 @@ public class FinancialProductService {
 
     private final FinancialProductMapper financialProductMapper;
     private final ObjectMapper objectMapper;
+    private final MaturityEstimateCalculator maturityEstimateCalculator;
 
     @Transactional(readOnly = true)
     public FinancialProductListResponse getProducts(
@@ -164,6 +168,98 @@ public class FinancialProductService {
                 bookmarked,
                 objectMapper
         );
+    }
+
+    @Transactional(readOnly = true)
+    public FinancialProductMaturityEstimateResponse estimateMaturity(
+            long financialProductId,
+            FinancialProductMaturityEstimateRequest request
+    ) {
+        if (financialProductId <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_QUERY_PARAMETER);
+        }
+        FinancialProduct product = getActiveProductOrThrow(financialProductId);
+        assertMaturityEstimateAvailable(product);
+        assertMaturityEstimateRequest(product, request);
+
+        boolean appliesMaximumRate = product.getMaxInterestRate() != null;
+        BigDecimal annualRate = appliesMaximumRate
+                ? product.getMaxInterestRate()
+                : product.getBaseInterestRate();
+        MaturityEstimateCalculator.Calculation calculation =
+                maturityEstimateCalculator.calculate(
+                        request.getMonthlyAmount(),
+                        request.getPeriodMonths(),
+                        annualRate
+                );
+
+        return new FinancialProductMaturityEstimateResponse(
+                financialProductId,
+                request.getMonthlyAmount(),
+                request.getPeriodMonths(),
+                appliesMaximumRate ? "MAX" : "BASE",
+                appliesMaximumRate ? "최고금리" : "기본금리",
+                annualRate.stripTrailingZeros(),
+                calculation.getPrincipalAmount(),
+                calculation.getEstimatedInterestBeforeTax(),
+                calculation.getEstimatedTax(),
+                calculation.getEstimatedInterestAfterTax(),
+                calculation.getEstimatedMaturityAmount()
+        );
+    }
+
+    private void assertMaturityEstimateAvailable(FinancialProduct product) {
+        boolean rateUnavailable = product.getMaxInterestRate() == null
+                && product.getBaseInterestRate() == null;
+        boolean periodUnavailable = product.getContractPeriodMonths() == null
+                && (product.getMinContractPeriodMonths() == null
+                || product.getMaxContractPeriodMonths() == null);
+        if (!"SAVING".equals(product.getProductType())
+                || rateUnavailable
+                || periodUnavailable) {
+            throw new BusinessException(
+                    ErrorCode.MATURITY_ESTIMATE_NOT_AVAILABLE
+            );
+        }
+    }
+
+    private void assertMaturityEstimateRequest(
+            FinancialProduct product,
+            FinancialProductMaturityEstimateRequest request
+    ) {
+        if (request == null
+                || request.getMonthlyAmount() == null
+                || request.getPeriodMonths() == null
+                || request.getMonthlyAmount().signum() <= 0
+                || request.getMonthlyAmount().stripTrailingZeros().scale() > 0
+                || request.getPeriodMonths() <= 0
+                || isMonthlyAmountOutOfRange(product, request.getMonthlyAmount())
+                || isPeriodOutOfRange(product, request.getPeriodMonths())) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_MATURITY_ESTIMATE_REQUEST
+            );
+        }
+    }
+
+    private boolean isMonthlyAmountOutOfRange(
+            FinancialProduct product,
+            BigDecimal monthlyAmount
+    ) {
+        return product.getMinMonthlyAmount() != null
+                && monthlyAmount.compareTo(product.getMinMonthlyAmount()) < 0
+                || product.getMaxMonthlyAmount() != null
+                && monthlyAmount.compareTo(product.getMaxMonthlyAmount()) > 0;
+    }
+
+    private boolean isPeriodOutOfRange(
+            FinancialProduct product,
+            int periodMonths
+    ) {
+        if (product.getContractPeriodMonths() != null) {
+            return periodMonths != product.getContractPeriodMonths();
+        }
+        return periodMonths < product.getMinContractPeriodMonths()
+                || periodMonths > product.getMaxContractPeriodMonths();
     }
 
     private FinancialProduct getActiveProductOrThrow(long financialProductId) {
