@@ -20,6 +20,8 @@ public class FinancialProduct {
     private String productSubtype;
     private String name;
     private String summary;
+    private String highlightLabel;
+    private String displayBadgesJson;
     private String detailUrl;
     private String productImageKey;
     private BigDecimal baseInterestRate;
@@ -29,6 +31,8 @@ public class FinancialProduct {
     private BigDecimal minMonthlyAmount;
     private BigDecimal maxMonthlyAmount;
     private Integer contractPeriodMonths;
+    private Integer minContractPeriodMonths;
+    private Integer maxContractPeriodMonths;
     private String renewalDescription;
     private String interestPaymentMethod;
     private String eligibilityConditionsJson;
