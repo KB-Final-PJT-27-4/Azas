@@ -1,9 +1,11 @@
 package com.azas.domain.finance.product.controller;
 
+import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
 import com.azas.domain.finance.product.dto.FinancialProductListResponse;
 import com.azas.domain.finance.product.entity.FinancialProduct;
 import com.azas.domain.finance.product.service.FinancialProductService;
 import com.azas.global.security.AccessTokenMemberResolver;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -97,6 +99,52 @@ class FinancialProductControllerTest {
                         1L
                 ))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void servesProductDetailWithOptionalChildBookmarkContext()
+            throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(1L);
+        FinancialProduct product = product();
+        product.setCurationReason("검수된 정적 큐레이션 사유");
+        product.setInterestRateReference("12개월 기준 · 세금공제 전");
+        product.setMinMonthlyAmount(new BigDecimal("10000"));
+        product.setMaxMonthlyAmount(new BigDecimal("3000000"));
+        product.setEligibilityConditionsJson("[]");
+        product.setInterestPaymentMethod("MATURITY_LUMP_SUM");
+        product.setJoinTerminationMethod("KB스타뱅킹에서 가입·해지");
+        product.setPreferentialConditionsJson("[]");
+        product.setAdditionalBenefitsJson("[]");
+        product.setCautionsJson("[]");
+        FinancialProductDetailResponse response =
+                FinancialProductDetailResponse.from(
+                        product,
+                        true,
+                        new ObjectMapper()
+                );
+        given(financialProductService.getProductDetail(1L, 1L, 6L))
+                .willReturn(response);
+
+        mockMvc.perform(get(
+                        "/api/v1/financial-products/{productId}",
+                        1L
+                )
+                        .param("child_id", "6")
+                        .header("Authorization", "Bearer access-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.financial_product_id").value(1))
+                .andExpect(jsonPath("$.curation_reason")
+                        .value("검수된 정적 큐레이션 사유"))
+                .andExpect(jsonPath("$.interest_rate.reference")
+                        .value("12개월 기준 · 세금공제 전"))
+                .andExpect(jsonPath("$.monthly_deposit.min_amount")
+                        .value(10000))
+                .andExpect(jsonPath("$.is_bookmarked").value(true))
+                .andExpect(jsonPath("$.recommendation").doesNotExist())
+                .andExpect(jsonPath("$.external_product_id")
+                        .doesNotExist());
     }
 
     private FinancialProduct product() {

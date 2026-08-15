@@ -18,6 +18,9 @@ class FinancialProductSeedSchemaTest {
         assertTrue(schema.contains("display_badges_json JSON NOT NULL"));
         assertTrue(schema.contains("min_contract_period_months INT NULL"));
         assertTrue(schema.contains("max_contract_period_months INT NULL"));
+        assertTrue(schema.contains("curation_reason VARCHAR(1000) NULL"));
+        assertTrue(schema.contains("interest_rate_reference VARCHAR(200) NULL"));
+        assertTrue(schema.contains("join_termination_method VARCHAR(1000) NULL"));
         assertTrue(schema.contains("ck_financial_product_contract_period"));
     }
 
@@ -32,6 +35,9 @@ class FinancialProductSeedSchemaTest {
         assertTrue(seed.contains("'KB아이사랑적금'"));
         assertTrue(seed.contains("'내 아이를 위한 280일 적금'"));
         assertTrue(seed.contains("JSON_ARRAY('#만19세미만', '#자유적립', '#무료보험')"));
+        assertTrue(seed.contains("'12개월 기준 · 세금공제 전'"));
+        assertTrue(seed.contains("'MATURITY_LUMP_SUM'"));
+        assertTrue(seed.contains("'영업점 또는 KB스타뱅킹에서 가입·해지할 수 있습니다.'"));
     }
 
     private String readResource(String path) throws IOException {

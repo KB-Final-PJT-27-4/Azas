@@ -1,6 +1,8 @@
 package com.azas.domain.finance.product.dto;
 
 import com.azas.domain.finance.product.entity.FinancialProduct;
+import com.azas.global.exception.BusinessException;
+import com.azas.global.exception.ErrorCode;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,7 +10,6 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,84 +18,75 @@ public class FinancialProductDetailResponse {
 
     @JsonProperty("financial_product_id")
     private final Long financialProductId;
-    @JsonProperty("external_product_id")
-    private final String externalProductId;
     @JsonProperty("bank_name")
     private final String bankName;
+    private final String name;
     @JsonProperty("product_type")
     private final String productType;
     @JsonProperty("product_subtype")
     private final String productSubtype;
-    private final String name;
+    @JsonProperty("target_owner_type")
+    private final String targetOwnerType;
     private final String summary;
-    @JsonProperty("detail_url")
-    private final String detailUrl;
-    @JsonProperty("product_image_key")
-    private final String productImageKey;
     private final List<Badge> badges;
+    @JsonProperty("curation_reason")
+    private final String curationReason;
     @JsonProperty("interest_rate")
     private final InterestRate interestRate;
-    @JsonProperty("available_age")
-    private final AvailableAge availableAge;
-    private final Contract contract;
-    @JsonProperty("deposit_conditions")
-    private final JsonNode depositConditions;
-    @JsonProperty("interest_payment_method")
-    private final InterestPaymentMethod interestPaymentMethod;
+    @JsonProperty("contract_period")
+    private final ContractPeriod contractPeriod;
+    @JsonProperty("monthly_deposit")
+    private final MonthlyDeposit monthlyDeposit;
     @JsonProperty("eligibility_conditions")
     private final JsonNode eligibilityConditions;
+    @JsonProperty("interest_payment_method")
+    private final InterestPaymentMethod interestPaymentMethod;
+    @JsonProperty("join_termination_method")
+    private final String joinTerminationMethod;
     @JsonProperty("preferential_conditions")
     private final JsonNode preferentialConditions;
     @JsonProperty("additional_benefits")
     private final JsonNode additionalBenefits;
     private final JsonNode cautions;
-    private final Recommendation recommendation;
     @JsonProperty("is_bookmarked")
     private final boolean bookmarked;
+    @JsonProperty("detail_url")
+    private final String detailUrl;
     @JsonProperty("source_base_date")
     private final LocalDate sourceBaseDate;
-    @JsonProperty("updated_at")
-    private final LocalDateTime updatedAt;
 
     private FinancialProductDetailResponse(
             FinancialProduct product,
             boolean bookmarked,
-            Recommendation recommendation,
             ObjectMapper objectMapper
     ) {
         this.financialProductId = product.getFinancialProductId();
-        this.externalProductId = product.getExternalProductId();
         this.bankName = product.getBankName();
+        this.name = product.getName();
         this.productType = product.getProductType();
         this.productSubtype = product.getProductSubtype();
-        this.name = product.getName();
+        this.targetOwnerType = product.getTargetOwnerType();
         this.summary = product.getSummary();
-        this.detailUrl = product.getDetailUrl();
-        this.productImageKey = product.getProductImageKey();
-        this.badges = badges(product, recommendation != null);
+        this.badges = badges(product);
+        this.curationReason = product.getCurationReason();
         this.interestRate = new InterestRate(
                 product.getBaseInterestRate(),
-                product.getMaxInterestRate()
+                product.getMaxInterestRate(),
+                product.getInterestRateReference()
         );
-        this.availableAge = new AvailableAge(
-                product.getMinAge(),
-                product.getMaxAge()
-        );
-        this.contract = new Contract(
-                product.getContractPeriodMonths(),
-                product.getRenewalDescription()
-        );
-        this.depositConditions = readArray(
-                objectMapper,
-                product.getDepositConditionsJson()
-        );
-        this.interestPaymentMethod = interestPaymentMethod(
-                product.getInterestPaymentMethod()
+        this.contractPeriod = ContractPeriod.from(product);
+        this.monthlyDeposit = new MonthlyDeposit(
+                product.getMinMonthlyAmount(),
+                product.getMaxMonthlyAmount()
         );
         this.eligibilityConditions = readArray(
                 objectMapper,
                 product.getEligibilityConditionsJson()
         );
+        this.interestPaymentMethod = interestPaymentMethod(
+                product.getInterestPaymentMethod()
+        );
+        this.joinTerminationMethod = product.getJoinTerminationMethod();
         this.preferentialConditions = readArray(
                 objectMapper,
                 product.getPreferentialConditionsJson()
@@ -104,40 +96,20 @@ public class FinancialProductDetailResponse {
                 product.getAdditionalBenefitsJson()
         );
         this.cautions = readArray(objectMapper, product.getCautionsJson());
-        this.recommendation = recommendation;
         this.bookmarked = bookmarked;
+        this.detailUrl = product.getDetailUrl();
         this.sourceBaseDate = product.getSourceBaseDate();
-        this.updatedAt = product.getUpdatedAt();
     }
 
     public static FinancialProductDetailResponse from(
             FinancialProduct product,
             boolean bookmarked,
-            Recommendation recommendation,
             ObjectMapper objectMapper
     ) {
         return new FinancialProductDetailResponse(
                 product,
                 bookmarked,
-                recommendation,
                 objectMapper
-        );
-    }
-
-    public static Recommendation recommendation(
-            FinancialProduct product,
-            Integer childAge,
-            BigDecimal monthlyAmount
-    ) {
-        int score = FinancialProductRecommendationResponse.Item.from(
-                product,
-                childAge,
-                monthlyAmount,
-                false
-        ).getMatchScore();
-        return new Recommendation(
-                "자녀의 나이와 적금 목표에 적합한 상품입니다.",
-                score
         );
     }
 
@@ -146,15 +118,19 @@ public class FinancialProductDetailResponse {
             return objectMapper.createArrayNode();
         }
         try {
-            return objectMapper.readTree(json);
+            JsonNode node = objectMapper.readTree(json);
+            if (!node.isArray()) {
+                throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+            return node;
+        } catch (BusinessException exception) {
+            throw exception;
         } catch (Exception exception) {
-            return objectMapper.createArrayNode();
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 
-    private static InterestPaymentMethod interestPaymentMethod(
-            String value
-    ) {
+    private static InterestPaymentMethod interestPaymentMethod(String value) {
         if (value == null || value.isBlank()) {
             return new InterestPaymentMethod(null, null);
         }
@@ -168,44 +144,41 @@ public class FinancialProductDetailResponse {
         return new InterestPaymentMethod(value, value);
     }
 
-    private static List<Badge> badges(
-            FinancialProduct product,
-            boolean recommended
-    ) {
+    private static List<Badge> badges(FinancialProduct product) {
         List<Badge> badges = new ArrayList<>();
-        if (product.getProductType() != null) {
-            badges.add(new Badge(
-                    "PRODUCT_TYPE",
-                    productTypeLabel(product.getProductType())
-            ));
+        if (product.getHighlightLabel() != null
+                && !product.getHighlightLabel().isBlank()) {
+            badges.add(new Badge("CURATION", product.getHighlightLabel()));
         }
         if (product.getMaxAge() != null && product.getMaxAge() <= 19) {
-            badges.add(new Badge("CHILD_YOUTH_ONLY", "어린이·청소년 전용"));
+            badges.add(new Badge(
+                    "CHILD_YOUTH_ONLY",
+                    "어린이·청소년 전용"
+            ));
         }
-        if (product.getProductSubtype() != null) {
-            badges.add(new Badge("PRODUCT_SUBTYPE", product.getProductSubtype()));
+        if (product.getProductSubtype() != null
+                && !product.getProductSubtype().isBlank()) {
+            badges.add(new Badge(
+                    "PRODUCT_SUBTYPE",
+                    productSubtypeLabel(product.getProductSubtype())
+            ));
         }
-        if (recommended) {
-            badges.add(new Badge("RECOMMENDED", "깨비추천"));
-        }
-        return badges;
+        return List.copyOf(badges);
     }
 
-    private static String productTypeLabel(String productType) {
-        if ("SAVING".equals(productType)) {
-            return "적금";
+    private static String productSubtypeLabel(String productSubtype) {
+        if ("자유적립식 예금".equals(productSubtype)) {
+            return "자유적립식";
         }
-        if ("DEPOSIT".equals(productType)) {
-            return "예금";
-        }
-        return productType;
+        return productSubtype;
     }
 
     @Getter
     public static class Badge {
         private final String code;
         private final String label;
-        Badge(String code, String label) {
+
+        private Badge(String code, String label) {
             this.code = code;
             this.label = label;
         }
@@ -217,33 +190,67 @@ public class FinancialProductDetailResponse {
         private final BigDecimal baseRate;
         @JsonProperty("max_rate")
         private final BigDecimal maxRate;
-        InterestRate(BigDecimal baseRate, BigDecimal maxRate) {
+        private final String reference;
+
+        private InterestRate(
+                BigDecimal baseRate,
+                BigDecimal maxRate,
+                String reference
+        ) {
             this.baseRate = baseRate;
             this.maxRate = maxRate;
+            this.reference = reference;
         }
     }
 
     @Getter
-    public static class AvailableAge {
-        @JsonProperty("min_age")
-        private final Integer minAge;
-        @JsonProperty("max_age")
-        private final Integer maxAge;
-        AvailableAge(Integer minAge, Integer maxAge) {
-            this.minAge = minAge;
-            this.maxAge = maxAge;
-        }
-    }
-
-    @Getter
-    public static class Contract {
-        @JsonProperty("period_months")
-        private final Integer periodMonths;
+    public static class ContractPeriod {
+        @JsonProperty("min_months")
+        private final Integer minMonths;
+        @JsonProperty("max_months")
+        private final Integer maxMonths;
         @JsonProperty("renewal_description")
         private final String renewalDescription;
-        Contract(Integer periodMonths, String renewalDescription) {
-            this.periodMonths = periodMonths;
+
+        private ContractPeriod(
+                Integer minMonths,
+                Integer maxMonths,
+                String renewalDescription
+        ) {
+            this.minMonths = minMonths;
+            this.maxMonths = maxMonths;
             this.renewalDescription = renewalDescription;
+        }
+
+        private static ContractPeriod from(FinancialProduct product) {
+            Integer minMonths = product.getMinContractPeriodMonths();
+            Integer maxMonths = product.getMaxContractPeriodMonths();
+            if (minMonths == null && maxMonths == null
+                    && product.getContractPeriodMonths() != null) {
+                minMonths = product.getContractPeriodMonths();
+                maxMonths = product.getContractPeriodMonths();
+            }
+            return new ContractPeriod(
+                    minMonths,
+                    maxMonths,
+                    product.getRenewalDescription()
+            );
+        }
+    }
+
+    @Getter
+    public static class MonthlyDeposit {
+        @JsonProperty("min_amount")
+        private final BigDecimal minAmount;
+        @JsonProperty("max_amount")
+        private final BigDecimal maxAmount;
+
+        private MonthlyDeposit(
+                BigDecimal minAmount,
+                BigDecimal maxAmount
+        ) {
+            this.minAmount = minAmount;
+            this.maxAmount = maxAmount;
         }
     }
 
@@ -251,20 +258,10 @@ public class FinancialProductDetailResponse {
     public static class InterestPaymentMethod {
         private final String code;
         private final String label;
-        InterestPaymentMethod(String code, String label) {
+
+        private InterestPaymentMethod(String code, String label) {
             this.code = code;
             this.label = label;
-        }
-    }
-
-    @Getter
-    public static class Recommendation {
-        private final String reason;
-        @JsonProperty("match_score")
-        private final int matchScore;
-        Recommendation(String reason, int matchScore) {
-            this.reason = reason;
-            this.matchScore = matchScore;
         }
     }
 }

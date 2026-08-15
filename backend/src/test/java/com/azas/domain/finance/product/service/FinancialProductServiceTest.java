@@ -4,7 +4,6 @@ import com.azas.domain.finance.product.dto.FinancialProductBookmarkResponse;
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
 import com.azas.domain.finance.product.dto.FinancialProductListResponse;
 import com.azas.domain.finance.product.entity.FinancialProduct;
-import com.azas.domain.finance.product.entity.RecommendationAccountBasis;
 import com.azas.domain.finance.product.mapper.FinancialProductMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
@@ -175,35 +174,31 @@ class FinancialProductServiceTest {
     }
 
     @Test
-    void rejectsParentOnlyProductDetailInChildContext() {
+    void returnsParentProductDetailButDoesNotQueryChildBookmark() {
         authorizeChild();
         FinancialProduct product = product(3L);
         product.setTargetOwnerType("PARENT");
         when(financialProductMapper.findActiveProductById(3L))
                 .thenReturn(product);
 
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> financialProductService.getProductDetail(
-                        1L, 3L, 1L, null
-                )
-        );
+        FinancialProductDetailResponse response =
+                financialProductService.getProductDetail(1L, 3L, 1L);
 
-        assertEquals(
-                ErrorCode.FINANCIAL_PRODUCT_NOT_FOUND,
-                exception.getErrorCode()
+        assertEquals("PARENT", response.getTargetOwnerType());
+        assertFalse(response.isBookmarked());
+        verify(financialProductMapper, never()).countBookmark(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyLong()
         );
     }
 
     @Test
-    void rejectsAccountContextWithoutChildContext() {
-        when(financialProductMapper.findActiveProductById(1L))
-                .thenReturn(product(1L));
-
+    void rejectsInvalidDetailIdentifiers() {
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> financialProductService.getProductDetail(
-                        1L, 1L, null, 3L
+                        1L, 0L, null
                 )
         );
 
@@ -211,21 +206,58 @@ class FinancialProductServiceTest {
                 ErrorCode.INVALID_QUERY_PARAMETER,
                 exception.getErrorCode()
         );
-        verify(financialProductMapper, never()).findSavingsAccountBasis(
-                org.mockito.ArgumentMatchers.anyLong(),
+        verify(financialProductMapper, never()).findActiveProductById(
                 org.mockito.ArgumentMatchers.anyLong()
         );
     }
 
     @Test
-    void returnsDetailWithoutRecommendationWhenNoAccountIsProvided() {
+    void returnsCuratedDetailWithoutPersonalizedRecommendation() {
         when(financialProductMapper.findActiveProductById(1L))
                 .thenReturn(product(1L));
 
         FinancialProductDetailResponse response =
-                financialProductService.getProductDetail(1L, 1L, null, null);
+                financialProductService.getProductDetail(1L, 1L, null);
 
-        assertNull(response.getRecommendation());
+        assertEquals("정적 큐레이션 사유", response.getCurationReason());
+        assertEquals(12, response.getContractPeriod().getMinMonths());
+        assertEquals(
+                "12개월 기준 · 세금공제 전",
+                response.getInterestRate().getReference()
+        );
+        assertFalse(response.isBookmarked());
+    }
+
+    @Test
+    void returnsBookmarkStateWhenChildContextIsProvided() {
+        authorizeChild();
+        when(financialProductMapper.findActiveProductById(1L))
+                .thenReturn(product(1L));
+        when(financialProductMapper.countBookmark(1L, 1L, 1L))
+                .thenReturn(1);
+
+        FinancialProductDetailResponse response =
+                financialProductService.getProductDetail(1L, 1L, 1L);
+
+        assertTrue(response.isBookmarked());
+    }
+
+    @Test
+    void rejectsMalformedDetailConditionJson() {
+        FinancialProduct product = product(1L);
+        product.setEligibilityConditionsJson("not-json");
+        when(financialProductMapper.findActiveProductById(1L))
+                .thenReturn(product);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> financialProductService.getProductDetail(1L, 1L, null)
+        );
+
+        assertEquals(
+                ErrorCode.INTERNAL_SERVER_ERROR,
+                exception.getErrorCode()
+        );
     }
 
     private FinancialProduct product(long productId) {
@@ -234,15 +266,21 @@ class FinancialProductServiceTest {
         product.setProductType("SAVING");
         product.setTargetOwnerType("CHILD");
         product.setName("Product " + productId);
+        product.setProductSubtype("자유적립식 예금");
+        product.setHighlightLabel("깨비 추천");
+        product.setCurationReason("정적 큐레이션 사유");
         product.setDisplayBadgesJson("[\"#만19세미만\",\"#자유적립\"]");
         product.setBaseInterestRate(new BigDecimal("2.1"));
         product.setMaxInterestRate(new BigDecimal("3.4"));
+        product.setInterestRateReference("12개월 기준 · 세금공제 전");
         product.setMinAge(0);
         product.setMaxAge(19);
         product.setMinMonthlyAmount(new BigDecimal("10000"));
         product.setMaxMonthlyAmount(new BigDecimal("3000000"));
         product.setMinContractPeriodMonths(12);
         product.setMaxContractPeriodMonths(12);
+        product.setInterestPaymentMethod("MATURITY_LUMP_SUM");
+        product.setJoinTerminationMethod("Mock 가입·해지 안내");
         product.setEligibilityConditionsJson("[]");
         product.setDepositConditionsJson("[]");
         product.setPreferentialConditionsJson("[]");

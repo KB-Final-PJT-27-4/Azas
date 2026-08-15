@@ -22,10 +22,12 @@ public class FinancialProduct {
     private String summary;
     private String highlightLabel;
     private String displayBadgesJson;
+    private String curationReason;
     private String detailUrl;
     private String productImageKey;
     private BigDecimal baseInterestRate;
     private BigDecimal maxInterestRate;
+    private String interestRateReference;
     private Integer minAge;
     private Integer maxAge;
     private BigDecimal minMonthlyAmount;
@@ -35,6 +37,7 @@ public class FinancialProduct {
     private Integer maxContractPeriodMonths;
     private String renewalDescription;
     private String interestPaymentMethod;
+    private String joinTerminationMethod;
     private String eligibilityConditionsJson;
     private String depositConditionsJson;
     private String preferentialConditionsJson;
