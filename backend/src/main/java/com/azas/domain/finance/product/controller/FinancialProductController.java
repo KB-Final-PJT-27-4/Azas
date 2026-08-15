@@ -4,7 +4,7 @@ import com.azas.domain.finance.product.dto.FinancialProductBookmarkListResponse;
 import com.azas.domain.finance.product.dto.FinancialProductBookmarkRequest;
 import com.azas.domain.finance.product.dto.FinancialProductBookmarkResponse;
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
-import com.azas.domain.finance.product.dto.FinancialProductRecommendationResponse;
+import com.azas.domain.finance.product.dto.FinancialProductListResponse;
 import com.azas.domain.finance.product.service.FinancialProductService;
 import com.azas.global.security.AccessTokenMemberResolver;
 import io.swagger.annotations.Api;
@@ -21,11 +21,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.math.BigDecimal;
 
 @Api(
         tags = "금융상품",
-        description = "금융상품 조회 및 북마크 API"
+        description = "금융상품 조회 및 관심상품 API"
 )
 @RestController
 @RequestMapping("/api/v1")
@@ -35,37 +34,25 @@ public class FinancialProductController {
     private final AccessTokenMemberResolver accessTokenMemberResolver;
     private final FinancialProductService financialProductService;
 
-    @ApiOperation("PRODUCT-1 금융상품 추천 조회")
-    @GetMapping("/children/{child_id}/financial-products/recommendations")
-    public ResponseEntity<FinancialProductRecommendationResponse>
-    getRecommendations(
+    @ApiOperation("PRODUCT-1 KB 금융상품 목록 조회")
+    @GetMapping("/financial-products")
+    public ResponseEntity<FinancialProductListResponse> getProducts(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
-            @PathVariable("child_id") long childId,
-            @RequestParam(value = "account_id", required = false)
-            Long financialAccountId,
-            @RequestParam(value = "monthly_amount", required = false)
-            BigDecimal monthlyAmount,
             @RequestParam(value = "product_type", required = false)
             String productType,
             @RequestParam(value = "cursor", required = false) String cursor,
             @RequestParam(value = "size", required = false) Integer size
     ) {
-        long memberId = accessTokenMemberResolver.resolveMemberId(
-                authorizationHeader
-        );
-        return ResponseEntity.ok(financialProductService.getRecommendations(
-                memberId,
-                childId,
-                financialAccountId,
-                monthlyAmount,
+        accessTokenMemberResolver.resolveMemberId(authorizationHeader);
+        return ResponseEntity.ok(financialProductService.getProducts(
                 productType,
                 cursor,
                 size
         ));
     }
 
-    @ApiOperation("PRODUCT-2 금융상품 북마크 목록 조회")
+    @ApiOperation("PRODUCT-2 자녀별 관심상품 목록 조회")
     @GetMapping("/children/{child_id}/financial-products/bookmarks")
     public ResponseEntity<FinancialProductBookmarkListResponse> getBookmarks(
             @RequestHeader(value = "Authorization", required = false)
@@ -88,7 +75,7 @@ public class FinancialProductController {
         ));
     }
 
-    @ApiOperation("PRODUCT-3 금융상품 북마크 설정")
+    @ApiOperation("PRODUCT-3 자녀별 관심상품 저장·해제")
     @PutMapping("/children/{child_id}/financial-products/{financial_product_id}/bookmark")
     public ResponseEntity<FinancialProductBookmarkResponse> updateBookmark(
             @RequestHeader(value = "Authorization", required = false)
