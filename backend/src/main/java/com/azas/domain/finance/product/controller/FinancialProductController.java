@@ -101,9 +101,7 @@ public class FinancialProductController {
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
             @PathVariable("financial_product_id") long financialProductId,
-            @RequestParam(value = "child_id", required = false) Long childId,
-            @RequestParam(value = "account_id", required = false)
-            Long financialAccountId
+            @RequestParam(value = "child_id", required = false) Long childId
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
                 authorizationHeader
@@ -111,8 +109,7 @@ public class FinancialProductController {
         return ResponseEntity.ok(financialProductService.getProductDetail(
                 memberId,
                 financialProductId,
-                childId,
-                financialAccountId
+                childId
         ));
     }
 }

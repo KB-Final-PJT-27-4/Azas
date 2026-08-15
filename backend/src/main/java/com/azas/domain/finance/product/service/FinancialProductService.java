@@ -5,7 +5,6 @@ import com.azas.domain.finance.product.dto.FinancialProductBookmarkResponse;
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
 import com.azas.domain.finance.product.dto.FinancialProductListResponse;
 import com.azas.domain.finance.product.entity.FinancialProduct;
-import com.azas.domain.finance.product.entity.RecommendationAccountBasis;
 import com.azas.domain.finance.product.mapper.FinancialProductMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
@@ -16,10 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -145,53 +140,28 @@ public class FinancialProductService {
     public FinancialProductDetailResponse getProductDetail(
             long requesterMemberId,
             long financialProductId,
-            Long childId,
-            Long financialAccountId
+            Long childId
     ) {
+        if (financialProductId <= 0 || (childId != null && childId <= 0)) {
+            throw new BusinessException(ErrorCode.INVALID_QUERY_PARAMETER);
+        }
         FinancialProduct product = getActiveProductOrThrow(financialProductId);
         boolean bookmarked = false;
-        RecommendationAccountBasis accountBasis = null;
-        Integer childAge = null;
 
         if (childId != null) {
             assertChildAccess(requesterMemberId, childId);
-            assertChildEligibleProduct(product);
-            bookmarked = financialProductMapper.countBookmark(
-                    requesterMemberId,
-                    childId,
-                    financialProductId
-            ) > 0;
-            childAge = financialProductMapper.findChildAge(childId);
-        }
-
-        if (financialAccountId != null) {
-            if (childId == null) {
-                throw new BusinessException(ErrorCode.INVALID_QUERY_PARAMETER);
-            }
-            accountBasis = financialProductMapper.findSavingsAccountBasis(
-                    financialAccountId,
-                    childId
-            );
-            if (accountBasis == null) {
-                throw new BusinessException(
-                        ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND
-                );
+            if (isChildEligibleProduct(product)) {
+                bookmarked = financialProductMapper.countBookmark(
+                        requesterMemberId,
+                        childId,
+                        financialProductId
+                ) > 0;
             }
         }
-
-        FinancialProductDetailResponse.Recommendation recommendation =
-                accountBasis == null
-                        ? null
-                        : FinancialProductDetailResponse.recommendation(
-                        product,
-                        childAge,
-                        calculateMonthlyAmount(accountBasis)
-                );
 
         return FinancialProductDetailResponse.from(
                 product,
                 bookmarked,
-                recommendation,
                 objectMapper
         );
     }
@@ -206,10 +176,14 @@ public class FinancialProductService {
     }
 
     private void assertChildEligibleProduct(FinancialProduct product) {
-        if (!"CHILD".equals(product.getTargetOwnerType())
-                && !"BOTH".equals(product.getTargetOwnerType())) {
+        if (!isChildEligibleProduct(product)) {
             throw new BusinessException(ErrorCode.FINANCIAL_PRODUCT_NOT_FOUND);
         }
+    }
+
+    private boolean isChildEligibleProduct(FinancialProduct product) {
+        return "CHILD".equals(product.getTargetOwnerType())
+                || "BOTH".equals(product.getTargetOwnerType());
     }
 
     private void assertChildAccess(long requesterMemberId, long childId) {
@@ -280,27 +254,4 @@ public class FinancialProductService {
         }
     }
 
-    private BigDecimal calculateMonthlyAmount(
-            RecommendationAccountBasis accountBasis
-    ) {
-        if (accountBasis.getGoalTargetAmount() == null
-                || accountBasis.getBalance() == null
-                || accountBasis.getGoalTargetDate() == null) {
-            return null;
-        }
-
-        BigDecimal remainingAmount = accountBasis.getGoalTargetAmount()
-                .subtract(accountBasis.getBalance())
-                .max(BigDecimal.ZERO);
-        long monthsUntilGoal = ChronoUnit.MONTHS.between(
-                LocalDate.now().withDayOfMonth(1),
-                accountBasis.getGoalTargetDate().withDayOfMonth(1)
-        );
-        long divisor = Math.max(1, monthsUntilGoal);
-        return remainingAmount.divide(
-                BigDecimal.valueOf(divisor),
-                0,
-                RoundingMode.CEILING
-        );
-    }
 }
