@@ -34,7 +34,7 @@ class FinancialProductMapperXmlTest {
     }
 
     @Test
-    void childProductQueriesExcludeParentOnlyProducts() throws Exception {
+    void generalListDoesNotFilterOwnerButBookmarkQueriesDo() throws Exception {
         String resourcePath = "mapper/finance/product/FinancialProductMapper.xml";
         String filter = "target_owner_type IN ('CHILD', 'BOTH')";
 
@@ -48,7 +48,7 @@ class FinancialProductMapperXmlTest {
 
             assertTrue(xml.contains("target_owner_type,"));
             assertTrue(xml.contains("p.target_owner_type,"));
-            assertEquals(3, xml.split(
+            assertEquals(2, xml.split(
                     java.util.regex.Pattern.quote(filter), -1
             ).length - 1);
         }

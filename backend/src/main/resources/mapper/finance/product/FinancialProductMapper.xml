@@ -78,7 +78,6 @@
         SELECT <include refid="productColumns"/>
         FROM financial_product
         WHERE is_active = 1
-          AND target_owner_type IN ('CHILD', 'BOTH')
         <if test="productType != null and productType != ''">
             AND product_type = #{productType}
         </if>

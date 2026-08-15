@@ -2,7 +2,7 @@ package com.azas.domain.finance.product.service;
 
 import com.azas.domain.finance.product.dto.FinancialProductBookmarkResponse;
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
-import com.azas.domain.finance.product.dto.FinancialProductRecommendationResponse;
+import com.azas.domain.finance.product.dto.FinancialProductListResponse;
 import com.azas.domain.finance.product.entity.FinancialProduct;
 import com.azas.domain.finance.product.entity.RecommendationAccountBasis;
 import com.azas.domain.finance.product.mapper.FinancialProductMapper;
@@ -47,8 +47,7 @@ class FinancialProductServiceTest {
     }
 
     @Test
-    void returnsRecommendationWithNextCursor() throws Exception {
-        authorizeChild();
+    void returnsProductListWithNextCursor() throws Exception {
         FinancialProduct firstProduct = product(1L);
         FinancialProduct secondProduct = product(2L);
 
@@ -57,37 +56,34 @@ class FinancialProductServiceTest {
                 eq(null),
                 eq(2)
         )).thenReturn(List.of(firstProduct, secondProduct));
-        when(financialProductMapper.findBookmarkedProductIds(1L, 1L))
-                .thenReturn(List.of(1L));
-        when(financialProductMapper.findChildAge(1L)).thenReturn(10);
+        FinancialProductListResponse response =
+                financialProductService.getProducts("saving", null, 1);
 
-        FinancialProductRecommendationResponse response =
-                financialProductService.getRecommendations(
-                        1L,
-                        1L,
-                        null,
-                        new BigDecimal("100000"),
-                        "saving",
-                        null,
-                        1
-                );
-
-        assertEquals(1L, response.getChildId());
         assertEquals("1", response.getNextCursor());
+        assertTrue(response.isHasNext());
         assertEquals(1, response.getItems().size());
-        assertTrue(response.getItems().get(0).isBookmarked());
+        assertEquals(
+                List.of("#만19세미만", "#자유적립"),
+                response.getItems().get(0).getHashtags()
+        );
+        assertEquals(
+                12,
+                response.getItems().get(0)
+                        .getContractPeriod().getMinMonths()
+        );
         String json = new ObjectMapper().writeValueAsString(response);
-        assertTrue(json.contains("\"is_bookmarked\":true"));
-        assertFalse(json.contains("\"bookmarked\":"));
+        assertTrue(json.contains("\"has_next\":true"));
+        assertFalse(json.contains("match_score"));
+        assertFalse(json.contains("recommendation_reason"));
+        assertFalse(json.contains("is_bookmarked"));
     }
 
     @Test
     void rejectsUnknownProductType() {
-        authorizeChild();
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> financialProductService.getRecommendations(
-                        1L, 1L, null, null, "LOAN", null, null
+                () -> financialProductService.getProducts(
+                        "LOAN", null, null
                 )
         );
 
@@ -99,6 +95,43 @@ class FinancialProductServiceTest {
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),
                 anyInt()
+        );
+    }
+
+    @Test
+    void returnsParentAndChildProductsWithoutOwnerFiltering() {
+        FinancialProduct parentProduct = product(3L);
+        parentProduct.setTargetOwnerType("PARENT");
+        when(financialProductMapper.findActiveProducts(null, null, 21))
+                .thenReturn(List.of(parentProduct));
+
+        FinancialProductListResponse response =
+                financialProductService.getProducts(null, null, null);
+
+        assertEquals(1, response.getItems().size());
+        assertEquals(
+                "PARENT",
+                response.getItems().get(0).getTargetOwnerType()
+        );
+        assertFalse(response.isHasNext());
+        assertNull(response.getNextCursor());
+    }
+
+    @Test
+    void rejectsMalformedDisplayBadgesJson() {
+        FinancialProduct malformedProduct = product(1L);
+        malformedProduct.setDisplayBadgesJson("not-json");
+        when(financialProductMapper.findActiveProducts(null, null, 21))
+                .thenReturn(List.of(malformedProduct));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> financialProductService.getProducts(null, null, null)
+        );
+
+        assertEquals(
+                ErrorCode.INTERNAL_SERVER_ERROR,
+                exception.getErrorCode()
         );
     }
 
@@ -201,12 +234,15 @@ class FinancialProductServiceTest {
         product.setProductType("SAVING");
         product.setTargetOwnerType("CHILD");
         product.setName("Product " + productId);
+        product.setDisplayBadgesJson("[\"#만19세미만\",\"#자유적립\"]");
         product.setBaseInterestRate(new BigDecimal("2.1"));
         product.setMaxInterestRate(new BigDecimal("3.4"));
         product.setMinAge(0);
         product.setMaxAge(19);
         product.setMinMonthlyAmount(new BigDecimal("10000"));
         product.setMaxMonthlyAmount(new BigDecimal("3000000"));
+        product.setMinContractPeriodMonths(12);
+        product.setMaxContractPeriodMonths(12);
         product.setEligibilityConditionsJson("[]");
         product.setDepositConditionsJson("[]");
         product.setPreferentialConditionsJson("[]");
