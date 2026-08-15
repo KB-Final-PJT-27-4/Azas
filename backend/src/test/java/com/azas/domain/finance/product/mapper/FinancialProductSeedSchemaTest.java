@@ -26,6 +26,9 @@ class FinancialProductSeedSchemaTest {
         String seed = readResource("db/seed.sql");
 
         assertTrue(seed.contains("'KB Young Youth 적금'"));
+        assertTrue(seed.matches(
+                "(?s).*'KB Young Youth 적금'.*?2\\.1000,\\s+3\\.6500,.*"
+        ));
         assertTrue(seed.contains("'KB아이사랑적금'"));
         assertTrue(seed.contains("'내 아이를 위한 280일 적금'"));
         assertTrue(seed.contains("JSON_ARRAY('#만19세미만', '#자유적립', '#무료보험')"));

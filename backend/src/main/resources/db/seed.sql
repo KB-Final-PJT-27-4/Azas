@@ -176,7 +176,7 @@ INSERT INTO financial_product (
     'https://www.kbstar.com/',
     'pig_coin',
     2.1000,
-    3.4000,
+    3.6500,
     0,
     19,
     10000,
