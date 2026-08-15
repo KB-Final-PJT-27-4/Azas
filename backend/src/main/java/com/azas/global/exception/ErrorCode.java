@@ -171,6 +171,14 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "조회 조건이 올바르지 않습니다."
     ),
+    INVALID_MATURITY_ESTIMATE_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "예상 만기금액 계산 조건이 올바르지 않습니다."
+    ),
+    MATURITY_ESTIMATE_NOT_AVAILABLE(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "해당 금융상품은 예상 만기금액을 계산할 수 없습니다."
+    ),
 
 
     // Time Capsule

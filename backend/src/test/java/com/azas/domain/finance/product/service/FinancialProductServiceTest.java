@@ -3,6 +3,8 @@ package com.azas.domain.finance.product.service;
 import com.azas.domain.finance.product.dto.FinancialProductBookmarkResponse;
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
 import com.azas.domain.finance.product.dto.FinancialProductListResponse;
+import com.azas.domain.finance.product.dto.FinancialProductMaturityEstimateRequest;
+import com.azas.domain.finance.product.dto.FinancialProductMaturityEstimateResponse;
 import com.azas.domain.finance.product.entity.FinancialProduct;
 import com.azas.domain.finance.product.mapper.FinancialProductMapper;
 import com.azas.global.exception.BusinessException;
@@ -41,7 +43,8 @@ class FinancialProductServiceTest {
     void setUp() {
         financialProductService = new FinancialProductService(
                 financialProductMapper,
-                new ObjectMapper()
+                new ObjectMapper(),
+                new MaturityEstimateCalculator()
         );
     }
 
@@ -256,6 +259,128 @@ class FinancialProductServiceTest {
 
         assertEquals(
                 ErrorCode.INTERNAL_SERVER_ERROR,
+                exception.getErrorCode()
+        );
+    }
+
+    @Test
+    void estimatesMaturityUsingMaximumRate() {
+        FinancialProduct product = product(1L);
+        product.setContractPeriodMonths(12);
+        when(financialProductMapper.findActiveProductById(1L))
+                .thenReturn(product);
+
+        FinancialProductMaturityEstimateResponse response =
+                financialProductService.estimateMaturity(
+                        1L,
+                        new FinancialProductMaturityEstimateRequest(
+                                new BigDecimal("300000"),
+                                12
+                        )
+                );
+
+        assertEquals("MAX", response.getAppliedInterestRate().getType());
+        assertEquals(
+                new BigDecimal("3.4"),
+                response.getAppliedInterestRate().getAnnualRate()
+        );
+        assertEquals(
+                new BigDecimal("3600000"),
+                response.getPrincipalAmount()
+        );
+        assertEquals(
+                new BigDecimal("66300"),
+                response.getEstimatedInterestBeforeTax()
+        );
+        assertEquals(
+                new BigDecimal("3656090"),
+                response.getEstimatedMaturityAmount()
+        );
+    }
+
+    @Test
+    void fallsBackToBaseRateWhenMaximumRateIsMissing() {
+        FinancialProduct product = product(1L);
+        product.setMaxInterestRate(null);
+        product.setContractPeriodMonths(12);
+        when(financialProductMapper.findActiveProductById(1L))
+                .thenReturn(product);
+
+        FinancialProductMaturityEstimateResponse response =
+                financialProductService.estimateMaturity(
+                        1L,
+                        new FinancialProductMaturityEstimateRequest(
+                                new BigDecimal("100000"),
+                                12
+                        )
+                );
+
+        assertEquals("BASE", response.getAppliedInterestRate().getType());
+        assertEquals(
+                new BigDecimal("2.1"),
+                response.getAppliedInterestRate().getAnnualRate()
+        );
+        assertTrue(response.getDisclaimer().contains("기본금리"));
+    }
+
+    @Test
+    void rejectsMaturityEstimateOutsideProductConditions() {
+        FinancialProduct product = product(1L);
+        product.setContractPeriodMonths(12);
+        when(financialProductMapper.findActiveProductById(1L))
+                .thenReturn(product);
+
+        BusinessException amountException = assertThrows(
+                BusinessException.class,
+                () -> financialProductService.estimateMaturity(
+                        1L,
+                        new FinancialProductMaturityEstimateRequest(
+                                new BigDecimal("9999"),
+                                12
+                        )
+                )
+        );
+        BusinessException periodException = assertThrows(
+                BusinessException.class,
+                () -> financialProductService.estimateMaturity(
+                        1L,
+                        new FinancialProductMaturityEstimateRequest(
+                                new BigDecimal("100000"),
+                                6
+                        )
+                )
+        );
+
+        assertEquals(
+                ErrorCode.INVALID_MATURITY_ESTIMATE_REQUEST,
+                amountException.getErrorCode()
+        );
+        assertEquals(
+                ErrorCode.INVALID_MATURITY_ESTIMATE_REQUEST,
+                periodException.getErrorCode()
+        );
+    }
+
+    @Test
+    void rejectsUnsupportedMaturityEstimateProduct() {
+        FinancialProduct product = product(1L);
+        product.setProductType("ACCOUNT");
+        when(financialProductMapper.findActiveProductById(1L))
+                .thenReturn(product);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> financialProductService.estimateMaturity(
+                        1L,
+                        new FinancialProductMaturityEstimateRequest(
+                                new BigDecimal("100000"),
+                                12
+                        )
+                )
+        );
+
+        assertEquals(
+                ErrorCode.MATURITY_ESTIMATE_NOT_AVAILABLE,
                 exception.getErrorCode()
         );
     }
