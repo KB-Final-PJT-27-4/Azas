@@ -8,11 +8,14 @@ import java.time.LocalDateTime;
 
 @Getter
 @RequiredArgsConstructor
-public final class AccountTransactionItemResult {
+public final class AccountTransactionDetailResult {
 
     private final Long accountTransactionId;
     private final LocalDateTime occurredAt;
-    private final String counterpartyName;
     private final String direction;
     private final BigDecimal amount;
+    private final String memo;
+    private final AccountTransactionPartyResult depositAccount;
+    private final AccountTransactionPartyResult withdrawalAccount;
+    private final BigDecimal balanceAfter;
 }

@@ -1,14 +1,11 @@
 package com.azas.domain.finance.account.service;
 
-import com.azas.domain.finance.account.dto.AccountDetailResult;
-import com.azas.domain.finance.account.dto.AccountTransactionAccountResult;
 import com.azas.domain.finance.account.dto.AccountTransactionItemResult;
 import com.azas.domain.finance.account.dto.AccountTransactionListResult;
 import com.azas.domain.finance.account.dto.AccountTransactionRow;
 import com.azas.domain.finance.account.mapper.FinancialAccountMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
-import com.azas.global.security.AccountNumberProtector;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,8 +28,6 @@ public class AccountTransactionService {
 
     private final FinancialAccountMapper financialAccountMapper;
     private final AccountDetailService accountDetailService;
-    private final AccountNumberProtector accountNumberProtector;
-
     @Transactional(readOnly = true)
     public AccountTransactionListResult getTransactions(
             long requesterMemberId,
@@ -43,8 +38,10 @@ public class AccountTransactionService {
         int size = validateAndResolveSize(requestedSize);
         TransactionCursor decodedCursor = decodeCursor(cursor);
 
-        AccountDetailResult currentAccount = accountDetailService
-                .getAccountDetail(requesterMemberId, financialAccountId);
+        accountDetailService.getAccountDetail(
+                requesterMemberId,
+                financialAccountId
+        );
 
         List<AccountTransactionRow> rows = financialAccountMapper
                 .findAccountTransactions(
@@ -65,7 +62,7 @@ public class AccountTransactionService {
 
         List<AccountTransactionItemResult> transactions = new ArrayList<>();
         for (AccountTransactionRow row : pageRows) {
-            transactions.add(toItemResult(currentAccount, row));
+            transactions.add(toItemResult(row));
         }
 
         String nextCursor = null;
@@ -88,61 +85,25 @@ public class AccountTransactionService {
     }
 
     private AccountTransactionItemResult toItemResult(
-            AccountDetailResult currentAccount,
             AccountTransactionRow row
     ) {
         validateStoredTransaction(row);
 
-        AccountTransactionAccountResult current =
-                new AccountTransactionAccountResult(
-                        currentAccount.getAccountId(),
-                        currentAccount.getBankName(),
-                        currentAccount.getAccountName(),
-                        currentAccount.getAccountNumber()
-                );
-        AccountTransactionAccountResult counterparty =
-                toCounterpartyResult(row);
-
-        boolean credit = CREDIT.equals(row.getDirection());
         return new AccountTransactionItemResult(
                 row.getAccountTransactionId(),
                 row.getOccurredAt(),
+                resolveCounterpartyName(row),
                 row.getDirection(),
-                row.getAmount(),
-                row.getDescription(),
-                credit ? current : counterparty,
-                credit ? counterparty : current,
-                row.getBalanceAfter()
+                row.getAmount()
         );
     }
 
-    private AccountTransactionAccountResult toCounterpartyResult(
+    private String resolveCounterpartyName(
             AccountTransactionRow row
     ) {
-        String accountName = row.getCounterpartyAccountName() == null
+        return row.getCounterpartyAccountName() == null
                 ? row.getCounterpartyName()
                 : row.getCounterpartyAccountName();
-
-        return new AccountTransactionAccountResult(
-                row.getCounterpartyAccountId(),
-                row.getCounterpartyBankName(),
-                accountName,
-                decryptCounterpartyAccountNumber(
-                        row.getCounterpartyAccountNumberCiphertext()
-                )
-        );
-    }
-
-    private String decryptCounterpartyAccountNumber(byte[] ciphertext) {
-        if (ciphertext == null) {
-            return null;
-        }
-
-        try {
-            return accountNumberProtector.decrypt(ciphertext);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
     }
 
     private void validateStoredTransaction(AccountTransactionRow row) {

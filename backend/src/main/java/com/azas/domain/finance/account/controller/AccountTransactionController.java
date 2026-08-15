@@ -29,19 +29,16 @@ public class AccountTransactionController {
     private final AccessTokenMemberResolver accessTokenMemberResolver;
 
     @ApiOperation(
-            value = "ACCOUNT-22 계좌 거래내역 조회",
-            notes = "계좌별 거래내역을 거래 발생 시각과 거래 ID의 역순으로 "
-                    + "커서 페이지네이션 조회합니다. 부모 명의 계좌는 연결한 "
-                    + "부모 본인만, 자녀 명의 계좌는 연결된 부모 또는 자녀 "
-                    + "본인이 조회할 수 있습니다. 거래 금액은 항상 양수이며 "
-                    + "direction(CREDIT, DEBIT)으로 입출금을 구분합니다. "
-                    + "응답에는 거래 목록과 이체 상세 화면에 필요한 입금·출금 "
-                    + "계좌 정보가 포함됩니다. 거래가 없으면 빈 목록을 반환합니다."
+            value = "ACCOUNT-22 계좌 거래내역 목록 조회",
+            notes = "계좌별 거래내역을 거래 발생 시각과 거래 ID 내림차순으로 "
+                    + "커서 페이지네이션 조회합니다. 목록 화면에 필요한 거래 ID, "
+                    + "거래 시각, 거래 상대 표시명, 입출금 방향, 금액만 반환합니다. "
+                    + "거래가 없으면 빈 목록을 반환합니다."
     )
     @ApiResponses({
             @ApiResponse(
                     code = 200,
-                    message = "계좌 거래내역 조회 성공",
+                    message = "계좌 거래내역 목록 조회 성공",
                     response = AccountTransactionListResponse.class
             ),
             @ApiResponse(
@@ -56,17 +53,17 @@ public class AccountTransactionController {
             ),
             @ApiResponse(
                     code = 403,
-                    message = "해당 금융 계좌에 접근할 권한이 없음",
+                    message = "금융 계좌 접근 권한 없음",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
                     code = 404,
-                    message = "계좌가 없거나 활성 연결 대상이 아님",
+                    message = "계좌가 없거나 활성 연결 계좌가 아님",
                     response = ApiErrorResponse.class
             ),
             @ApiResponse(
                     code = 500,
-                    message = "계좌번호 복호화 실패, 잘못 저장된 거래 또는 서버 오류",
+                    message = "저장 거래 데이터 불일치 또는 서버 오류",
                     response = ApiErrorResponse.class
             )
     })
@@ -79,7 +76,7 @@ public class AccountTransactionController {
             @ApiParam(value = "이전 응답의 next_cursor")
             @RequestParam(value = "cursor", required = false)
             String cursor,
-            @ApiParam(value = "페이지당 조회 개수(1~100, 기본 20)",
+            @ApiParam(value = "페이지 조회 개수(1~100, 기본 20)",
                     example = "20")
             @RequestParam(value = "size", required = false)
             Integer size
