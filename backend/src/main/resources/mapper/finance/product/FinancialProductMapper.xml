@@ -58,16 +58,6 @@
           AND c.status = 'ACTIVE'
     </select>
 
-    <select id="findChildAge" resultType="java.lang.Integer">
-        SELECT CASE
-                   WHEN birth_date IS NULL THEN NULL
-                   ELSE TIMESTAMPDIFF(YEAR, birth_date, CURDATE())
-               END
-        FROM child
-        WHERE child_id = #{childId}
-          AND status = 'ACTIVE'
-    </select>
-
     <select id="findActiveProductById"
             resultType="com.azas.domain.finance.product.entity.FinancialProduct">
         SELECT <include refid="productColumns"/>
@@ -89,29 +79,6 @@
         </if>
         ORDER BY financial_product_id ASC
         LIMIT #{limit}
-    </select>
-
-    <select id="findSavingsAccountBasis"
-            resultType="com.azas.domain.finance.product.entity.RecommendationAccountBasis">
-        SELECT
-            financial_account_id,
-            goal_name_snapshot AS goal_name,
-            goal_target_amount,
-            goal_target_date,
-            balance,
-            maturity_date
-        FROM financial_account
-        WHERE financial_account_id = #{financialAccountId}
-          AND child_id = #{childId}
-          AND account_product_type = 'SAVINGS'
-          AND account_status = 'ACTIVE'
-    </select>
-
-    <select id="findBookmarkedProductIds" resultType="long">
-        SELECT financial_product_id
-        FROM financial_product_bookmark
-        WHERE member_id = #{memberId}
-          AND child_id = #{childId}
     </select>
 
     <select id="countBookmark" resultType="int">
