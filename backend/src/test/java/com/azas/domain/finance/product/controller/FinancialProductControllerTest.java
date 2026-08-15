@@ -2,6 +2,8 @@ package com.azas.domain.finance.product.controller;
 
 import com.azas.domain.finance.product.dto.FinancialProductDetailResponse;
 import com.azas.domain.finance.product.dto.FinancialProductListResponse;
+import com.azas.domain.finance.product.dto.FinancialProductMaturityEstimateRequest;
+import com.azas.domain.finance.product.dto.FinancialProductMaturityEstimateResponse;
 import com.azas.domain.finance.product.entity.FinancialProduct;
 import com.azas.domain.finance.product.service.FinancialProductService;
 import com.azas.global.security.AccessTokenMemberResolver;
@@ -19,7 +21,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -145,6 +150,81 @@ class FinancialProductControllerTest {
                 .andExpect(jsonPath("$.recommendation").doesNotExist())
                 .andExpect(jsonPath("$.external_product_id")
                         .doesNotExist());
+    }
+
+    @Test
+    void servesFinancialProductMaturityEstimate() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(1L);
+        FinancialProductMaturityEstimateResponse response =
+                new FinancialProductMaturityEstimateResponse(
+                        1L,
+                        new BigDecimal("300000"),
+                        12,
+                        "MAX",
+                        "최고금리",
+                        new BigDecimal("3.4"),
+                        new BigDecimal("3600000"),
+                        new BigDecimal("66300"),
+                        new BigDecimal("10210"),
+                        new BigDecimal("56090"),
+                        new BigDecimal("3656090")
+                );
+        given(financialProductService.estimateMaturity(
+                org.mockito.ArgumentMatchers.eq(1L),
+                any(FinancialProductMaturityEstimateRequest.class)
+        )).willReturn(response);
+
+        mockMvc.perform(post(
+                        "/api/v1/financial-products/{productId}/maturity-estimate",
+                        1L
+                )
+                        .header("Authorization", "Bearer access-token")
+                        .contentType("application/json")
+                        .content("{\"monthly_amount\":300000,"
+                                + "\"period_months\":12}"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(
+                        "application/json"
+                ))
+                .andExpect(jsonPath("$.financial_product_id").value(1))
+                .andExpect(jsonPath("$.monthly_amount").value(300000))
+                .andExpect(jsonPath("$.period_months").value(12))
+                .andExpect(jsonPath("$.applied_interest_rate.type")
+                        .value("MAX"))
+                .andExpect(jsonPath("$.applied_interest_rate.label")
+                        .value("최고금리"))
+                .andExpect(jsonPath("$.applied_interest_rate.annual_rate")
+                        .value(3.4))
+                .andExpect(jsonPath("$.principal_amount").value(3600000))
+                .andExpect(jsonPath("$.estimated_interest_before_tax")
+                        .value(66300))
+                .andExpect(jsonPath("$.tax_rate").value(15.4))
+                .andExpect(jsonPath("$.estimated_tax").value(10210))
+                .andExpect(jsonPath("$.estimated_interest_after_tax")
+                        .value(56090))
+                .andExpect(jsonPath("$.estimated_maturity_amount")
+                        .value(3656090))
+                .andExpect(jsonPath("$.calculation_basis")
+                        .value("MONTHLY_BEGINNING_SIMPLE_INTEREST"))
+                .andExpect(jsonPath("$.disclaimer").isNotEmpty())
+                .andExpect(jsonPath("$.interest_rate_type")
+                        .doesNotExist());
+    }
+
+    @Test
+    void rejectsInvalidMaturityEstimateRequestAtWebBoundary()
+            throws Exception {
+        mockMvc.perform(post(
+                        "/api/v1/financial-products/{productId}/maturity-estimate",
+                        1L
+                )
+                        .header("Authorization", "Bearer access-token")
+                        .contentType("application/json")
+                        .content("{\"monthly_amount\":0,"
+                                + "\"period_months\":0}"))
+                .andExpect(status().isBadRequest());
     }
 
     private FinancialProduct product() {
