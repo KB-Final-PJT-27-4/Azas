@@ -234,9 +234,10 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       hideBottomNavigation: true,
-      headerTitle: '마이페이지',
+      headerTitle: '목표 관리',
       showHeaderBack: true,
       showHeaderNotification: false,
+      pageBackgroundColor: '#eef9fe',
     },
   },
   {
@@ -247,7 +248,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       hideBottomNavigation: true,
-      headerTitle: '마이페이지',
+      headerTitle: '목표 수정',
       showHeaderBack: true,
       showHeaderNotification: false,
     },

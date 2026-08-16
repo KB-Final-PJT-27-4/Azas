@@ -18,12 +18,16 @@ const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
 const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
 const showHeaderNotification = computed(() => route.meta.showHeaderNotification !== false)
 const notificationCount = computed(() => Number(route.meta.notificationCount ?? 0))
+const pageBackgroundColor = computed(() => String(route.meta.pageBackgroundColor ?? ''))
+const pageBackgroundStyle = computed(() =>
+  pageBackgroundColor.value ? { backgroundColor: pageBackgroundColor.value } : undefined,
+)
 const { toastMessage, toastVariant } = useToast()
 </script>
 
 <template>
   <div class="default-layout">
-    <div class="default-layout__shell">
+    <div class="default-layout__shell" :style="pageBackgroundStyle">
       <AppSubHeader
         v-if="!hideNavigation && showHeaderBack"
         :title="headerTitle"
@@ -38,6 +42,7 @@ const { toastMessage, toastVariant } = useToast()
       />
       <div
         class="default-layout__content"
+        :style="pageBackgroundStyle"
         :class="{
           'default-layout__content--without-navigation': hideNavigation,
           'default-layout__content--without-bottom-navigation': hideBottomNavigation,
