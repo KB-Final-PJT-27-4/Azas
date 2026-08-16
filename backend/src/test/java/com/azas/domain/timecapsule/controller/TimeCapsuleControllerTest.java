@@ -278,6 +278,8 @@ class TimeCapsuleControllerTest {
                         .value("COLLECTING"))
                 .andExpect(jsonPath("$.time_capsules[0].d_day")
                         .value(23))
+                .andExpect(jsonPath("$.time_capsules[0].dday")
+                        .doesNotExist())
                 .andExpect(jsonPath(
                         "$.time_capsules[0].total_saved_amount"
                 ).value(200000.00))

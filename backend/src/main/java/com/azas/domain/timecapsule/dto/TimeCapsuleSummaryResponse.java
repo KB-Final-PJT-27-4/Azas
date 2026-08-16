@@ -23,7 +23,6 @@ public class TimeCapsuleSummaryResponse {
     @JsonProperty("release_date")
     private final LocalDate releaseDate;
 
-    @JsonProperty("d_day")
     private final Long dDay;
 
     @JsonProperty("total_saved_amount")
@@ -52,6 +51,11 @@ public class TimeCapsuleSummaryResponse {
             LocalDate today
     ) {
         return new TimeCapsuleSummaryResponse(timeCapsule, today);
+    }
+
+    @JsonProperty("d_day")
+    public Long getDDay() {
+        return dDay;
     }
 
     // [JMG] CAPSULE-2 예상 공개일까지 남은 일수를 계산한다.
