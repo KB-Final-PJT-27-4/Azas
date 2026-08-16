@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import goalEducationIcon from '@/assets/images/goals/goals_1.png'
 import goalLumpSumIcon from '@/assets/images/goals/goal-lump-sum.png'
 import goalCloudBackground from '@/assets/images/home/home-hero-bg.png'
+import { useToast } from '@/composables/useToast'
 import { linkedAssetAccounts } from '@/data/assetDummyData'
 
 interface ManagedGoal {
@@ -17,6 +18,7 @@ interface ManagedGoal {
 }
 
 const router = useRouter()
+const { showToast } = useToast()
 const openMenuId = ref<number | null>(null)
 let previousHtmlBackground = ''
 let previousBodyBackground = ''
@@ -64,6 +66,7 @@ const toggleGoalMenu = (goalId: number) => {
 const deleteGoal = (goalId: number) => {
   goals.value = goals.value.filter((goal) => goal.id !== goalId)
   openMenuId.value = null
+  showToast('목표를 삭제했어요.', 'success')
 }
 
 const addGoal = () => {

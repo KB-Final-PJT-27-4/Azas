@@ -52,7 +52,12 @@ const { toastMessage, toastVariant } = useToast()
       </div>
       <AppBottomNavigation v-if="!hideBottomNavigation" />
       <Transition name="global-toast">
-        <BaseToast v-if="toastMessage" :message="toastMessage" :variant="toastVariant" />
+        <BaseToast
+          v-if="toastMessage"
+          :message="toastMessage"
+          :variant="toastVariant"
+          :with-bottom-navigation="!hideBottomNavigation"
+        />
       </Transition>
     </div>
   </div>

@@ -251,6 +251,7 @@ const routes: RouteRecordRaw[] = [
       headerTitle: '목표 수정',
       showHeaderBack: true,
       showHeaderNotification: false,
+      pageBackgroundColor: '#eef9fe',
     },
   },
   {
