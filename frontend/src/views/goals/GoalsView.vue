@@ -8,6 +8,7 @@ import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import GoalPlanStep from '@/components/goals/GoalPlanStep.vue'
 import GoalSelectionStep from '@/components/goals/GoalSelectionStep.vue'
 import GoalSavingsLinkStep from '@/components/goals/GoalSavingsLinkStep.vue'
+import GoalSetupSummaryStep from '@/components/goals/GoalSetupSummaryStep.vue'
 
 type GoalSetting = { amount: number; targetDate: string }
 
@@ -23,6 +24,7 @@ const currentLinkGoalIndex = ref(0)
 const slideDirection = ref<'forward' | 'backward'>('forward')
 const today = new Date()
 const defaultTargetDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+const goalDisplayOrder = ['education', 'housing', 'marriage', 'lump-sum', 'custom']
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
@@ -42,6 +44,7 @@ const remainingGoalCount = computed(() =>
 )
 const nextButtonLabel = computed(() => {
   if (currentStep.value === 3) return '적금 연결하기'
+  if (currentStep.value === 5) return '목표 관리로 이동'
   if (currentStep.value === 4) {
     return currentLinkGoalIndex.value < selectedGoals.value.length - 1 ? '다음 목표' : '연결 완료'
   }
@@ -52,17 +55,16 @@ const currentSetting = computed(() =>
   currentGoalId.value ? goalSettings[currentGoalId.value] : undefined,
 )
 const currentLinkPlan = computed(() => plans.value[currentLinkGoalIndex.value])
+const unavailableSavingsIds = computed(() => {
+  const currentGoalId = currentLinkPlan.value?.id
+  return Object.entries(linkedSavings)
+    .filter(([goalId]) => goalId !== currentGoalId)
+    .flatMap(([, savingsIds]) => savingsIds)
+})
 const canContinue = computed(
-  () => {
-    if (currentStep.value === 4) {
-      const goalId = currentLinkPlan.value?.id
-      return Boolean(goalId && linkedSavings[goalId]?.length)
-    }
-    return (
-      selectedGoals.value.length > 0 &&
-      (!selectedGoals.value.includes('custom') || customGoal.value.trim().length > 0)
-    )
-  },
+  () =>
+    selectedGoals.value.length > 0 &&
+    (!selectedGoals.value.includes('custom') || customGoal.value.trim().length > 0),
 )
 const progressStep = computed(() =>
   currentStep.value === 1
@@ -95,12 +97,18 @@ const toggleGoal = (goalId: string) => {
     return
   }
   selectedGoals.value.push(goalId)
+  selectedGoals.value.sort(
+    (a, b) => goalDisplayOrder.indexOf(a) - goalDisplayOrder.indexOf(b),
+  )
   ensureSetting(goalId)
 }
 
 const goBack = () => {
   slideDirection.value = 'backward'
-  if (currentStep.value === 4 && currentLinkGoalIndex.value > 0) {
+  if (currentStep.value === 5) {
+    currentStep.value = 4
+    currentLinkGoalIndex.value = selectedGoals.value.length - 1
+  } else if (currentStep.value === 4 && currentLinkGoalIndex.value > 0) {
     currentLinkGoalIndex.value -= 1
   } else if (currentStep.value === 4) {
     currentStep.value = 3
@@ -130,10 +138,12 @@ const goNext = () => {
   } else if (currentStep.value === 3) {
     currentLinkGoalIndex.value = 0
     currentStep.value = 4
-  } else if (currentLinkGoalIndex.value < selectedGoals.value.length - 1) {
+  } else if (currentStep.value === 4 && currentLinkGoalIndex.value < selectedGoals.value.length - 1) {
     currentLinkGoalIndex.value += 1
-  } else {
-    router.push({ name: 'Home' })
+  } else if (currentStep.value === 4) {
+    currentStep.value = 5
+  } else if (currentStep.value === 5) {
+    router.push({ name: 'MypageGoals' })
   }
 }
 
@@ -177,6 +187,7 @@ const toggleLinkedSaving = (goalId: string, savingsId: string) => {
         <div
           :key="`${currentStep}-${currentStep === 4 ? currentLinkGoalIndex : currentGoalIndex}`"
           class="mx-auto w-full max-w-[520px]"
+          :class="currentStep === 5 ? 'flex min-h-full items-center' : ''"
         >
           <GoalSelectionStep
             v-if="currentStep === 1"
@@ -199,12 +210,18 @@ const toggleLinkedSaving = (goalId: string, savingsId: string) => {
 
           <GoalPlanStep v-else-if="currentStep === 3" :plans="plans" />
           <GoalSavingsLinkStep
-            v-else-if="currentLinkPlan"
+            v-else-if="currentStep === 4 && currentLinkPlan"
             :plan="currentLinkPlan"
             :goal-number="currentLinkGoalIndex + 1"
             :goal-count="plans.length"
             :selected-savings-ids="linkedSavings[currentLinkPlan.id] ?? []"
+            :unavailable-savings-ids="unavailableSavingsIds"
             @toggle="toggleLinkedSaving(currentLinkPlan.id, $event)"
+          />
+          <GoalSetupSummaryStep
+            v-else-if="currentStep === 5"
+            :plans="plans"
+            :linked-savings="linkedSavings"
           />
         </div>
       </Transition>

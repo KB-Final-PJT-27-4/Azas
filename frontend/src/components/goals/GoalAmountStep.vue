@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { BaseDatePicker } from '@/components/common'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     goalName: string
     amount: number
@@ -20,7 +21,25 @@ const emit = defineEmits<{
   openRecommendation: []
 }>()
 
-const currentYear = new Date().getFullYear()
+const today = new Date()
+const currentYear = today.getFullYear()
+const currentMonth = today.getMonth() + 1
+const todayValue = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+const remainingMonths = computed(() => {
+  const match = /^(\d{4})-(\d{2})$/.exec(props.targetDate)
+  if (!match) return 1
+
+  const targetYear = Number(match[1])
+  const targetMonth = Number(match[2])
+  const monthDifference = (targetYear - currentYear) * 12 + (targetMonth - currentMonth)
+
+  return Math.max(monthDifference, 1)
+})
+
+const monthlySavings = computed(() =>
+  props.amount > 0 ? Math.ceil(props.amount / remainingMonths.value) : 0,
+)
 
 const updateAmount = (event: Event) => {
   const value = Number((event.target as HTMLInputElement).value.replace(/[^0-9]/g, ''))
@@ -77,7 +96,7 @@ const updateAmount = (event: Event) => {
         :model-value="targetDate"
         label="목표 달성 시기"
         selection-mode="month"
-        inline-panel
+        :min-date="todayValue"
         :min-year="currentYear"
         :max-year="currentYear + 100"
         @update:model-value="emit('update:targetDate', $event)"
@@ -85,10 +104,10 @@ const updateAmount = (event: Event) => {
 
       <div class="min-w-0 w-full max-w-full rounded-2xl bg-[var(--color-selected-background)] p-5">
         <div class="text-xl font-semibold text-[var(--color-selected-text)]">
-          매월 약 {{ Math.ceil(amount / 240).toLocaleString('ko-KR') }}원
+          매월 약 {{ monthlySavings.toLocaleString('ko-KR') }}원
         </div>
         <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
-          현재부터 240개월 동안 균등 저축 기준
+          현재부터 {{ remainingMonths.toLocaleString('ko-KR') }}개월 동안 균등 저축 기준
         </p>
       </div>
     </div>

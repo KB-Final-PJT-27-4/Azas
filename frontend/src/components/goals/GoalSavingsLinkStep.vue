@@ -26,6 +26,7 @@ type SavingsAccount = {
 defineProps<{
   plan: GoalPlan
   selectedSavingsIds: string[]
+  unavailableSavingsIds: string[]
   goalNumber: number
   goalCount: number
 }>()
@@ -91,7 +92,7 @@ const savingsAccounts: SavingsAccount[] = [
       </div>
     </div>
     <p class="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-      목표에 연결할 적금을 선택해주세요. 여러 개를 함께 연결할 수 있어요.
+      연결할 적금을 선택해보세요. 지금 연결하지 않고 넘어가도 괜찮아요.
     </p>
 
     <article
@@ -103,7 +104,6 @@ const savingsAccounts: SavingsAccount[] = [
         <img class="size-10 object-contain" :src="goalIcons[plan.id]" alt="" />
       </span>
       <span class="min-w-0 flex-1">
-        <span class="block text-xs font-medium text-[var(--color-text-secondary)]">선택한 목표</span>
         <strong class="mt-0.5 block truncate text-lg">{{ plan.name }}</strong>
         <span class="mt-1 block text-sm text-[var(--color-text-secondary)]">
           목표 {{ plan.amount.toLocaleString('ko-KR') }}원
@@ -114,7 +114,7 @@ const savingsAccounts: SavingsAccount[] = [
     <div class="mt-7 flex items-center justify-between">
       <h2 class="text-base font-bold">연결 가능한 적금</h2>
       <span class="text-xs text-[var(--color-text-secondary)]">
-        {{ selectedSavingsIds.length > 0 ? `${selectedSavingsIds.length}개 선택` : `총 ${savingsAccounts.length}개` }}
+        {{ selectedSavingsIds.length > 0 ? `${selectedSavingsIds.length}개 선택` : '선택 안 함' }}
       </span>
     </div>
 
@@ -126,10 +126,18 @@ const savingsAccounts: SavingsAccount[] = [
         :class="
           selectedSavingsIds.includes(saving.id)
             ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)]'
-            : 'border-[var(--color-border)] bg-white'
+            : unavailableSavingsIds.includes(saving.id)
+              ? 'cursor-not-allowed border-[#d9e0e6] bg-[#f5f6f7] opacity-55'
+            : 'border-[#cbd5df] bg-white'
         "
         type="button"
+        :disabled="unavailableSavingsIds.includes(saving.id)"
         :aria-pressed="selectedSavingsIds.includes(saving.id)"
+        :aria-label="
+          unavailableSavingsIds.includes(saving.id)
+            ? `${saving.name}, 다른 목표에 연결된 적금`
+            : saving.name
+        "
         @click="emit('toggle', saving.id)"
       >
         <strong class="block text-base">{{ saving.name }}</strong>
@@ -148,11 +156,17 @@ const savingsAccounts: SavingsAccount[] = [
           :class="
             selectedSavingsIds.includes(saving.id)
               ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-white'
-              : 'border-[var(--color-border)] text-transparent'
+              : 'border-[#cbd5df] text-transparent'
           "
           aria-hidden="true"
         >
           <Check :size="15" :stroke-width="3" />
+        </span>
+        <span
+          v-if="unavailableSavingsIds.includes(saving.id)"
+          class="absolute top-3 right-4 text-[11px] font-semibold text-[var(--color-text-secondary)]"
+        >
+          연결됨
         </span>
       </button>
     </div>
