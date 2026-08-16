@@ -2,6 +2,7 @@
 import { Baby, CalendarDays, ShieldCheck, UserRound } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import logoPigUrl from '@/assets/images/login/logo-pig.png'
 
 const router = useRouter()
 const isAccepting = ref(false)
@@ -32,8 +33,17 @@ const declineInvitation = () => {
 
 <template>
   <main class="flex min-h-dvh flex-col text-[var(--color-text-primary)]">
-    <header class="flex h-16 shrink-0 items-center border-b border-[var(--color-border)] bg-white px-6">
-      <strong class="text-[16px] tracking-[-0.02em]">우리 아이 자산관리 서비스</strong>
+    <header class="flex h-16 shrink-0 items-center gap-1 border-b border-[var(--color-border)] bg-white px-2">
+      <img
+        class="size-12 shrink-0 object-contain"
+        :src="logoPigUrl"
+        alt=""
+        aria-hidden="true"
+      />
+      <strong class="text-[16px] tracking-[-0.02em] text-[var(--color-text-primary)]">
+        우리 <span class="text-[#f28faa]">아</span>이
+        <span class="text-[#f28faa]">자</span>산관리 서비<span class="text-[#f28faa]">스</span>
+      </strong>
     </header>
 
     <div class="flex flex-1 flex-col px-5 pt-1 pb-[max(24px,env(safe-area-inset-bottom))]">
@@ -46,9 +56,9 @@ const declineInvitation = () => {
         </p>
       </section>
 
-      <section class="mt-8" aria-labelledby="guardian-info-title">
+      <section class="mt-6" aria-labelledby="guardian-info-title">
         <div class="mb-3 flex items-center justify-between">
-          <h2 id="guardian-info-title" class="text-sm font-bold">초대한 보호자</h2>
+          <h2 id="guardian-info-title" class="text-base font-bold">초대한 보호자</h2>
         </div>
         <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
           <div class="flex items-center gap-4">
@@ -75,13 +85,13 @@ const declineInvitation = () => {
         </article>
       </section>
 
-      <section class="mt-7" aria-labelledby="child-info-title">
+      <section class="mt-5" aria-labelledby="child-info-title">
         <div class="mb-3 flex items-center justify-between">
-          <h2 id="child-info-title" class="text-sm font-bold">내 정보</h2>
+          <h2 id="child-info-title" class="text-base font-bold">내 정보</h2>
         </div>
-        <article class="rounded-[20px] border border-[#d9eaf2] bg-[#f1faff] p-4">
+        <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
           <div class="flex items-center gap-4">
-            <span class="grid size-14 shrink-0 place-items-center rounded-full bg-white text-[var(--color-selected-text)]">
+            <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
               <Baby :size="28" :stroke-width="2.1" aria-hidden="true" />
             </span>
             <div class="min-w-0 flex-1">
@@ -103,7 +113,7 @@ const declineInvitation = () => {
         </article>
       </section>
 
-      <div class="mt-auto grid grid-cols-2 gap-3">
+      <div class="mt-auto grid grid-cols-2 gap-3 pt-7">
         <button
           class="h-14 rounded-2xl border border-[var(--color-border)] bg-white text-base font-bold text-[var(--color-text-secondary)] transition-colors active:bg-[var(--color-surface-muted)] disabled:opacity-60"
           type="button"

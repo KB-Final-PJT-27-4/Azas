@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Baby, CalendarDays, ShieldCheck, UserRound } from 'lucide-vue-next'
 import { BaseDatePicker } from '@/components/common'
+import logoPigUrl from '@/assets/images/login/logo-pig.png'
 import {
   loadRegistrationDraft,
   saveRegistrationDraft,
@@ -54,8 +55,17 @@ const declineInvitation = () => router.push({ name: 'Login' })
 
 <template>
   <main class="flex min-h-dvh flex-col text-[var(--color-text-primary)]">
-    <header class="flex h-16 shrink-0 items-center border-b border-[var(--color-border)] bg-white px-6">
-      <strong class="text-[16px] tracking-[-0.02em]">우리 아이 자산관리 서비스</strong>
+    <header class="flex h-16 shrink-0 items-center gap-1 border-b border-[var(--color-border)] bg-white px-2">
+      <img
+        class="size-12 shrink-0 object-contain"
+        :src="logoPigUrl"
+        alt=""
+        aria-hidden="true"
+      />
+      <strong class="text-[16px] tracking-[-0.02em] text-[var(--color-text-primary)]">
+        우리 <span class="text-[#f28faa]">아</span>이
+        <span class="text-[#f28faa]">자</span>산관리 서비<span class="text-[#f28faa]">스</span>
+      </strong>
     </header>
 
     <form class="flex flex-1 flex-col px-5 pt-1 pb-[max(24px,env(safe-area-inset-bottom))]" @submit.prevent="submitRegistration">
@@ -80,9 +90,9 @@ const declineInvitation = () => router.push({ name: 'Login' })
       </section>
 
       <template v-if="isGuardianInvitation">
-        <section class="mt-8" aria-labelledby="inviter-info-title">
+        <section class="mt-6" aria-labelledby="inviter-info-title">
           <div class="mb-3 flex items-center justify-between">
-            <h2 id="inviter-info-title" class="text-sm font-bold">초대한 보호자</h2>
+            <h2 id="inviter-info-title" class="text-base font-bold">초대한 보호자</h2>
           </div>
           <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
             <div class="flex items-center gap-4">
@@ -109,13 +119,13 @@ const declineInvitation = () => router.push({ name: 'Login' })
           </article>
         </section>
 
-        <section class="mt-7" aria-labelledby="invited-child-title">
+        <section class="mt-5" aria-labelledby="invited-child-title">
           <div class="mb-3 flex items-center justify-between">
-            <h2 id="invited-child-title" class="text-sm font-bold">함께 관리할 아이</h2>
+            <h2 id="invited-child-title" class="text-base font-bold">함께 관리할 아이</h2>
           </div>
-          <article class="rounded-[20px] border border-[#d9eaf2] bg-[#f1faff] p-4">
+          <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
             <div class="flex items-center gap-4">
-              <span class="grid size-14 shrink-0 place-items-center rounded-full bg-white text-[var(--color-selected-text)]">
+              <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
                 <Baby :size="28" :stroke-width="2.1" aria-hidden="true" />
               </span>
               <div class="min-w-0 flex-1">
@@ -137,7 +147,7 @@ const declineInvitation = () => router.push({ name: 'Login' })
           </article>
         </section>
 
-        <fieldset class="mt-7">
+        <fieldset class="mt-5">
           <legend class="mb-3 text-base font-bold">본인 정보</legend>
           <p class="-mt-2 mb-3 text-xs text-[var(--color-text-secondary)]">아이와의 관계를 선택해주세요.</p>
           <div class="grid grid-cols-3 gap-3">

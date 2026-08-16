@@ -40,7 +40,7 @@ watch(
 </script>
 
 <template>
-  <section class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col bg-white">
+  <section class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-white">
 
     <div class="flex flex-1 flex-col px-6 pt-5 pb-6">
       <div class="mb-6 grid grid-cols-2 gap-2" aria-label="계좌 등록 진행 단계">

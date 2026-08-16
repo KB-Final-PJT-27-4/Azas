@@ -42,10 +42,9 @@ const savingsProducts = [
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-8 pb-[calc(28px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-3 pb-[calc(28px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]"
   >
     <header>
-      <span class="text-sm font-bold text-[var(--color-selected-text)]">깨비 맞춤 추천</span>
       <h1 class="mt-2 text-[28px] leading-[1.3] font-extrabold tracking-[-0.035em]">
         아이의 미래에 꼭 맞는<br />KB 적금을 골라봤어요
       </h1>
@@ -59,11 +58,11 @@ const savingsProducts = [
       <ul class="grid list-none gap-3 p-0">
         <li v-for="product in savingsProducts" :key="product.name">
           <article
-            class="savings-card group relative rounded-[20px] border bg-white p-5"
+            class="savings-card group relative rounded-[20px] border p-5"
             :class="
               selectedProductName === product.name
-                ? 'savings-card--selected border-[var(--color-brand-primary)] bg-[#f7fcff]'
-                : 'border-[var(--color-border)]'
+                ? 'savings-card--selected border-[var(--color-brand-primary)] bg-[#e8f7ff]'
+                : 'border-[var(--color-border)] bg-white'
             "
           >
             <button
@@ -110,7 +109,8 @@ const savingsProducts = [
               <span
                 v-for="tag in product.tags"
                 :key="tag"
-                class="rounded-full bg-[#f5f7f8] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)]"
+                class="rounded-full px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] transition-colors"
+                :class="selectedProductName === product.name ? 'bg-white' : 'bg-[#f5f7f8]'"
               >
                 {{ tag }}
               </span>
@@ -142,7 +142,8 @@ const savingsProducts = [
 <style scoped>
 .savings-card {
   box-shadow: 0 6px 20px rgb(55 96 118 / 5%);
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .savings-card:active {

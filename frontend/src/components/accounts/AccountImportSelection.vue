@@ -14,21 +14,27 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  connect: [account: ImportedAccount]
+  connect: [accounts: ImportedAccount[]]
   createAccount: []
   later: []
 }>()
 
-const selectedAccountId = ref<number | null>(props.accounts[0]?.id ?? null)
-const selectedAccount = computed(() =>
-  props.accounts.find(({ id }) => id === selectedAccountId.value),
+const selectedAccountIds = ref<number[]>(props.accounts[0] ? [props.accounts[0].id] : [])
+const selectedAccounts = computed(() =>
+  props.accounts.filter(({ id }) => selectedAccountIds.value.includes(id)),
 )
+
+const toggleAccount = (accountId: number) => {
+  selectedAccountIds.value = selectedAccountIds.value.includes(accountId)
+    ? selectedAccountIds.value.filter((id) => id !== accountId)
+    : [...selectedAccountIds.value, accountId]
+}
 </script>
 
 <template>
   <section
     v-if="accounts.length"
-    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col px-5 pt-7 pb-5"
+    class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col px-5 pt-7 pb-5"
     aria-labelledby="imported-account-title"
   >
     <div>
@@ -38,22 +44,24 @@ const selectedAccount = computed(() =>
       >
         연결할 계좌를 선택해주세요
       </h1>
-      <p class="mt-3 text-sm text-[var(--color-text-secondary)]">{{ accounts.length }}개의 계좌</p>
+      <div class="mt-3 flex items-center justify-between text-sm">
+        <p class="text-[var(--color-text-secondary)]">{{ accounts.length }}개의 계좌</p>
+        <span class="font-bold text-[var(--color-selected-text)]">{{ selectedAccounts.length }}개 선택</span>
+      </div>
 
-      <div class="mt-3 grid gap-3" role="radiogroup" aria-label="불러온 계좌 목록">
+      <div class="mt-3 grid gap-3" role="group" aria-label="불러온 계좌 목록">
         <button
           v-for="account in accounts"
           :key="account.id"
           class="imported-account flex min-h-[88px] w-full items-center rounded-2xl border px-4 text-left"
           :class="
-            selectedAccountId === account.id
+            selectedAccountIds.includes(account.id)
               ? 'border-[#8cd7fa] bg-[#f2fbff]'
               : 'border-[var(--color-border)] bg-white'
           "
           type="button"
-          role="radio"
-          :aria-checked="selectedAccountId === account.id"
-          @click="selectedAccountId = account.id"
+          :aria-pressed="selectedAccountIds.includes(account.id)"
+          @click="toggleAccount(account.id)"
         >
           <span class="grid size-11 shrink-0 place-items-center rounded-full bg-[#d8dadd] text-[#8d949a]">
             <Landmark :size="21" :stroke-width="2" aria-hidden="true" />
@@ -72,7 +80,7 @@ const selectedAccount = computed(() =>
           <span
             class="ml-3 grid size-6 shrink-0 place-items-center rounded-full border"
             :class="
-              selectedAccountId === account.id
+              selectedAccountIds.includes(account.id)
                 ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-white'
                 : 'border-[#cbd5db] bg-white text-transparent'
             "
@@ -87,16 +95,16 @@ const selectedAccount = computed(() =>
     <button
       class="mt-auto min-h-[54px] w-full rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-white shadow-[0_6px_16px_rgba(39,169,235,0.2)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:bg-[#cbd8df] disabled:shadow-none"
       type="button"
-      :disabled="!selectedAccount"
-      @click="selectedAccount && emit('connect', selectedAccount)"
+      :disabled="selectedAccounts.length === 0"
+      @click="selectedAccounts.length && emit('connect', selectedAccounts)"
     >
-      선택한 계좌 연결하기
+      선택한 계좌 {{ selectedAccounts.length }}개 연결하기
     </button>
   </section>
 
   <section
     v-else
-    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col px-5 pt-5 pb-6"
+    class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col px-5 pt-5 pb-6"
     aria-labelledby="empty-account-title"
   >
     <div>

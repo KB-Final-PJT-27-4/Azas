@@ -23,6 +23,7 @@ const currentLinkGoalIndex = ref(0)
 const slideDirection = ref<'forward' | 'backward'>('forward')
 const today = new Date()
 const defaultTargetDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+const goalDisplayOrder = ['education', 'housing', 'marriage', 'lump-sum', 'custom']
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
@@ -52,17 +53,16 @@ const currentSetting = computed(() =>
   currentGoalId.value ? goalSettings[currentGoalId.value] : undefined,
 )
 const currentLinkPlan = computed(() => plans.value[currentLinkGoalIndex.value])
+const unavailableSavingsIds = computed(() => {
+  const currentGoalId = currentLinkPlan.value?.id
+  return Object.entries(linkedSavings)
+    .filter(([goalId]) => goalId !== currentGoalId)
+    .flatMap(([, savingsIds]) => savingsIds)
+})
 const canContinue = computed(
-  () => {
-    if (currentStep.value === 4) {
-      const goalId = currentLinkPlan.value?.id
-      return Boolean(goalId && linkedSavings[goalId]?.length)
-    }
-    return (
-      selectedGoals.value.length > 0 &&
-      (!selectedGoals.value.includes('custom') || customGoal.value.trim().length > 0)
-    )
-  },
+  () =>
+    selectedGoals.value.length > 0 &&
+    (!selectedGoals.value.includes('custom') || customGoal.value.trim().length > 0),
 )
 const progressStep = computed(() =>
   currentStep.value === 1
@@ -95,6 +95,9 @@ const toggleGoal = (goalId: string) => {
     return
   }
   selectedGoals.value.push(goalId)
+  selectedGoals.value.sort(
+    (a, b) => goalDisplayOrder.indexOf(a) - goalDisplayOrder.indexOf(b),
+  )
   ensureSetting(goalId)
 }
 
@@ -204,6 +207,7 @@ const toggleLinkedSaving = (goalId: string, savingsId: string) => {
             :goal-number="currentLinkGoalIndex + 1"
             :goal-count="plans.length"
             :selected-savings-ids="linkedSavings[currentLinkPlan.id] ?? []"
+            :unavailable-savings-ids="unavailableSavingsIds"
             @toggle="toggleLinkedSaving(currentLinkPlan.id, $event)"
           />
         </div>
