@@ -7,14 +7,14 @@ import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleExportDownloadUrlResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleExportResponse;
-import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
 import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleExportService;
@@ -197,6 +197,33 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
+            value = "TIMECAPSULE-5 타임캡슐 기록 생성",
+            notes = "부모가 타임캡슐 계좌의 입금 거래와 제목·편지를 선택해 DRAFT 기록을 생성합니다."
+    )
+    @PostMapping("/time-capsules/{time_capsule_id}/entries")
+    public ResponseEntity<CreateTimeCapsuleEntryResponse>
+    createTimeCapsuleEntry(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 보관함 ID", required = true)
+            @PathVariable("time_capsule_id")
+            long timeCapsuleId,
+            @Valid @RequestBody CreateTimeCapsuleEntryRequest request
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                timeCapsuleEntryService.createTimeCapsuleEntry(
+                        memberId,
+                        timeCapsuleId,
+                        request
+                )
+        );
+    }
+
+    @ApiOperation(
             value = "TIMECAPSULE-4 타임캡슐 엔트리 목록 조회",
             notes = "부모가 보관함 요약과 봉인된 엔트리 목록을 리스트·캘린더 공용 응답으로 조회합니다."
     )
@@ -270,34 +297,6 @@ public class TimeCapsuleController {
         );
 
         return ResponseEntity.noContent().build();
-    }
-
-    @ApiOperation(
-            value = "TC-12 타임캡슐 엔트리 수정",
-            notes = "작성자 본인이 DRAFT 엔트리의 제목 또는 편지를 수정합니다."
-    )
-    @PatchMapping("/time-capsule-entries/{entry_id}")
-    // [JMG] CAPSULE-12 작성자 본인의 DRAFT 엔트리 제목·편지 수정 요청을 처리한다.
-    public ResponseEntity<TimeCapsuleEntryUpdateResponse>
-    updateTimeCapsuleEntry(
-            @RequestHeader(value = "Authorization", required = false)
-            String authorizationHeader,
-            @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
-            @PathVariable("entry_id")
-            long timeCapsuleEntryId,
-            @Valid @RequestBody UpdateTimeCapsuleEntryRequest request
-    ) {
-        long memberId = accessTokenMemberResolver.resolveMemberId(
-                authorizationHeader
-        );
-
-        return ResponseEntity.ok(
-                timeCapsuleEntryService.updateTimeCapsuleEntry(
-                        memberId,
-                        timeCapsuleEntryId,
-                        request
-                )
-        );
     }
 
     @ApiOperation(

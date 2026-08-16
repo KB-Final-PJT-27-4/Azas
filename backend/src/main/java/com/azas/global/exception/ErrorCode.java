@@ -212,7 +212,7 @@ public enum ErrorCode {
     ),
     INELIGIBLE_TIME_CAPSULE_TRANSACTION(
             HttpStatus.UNPROCESSABLE_ENTITY,
-            "타임캡슐 기록에는 적금 계좌의 입금 거래만 연결할 수 있습니다."
+            "타임캡슐 기록에는 해당 타임캡슐 계좌의 입금 거래만 연결할 수 있습니다."
     ),
     TIME_CAPSULE_ENTRY_NOT_FOUND(
             HttpStatus.NOT_FOUND,

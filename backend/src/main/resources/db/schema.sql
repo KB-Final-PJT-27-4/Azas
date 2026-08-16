@@ -638,7 +638,6 @@ CREATE TABLE time_capsule_entry (
   thumbnail_object_key VARCHAR(1000) NULL COMMENT '대표 썸네일 객체 키',
   blurred_thumbnail_object_key VARCHAR(1000) NULL COMMENT '블러 썸네일 객체 키',
   status VARCHAR(20) NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT, SEALED, DELETED',
-  edit_count TINYINT NOT NULL DEFAULT 0 COMMENT '수정 횟수',
   sealed_at DATETIME(6) NULL COMMENT '봉인 시각',
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',

@@ -19,7 +19,6 @@
         <result property="thumbnailObjectKey" column="thumbnail_object_key"/>
         <result property="blurredThumbnailObjectKey" column="blurred_thumbnail_object_key"/>
         <result property="status" column="status"/>
-        <result property="editCount" column="edit_count"/>
         <result property="sealedAt" column="sealed_at"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
@@ -49,7 +48,6 @@
             tce.thumbnail_object_key,
             tce.blurred_thumbnail_object_key,
             tce.status,
-            tce.edit_count,
             tce.sealed_at,
             tce.created_at,
             tce.updated_at,
@@ -73,7 +71,6 @@
             tce.thumbnail_object_key,
             tce.blurred_thumbnail_object_key,
             tce.status,
-            tce.edit_count,
             tce.sealed_at,
             tce.created_at,
             tce.updated_at
@@ -95,7 +92,6 @@
             tce.thumbnail_object_key,
             tce.blurred_thumbnail_object_key,
             tce.status,
-            tce.edit_count,
             tce.sealed_at,
             tce.created_at,
             tce.updated_at,
@@ -133,7 +129,6 @@
             tce.thumbnail_object_key,
             tce.blurred_thumbnail_object_key,
             tce.status,
-            tce.edit_count,
             tce.sealed_at,
             tce.created_at,
             tce.updated_at,
@@ -171,7 +166,6 @@
             tce.thumbnail_object_key,
             tce.blurred_thumbnail_object_key,
             tce.status,
-            tce.edit_count,
             tce.sealed_at,
             tce.created_at,
             tce.updated_at,
@@ -210,7 +204,6 @@
             tce.thumbnail_object_key,
             tce.blurred_thumbnail_object_key,
             tce.status,
-            tce.edit_count,
             tce.sealed_at,
             tce.created_at,
             tce.updated_at,
@@ -259,22 +252,6 @@
             #{status}
         )
     </insert>
-
-    <update id="updateDraftContent">
-        UPDATE time_capsule_entry
-        <set>
-            <if test="title != null">
-                title = #{title},
-            </if>
-            <if test="message != null">
-                message = #{message},
-            </if>
-            edit_count = edit_count + 1
-        </set>
-        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
-          AND status = 'DRAFT'
-          AND edit_count &lt; 1
-    </update>
 
     <update id="updateDraftMediaModeIfNone">
         UPDATE time_capsule_entry

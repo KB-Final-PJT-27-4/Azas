@@ -37,9 +37,6 @@ public class TimeCapsuleEntryDetailResponse {
     private final String mediaMode;
     private final String status;
 
-    @JsonProperty("edit_count")
-    private final int editCount;
-
     @JsonProperty("sealed_at")
     private final LocalDateTime sealedAt;
     private final List<MediaResponse> media;
@@ -62,7 +59,6 @@ public class TimeCapsuleEntryDetailResponse {
         this.contributedAt = entry.getContributedAt();
         this.mediaMode = entry.getMediaMode().name();
         this.status = entry.getStatus().name();
-        this.editCount = entry.getEditCount();
         this.sealedAt = entry.getSealedAt();
         this.media = List.copyOf(media);
         this.createdAt = entry.getCreatedAt();
