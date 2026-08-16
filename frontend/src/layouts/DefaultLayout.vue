@@ -18,6 +18,7 @@ const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
 const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
 const showHeaderNotification = computed(() => route.meta.showHeaderNotification !== false)
 const notificationCount = computed(() => Number(route.meta.notificationCount ?? 0))
+const isHome = computed(() => route.name === 'Home')
 const pageBackgroundColor = computed(() => String(route.meta.pageBackgroundColor ?? ''))
 const pageBackgroundStyle = computed(() =>
   pageBackgroundColor.value ? { backgroundColor: pageBackgroundColor.value } : undefined,
@@ -39,6 +40,10 @@ const { toastMessage, toastVariant } = useToast()
         profile-name="깨비"
         :show-notification="showHeaderNotification"
         :notification-count="notificationCount"
+        :background-color="pageBackgroundColor || undefined"
+        :profile-background-color="isHome ? '#ffffff' : undefined"
+        :hide-divider="isHome"
+        :change-on-scroll="isHome"
       />
       <div
         class="default-layout__content"
