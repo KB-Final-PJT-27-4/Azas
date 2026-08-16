@@ -287,4 +287,19 @@ public class NotificationServiceImpl implements NotificationService {
                 ErrorCode.INVALID_QUERY_PARAMETER
         );
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NotificationUnreadCountResponse getUnreadCount(
+            Long memberId
+    ) {
+        long unreadCount =
+                notificationMapper.countUnreadNotifications(
+                        memberId
+                );
+
+        return new NotificationUnreadCountResponse(
+                unreadCount
+        );
+    }
 }

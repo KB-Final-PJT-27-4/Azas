@@ -1,6 +1,7 @@
 package com.azas.domain.notification.controller;
 
 import com.azas.domain.notification.dto.NotificationListResponse;
+import com.azas.domain.notification.dto.NotificationUnreadCountResponse;
 import com.azas.domain.notification.service.NotificationService;
 import com.azas.global.security.AccessTokenMemberResolver;
 import io.swagger.annotations.Api;
@@ -70,6 +71,28 @@ public class NotificationController {
         NotificationListResponse response = notificationService.getNotifications(
                 memberId, childId, category, notificationType, isRead, cursor, afterId, size
         );
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(response);
+    }
+
+    @ApiOperation("읽지 않은 알림 수 조회")
+    @GetMapping("/unread-count")
+    public ResponseEntity<NotificationUnreadCountResponse>
+    getUnreadCount(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader
+    ) {
+        long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        NotificationUnreadCountResponse response =
+                notificationService.getUnreadCount(memberId);
 
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())

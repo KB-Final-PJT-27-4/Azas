@@ -2,6 +2,7 @@ package com.azas.domain.notification.service;
 
 import com.azas.domain.notification.dto.NotificationListResponse;
 import com.azas.domain.notification.dto.NotificationListRow;
+import com.azas.domain.notification.dto.NotificationUnreadCountResponse;
 import com.azas.domain.notification.entity.NotificationCategory;
 import com.azas.domain.notification.entity.NotificationType;
 import com.azas.domain.notification.mapper.NotificationMapper;
@@ -19,6 +20,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -324,5 +326,38 @@ class NotificationServiceTest {
                 ErrorCode.INVALID_QUERY_PARAMETER,
                 exception.getErrorCode()
         );
+    }
+
+    // 읽지 않은 알림 수 테스트
+    @Test
+    void getsUnreadNotificationCount() {
+        when(notificationMapper.countUnreadNotifications(
+                MEMBER_ID
+        )).thenReturn(3L);
+
+        NotificationUnreadCountResponse response =
+                notificationService.getUnreadCount(
+                        MEMBER_ID
+                );
+
+        assertEquals(3L, response.getUnreadCount());
+
+        verify(notificationMapper)
+                .countUnreadNotifications(MEMBER_ID);
+    }
+
+    // 0건 테스트
+    @Test
+    void returnsZeroWhenNoUnreadNotificationsExist() {
+        when(notificationMapper.countUnreadNotifications(
+                MEMBER_ID
+        )).thenReturn(0L);
+
+        NotificationUnreadCountResponse response =
+                notificationService.getUnreadCount(
+                        MEMBER_ID
+                );
+
+        assertEquals(0L, response.getUnreadCount());
     }
 }

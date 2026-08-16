@@ -1,6 +1,7 @@
 package com.azas.domain.notification.service;
 
 import com.azas.domain.notification.dto.NotificationListResponse;
+import com.azas.domain.notification.dto.NotificationUnreadCountResponse;
 
 public interface NotificationService {
 
@@ -13,5 +14,9 @@ public interface NotificationService {
             String cursor,
             String afterId,
             String size
+    );
+
+    NotificationUnreadCountResponse getUnreadCount(
+            Long memberId
     );
 }
