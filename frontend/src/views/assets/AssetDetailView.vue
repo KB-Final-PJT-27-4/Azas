@@ -86,7 +86,7 @@ const deleteAccount = async () => {
       :class="
         isParentAccount
           ? 'border-b-[6px] border-b-[var(--color-brand-primary)] bg-[#f7fcff]'
-          : 'border-b-[6px] border-b-[#ffb400] bg-[#fffdf7]'
+          : 'border-b-[6px] border-b-[#ffb400] bg-[#fffdf5]'
       "
       aria-labelledby="account-detail-title"
     >
@@ -98,7 +98,7 @@ const deleteAccount = async () => {
               :class="
                 isParentAccount
                   ? 'bg-[#e5f6ff] text-[var(--color-selected-text)]'
-                  : 'bg-[#fff2c7] text-[#e3a000]'
+                  : 'bg-[#fff4cd] text-[#c78e0c]'
               "
               aria-hidden="true"
             >

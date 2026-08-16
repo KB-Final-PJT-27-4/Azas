@@ -307,15 +307,8 @@ const retryTransfer = () => {
   <main
     class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white px-[18px] pt-4 pb-9 text-[var(--color-text-primary)]"
   >
-    <header class="px-0.5 py-1">
-      <h1 class="m-0 text-[22px] leading-tight font-extrabold tracking-[-0.025em]">계좌</h1>
-      <p class="mt-2 mb-0 text-[12px] leading-relaxed text-[#628091]">
-        우리 가족의 계좌와 자동이체를 한눈에 확인하고 관리해요.
-      </p>
-    </header>
-
     <div
-      class="mt-4 grid grid-cols-2 rounded-[14px] border border-[var(--color-border)] bg-[#f3f7f9] p-1"
+      class="grid grid-cols-2 rounded-[14px] border border-[var(--color-border)] bg-[#f3f7f9] p-1"
       role="tablist"
       aria-label="계좌 관리 목록 선택"
     >
@@ -398,8 +391,13 @@ const retryTransfer = () => {
             </div>
 
             <RouterLink
-              class="flex h-8 w-[82px] shrink-0 items-center justify-center gap-0.5 rounded-[10px] border border-[#cdebf9] bg-white text-[11px] font-bold !text-[var(--color-selected-text)] shadow-[0_2px_7px_rgba(43,171,232,0.08)] active:bg-[#edf9ff]"
-              :to="{ name: 'Accounts' }"
+              class="flex h-8 w-[82px] shrink-0 items-center justify-center gap-0.5 rounded-[10px] border bg-white text-[11px] font-bold"
+              :class="
+                group.id === 'parent'
+                  ? 'border-[#cdebf9] !text-[var(--color-selected-text)] shadow-[0_2px_7px_rgba(43,171,232,0.08)] active:bg-[#edf9ff]'
+                  : 'border-[var(--color-accent-yellow-border)] !text-[var(--color-accent-yellow-text)] shadow-[0_2px_7px_rgba(199,142,12,0.08)] active:bg-[var(--color-accent-yellow-surface)]'
+              "
+              :to="group.id === 'parent' ? { name: 'Accounts' } : { name: 'ChildAccountCreate' }"
             >
               <Plus :size="13" :stroke-width="2.8" aria-hidden="true" />
               계좌 연결
@@ -481,7 +479,9 @@ const retryTransfer = () => {
         class="overflow-hidden rounded-[22px] border border-[#e2edf2] bg-white shadow-[0_8px_24px_rgba(54,112,139,0.07)]"
         aria-labelledby="auto-transfer-title"
       >
-        <header class="flex items-center justify-between gap-3 bg-[#f7fcff] px-5 py-[18px]">
+        <header
+          class="flex items-center justify-between gap-3 bg-[#f7fcff] px-5 pt-[18px] pb-[10px]"
+        >
           <div class="flex min-w-0 items-center gap-3">
             <span
               class="grid size-10 shrink-0 place-items-center rounded-[13px] bg-[#e5f6ff] text-[var(--color-selected-text)]"
@@ -500,9 +500,6 @@ const retryTransfer = () => {
                   총 {{ autoTransfers.length }}건
                 </span>
               </div>
-              <p class="mt-1 mb-0 text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
-                이체 금액과 날짜를 확인하고 변경할 수 있어요.
-              </p>
             </div>
           </div>
           <button
