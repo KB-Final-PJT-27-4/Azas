@@ -50,10 +50,7 @@ const updateAmount = (event: Event) => {
 </script>
 
 <template>
-  <div
-    class="min-w-0 w-full max-w-full"
-    :class="appearance === 'management' ? 'overflow-visible' : 'overflow-x-clip'"
-  >
+  <div class="min-w-0 w-full max-w-full overflow-visible">
     <h1
       v-if="showIntro"
       class="max-w-full break-keep text-[25px] leading-[1.35] font-bold tracking-[-0.04em] [overflow-wrap:anywhere]"
@@ -107,7 +104,7 @@ const updateAmount = (event: Event) => {
         label="목표 달성 시기"
         selection-mode="month"
         :min-date="todayValue"
-        :inline-panel="appearance !== 'management'"
+        :inline-panel="false"
         :min-year="currentYear"
         :max-year="currentYear + 100"
         @update:model-value="emit('update:targetDate', $event)"
