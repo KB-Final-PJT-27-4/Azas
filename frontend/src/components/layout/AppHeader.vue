@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Bell, Check, ChevronLeft, ChevronRight, Plus, UserRound } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
@@ -18,6 +18,11 @@ const props = withDefaults(
     showBack?: boolean
     showNotification?: boolean
     notificationCount?: number
+    backgroundColor?: string
+    profileBackgroundColor?: string
+    hideDivider?: boolean
+    changeOnScroll?: boolean
+    scrollThreshold?: number
   }>(),
   {
     title: '깨비',
@@ -27,6 +32,11 @@ const props = withDefaults(
     showBack: false,
     showNotification: true,
     notificationCount: 0,
+    backgroundColor: '',
+    profileBackgroundColor: '',
+    hideDivider: false,
+    changeOnScroll: false,
+    scrollThreshold: 12,
   },
 )
 
@@ -37,6 +47,15 @@ const profiles = computed(() => [
 ])
 const selectedProfileId = ref(1)
 const isProfileSheetOpen = ref(false)
+const isScrolled = ref(false)
+const useTopAppearance = computed(() => !props.changeOnScroll || !isScrolled.value)
+const appliedHeaderBackgroundColor = computed(() =>
+  useTopAppearance.value ? props.backgroundColor : '',
+)
+const appliedProfileBackgroundColor = computed(() =>
+  useTopAppearance.value ? props.profileBackgroundColor : '',
+)
+const hideAppliedDivider = computed(() => props.hideDivider && useTopAppearance.value)
 const activeProfile = computed(
   () => profiles.value.find(({ id }) => id === selectedProfileId.value) ?? profiles.value[0]!,
 )
@@ -88,12 +107,28 @@ const goBack = () => {
   router.back()
 }
 
-onBeforeUnmount(clearProfilePress)
+const updateScrollState = () => {
+  isScrolled.value = window.scrollY > props.scrollThreshold
+}
+
+onMounted(() => {
+  updateScrollState()
+  window.addEventListener('scroll', updateScrollState, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  clearProfilePress()
+  window.removeEventListener('scroll', updateScrollState)
+})
 </script>
 
 <template>
   <header
-    class="fixed top-0 left-1/2 z-[var(--z-index-header)] h-[calc(var(--app-header-height)+env(safe-area-inset-top))] w-full max-w-[var(--app-max-width)] -translate-x-1/2 border-b border-[var(--color-border)] bg-[var(--color-surface)]"
+    class="fixed top-0 left-1/2 z-[var(--z-index-header)] h-[calc(var(--app-header-height)+env(safe-area-inset-top))] w-full max-w-[var(--app-max-width)] -translate-x-1/2 border-b bg-[var(--color-surface)] transition-[background-color,border-color] duration-300 ease-out"
+    :class="hideAppliedDivider ? 'border-transparent' : 'border-[var(--color-border)]'"
+    :style="
+      appliedHeaderBackgroundColor ? { backgroundColor: appliedHeaderBackgroundColor } : undefined
+    "
   >
     <div
       class="relative flex h-[var(--app-header-height)] items-center justify-between px-[var(--space-5)] pt-[env(safe-area-inset-top)]"
@@ -122,7 +157,12 @@ onBeforeUnmount(clearProfilePress)
         @keydown.space.prevent="openProfileSheet"
       >
         <span
-          class="grid size-[38px] flex-[0_0_38px] place-items-center overflow-hidden rounded-full bg-[var(--color-selected-background)] text-xl"
+          class="grid size-[38px] flex-[0_0_38px] place-items-center overflow-hidden rounded-full bg-[var(--color-selected-background)] text-xl transition-colors duration-300 ease-out"
+          :style="
+            appliedProfileBackgroundColor
+              ? { backgroundColor: appliedProfileBackgroundColor }
+              : undefined
+          "
           aria-hidden="true"
         >
           <img

@@ -45,7 +45,7 @@ const routes: RouteRecordRaw[] = [
     path: '/home',
     name: 'Home',
     component: () => import('@/views/home/HomeView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, pageBackgroundColor: '#eef9ff' },
   },
 
   // 목표

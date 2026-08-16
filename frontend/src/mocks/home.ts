@@ -88,7 +88,7 @@ export const homeDataByMemberType: Record<HomeMemberType, HomeData> = {
     checklistStatus: '3 / 6 완료',
     timeCapsuleStatus: 'D - 23',
     goalStatus: '9,600,000원',
-    goalCtaTo: '/goals',
+    goalCtaTo: '/mypage/goals',
     productsMoreTo: '/products',
     quickMenus: [
       { title: '체크리스트', subtitle: '3 / 6 완료', icon: 'checklist', to: '/checklists' },
