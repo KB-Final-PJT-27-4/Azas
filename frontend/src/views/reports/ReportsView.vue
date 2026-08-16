@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { CalendarDays, CheckCircle2, ChevronRight, Landmark, TrendingUp } from 'lucide-vue-next'
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
+import reportPigGraphImage from '@/assets/images/reports/report-pig-graph.png'
 
 import ChildcareReportOverview from './ChildcareReportOverview.vue'
 
@@ -25,6 +27,8 @@ const activeTab = ref<ReportTab>(route.query.tab === 'allowance' ? 'allowance' :
 const activeGoalIndex = ref(0)
 const goalCarousel = ref<HTMLElement | null>(null)
 const goalCarouselHeight = ref<number | null>(null)
+const displayedTotalAssets = ref(0)
+let totalAssetsAnimationFrame: number | null = null
 
 const setReportTab = (tab: ReportTab) => {
   activeTab.value = tab
@@ -64,6 +68,37 @@ const totalTarget = computed(() =>
 const totalRate = computed(() => (totalAssets.value / totalTarget.value) * 100)
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
+const animateTotalAssets = () => {
+  if (totalAssetsAnimationFrame !== null) cancelAnimationFrame(totalAssetsAnimationFrame)
+
+  const targetAmount = totalAssets.value
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    displayedTotalAssets.value = targetAmount
+    totalAssetsAnimationFrame = null
+    return
+  }
+
+  displayedTotalAssets.value = 0
+  const startedAt = performance.now()
+  const duration = 1100
+
+  const updateAmount = (currentTime: number) => {
+    const progress = Math.min((currentTime - startedAt) / duration, 1)
+    const easedProgress = 1 - Math.pow(1 - progress, 3)
+    displayedTotalAssets.value = Math.round(targetAmount * easedProgress)
+
+    if (progress < 1) {
+      totalAssetsAnimationFrame = requestAnimationFrame(updateAmount)
+      return
+    }
+
+    displayedTotalAssets.value = targetAmount
+    totalAssetsAnimationFrame = null
+  }
+
+  totalAssetsAnimationFrame = requestAnimationFrame(updateAmount)
+}
+
 const syncGoalCarouselHeight = () => {
   nextTick(() => {
     const activeCard = goalCarousel.value?.children[activeGoalIndex.value] as
@@ -84,7 +119,18 @@ const updateActiveGoal = (event: Event) => {
   syncGoalCarouselHeight()
 }
 
-onMounted(syncGoalCarouselHeight)
+watch(activeTab, (tab) => {
+  if (tab === 'assets') void nextTick(animateTotalAssets)
+})
+
+onMounted(() => {
+  syncGoalCarouselHeight()
+  if (activeTab.value === 'assets') animateTotalAssets()
+})
+
+onBeforeUnmount(() => {
+  if (totalAssetsAnimationFrame !== null) cancelAnimationFrame(totalAssetsAnimationFrame)
+})
 </script>
 
 <template>
@@ -136,9 +182,12 @@ onMounted(syncGoalCarouselHeight)
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-sm font-semibold text-[var(--color-text-secondary)]">총 자산</p>
-            <strong class="mt-2 block text-[28px] leading-none tracking-[-0.04em]">{{
-              formatWon(totalAssets)
-            }}</strong>
+            <strong
+              class="mt-2 block text-[28px] leading-none tracking-[-0.04em] tabular-nums"
+              :aria-label="`총 자산 ${formatWon(totalAssets)}`"
+            >
+              {{ formatWon(displayedTotalAssets) }}
+            </strong>
             <p class="mt-3 text-xs text-[var(--color-text-secondary)]">
               지난달보다
               <strong class="text-[var(--color-selected-text)]">350,000원</strong> 늘었어요
@@ -152,7 +201,7 @@ onMounted(syncGoalCarouselHeight)
         </div>
         <div class="mt-5 h-2 overflow-hidden rounded-full bg-white/90">
           <div
-            class="h-full rounded-full bg-[var(--color-brand-primary)]"
+            class="report-progress-fill h-full rounded-full bg-[var(--color-brand-primary)]"
             :style="{ width: `${totalRate}%` }"
           ></div>
         </div>
@@ -173,20 +222,18 @@ onMounted(syncGoalCarouselHeight)
             이번 달 목표의 25%를 채웠어요
           </p>
         </div>
-        <div class="flex h-16 items-end gap-2" aria-hidden="true">
-          <span class="h-7 w-3 rounded-t-full bg-[#73cbd5]"></span>
-          <span class="h-11 w-3 rounded-t-full bg-[#b7d6fa]"></span>
-          <span class="h-15 w-3 rounded-t-full bg-[#91baf1]"></span>
-        </div>
+        <img
+          class="h-24 w-28 shrink-0 object-contain"
+          :src="reportPigGraphImage"
+          alt=""
+          aria-hidden="true"
+        />
       </section>
 
       <section class="mt-7">
         <div>
           <div>
             <h1 class="text-[21px] font-extrabold tracking-[-0.03em]">목표별 달성률</h1>
-            <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
-              연결된 적금별 잔액을 함께 확인해보세요.
-            </p>
           </div>
         </div>
 
@@ -216,7 +263,7 @@ onMounted(syncGoalCarouselHeight)
               </div>
               <div class="mt-3 h-2 overflow-hidden rounded-full bg-[#eaf0f3]">
                 <div
-                  class="h-full rounded-full bg-[var(--color-brand-primary)] transition-[width] duration-500"
+                  class="report-progress-fill report-progress-fill--goal h-full rounded-full bg-[var(--color-brand-primary)] transition-[width] duration-500"
                   :style="{ width: `${achievementRate(goal)}%` }"
                 ></div>
               </div>
@@ -225,10 +272,9 @@ onMounted(syncGoalCarouselHeight)
             <div class="border-t border-[#edf1f3] bg-[#fbfcfd] px-5 py-4">
               <div class="mb-3 flex items-center justify-between">
                 <h3 class="text-sm font-bold">연결된 적금</h3>
-                <span
-                  class="rounded-full bg-[#eaf8ff] px-2.5 py-1 text-xs font-semibold text-[var(--color-selected-text)]"
-                  >{{ goal.accounts.length }}개</span
-                >
+                <span class="text-xs font-medium text-[var(--color-text-secondary)]">
+                  {{ goal.accounts.length }}개
+                </span>
               </div>
               <ul
                 class="divide-y divide-[#e8edf0] overflow-hidden rounded-2xl border border-[#e2e9ed] bg-white"
@@ -280,8 +326,14 @@ onMounted(syncGoalCarouselHeight)
           <h2 class="text-[21px] font-extrabold tracking-[-0.03em]">이번 달 인사이트</h2>
         </div>
         <div class="mt-4 grid gap-3">
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
-            <TrendingUp class="shrink-0 text-[#ef6c8f]" :size="27" :stroke-width="2.2" />
+          <article
+            class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4"
+          >
+            <TrendingUp
+              class="shrink-0 text-[var(--color-selected-text)]"
+              :size="27"
+              :stroke-width="2.2"
+            />
             <div>
               <strong class="text-sm">지난달보다 90,000원을 더 저축했어요.</strong>
               <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
@@ -289,7 +341,9 @@ onMounted(syncGoalCarouselHeight)
               </p>
             </div>
           </article>
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
+          <article
+            class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4"
+          >
             <CheckCircle2
               class="shrink-0 text-[var(--color-selected-text)]"
               :size="27"
@@ -302,8 +356,14 @@ onMounted(syncGoalCarouselHeight)
               </p>
             </div>
           </article>
-          <article class="flex items-center gap-4 rounded-[18px] bg-[#eaf8ff] p-4">
-            <CalendarDays class="shrink-0 text-[#65bd73]" :size="27" :stroke-width="2.2" />
+          <article
+            class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4"
+          >
+            <CalendarDays
+              class="shrink-0 text-[var(--color-selected-text)]"
+              :size="27"
+              :stroke-width="2.2"
+            />
             <div>
               <strong class="text-sm">목표 달성 시기를 4개월 앞당길 수 있어요.</strong>
               <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
@@ -318,3 +378,28 @@ onMounted(syncGoalCarouselHeight)
     <ChildcareReportOverview v-else />
   </main>
 </template>
+
+<style scoped>
+.report-progress-fill {
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: report-progress-grow 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.report-progress-fill--goal {
+  animation-delay: 120ms;
+}
+
+@keyframes report-progress-grow {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-progress-fill {
+    transform: scaleX(1);
+    animation: none;
+  }
+}
+</style>
