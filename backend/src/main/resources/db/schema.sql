@@ -594,25 +594,36 @@ CREATE TABLE auto_transfer_schedule (
 CREATE TABLE time_capsule (
   time_capsule_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '타임캡슐 ID',
   child_id BIGINT UNSIGNED NOT NULL COMMENT '자녀 ID',
-  financial_account_id BIGINT UNSIGNED NOT NULL COMMENT '적금 계좌 ID',
-  title VARCHAR(200) NOT NULL COMMENT '보관함 제목',
+  financial_account_id BIGINT UNSIGNED NOT NULL COMMENT '연결 금융 계좌 ID',
+  title VARCHAR(200) NOT NULL COMMENT '생성 시점 계좌명 스냅샷',
   status VARCHAR(20) NOT NULL DEFAULT 'COLLECTING' COMMENT 'COLLECTING, RELEASED, ARCHIVED',
   expected_release_at DATETIME(6) NULL COMMENT '예상 공개일',
-  release_reason VARCHAR(20) NULL COMMENT 'MATURITY, TERMINATION',
   released_at DATETIME(6) NULL COMMENT '실제 공개 시각',
   entry_count INT NOT NULL DEFAULT 0 COMMENT '보관함 목록용 캐시',
+  total_contribution_amount DECIMAL(19, 2) NOT NULL DEFAULT 0 COMMENT '활성 엔트리 저축 금액 합계 캐시',
   latest_entry_at DATETIME(6) NULL COMMENT '최근 기록 시각',
+  deleted_at DATETIME(6) NULL COMMENT '보관함 삭제 시각',
+  active_financial_account_id BIGINT UNSIGNED
+    GENERATED ALWAYS AS (
+      CASE
+        WHEN deleted_at IS NULL THEN financial_account_id
+        ELSE NULL
+      END
+    ) STORED COMMENT '활성 보관함 중복 방지용 계좌 ID',
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
   PRIMARY KEY (time_capsule_id),
-  UNIQUE KEY uk_time_capsule_account_id (financial_account_id),
+  UNIQUE KEY uk_time_capsule_child_active_account (
+    child_id,
+    active_financial_account_id
+  ),
   KEY idx_time_capsule_child_status (child_id, status),
   CONSTRAINT fk_time_capsule_child
     FOREIGN KEY (child_id) REFERENCES child (child_id),
   CONSTRAINT fk_time_capsule_account
     FOREIGN KEY (financial_account_id) REFERENCES financial_account (financial_account_id),
   CONSTRAINT ck_time_capsule_status CHECK (status IN ('COLLECTING', 'RELEASED', 'ARCHIVED'))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='적금 계좌 타임캡슐 보관함';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='금융 계좌별 자녀 타임캡슐 보관함';
 
 CREATE TABLE time_capsule_entry (
   time_capsule_entry_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '타임캡슐 기록 ID',

@@ -6,8 +6,10 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
+
+import java.time.LocalDate;
 
 @ApiModel(description = "타임캡슐 보관함 생성 요청")
 @Getter
@@ -15,12 +17,19 @@ import javax.validation.constraints.Size;
 public class CreateTimeCapsuleRequest {
 
     @ApiModelProperty(
-            value = "보관함 제목",
+            value = "타임캡슐과 연결할 금융 계좌 ID",
             required = true,
-            example = "깨비의 첫 대학자금 저축"
+            example = "5"
     )
-    @NotBlank
-    @Size(max = 200)
-    @JsonProperty("title")
-    private String title;
+    @NotNull
+    @Positive
+    @JsonProperty("financial_account_id")
+    private Long financialAccountId;
+
+    @ApiModelProperty(
+            value = "공개 예정일. 생략하면 나중에 설정할 수 있습니다.",
+            example = "2027-08-08"
+    )
+    @JsonProperty("release_date")
+    private LocalDate releaseDate;
 }

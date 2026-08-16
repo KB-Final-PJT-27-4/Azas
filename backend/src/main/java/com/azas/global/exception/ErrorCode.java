@@ -196,7 +196,7 @@ public enum ErrorCode {
     ),
     DUPLICATE_TIME_CAPSULE(
             HttpStatus.CONFLICT,
-            "해당 적금 계좌에는 이미 타임캡슐이 존재합니다."
+            "해당 자녀와 계좌에 이미 타임캡슐이 존재합니다."
     ),
     DUPLICATE_TIME_CAPSULE_ENTRY(
             HttpStatus.CONFLICT,
@@ -208,7 +208,7 @@ public enum ErrorCode {
     ),
     INELIGIBLE_TIME_CAPSULE_ACCOUNT(
             HttpStatus.UNPROCESSABLE_ENTITY,
-            "자녀 명의의 활성 적금 계좌만 타임캡슐로 등록할 수 있습니다."
+            "타임캡슐에 사용할 수 없는 계좌입니다."
     ),
     INELIGIBLE_TIME_CAPSULE_TRANSACTION(
             HttpStatus.UNPROCESSABLE_ENTITY,
