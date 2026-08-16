@@ -66,6 +66,7 @@ const routes: RouteRecordRaw[] = [
       headerTitle: '계좌 연동',
       showHeaderBack: true,
       showHeaderNotification: false,
+      hideBottomNavigation: true,
     },
   },
 

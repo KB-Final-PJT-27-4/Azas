@@ -8,7 +8,10 @@ defineEmits<{
 </script>
 
 <template>
-  <section class="px-5 pt-7" aria-labelledby="account-connection-title">
+  <section
+    class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col px-5 pt-7 pb-5"
+    aria-labelledby="account-connection-title"
+  >
     <header>
       <h1
         id="account-connection-title"
@@ -17,57 +20,63 @@ defineEmits<{
         계좌를 연결해 볼까요?
       </h1>
       <p class="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-        연결하면 자산 현황 확인과 목표 관리가 더욱 쉬워져요.
+        내게 맞는 방법으로 계좌를 연결해주세요.
       </p>
     </header>
 
-    <div class="mt-6 grid gap-3">
+    <div class="mt-5 grid min-h-0 flex-1 grid-rows-2 gap-3.5">
       <button
-        class="connection-option group flex min-h-[92px] w-full items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 text-left"
+        class="connection-option connection-option--primary group flex h-full min-h-[180px] w-full flex-col items-stretch justify-between overflow-hidden rounded-[24px] border border-[#cfe8f4] bg-white p-5 text-left"
         type="button"
         @click="$emit('import')"
       >
-        <span class="grid size-12 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[#2da9e8]">
-          <Landmark :size="24" :stroke-width="2.2" aria-hidden="true" />
-        </span>
-        <span class="ml-4 min-w-0 flex-1">
-          <strong class="block text-base font-bold text-[var(--color-text-primary)]">
-            계좌 정보 불러오기
-          </strong>
-          <span class="mt-1 block text-xs leading-5 text-[var(--color-text-secondary)]">
-            KB국민은행 계좌를<br />간편하게 불러와요
+        <span class="flex items-start justify-between gap-4">
+          <span class="inline-flex h-7 items-center rounded-full bg-[#e9f8ff] px-3 text-[12px] font-bold text-[var(--color-selected-text)]">
+            가장 간편해요
+          </span>
+          <span class="grid size-14 shrink-0 place-items-center rounded-[18px] bg-[#eef9fe] text-[var(--color-selected-text)]">
+            <Landmark :size="28" :stroke-width="2.1" aria-hidden="true" />
           </span>
         </span>
-        <ChevronRight
-          class="ml-3 shrink-0 text-[var(--color-unselected-text)] transition-transform group-active:translate-x-0.5"
-          :size="20"
-          :stroke-width="2"
-          aria-hidden="true"
-        />
+
+        <span class="my-3 block min-w-0">
+          <strong class="block text-[21px] font-extrabold tracking-[-0.025em] text-[var(--color-text-primary)]">계좌 정보 불러오기</strong>
+          <span class="mt-2 block break-keep text-sm leading-6 text-[var(--color-text-secondary)]">
+            이미 가지고 있는 KB국민은행 계좌를<br />안전하고 빠르게 연결해요.
+          </span>
+        </span>
+
+        <span class="flex h-11 items-center justify-between rounded-[14px] bg-[#f0faff] px-4 text-sm font-bold text-[var(--color-selected-text)]">
+          내 계좌 확인하기
+          <ChevronRight class="transition-transform group-active:translate-x-1" :size="20" :stroke-width="2.4" aria-hidden="true" />
+        </span>
       </button>
 
       <button
-        class="connection-option group flex min-h-[92px] w-full items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 text-left"
+        class="connection-option group flex h-full min-h-[180px] w-full flex-col items-stretch justify-between overflow-hidden rounded-[24px] border border-[#f0e5c5] bg-white p-5 text-left"
         type="button"
         @click="$emit('create')"
       >
-        <span class="grid size-12 shrink-0 place-items-center rounded-full bg-[#fff7df] text-[#f1ad36]">
-          <Plus :size="25" :stroke-width="2.5" aria-hidden="true" />
-        </span>
-        <span class="ml-4 min-w-0 flex-1">
-          <strong class="block text-base font-bold text-[var(--color-text-primary)]">
-            계좌 개설하기
-          </strong>
-          <span class="mt-1 block text-xs leading-5 text-[var(--color-text-secondary)]">
-            계좌가 없다면<br />KB국민은행 계좌를 만들어요
+        <span class="flex items-start justify-between gap-4">
+          <span class="inline-flex h-7 items-center rounded-full bg-[#fff7df] px-3 text-[12px] font-bold text-[#b68017]">
+            계좌가 없다면
+          </span>
+          <span class="grid size-14 shrink-0 place-items-center rounded-[18px] bg-[#fff7df] text-[#e7a52c]">
+            <Plus :size="29" :stroke-width="2.4" aria-hidden="true" />
           </span>
         </span>
-        <ChevronRight
-          class="ml-3 shrink-0 text-[var(--color-unselected-text)] transition-transform group-active:translate-x-0.5"
-          :size="20"
-          :stroke-width="2"
-          aria-hidden="true"
-        />
+
+        <span class="my-3 block min-w-0">
+          <strong class="block text-[21px] font-extrabold tracking-[-0.025em] text-[var(--color-text-primary)]">계좌 개설하기</strong>
+          <span class="mt-2 block break-keep text-sm leading-6 text-[var(--color-text-secondary)]">
+            아이의 자산 관리를 시작할<br />KB국민은행 계좌를 새로 만들어요.
+          </span>
+        </span>
+
+        <span class="flex h-11 items-center justify-between rounded-[14px] bg-[#fff9e9] px-4 text-sm font-bold text-[#9f7418]">
+          새 계좌 만들기
+          <ChevronRight class="text-[#b69244] transition-transform group-active:translate-x-1" :size="20" :stroke-width="2.4" aria-hidden="true" />
+        </span>
       </button>
     </div>
   </section>
@@ -75,8 +84,12 @@ defineEmits<{
 
 <style scoped>
 .connection-option {
-  box-shadow: 0 5px 18px rgb(43 83 105 / 4%);
+  box-shadow: 0 5px 18px rgb(43 83 105 / 3%);
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.connection-option--primary {
+  box-shadow: 0 5px 18px rgb(43 83 105 / 3%);
 }
 
 .connection-option:active {

@@ -20,12 +20,9 @@ const importedAccounts = ref([
   { id: 2, bank: 'KB국민은행', number: '9876-543-210987', balance: 3200000 },
   { id: 3, bank: 'KB국민은행', number: '1111-222-333444', balance: 1520000 },
 ])
-const registeredAccount = ref({
-  bank: '',
-  accountNumber: '',
-  accountName: '',
-  balance: 0,
-})
+const registeredAccounts = ref<
+  { bank: string; accountNumber: string; accountName: string; balance: number }[]
+>([])
 
 const startAccountImport = () => {
   slideDirection.value = 'forward'
@@ -42,24 +39,27 @@ const showAccountOpeningGuide = () => {
   registrationStep.value = 'empty'
 }
 
-const connectImportedAccount = (account: (typeof importedAccounts.value)[number]) => {
-  registeredAccount.value = {
+const connectImportedAccount = (accounts: (typeof importedAccounts.value)[number][]) => {
+  const [primaryAccount] = accounts
+  if (!primaryAccount) return
+
+  registeredAccounts.value = accounts.map((account, index) => ({
     bank: account.bank,
     accountNumber: account.number,
-    accountName: `${account.bank} 계좌`,
+    accountName: accounts.length > 1 ? `${account.bank} 계좌 ${index + 1}` : `${account.bank} 계좌`,
     balance: account.balance,
-  }
+  }))
   slideDirection.value = 'forward'
   registrationStep.value = 'complete'
 }
 
 const createKbAccount = () => {
-  registeredAccount.value = {
+  registeredAccounts.value = [{
     bank: 'KB국민은행',
     accountNumber: '123-456-789012',
     accountName: 'KB국민은행 자녀 계좌',
     balance: 0,
-  }
+  }]
   slideDirection.value = 'forward'
   registrationStep.value = 'complete'
 }
@@ -80,12 +80,12 @@ const goToForm = () => {
 }
 
 const completeRegistration = () => {
-  registeredAccount.value = {
+  registeredAccounts.value = [{
     bank: selectedBank.value,
     accountNumber: accountNumber.value,
     accountName: accountAlias.value || `${selectedBank.value} 계좌`,
     balance: 0,
-  }
+  }]
   slideDirection.value = 'forward'
   registrationStep.value = 'complete'
 }
@@ -137,12 +137,8 @@ const completeRegistration = () => {
 
         <AccountRegistrationComplete
           v-else
-          :bank="registeredAccount.bank"
-          :account-number="registeredAccount.accountNumber"
-          :account-name="registeredAccount.accountName"
-          :balance="registeredAccount.balance"
+          :accounts="registeredAccounts"
           @home="router.push('/home')"
-          @create-goal="router.push('/goals')"
         />
       </div>
     </Transition>
