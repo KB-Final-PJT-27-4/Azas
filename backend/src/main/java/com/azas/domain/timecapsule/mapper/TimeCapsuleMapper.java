@@ -11,16 +11,21 @@ import java.util.List;
 @Mapper
 public interface TimeCapsuleMapper {
 
-    // [JMG] CAPSULE-1 요청 부모가 접근 가능한 보관함 생성 대상 계좌를 조회한다.
-    TimeCapsuleAccount findAccessibleAccountById(
-            @Param("financialAccountId") long financialAccountId,
-            @Param("memberId") long memberId
+    TimeCapsuleAccount findAccountById(
+            @Param("financialAccountId") long financialAccountId
     );
+
+    boolean existsChildById(@Param("childId") long childId);
 
     // [JMG] CAPSULE-1~3 요청 회원의 부모-자녀 관계를 확인한다.
     boolean existsActiveParentRelation(
             @Param("memberId") long memberId,
             @Param("childId") long childId
+    );
+
+    TimeCapsule findByChildIdAndFinancialAccountId(
+            @Param("childId") long childId,
+            @Param("financialAccountId") long financialAccountId
     );
 
     // [JMG] CAPSULE-1 적금 계좌에 연결된 기존 보관함을 조회한다.

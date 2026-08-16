@@ -13,10 +13,12 @@
         <result property="title" column="title"/>
         <result property="status" column="status"/>
         <result property="expectedReleaseAt" column="expected_release_at"/>
-        <result property="releaseReason" column="release_reason"/>
         <result property="releasedAt" column="released_at"/>
         <result property="entryCount" column="entry_count"/>
+        <result property="totalContributionAmount"
+                column="total_contribution_amount"/>
         <result property="latestEntryAt" column="latest_entry_at"/>
+        <result property="deletedAt" column="deleted_at"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
         <result property="financialGoalTemplateId" column="financial_goal_template_id"/>
@@ -28,11 +30,13 @@
     <resultMap id="timeCapsuleAccountResultMap"
                type="com.azas.domain.timecapsule.entity.TimeCapsuleAccount">
         <id property="financialAccountId" column="financial_account_id"/>
+        <result property="ownerType" column="owner_type"/>
+        <result property="ownerMemberId" column="owner_member_id"/>
         <result property="childId" column="child_id"/>
+        <result property="accountName" column="account_name"/>
         <result property="accountProductType" column="account_product_type"/>
         <result property="accountStatus" column="account_status"/>
         <result property="linkStatus" column="link_status"/>
-        <result property="maturityDate" column="maturity_date"/>
     </resultMap>
 
     <sql id="timeCapsuleColumns">
@@ -42,10 +46,11 @@
         title,
         status,
         expected_release_at,
-        release_reason,
         released_at,
         entry_count,
+        total_contribution_amount,
         latest_entry_at,
+        deleted_at,
         created_at,
         updated_at
     </sql>
@@ -57,10 +62,11 @@
         tc.title,
         tc.status,
         tc.expected_release_at,
-        tc.release_reason,
         tc.released_at,
         tc.entry_count,
+        tc.total_contribution_amount,
         tc.latest_entry_at,
+        tc.deleted_at,
         tc.created_at,
         tc.updated_at,
         fa.financial_goal_template_id,
@@ -69,23 +75,27 @@
         fa.goal_target_date
     </sql>
 
-    <select id="findAccessibleAccountById"
+    <select id="findAccountById"
             resultMap="timeCapsuleAccountResultMap">
         SELECT
             fa.financial_account_id,
+            fa.owner_type,
+            fa.owner_member_id,
             fa.child_id,
+            fa.account_name,
             fa.account_product_type,
             fa.account_status,
-            fa.link_status,
-            fa.maturity_date
+            fa.link_status
         FROM financial_account fa
-        INNER JOIN child_parent cp
-            ON cp.child_id = fa.child_id
-           AND cp.member_id = #{memberId}
-        INNER JOIN member m
-            ON m.member_id = cp.member_id
-           AND m.status = 'ACTIVE'
         WHERE fa.financial_account_id = #{financialAccountId}
+    </select>
+
+    <select id="existsChildById" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+            FROM child c
+            WHERE c.child_id = #{childId}
+        )
     </select>
 
     <select id="existsActiveParentRelation"
@@ -101,6 +111,20 @@
         )
     </select>
 
+    <select id="findByChildIdAndFinancialAccountId"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = tc.financial_account_id
+        LEFT JOIN financial_goal_template fgt
+            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
+        WHERE tc.child_id = #{childId}
+          AND tc.financial_account_id = #{financialAccountId}
+          AND tc.deleted_at IS NULL
+    </select>
+
     <select id="findByFinancialAccountId"
             resultMap="timeCapsuleResultMap">
         SELECT
@@ -111,6 +135,7 @@
         LEFT JOIN financial_goal_template fgt
             ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.financial_account_id = #{financialAccountId}
+          AND tc.deleted_at IS NULL
     </select>
 
     <insert id="insert"
@@ -149,6 +174,7 @@
             ON m.member_id = cp.member_id
            AND m.status = 'ACTIVE'
         WHERE tc.time_capsule_id = #{timeCapsuleId}
+          AND tc.deleted_at IS NULL
     </select>
 
     <select id="findAccessibleByIdForUpdate"
@@ -167,6 +193,7 @@
             ON m.member_id = cp.member_id
            AND m.status = 'ACTIVE'
         WHERE tc.time_capsule_id = #{timeCapsuleId}
+          AND tc.deleted_at IS NULL
         FOR UPDATE
     </select>
 
@@ -180,6 +207,7 @@
         LEFT JOIN financial_goal_template fgt
             ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.financial_account_id = #{financialAccountId}
+          AND tc.deleted_at IS NULL
         FOR UPDATE
     </select>
 
@@ -213,6 +241,7 @@
         LEFT JOIN financial_goal_template fgt
             ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.child_id = #{childId}
+          AND tc.deleted_at IS NULL
         <if test="status != null">
             AND tc.status = #{status}
         </if>
@@ -239,6 +268,7 @@
         LEFT JOIN financial_goal_template fgt
             ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.child_id = #{childId}
+          AND tc.deleted_at IS NULL
           AND tc.expected_release_at &gt;= #{calendarStart}
           AND tc.expected_release_at &lt; #{calendarEnd}
         <if test="status != null">

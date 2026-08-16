@@ -18,10 +18,11 @@ public class TimeCapsule {
     private String title;
     private TimeCapsuleStatus status;
     private LocalDateTime expectedReleaseAt;
-    private String releaseReason;
     private LocalDateTime releasedAt;
     private int entryCount;
+    private BigDecimal totalContributionAmount;
     private LocalDateTime latestEntryAt;
+    private LocalDateTime deletedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long financialGoalTemplateId;
@@ -34,16 +35,17 @@ public class TimeCapsule {
             long childId,
             long financialAccountId,
             String title,
-            LocalDate maturityDate
+            LocalDate releaseDate
     ) {
         TimeCapsule timeCapsule = new TimeCapsule();
         timeCapsule.childId = childId;
         timeCapsule.financialAccountId = financialAccountId;
         timeCapsule.title = title;
         timeCapsule.status = TimeCapsuleStatus.COLLECTING;
-        timeCapsule.expectedReleaseAt = maturityDate == null
+        timeCapsule.expectedReleaseAt = releaseDate == null
                 ? null
-                : maturityDate.atStartOfDay();
+                : releaseDate.atStartOfDay();
+        timeCapsule.totalContributionAmount = BigDecimal.ZERO;
         return timeCapsule;
     }
 }

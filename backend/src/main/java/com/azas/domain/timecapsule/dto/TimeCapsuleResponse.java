@@ -26,9 +26,6 @@ public class TimeCapsuleResponse {
     @JsonProperty("expected_release_at")
     private final LocalDateTime expectedReleaseAt;
 
-    @JsonProperty("release_reason")
-    private final String releaseReason;
-
     @JsonProperty("released_at")
     private final LocalDateTime releasedAt;
 
@@ -50,7 +47,6 @@ public class TimeCapsuleResponse {
         this.title = timeCapsule.getTitle();
         this.status = timeCapsule.getStatus().name();
         this.expectedReleaseAt = timeCapsule.getExpectedReleaseAt();
-        this.releaseReason = timeCapsule.getReleaseReason();
         this.releasedAt = timeCapsule.getReleasedAt();
         this.entryCount = timeCapsule.getEntryCount();
         this.latestEntryAt = timeCapsule.getLatestEntryAt();
