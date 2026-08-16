@@ -1,15 +1,18 @@
 package com.azas.domain.timecapsule.dto;
 
 import com.azas.domain.timecapsule.entity.TimeCapsule;
+import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@ApiModel(description = "타임캡슐 보관함 응답")
+@ApiModel(description = "타임캡슐 보관함 생성 응답")
 @Getter
-public class TimeCapsuleResponse {
+public class CreateTimeCapsuleResponse {
 
     @JsonProperty("time_capsule_id")
     private final Long timeCapsuleId;
@@ -17,14 +20,12 @@ public class TimeCapsuleResponse {
     @JsonProperty("child_id")
     private final Long childId;
 
-    @JsonProperty("financial_account_id")
-    private final Long financialAccountId;
-
     private final String title;
+    private final TimeCapsuleAccountResponse account;
     private final String status;
 
-    @JsonProperty("expected_release_at")
-    private final LocalDateTime expectedReleaseAt;
+    @JsonProperty("release_date")
+    private final LocalDate releaseDate;
 
     @JsonProperty("released_at")
     private final LocalDateTime releasedAt;
@@ -32,30 +33,41 @@ public class TimeCapsuleResponse {
     @JsonProperty("entry_count")
     private final int entryCount;
 
+    @JsonProperty("total_saved_amount")
+    private final BigDecimal totalSavedAmount;
+
     @JsonProperty("latest_entry_at")
     private final LocalDateTime latestEntryAt;
-
-    private final TimeCapsuleGoalResponse goal;
 
     @JsonProperty("created_at")
     private final LocalDateTime createdAt;
 
-    private TimeCapsuleResponse(TimeCapsule timeCapsule) {
+    private CreateTimeCapsuleResponse(
+            TimeCapsule timeCapsule,
+            TimeCapsuleAccount account
+    ) {
         this.timeCapsuleId = timeCapsule.getTimeCapsuleId();
         this.childId = timeCapsule.getChildId();
-        this.financialAccountId = timeCapsule.getFinancialAccountId();
         this.title = timeCapsule.getTitle();
+        this.account = TimeCapsuleAccountResponse.from(account);
         this.status = timeCapsule.getStatus().name();
-        this.expectedReleaseAt = timeCapsule.getExpectedReleaseAt();
+        this.releaseDate = timeCapsule.getExpectedReleaseAt() == null
+                ? null
+                : timeCapsule.getExpectedReleaseAt().toLocalDate();
         this.releasedAt = timeCapsule.getReleasedAt();
         this.entryCount = timeCapsule.getEntryCount();
+        this.totalSavedAmount =
+                timeCapsule.getTotalContributionAmount() == null
+                        ? BigDecimal.ZERO
+                        : timeCapsule.getTotalContributionAmount();
         this.latestEntryAt = timeCapsule.getLatestEntryAt();
-        this.goal = TimeCapsuleGoalResponse.fromOrNull(timeCapsule);
         this.createdAt = timeCapsule.getCreatedAt();
     }
 
-    // [JMG] CAPSULE-1, CAPSULE-3 ERD 보관함 엔티티를 API 응답으로 변환한다.
-    public static TimeCapsuleResponse from(TimeCapsule timeCapsule) {
-        return new TimeCapsuleResponse(timeCapsule);
+    public static CreateTimeCapsuleResponse from(
+            TimeCapsule timeCapsule,
+            TimeCapsuleAccount account
+    ) {
+        return new CreateTimeCapsuleResponse(timeCapsule, account);
     }
 }

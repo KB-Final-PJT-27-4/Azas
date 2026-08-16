@@ -1,6 +1,7 @@
 package com.azas.domain.timecapsule.controller;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleExportRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
@@ -50,17 +51,16 @@ public class TimeCapsuleController {
     private final TimeCapsuleExportService timeCapsuleExportService;
 
     @ApiOperation(
-            value = "TC-1 타임캡슐 보관함 생성",
-            notes = "자녀 명의 활성 적금 계좌에 연결된 타임캡슐 보관함을 생성합니다."
+            value = "TIMECAPSULE-1 타임캡슐 보관함 생성",
+            notes = "부모가 접근 가능한 부모 또는 자녀의 활성 입출금·적금 계좌를 특정 자녀의 타임캡슐과 연결합니다. 보관함 제목은 계좌명으로 자동 생성되며 공개 날짜는 선택 입력입니다."
     )
-    @PostMapping("/accounts/{account_id}/time-capsule")
-    // [JMG] CAPSULE-1 자녀 적금 계좌와 1:1로 연결되는 타임캡슐 보관함 생성 요청을 처리한다.
-    public ResponseEntity<TimeCapsuleResponse> createTimeCapsule(
+    @PostMapping("/children/{child_id}/time-capsules")
+    public ResponseEntity<CreateTimeCapsuleResponse> createTimeCapsule(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
-            @ApiParam(value = "금융 계좌 ID", required = true)
-            @PathVariable("account_id")
-            long accountId,
+            @ApiParam(value = "타임캡슐 대상 자녀 ID", required = true)
+            @PathVariable("child_id")
+            long childId,
             @Valid @RequestBody CreateTimeCapsuleRequest request
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
@@ -71,7 +71,7 @@ public class TimeCapsuleController {
                 .status(HttpStatus.CREATED)
                 .body(timeCapsuleService.createTimeCapsule(
                         memberId,
-                        accountId,
+                        childId,
                         request
                 ));
     }
