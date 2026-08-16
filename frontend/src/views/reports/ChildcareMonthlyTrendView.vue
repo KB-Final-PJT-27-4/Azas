@@ -62,10 +62,10 @@ const selectPeriod = (nextPeriod: Period) => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[#f7fafc] px-[18px] py-6 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white px-[18px] py-6 text-[var(--color-text-primary)]"
   >
     <div
-      class="relative grid grid-cols-2 rounded-[14px] bg-[#e9eef1] p-1"
+      class="relative grid grid-cols-2 rounded-[14px] bg-[#f3f6f8] p-1"
       role="tablist"
       aria-label="조회 기간"
     >
