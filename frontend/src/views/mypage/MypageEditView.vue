@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { Camera, CheckCircle2, ShieldCheck, UserRound } from 'lucide-vue-next'
+import { CheckCircle2 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import BaseDatePicker from '@/components/common/BaseDatePicker.vue'
@@ -116,93 +116,76 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]"
   >
-    <header>
-      <h1 class="m-0 text-[24px] font-extrabold">내 정보 수정</h1>
-      <p class="mt-1.5 mb-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-        이름과 연락처, 가족 내 역할을 확인하고 변경할 수 있어요.
+    <header class="px-0.5">
+      <h1 class="m-0 text-[26px] leading-tight font-extrabold tracking-[-0.04em]">내 정보 수정</h1>
+      <p class="mt-2 mb-0 text-sm leading-6 text-[var(--color-text-secondary)]">
+        가족에게 보이는 내 정보와 연락처를 관리해요.
       </p>
     </header>
 
-    <form class="mt-7" @submit.prevent="saveProfile">
-      <section class="flex flex-col items-center" aria-label="프로필 사진">
-        <button
-          class="group relative grid size-[124px] place-items-center overflow-visible rounded-full border-0 bg-[#e6f7fe] text-[#6d9ebe] transition-transform active:scale-[0.98]"
-          type="button"
-          aria-label="프로필 사진 변경"
-          @click="fileInput?.click()"
-        >
-          <img
-            v-if="profileImage"
-            :src="profileImage"
-            alt="선택한 프로필"
-            class="size-full rounded-full object-cover"
-          />
-          <UserRound v-else :size="36" :stroke-width="1.8" />
-          <span
-            class="absolute right-0 bottom-1 grid size-9 place-items-center rounded-full border-[3px] border-white bg-[var(--color-brand-primary)] text-white shadow-sm"
-          >
-            <Camera :size="16" :stroke-width="2.3" />
-          </span>
-        </button>
-        <button
-          class="mt-3 border-0 bg-transparent p-0 text-[12px] font-bold text-[var(--color-selected-text)]"
-          type="button"
-          @click="fileInput?.click()"
-        >
-          프로필 사진 변경
-        </button>
-        <input
-          ref="fileInput"
-          class="sr-only"
-          type="file"
-          accept="image/*"
-          @change="changeProfileImage"
-        />
+    <form class="mt-5" @submit.prevent="saveProfile">
+
+      <section class="mt-5 rounded-[24px] border border-[#d9e2e7] bg-white p-5">
+        <div class="mb-5">
+          <h2 class="text-lg font-extrabold">기본 정보</h2>
+        </div>
+
+        <div class="space-y-5">
+          <label class="block">
+            <span class="field-label">이름 <em>*</em></span>
+            <input
+              v-model="name"
+              class="field-input"
+              type="text"
+              maxlength="30"
+              autocomplete="name"
+            />
+          </label>
+
+          <fieldset class="m-0 border-0 p-0">
+            <legend class="field-label">가족 내 역할 <em>*</em></legend>
+            <div class="mt-2 grid grid-cols-3 gap-2.5">
+              <label v-for="item in roles" :key="item" class="cursor-pointer">
+                <input v-model="role" class="peer sr-only" type="radio" name="family-role" :value="item" />
+                <span class="grid h-12 place-items-center rounded-xl border border-transparent bg-[#f4f6f7] text-sm font-bold text-[#7b8995] transition peer-checked:border-[var(--color-brand-primary)] peer-checked:bg-[#e8f8ff] peer-checked:text-[var(--color-selected-text)] peer-focus-visible:ring-2 peer-focus-visible:ring-[#9cddfa]">
+                  {{ item }}
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <label class="block">
+            <span class="field-label">이메일</span>
+            <input class="field-input text-[#97a3ad]" type="email" value="hana.kim@example.com" disabled />
+            <span class="field-help">소셜 로그인 계정의 이메일은 직접 변경할 수 없어요.</span>
+          </label>
+
+          <div>
+            <span class="field-label">생년월일</span>
+            <BaseDatePicker
+              v-model="birthDate"
+              class="birth-date-picker mt-2"
+              placeholder="생년월일을 선택해 주세요"
+              :min-year="1900"
+              :max-year="new Date().getFullYear()"
+            />
+          </div>
+        </div>
       </section>
 
-      <div class="mt-7 space-y-5">
-        <label class="block">
-          <span class="field-label">이름 <em>*</em></span>
-          <input
-            v-model="name"
-            class="field-input"
-            type="text"
-            maxlength="30"
-            autocomplete="name"
-          />
-        </label>
-
-        <fieldset class="m-0 border-0 p-0">
-          <legend class="field-label">가족 내 역할 <em>*</em></legend>
-          <div class="mt-2 grid grid-cols-3 gap-2.5">
-            <label v-for="item in roles" :key="item" class="cursor-pointer">
-              <input
-                v-model="role"
-                class="peer sr-only"
-                type="radio"
-                name="family-role"
-                :value="item"
-              />
-              <span
-                class="grid h-12 place-items-center rounded-xl bg-[#f4f7f9] text-[13px] font-bold text-[#7b8995] transition peer-checked:bg-[#e8f8ff] peer-checked:text-[var(--color-selected-text)] peer-focus-visible:ring-2 peer-focus-visible:ring-[#9cddfa]"
-              >
-                {{ item }}
-              </span>
-            </label>
+      <section class="mt-5 rounded-[24px] border border-[#d9e2e7] bg-white p-5">
+        <div class="mb-5 flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-extrabold">휴대폰 인증</h2>
+            <p class="mt-1 text-xs text-[var(--color-text-secondary)]">안전한 정보 변경을 위해 확인해요.</p>
           </div>
-        </fieldset>
-
-        <label class="block">
-          <span class="field-label">이메일</span>
-          <input
-            class="field-input text-[#97a3ad]"
-            type="email"
-            value="hana.kim@example.com"
-            disabled
-          />
-        </label>
+          <span
+            v-if="phoneVerified"
+            class="shrink-0 rounded-full bg-[#ebf9f4] px-2.5 py-1 text-[11px] font-bold text-[#27966d]"
+          >인증 완료</span>
+        </div>
 
         <div>
           <label class="field-label" for="phone">휴대폰 번호 <em>*</em></label>
@@ -210,28 +193,26 @@ onBeforeUnmount(() => {
             <input
               id="phone"
               :value="phone"
-              class="field-input mt-0 min-w-0 flex-1"
+              class="field-input mt-0 min-w-0"
               type="tel"
               inputmode="numeric"
               autocomplete="tel"
               @input="formatPhone"
             />
             <button
-              class="shrink-0 rounded-xl border border-[#b9e2f5] bg-[#edf9ff] px-4 text-[12px] font-bold text-[var(--color-selected-text)] active:bg-[#ddf4ff]"
+              class="rounded-xl border border-[#b9e2f5] bg-[#edf9ff] text-xs font-bold text-[var(--color-selected-text)] active:bg-[#ddf4ff]"
               type="button"
               @click="sendVerificationCode"
             >
-              {{ verificationCodeSent ? '재전송' : phoneVerified ? '재인증' : '인증번호 받기' }}
+              {{ verificationCodeSent ? '재전송' : phoneVerified ? '재인증' : '인증 요청' }}
             </button>
           </div>
-          <div
-            v-if="verificationCodeSent"
-            class="mt-2.5 rounded-xl border border-[#d9e8ef] bg-[#f8fbfc] p-3"
-          >
+
+          <div v-if="verificationCodeSent" class="mt-3 rounded-[16px] border border-[#d9e8ef] bg-[#f7fafb] p-3">
             <div class="verification-row">
               <input
                 :value="verificationCode"
-                class="field-input mt-0 min-w-0 flex-1 bg-white"
+                class="field-input mt-0 min-w-0 bg-white"
                 type="text"
                 inputmode="numeric"
                 autocomplete="one-time-code"
@@ -242,67 +223,41 @@ onBeforeUnmount(() => {
                 @keyup.enter="confirmVerificationCode"
               />
               <button
-                class="shrink-0 rounded-xl border-0 bg-[var(--color-brand-primary)] px-4 text-[12px] font-bold text-white disabled:opacity-45"
+                class="rounded-xl border-0 bg-[var(--color-brand-primary)] text-xs font-bold text-white disabled:opacity-45"
                 type="button"
                 :disabled="verificationCode.length !== 6"
                 @click="confirmVerificationCode"
-              >
-                인증 확인
-              </button>
+              >인증 확인</button>
             </div>
-            <p
-              v-if="verificationError"
-              class="mt-2 mb-0 text-[11px] font-semibold text-[var(--color-danger)]"
-            >
+            <p v-if="verificationError" class="mt-2 mb-0 text-[11px] font-semibold text-[var(--color-danger)]">
               {{ verificationError }}
             </p>
+            <p v-else class="mt-2 mb-0 text-[11px] text-[var(--color-text-secondary)]">
+              테스트 인증번호는 <strong>123456</strong>이에요.
+            </p>
           </div>
-          <div
-            v-if="phoneVerified"
-            class="mt-2.5 flex items-center gap-1.5 rounded-xl bg-[#ebf9f4] px-3 py-2.5 text-[11px] font-semibold text-[#27966d]"
-          >
+
+          <div v-if="phoneVerified" class="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#27966d]">
             <CheckCircle2 :size="15" :stroke-width="2.4" />
-            휴대폰 번호가 인증되어 있습니다.
+            현재 번호로 인증되어 있어요.
           </div>
-          <p v-else-if="!verificationCodeSent" class="mt-2 mb-0 text-[11px] text-[#e17a50]">
+          <p v-else-if="!verificationCodeSent" class="mt-3 mb-0 text-xs text-[#d76f4a]">
             변경한 번호는 저장 전에 인증이 필요해요.
           </p>
         </div>
+      </section>
 
-        <div class="block">
-          <span class="field-label">생년월일</span>
-          <BaseDatePicker
-            v-model="birthDate"
-            class="birth-date-picker mt-2"
-            placeholder="생년월일을 선택해 주세요"
-            :min-year="1900"
-            :max-year="new Date().getFullYear()"
-          />
-        </div>
-      </div>
-
-      <aside
-        class="mt-5 flex gap-2.5 rounded-2xl bg-[#f6f8fa] p-4 text-[11px] leading-[1.65] text-[var(--color-text-secondary)]"
-      >
-        <ShieldCheck class="mt-0.5 shrink-0 text-[#7f99a9]" :size="18" />
-        개인정보는 서비스 운영과 가족 계정 관리에 필요한 범위에서만 안전하게 사용됩니다.
-      </aside>
-
-      <div class="mt-5 grid grid-cols-2 gap-2.5">
+      <div class="mt-5 grid grid-cols-2 gap-3">
         <button
-          class="h-[52px] rounded-xl border border-[var(--color-border)] bg-white text-[14px] font-bold text-[var(--color-unselected-text)] active:bg-[#f5f7f8]"
+          class="h-14 rounded-2xl border border-[#d5dfe5] bg-white text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]"
           type="button"
           @click="router.back()"
-        >
-          취소
-        </button>
+        >취소</button>
         <button
-          class="h-[52px] rounded-xl border-0 bg-[var(--color-brand-primary)] text-[14px] font-2bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:opacity-45"
+          class="h-14 rounded-2xl border-0 bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:opacity-45"
           type="submit"
           :disabled="!canSave"
-        >
-          변경사항 저장
-        </button>
+        >변경사항 저장</button>
       </div>
     </form>
   </main>
@@ -324,7 +279,7 @@ onBeforeUnmount(() => {
 
 .field-input {
   width: 100%;
-  height: 48px;
+  height: 52px;
   margin-top: 8px;
   padding: 0 14px;
   color: var(--color-text-primary);
@@ -357,23 +312,24 @@ onBeforeUnmount(() => {
 }
 
 .verification-row {
-  display: flex;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 104px;
   gap: 8px;
-  height: 48px;
+  height: 52px;
 }
 
 .verification-row > input,
 .verification-row > button {
   box-sizing: border-box;
-  height: 48px;
-  min-height: 48px;
+  width: 100%;
+  height: 52px;
+  min-height: 52px;
   margin-top: 0;
   line-height: 1;
 }
 
 .birth-date-picker :deep(> button) {
-  height: 48px;
+  height: 52px;
   padding: 0 14px;
   font-size: 14px;
   border-color: #dce7ed;

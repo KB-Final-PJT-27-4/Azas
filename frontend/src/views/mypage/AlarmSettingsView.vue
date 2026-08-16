@@ -24,27 +24,15 @@ const alarmGroups = ref<AlarmGroup[]>([
     description: '저축 일정과 가족의 금융 기록을 알려드려요.',
     settings: [
       {
-        id: 'saving-day',
-        title: '저축일 알림',
-        description: '설정한 저축일을 놓치지 않게 알려드려요.',
-        enabled: true,
-      },
-      {
-        id: 'automatic-transfer',
-        title: '자동이체 알림',
-        description: '자동이체 예정일과 처리 결과를 알려드려요.',
+        id: 'scheduled-saving',
+        title: '저축 예정 알림',
+        description: '저축일과 자동이체 예정 일정을 미리 알려드려요.',
         enabled: true,
       },
       {
         id: 'time-capsule-release',
         title: '타임캡슐 공개 알림',
         description: '타임캡슐을 열 수 있는 날에 알려드려요.',
-        enabled: true,
-      },
-      {
-        id: 'allowance-request',
-        title: '용돈 요청 알림',
-        description: '아이가 용돈을 요청하면 바로 알려드려요.',
         enabled: true,
       },
     ],
@@ -54,6 +42,12 @@ const alarmGroups = ref<AlarmGroup[]>([
     title: '아이 성장·활동 알림',
     description: '아이의 성장 과정과 서비스 활동을 챙겨드려요.',
     settings: [
+      {
+        id: 'allowance-request',
+        title: '용돈 요청 알림',
+        description: '아이가 용돈을 요청하면 바로 알려드려요.',
+        enabled: true,
+      },
       {
         id: 'pregnancy-week',
         title: '임신 주차별 알림',
@@ -82,12 +76,14 @@ const saveSettings = () => {
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] px-5 pb-0">
-    <form class="mt-5" @submit.prevent="saveSettings">
+  <main
+    class="h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] overflow-hidden px-5 pb-20"
+  >
+    <form class="mt-4" @submit.prevent="saveSettings">
       <section
         v-for="(group, groupIndex) in alarmGroups"
         :key="group.id"
-        :class="groupIndex ? 'mt-5' : ''"
+        :class="groupIndex ? 'mt-6' : ''"
         :aria-labelledby="`alarm-group-${group.id}`"
       >
         <div class="px-1">
@@ -100,11 +96,11 @@ const saveSettings = () => {
 
         </div>
 
-        <ul class="mt-3 overflow-hidden rounded-[20px] border border-[#e0e9ee] bg-white px-4 shadow-[0_6px_22px_rgba(49,87,108,0.04)]">
+        <ul class="mt-3 overflow-hidden rounded-[20px] border border-[#e0e9ee] bg-white px-4">
           <li
             v-for="(setting, settingIndex) in group.settings"
             :key="setting.id"
-            class="flex min-h-[82px] items-center gap-4 py-4"
+            class="flex min-h-[74px] items-center gap-4 py-3.5"
             :class="settingIndex ? 'border-t border-[#edf1f3]' : ''"
           >
             <label
@@ -137,9 +133,11 @@ const saveSettings = () => {
         </ul>
       </section>
 
-      <div class="sticky bottom-0 z-10 -mx-5 bg-gradient-to-t from-white via-white to-white/0 px-5 pt-7 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div
+        class="pointer-events-none fixed bottom-[calc(var(--app-bottom-nav-height)+12px+env(safe-area-inset-bottom))] left-1/2 z-20 w-full max-w-[var(--app-max-width)] -translate-x-1/2 px-5"
+      >
         <button
-          class="min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white shadow-[0_7px_18px_rgba(39,169,235,0.2)] transition-colors active:bg-[var(--color-brand-primary-pressed)]"
+          class="pointer-events-auto min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]"
           type="submit"
         >
           알림 설정 저장
