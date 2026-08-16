@@ -5,15 +5,24 @@ withDefaults(
   defineProps<{
     message: string
     variant?: 'success' | 'error' | 'info'
+    withBottomNavigation?: boolean
   }>(),
   {
     variant: 'info',
+    withBottomNavigation: true,
   },
 )
 </script>
 
 <template>
-  <div class="base-toast" :class="`base-toast--${variant}`" role="status">
+  <div
+    class="base-toast"
+    :class="[
+      `base-toast--${variant}`,
+      { 'base-toast--without-bottom-navigation': !withBottomNavigation },
+    ]"
+    role="status"
+  >
     <span class="base-toast__icon" aria-hidden="true">
       <Check v-if="variant === 'success'" :size="15" :stroke-width="3" />
       <X v-else-if="variant === 'error'" :size="15" :stroke-width="3" />
@@ -26,7 +35,7 @@ withDefaults(
 <style scoped>
 .base-toast {
   position: fixed;
-  bottom: calc(var(--app-bottom-nav-height) + 96px);
+  bottom: calc(var(--app-bottom-nav-height) + 24px + env(safe-area-inset-bottom));
   left: 50%;
   z-index: var(--z-index-toast);
   display: flex;
@@ -45,6 +54,10 @@ withDefaults(
   border: 1px solid rgb(225 230 235 / 85%);
   border-radius: 16px;
   box-shadow: 0 8px 28px rgb(29 43 54 / 16%);
+}
+
+.base-toast--without-bottom-navigation {
+  bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
 .base-toast__icon {
