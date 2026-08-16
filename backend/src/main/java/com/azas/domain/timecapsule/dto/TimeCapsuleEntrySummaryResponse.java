@@ -23,19 +23,11 @@ public class TimeCapsuleEntrySummaryResponse {
     @JsonProperty("contributed_at")
     private final LocalDateTime contributedAt;
 
-    @JsonProperty("media_mode")
-    private final String mediaMode;
-
     @JsonProperty("thumbnail_url")
     private final String thumbnailUrl;
 
     @JsonProperty("thumbnail_expires_at")
     private final LocalDateTime thumbnailExpiresAt;
-
-    private final String status;
-
-    @JsonProperty("media_count")
-    private final int mediaCount;
 
     private TimeCapsuleEntrySummaryResponse(
             TimeCapsuleEntry entry,
@@ -46,11 +38,8 @@ public class TimeCapsuleEntrySummaryResponse {
         this.title = entry.getTitle();
         this.contributionAmount = entry.getContributionAmount();
         this.contributedAt = entry.getContributedAt();
-        this.mediaMode = entry.getMediaMode().name();
         this.thumbnailUrl = thumbnailUrl;
         this.thumbnailExpiresAt = thumbnailExpiresAt;
-        this.status = entry.getStatus().name();
-        this.mediaCount = entry.getMediaCount();
     }
 
     // [JMG] CAPSULE-4 기록 조회 결과를 목록 응답 항목으로 변환한다.
