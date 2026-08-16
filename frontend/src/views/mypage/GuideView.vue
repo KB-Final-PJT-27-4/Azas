@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ChevronDown, X } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, X } from 'lucide-vue-next'
 import { ref } from 'vue'
-
-import { useToast } from '@/composables/useToast'
+import questionPigImage from '@/assets/images/mypage/question_pig.png'
 
 interface FrequentlyAskedQuestion {
   id: string
@@ -16,9 +15,11 @@ interface QuickGuide {
   steps: string[]
 }
 
-const { showToast } = useToast()
-const openQuestionId = ref<string | null>('account')
+const openQuestionId = ref<string | null>(null)
 const selectedGuide = ref<QuickGuide | null>(null)
+const sheetDragOffset = ref(0)
+const isSheetDragging = ref(false)
+let sheetDragStartY = 0
 
 const guides: QuickGuide[] = [
   {
@@ -80,154 +81,249 @@ const toggleQuestion = (questionId: string) => {
   openQuestionId.value = openQuestionId.value === questionId ? null : questionId
 }
 
-const requestHelp = () => {
-  showToast('문의가 접수되었습니다. 빠르게 도와드릴게요.', 'success')
+const startSheetDrag = (event: PointerEvent) => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+
+  sheetDragStartY = event.clientY
+  isSheetDragging.value = true
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
 }
+
+const moveSheetDrag = (event: PointerEvent) => {
+  if (!isSheetDragging.value) return
+  sheetDragOffset.value = Math.max(0, event.clientY - sheetDragStartY)
+}
+
+const endSheetDrag = () => {
+  if (!isSheetDragging.value) return
+
+  isSheetDragging.value = false
+  if (sheetDragOffset.value >= 80) {
+    selectedGuide.value = null
+    window.setTimeout(() => {
+      sheetDragOffset.value = 0
+    }, 340)
+    return
+  }
+
+  sheetDragOffset.value = 0
+}
+
 </script>
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-5 pt-7 pb-10 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-5 pb-[calc(16px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]"
   >
     <section
-      class="relative overflow-hidden rounded-[24px] bg-[var(--color-selected-background)] p-6"
+      class="relative overflow-hidden rounded-[24px] border border-[#cfeaf6] bg-[#eefaff] px-5 py-6"
       aria-labelledby="guide-title"
     >
-      <h1 id="guide-title" class="text-[26px] font-bold tracking-[-0.04em]">
+      <span class="text-xs font-bold text-[var(--color-text-primary)]">
+        우리 <span class="text-[#f28faa]">아</span>이
+        <span class="text-[#f28faa]">자</span>산관리 서비<span class="text-[#f28faa]">스</span>
+      </span>
+      <h1 id="guide-title" class="mt-2 text-[25px] font-extrabold tracking-[-0.04em]">
         무엇을 도와드릴까요?
       </h1>
-      <p class="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
+      <p class="relative z-10 mt-2 max-w-[230px] text-[13px] leading-6 text-[var(--color-text-secondary)]">
         우리 아이의 자산 관리, 어렵지 않아요.<br />자주 찾는 기능부터 차근차근 알려드릴게요.
       </p>
+      <img
+        :src="questionPigImage"
+        class="pointer-events-none absolute -right-3 top-1/2 w-[132px] -translate-y-1/2 object-contain"
+        alt=""
+        aria-hidden="true"
+      />
     </section>
 
-    <section class="mt-8" aria-labelledby="quick-guide-title">
-      <div class="flex items-center gap-2">
-        <h2 id="quick-guide-title" class="text-lg font-bold">빠른 이용 가이드</h2>
-      </div>
+    <section class="mt-7" aria-labelledby="quick-guide-title">
+      <h2 id="quick-guide-title" class="text-[19px] font-extrabold tracking-[-0.02em]">
+        빠른 이용 가이드
+      </h2>
+      <p class="mt-1 text-xs text-[var(--color-text-secondary)]">필요한 기능을 순서대로 알려드려요.</p>
 
       <div class="mt-4 grid gap-3">
         <button
-          v-for="guide in guides"
+          v-for="(guide, index) in guides"
           :key="guide.title"
-          class="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left shadow-sm transition-colors active:bg-[var(--color-surface-muted)]"
+          class="group flex min-h-[76px] items-center gap-4 rounded-[20px] border border-[#d9e5eb] bg-white px-4 py-3 text-left transition-colors active:bg-[#f5fbfe]"
           type="button"
           @click="selectedGuide = guide"
         >
-          <div class="min-w-0 flex-1">
-            <h3 class="text-base font-bold">{{ guide.title }}</h3>
-            <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+          <span
+            class="grid size-10 shrink-0 place-items-center rounded-[14px] bg-[#eaf8fe] text-sm font-extrabold text-[var(--color-brand-primary)]"
+          >
+            {{ index + 1 }}
+          </span>
+          <span class="min-w-0 flex-1">
+            <strong class="block text-[15px] font-bold">{{ guide.title }}</strong>
+            <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">
               {{ guide.description }}
-            </p>
-          </div>
+            </span>
+          </span>
+          <ChevronRight
+            :size="19"
+            class="shrink-0 text-[#9aabb5] transition-transform group-active:translate-x-0.5"
+            aria-hidden="true"
+          />
         </button>
       </div>
     </section>
 
-    <section class="mt-8" aria-labelledby="faq-title">
-      <div class="flex items-center gap-2">
-        <h2 id="faq-title" class="text-lg font-bold">자주 묻는 질문</h2>
-      </div>
+    <section class="mt-6" aria-labelledby="faq-title">
+      <h2 id="faq-title" class="text-[19px] font-extrabold tracking-[-0.02em]">자주 묻는 질문</h2>
+      <p class="mt-1 text-xs text-[var(--color-text-secondary)]">궁금한 질문을 눌러 확인해보세요.</p>
 
-      <div class="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)]">
+      <div class="mt-4 overflow-hidden rounded-[20px] border border-[#d9e5eb] bg-white">
         <article
           v-for="(item, index) in questions"
           :key="item.id"
-          :class="index > 0 ? 'border-t border-[var(--color-border)]' : ''"
+          :class="index > 0 ? 'border-t border-[#edf1f3]' : ''"
         >
           <button
-            class="flex min-h-14 w-full items-center justify-between gap-4 bg-[var(--color-surface)] px-4 py-3 text-left"
+            class="flex min-h-[62px] w-full items-center justify-between gap-4 bg-white px-4 py-3 text-left transition-colors active:bg-[#f7fbfd]"
             type="button"
             :aria-expanded="openQuestionId === item.id"
             :aria-controls="`answer-${item.id}`"
             @click="toggleQuestion(item.id)"
           >
-            <span class="text-sm font-semibold">{{ item.question }}</span>
+            <span class="text-[14px] font-bold">{{ item.question }}</span>
             <ChevronDown
               :size="19"
-              class="shrink-0 text-[var(--color-text-secondary)] transition-transform"
-              :class="openQuestionId === item.id ? 'rotate-180' : ''"
+              class="shrink-0 text-[#8497a3] transition-all duration-300 ease-out"
+              :class="openQuestionId === item.id ? 'rotate-180 text-[var(--color-brand-primary)]' : ''"
             />
           </button>
           <div
-            v-if="openQuestionId === item.id"
             :id="`answer-${item.id}`"
-            class="bg-[var(--color-surface-muted)] px-4 py-4 text-sm leading-6 text-[var(--color-text-secondary)]"
+            class="grid bg-[#f4fbfe] transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            :class="
+              openQuestionId === item.id
+                ? 'grid-rows-[1fr] opacity-100'
+                : 'grid-rows-[0fr] opacity-0'
+            "
           >
-            {{ item.answer }}
+            <div class="overflow-hidden">
+              <p class="border-t border-[#e1f1f7] px-4 py-4 text-[13px] leading-6 text-[var(--color-text-secondary)]">
+                {{ item.answer }}
+              </p>
+            </div>
           </div>
         </article>
       </div>
     </section>
-
-    <section class="mt-8 rounded-2xl bg-[var(--color-brand-secondary)] p-5 text-center">
-      <h2 class="text-base font-bold">원하는 답변을 찾지 못했나요?</h2>
-      <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
-        궁금한 내용을 남겨주시면 친절하게 안내해드릴게요.
-      </p>
-      <button
-        class="mt-4 h-11 w-full rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
-        type="button"
-        @click="requestHelp"
-      >
-        1:1 문의하기
-      </button>
-    </section>
   </main>
 
-  <div
-    v-if="selectedGuide"
-    class="fixed inset-0 z-[var(--z-index-overlay)] grid place-items-center bg-black/40 px-6"
-    role="presentation"
-    @click.self="selectedGuide = null"
-  >
-    <section
-      class="w-full max-w-[380px] rounded-2xl bg-[var(--color-surface)] p-6 shadow-lg"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="quick-guide-modal-title"
+  <Transition name="guide-sheet">
+    <div
+      v-if="selectedGuide"
+      class="guide-sheet__backdrop fixed inset-y-0 left-1/2 z-[var(--z-index-overlay)] w-full max-w-[var(--app-max-width)] -translate-x-1/2 bg-black/35"
+      role="presentation"
+      @click.self="selectedGuide = null"
     >
-      <header class="flex items-start justify-between gap-4">
-        <div>
-          <h2 id="quick-guide-modal-title" class="text-xl font-bold">
-            {{ selectedGuide.title }}
-          </h2>
-          <p class="mt-1 text-sm text-[var(--color-text-secondary)]">
-            {{ selectedGuide.description }}
-          </p>
+      <section
+        class="guide-sheet__panel absolute right-0 bottom-0 left-0 rounded-t-[28px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]"
+        :class="{ 'is-dragging': isSheetDragging }"
+        :style="{ '--sheet-drag-y': `${sheetDragOffset}px` }"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quick-guide-modal-title"
+      >
+        <div
+          class="sheet-drag-handle -mx-5 -mt-3 flex h-11 touch-none cursor-grab items-center justify-center active:cursor-grabbing"
+          role="button"
+          tabindex="0"
+          aria-label="아래로 밀어 닫기"
+          @pointerdown="startSheetDrag"
+          @pointermove="moveSheetDrag"
+          @pointerup="endSheetDrag"
+          @pointercancel="endSheetDrag"
+        >
+          <span class="h-1.5 w-12 rounded-full bg-[#d8e1e6]" aria-hidden="true"></span>
         </div>
+        <header class="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="quick-guide-modal-title" class="text-xl font-extrabold">
+              {{ selectedGuide.title }}
+            </h2>
+            <p class="mt-1 text-sm text-[var(--color-text-secondary)]">
+              {{ selectedGuide.description }}
+            </p>
+          </div>
+          <button
+            class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f6]"
+            type="button"
+            aria-label="닫기"
+            @click="selectedGuide = null"
+          >
+            <X :size="21" />
+          </button>
+        </header>
+
+        <ol class="mt-6 grid gap-3">
+          <li
+            v-for="(step, index) in selectedGuide.steps"
+            :key="step"
+            class="flex items-center gap-3 rounded-2xl bg-[#f4f8fa] p-4"
+          >
+            <span
+              class="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--color-brand-primary)] text-xs font-bold text-[var(--color-text-inverse)]"
+            >
+              {{ index + 1 }}
+            </span>
+            <p class="text-sm leading-6">{{ step }}</p>
+          </li>
+        </ol>
+
         <button
-          class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
+          class="mt-6 h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
           type="button"
-          aria-label="닫기"
           @click="selectedGuide = null"
         >
-          <X :size="21" />
+          확인했어요
         </button>
-      </header>
-
-      <ol class="mt-6 grid gap-4">
-        <li
-          v-for="(step, index) in selectedGuide.steps"
-          :key="step"
-          class="flex items-center gap-3 rounded-xl bg-[var(--color-surface-muted)] p-4"
-        >
-          <span
-            class="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--color-brand-primary)] text-xs font-bold text-[var(--color-text-inverse)]"
-          >
-            {{ index + 1 }}
-          </span>
-          <p class="pt-0.5 text-sm leading-6">{{ step }}</p>
-        </li>
-      </ol>
-
-      <button
-        class="mt-6 h-12 w-full rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
-        type="button"
-        @click="selectedGuide = null"
-      >
-        확인했어요
-      </button>
-    </section>
-  </div>
+      </section>
+    </div>
+  </Transition>
 </template>
+
+<style scoped>
+.guide-sheet__panel {
+  transform: translateY(var(--sheet-drag-y, 0));
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.guide-sheet__panel.is-dragging {
+  transition: none;
+}
+
+.guide-sheet-enter-active,
+.guide-sheet-leave-active {
+  transition: opacity 220ms ease;
+}
+
+.guide-sheet-enter-active .guide-sheet__panel,
+.guide-sheet-leave-active .guide-sheet__panel {
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.guide-sheet-enter-from,
+.guide-sheet-leave-to {
+  opacity: 0;
+}
+
+.guide-sheet-enter-from .guide-sheet__panel,
+.guide-sheet-leave-to .guide-sheet__panel {
+  transform: translateY(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-sheet-enter-active,
+  .guide-sheet-leave-active,
+  .guide-sheet-enter-active .guide-sheet__panel,
+  .guide-sheet-leave-active .guide-sheet__panel {
+    transition-duration: 1ms;
+  }
+}
+</style>

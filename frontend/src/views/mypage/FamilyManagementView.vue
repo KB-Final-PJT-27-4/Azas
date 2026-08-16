@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Baby, Check, Copy, Link2, UserRound, X } from 'lucide-vue-next'
+import { Baby, Check, ChevronRight, Copy, Link2, UserRound, X } from 'lucide-vue-next'
 
+import childProfileUrl from '@/assets/images/home/home-profile-baby.png'
 import { useToast } from '@/composables/useToast'
 
 type InviteType = 'guardian' | 'child'
@@ -68,28 +69,40 @@ const copyInvitationLink = async () => {
 
 <template>
   <main
-    class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top))] flex-col bg-white px-5 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]"
+    class="flex h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] flex-col overflow-hidden px-5 pt-4 pb-3 text-[var(--color-text-primary)]"
   >
-    <header>
-      <h1 class="m-0 text-[24px] font-extrabold">가족 관리</h1>
-      <p class="mt-1.5 mb-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-        함께 연결된 가족을 확인하고 새로운 가족을 초대할 수 있어요.
+    <header class="px-0.5">
+      <h1 class="m-0 text-[26px] leading-tight font-extrabold tracking-[-0.04em]">우리 가족</h1>
+      <p class="mt-2 mb-0 text-sm leading-6 text-[var(--color-text-secondary)]">
+        깨비와 함께 자산을 관리하는 가족을 확인해요.
       </p>
     </header>
 
-    <section class="mt-7" aria-labelledby="family-members-title">
-      <div class="flex items-end justify-between px-0.5">
-        <h2 id="family-members-title" class="m-0 text-[17px] font-extrabold">함께 관리하는 가족</h2>
-        <span class="text-[11px] font-semibold text-[var(--color-text-secondary)]"
-          >{{ familyMembers.length }}명</span
-        >
+    <section class="mt-4 flex items-center gap-4 rounded-[24px] border border-[#cfe8f3] bg-[#eaf8fe] p-4">
+      <span class="size-16 shrink-0 overflow-hidden rounded-full bg-white">
+        <img class="size-full object-cover" :src="childProfileUrl" alt="깨비 프로필" />
+      </span>
+      <div class="min-w-0 flex-1">
+        <span class="text-xs font-semibold text-[var(--color-selected-text)]">깨비네 가족</span>
+        <strong class="mt-1 block text-xl">함께 모으는 중이에요</strong>
+        <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
+          보호자 {{ familyMembers.length }}명이 연결되어 있어요.
+        </p>
+      </div>
+    </section>
+
+    <section class="mt-5" aria-labelledby="family-members-title">
+      <div class="flex items-center justify-between px-0.5">
+        <h2 id="family-members-title" class="m-0 text-[18px] font-extrabold">함께 관리하는 가족</h2>
+        <span class="text-xs font-semibold text-[var(--color-text-secondary)]">{{ familyMembers.length }}명</span>
       </div>
 
-      <ul class="mt-3 m-0 list-none space-y-3 p-0">
+      <ul class="mt-2.5 m-0 list-none overflow-hidden rounded-[20px] border border-[#d9e2e7] bg-white px-4 p-0">
         <li
-          v-for="member in familyMembers"
+          v-for="(member, index) in familyMembers"
           :key="member.id"
-          class="flex min-h-[76px] items-center gap-3.5 rounded-2xl border border-[#dce7ed] bg-white px-4 py-3 shadow-[0_3px_12px_rgba(31,76,99,0.035)]"
+          class="flex min-h-[68px] items-center gap-3.5"
+          :class="index ? 'border-t border-[#edf1f3]' : ''"
         >
           <span
             class="grid size-11 shrink-0 place-items-center rounded-full text-[13px] font-extrabold"
@@ -99,42 +112,48 @@ const copyInvitationLink = async () => {
             {{ member.initials }}
           </span>
           <span class="min-w-0 flex-1">
-            <strong class="block text-[14px] font-extrabold">{{ member.name }}</strong>
-            <span class="mt-1 block text-[11px] text-[var(--color-text-secondary)]"
+            <strong class="block text-[15px] font-extrabold">{{ member.name }}</strong>
+            <span class="mt-1 block text-xs text-[var(--color-text-secondary)]"
               >{{ member.relation }} · 보호자</span
             >
           </span>
           <span
             v-if="member.isMe"
-            class="shrink-0 rounded-full bg-[#fff4cf] px-2.5 py-1 text-[10px] font-bold text-[#a67d18]"
+            class="ml-auto shrink-0 rounded-full bg-[#fff4cf] px-2.5 py-1 text-[10px] font-bold text-[#a67d18]"
             >본인</span
           >
         </li>
       </ul>
     </section>
 
-    <section class="mt-8" aria-labelledby="family-invite-title">
-      <h2 id="family-invite-title" class="m-0 px-0.5 text-[17px] font-extrabold">가족 초대</h2>
-      <p class="mt-1.5 mb-0 px-0.5 text-[11px] text-[var(--color-text-secondary)]">
-        초대 링크는 개인정보가 포함되지 않아 안전해요.
-      </p>
+    <section class="mt-5" aria-labelledby="family-invite-title">
+      <h2 id="family-invite-title" class="m-0 px-0.5 text-[18px] font-extrabold">가족 초대</h2>
+      <p class="mt-1.5 mb-0 px-0.5 text-xs text-[var(--color-text-secondary)]">역할에 맞는 초대 링크를 만들어보세요.</p>
 
-      <div class="mt-4 grid gap-3">
+      <div class="mt-3 grid gap-2.5">
         <button
-          class="flex min-h-[58px] w-full items-center justify-center gap-2 rounded-2xl border-0 bg-[var(--color-brand-primary)] text-[14px] font-bold text-white shadow-[0_7px_18px_rgba(85,192,244,0.2)] active:bg-[var(--color-brand-primary-pressed)]"
+          class="flex min-h-[68px] w-full items-center gap-3 rounded-[18px] border border-[#cfe8f3] bg-[#eef9fe] px-4 py-3 text-left active:bg-[#e3f5fc]"
           type="button"
           @click="openInvitation('guardian')"
         >
-          <UserRound :size="18" :stroke-width="2.2" />
-          보호자 초대 링크 만들기
+          <span class="grid size-11 shrink-0 place-items-center rounded-full bg-white text-[var(--color-selected-text)]"><UserRound :size="21" :stroke-width="2.2" /></span>
+          <span class="min-w-0 flex-1">
+            <strong class="block text-[15px]">보호자 초대</strong>
+            <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">자산과 목표를 함께 관리해요.</span>
+          </span>
+          <ChevronRight class="shrink-0 text-[#8da2ad]" :size="19" />
         </button>
         <button
-          class="flex min-h-[58px] w-full items-center justify-center gap-2 rounded-2xl border border-[#d5edf8] bg-[#eaf8ff] text-[14px] font-bold text-[var(--color-selected-text)] active:bg-[#ddf4ff]"
+          class="flex min-h-[68px] w-full items-center gap-3 rounded-[18px] border border-[#eadfbf] bg-[#fffaf0] px-4 py-3 text-left active:bg-[#fff5df]"
           type="button"
           @click="openInvitation('child')"
         >
-          <Baby :size="19" :stroke-width="2.1" />
-          자녀 초대 링크 만들기
+          <span class="grid size-11 shrink-0 place-items-center rounded-full bg-white text-[#d89b2b]"><Baby :size="22" :stroke-width="2.1" /></span>
+          <span class="min-w-0 flex-1">
+            <strong class="block text-[15px]">자녀 초대</strong>
+            <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">아이 계정을 가족에 연결해요.</span>
+          </span>
+          <ChevronRight class="shrink-0 text-[#a79b7f]" :size="19" />
         </button>
       </div>
     </section>
