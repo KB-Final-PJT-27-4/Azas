@@ -69,9 +69,6 @@ const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 74, 5)}
       <h2 id="category-comparison-title" class="m-0 text-[16px] font-extrabold">
         항목별 지출 흐름
       </h2>
-      <p class="mt-1.5 mb-0 text-[11px] leading-5 text-[var(--color-text-secondary)]">
-        우리 집 지출은 노란색, 평균은 회색으로 표시했어요. 막대를 눌러 금액을 확인해보세요.
-      </p>
 
       <div
         class="mt-4 flex items-center gap-5 text-[11px] font-bold text-[var(--color-text-secondary)]"
