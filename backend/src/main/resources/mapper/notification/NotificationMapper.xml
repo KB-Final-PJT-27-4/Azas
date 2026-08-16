@@ -105,4 +105,19 @@
           AND is_read = 0
     </select>
 
+    <select id="findNotificationReadStatus"
+            resultType="java.lang.Boolean">
+        SELECT is_read
+        FROM notification
+        WHERE notification_id = #{notificationId}
+          AND member_id = #{memberId}
+    </select>
+
+    <update id="markNotificationAsRead">
+        UPDATE notification
+        SET is_read = 1
+        WHERE notification_id = #{notificationId}
+          AND member_id = #{memberId}
+          AND is_read = 0
+    </update>
 </mapper>

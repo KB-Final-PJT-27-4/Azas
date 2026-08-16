@@ -348,6 +348,12 @@ public enum ErrorCode {
     TRANSFER_PROCESSING_FAILED(
             HttpStatus.BAD_GATEWAY,
             "이체 처리 중 오류가 발생했습니다."
+    ),
+
+    // Notification
+    NOTIFICATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+        "알림을 찾을 수 없습니다."
     );
 
     private final HttpStatus httpStatus;

@@ -17,4 +17,14 @@ public interface NotificationMapper {
     long countUnreadNotifications(
             @Param("memberId") Long memberId
     );
+
+    Boolean findNotificationReadStatus(
+            @Param("memberId") Long memberId,
+            @Param("notificationId") Long notificationId
+    );
+
+    int markNotificationAsRead(
+            @Param("memberId") Long memberId,
+            @Param("notificationId") Long notificationId
+    );
 }

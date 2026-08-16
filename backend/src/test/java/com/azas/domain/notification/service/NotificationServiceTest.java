@@ -2,6 +2,7 @@ package com.azas.domain.notification.service;
 
 import com.azas.domain.notification.dto.NotificationListResponse;
 import com.azas.domain.notification.dto.NotificationListRow;
+import com.azas.domain.notification.dto.NotificationReadResponse;
 import com.azas.domain.notification.dto.NotificationUnreadCountResponse;
 import com.azas.domain.notification.entity.NotificationCategory;
 import com.azas.domain.notification.entity.NotificationType;
@@ -20,8 +21,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
@@ -359,5 +359,111 @@ class NotificationServiceTest {
                 );
 
         assertEquals(0L, response.getUnreadCount());
+    }
+
+    // 읽지 않은 알림 읽음
+    @Test
+    void readsUnreadNotification() {
+        Long memberId = 7L;
+        Long notificationId = 101L;
+
+        when(notificationMapper.findNotificationReadStatus(
+                memberId,
+                notificationId
+        )).thenReturn(false);
+
+        NotificationReadResponse response =
+                notificationService.readNotification(
+                        memberId,
+                        notificationId
+                );
+
+        assertEquals(notificationId, response.getNotificationId());
+        assertTrue(response.isRead());
+
+        verify(notificationMapper)
+                .markNotificationAsRead(
+                        memberId,
+                        notificationId
+                );
+    }
+
+    // 이미 읽은 알림 재요청
+    @Test
+    void returnsSuccessWhenNotificationIsAlreadyRead() {
+        Long memberId = 7L;
+        Long notificationId = 101L;
+
+        when(notificationMapper.findNotificationReadStatus(
+                memberId,
+                notificationId
+        )).thenReturn(true);
+
+        NotificationReadResponse response =
+                notificationService.readNotification(
+                        memberId,
+                        notificationId
+                );
+
+        assertEquals(notificationId, response.getNotificationId());
+        assertTrue(response.isRead());
+
+        verify(notificationMapper, never())
+                .markNotificationAsRead(
+                        memberId,
+                        notificationId
+                );
+    }
+
+    // 알림을 찾을 수 없는 경우
+    @Test
+    void throwsNotFoundWhenNotificationDoesNotBelongToMember() {
+        Long memberId = 7L;
+        Long notificationId = 999L;
+
+        when(notificationMapper.findNotificationReadStatus(
+                memberId,
+                notificationId
+        )).thenReturn(null);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> notificationService.readNotification(
+                                memberId,
+                                notificationId
+                        )
+                );
+
+        assertEquals(
+                ErrorCode.NOTIFICATION_NOT_FOUND,
+                exception.getErrorCode()
+        );
+
+        verify(notificationMapper, never())
+                .markNotificationAsRead(
+                        memberId,
+                        notificationId
+                );
+    }
+
+    // 잘못된 알림 ID
+    @Test
+    void throwsBadRequestWhenNotificationIdIsNotPositive() {
+        Long memberId = 7L;
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> notificationService.readNotification(
+                                memberId,
+                                0L
+                        )
+                );
+
+        assertEquals(
+                ErrorCode.BADREQUEST,
+                exception.getErrorCode()
+        );
     }
 }

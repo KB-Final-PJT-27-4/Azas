@@ -1,6 +1,7 @@
 package com.azas.domain.notification.controller;
 
 import com.azas.domain.notification.dto.NotificationListResponse;
+import com.azas.domain.notification.dto.NotificationReadResponse;
 import com.azas.domain.notification.dto.NotificationUnreadCountResponse;
 import com.azas.domain.notification.service.NotificationService;
 import com.azas.global.security.AccessTokenMemberResolver;
@@ -19,6 +20,7 @@ public class NotificationController {
 
     private final NotificationService notificationService;
     private final AccessTokenMemberResolver accessTokenMemberResolver;
+
 
     @ApiOperation("알림 목록 조회 및 신규 알림 폴링")
     @GetMapping
@@ -97,5 +99,33 @@ public class NotificationController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(response);
+    }
+
+    @ApiOperation(
+            value = "알림 한 건 읽음 처리",
+            notes = "현재 로그인한 회원의 알림 한 건을 읽음 처리합니다."
+    )
+    @PatchMapping("/{notification_id}/read")
+    public ResponseEntity<NotificationReadResponse> readNotification(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader,
+
+            @PathVariable("notification_id")
+            Long notificationId
+    ) {
+        Long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        NotificationReadResponse response =
+                notificationService.readNotification(
+                        memberId,
+                        notificationId
+                );
+
+        return ResponseEntity.ok(response);
     }
 }

@@ -302,4 +302,39 @@ public class NotificationServiceImpl implements NotificationService {
                 unreadCount
         );
     }
+
+    @Override
+    @Transactional
+    public NotificationReadResponse readNotification(
+            Long memberId,
+            Long notificationId
+    ) {
+        if (notificationId == null || notificationId <= 0) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        Boolean readStatus =
+                notificationMapper.findNotificationReadStatus(
+                        memberId,
+                        notificationId
+                );
+
+        if (readStatus == null) {
+            throw new BusinessException(
+                    ErrorCode.NOTIFICATION_NOT_FOUND
+            );
+        }
+
+        if (!readStatus) {
+            notificationMapper.markNotificationAsRead(
+                    memberId,
+                    notificationId
+            );
+        }
+
+        return new NotificationReadResponse(
+                notificationId,
+                true
+        );
+    }
 }
