@@ -312,7 +312,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/child/ChildAccountCreateView.vue'),
     meta: {
       requiresAuth: true,
-      roles: ['CHILD'],
+      roles: ['PARENT'],
       headerTitle: '아이 계좌 등록',
       showHeaderBack: true,
       showHeaderNotification: false,
