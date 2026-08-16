@@ -69,9 +69,10 @@ INSERT INTO financial_goal_template (
   is_active,
   created_by_member_id
 ) VALUES
-  (1, '대학자금 마련', '아이의 대학 입학 시점에 필요한 자금을 준비해요.', 'graduation_cap', 1, 1, 1, NULL),
-  (2, '독립자금 마련', '성인이 되었을 때 첫 독립을 위한 종잣돈을 준비해요.', 'home', 2, 1, 1, NULL),
-  (3, '첫 종잣돈 마련', '아이에게 경제적 출발선을 만들어주는 목표예요.', 'seed_money', 3, 1, 1, NULL);
+  (1, '대학자금', '대학 등록금과 교육비', 'graduation_cap', 1, 1, 1, NULL),
+  (2, '주거자금', '내 집 마련을 위한 자금', 'house', 2, 1, 1, NULL),
+  (4, '결혼자금', '미래 자녀의 결혼을 위한 자금', 'hearts', 3, 1, 1, NULL),
+  (3, '목돈 마련', '아이의 미래를 위한 든든한 목돈', 'coins', 4, 1, 1, NULL);
 
 INSERT INTO child (
   child_id,
