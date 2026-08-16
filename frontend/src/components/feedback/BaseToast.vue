@@ -35,7 +35,7 @@ withDefaults(
 <style scoped>
 .base-toast {
   position: fixed;
-  bottom: calc(var(--app-bottom-nav-height) + 96px);
+  bottom: calc(var(--app-bottom-nav-height) + 24px + env(safe-area-inset-bottom));
   left: 50%;
   z-index: var(--z-index-toast);
   display: flex;

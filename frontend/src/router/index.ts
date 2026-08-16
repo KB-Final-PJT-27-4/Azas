@@ -172,7 +172,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/MypageEditView.vue'),
     meta: {
       requiresAuth: true,
-      hideBottomNavigation: true,
       headerTitle: '마이페이지',
       showHeaderBack: true,
       showHeaderNotification: false,
@@ -184,7 +183,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/ChildEditView.vue'),
     meta: {
       requiresAuth: true,
-      hideBottomNavigation: true,
       headerTitle: '마이페이지',
       showHeaderBack: true,
       showHeaderNotification: false,
@@ -196,7 +194,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/FamilyManagementView.vue'),
     meta: {
       requiresAuth: true,
-      hideBottomNavigation: true,
       headerTitle: '마이페이지',
       showHeaderBack: true,
       showHeaderNotification: false,
@@ -209,7 +206,6 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       roles: ['PARENT'],
-      hideBottomNavigation: true,
       headerTitle: '아이 이용 권한 설정',
       showHeaderBack: true,
       showHeaderNotification: false,
@@ -221,7 +217,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/MypageAccountsView.vue'),
     meta: {
       requiresAuth: true,
-      hideBottomNavigation: true,
       headerTitle: '마이페이지',
       showHeaderBack: true,
       showHeaderNotification: false,
@@ -233,7 +228,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/MypageGoalsView.vue'),
     meta: {
       requiresAuth: true,
-      hideBottomNavigation: true,
       headerTitle: '목표 관리',
       showHeaderBack: true,
       showHeaderNotification: false,
@@ -247,7 +241,6 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: {
       requiresAuth: true,
-      hideBottomNavigation: true,
       headerTitle: '목표 수정',
       showHeaderBack: true,
       showHeaderNotification: false,
@@ -260,7 +253,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/AlarmSettingsView.vue'),
     meta: {
       requiresAuth: true,
-      hideBottomNavigation: true,
       headerTitle: '마이페이지',
       showHeaderBack: true,
       showHeaderNotification: false,
@@ -272,7 +264,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/GuideView.vue'),
     meta: {
       requiresAuth: true,
-      hideBottomNavigation: true,
       headerTitle: '도움말',
       showHeaderBack: true,
       showHeaderNotification: false,

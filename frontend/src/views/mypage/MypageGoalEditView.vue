@@ -42,11 +42,11 @@ const saveGoal = () => {
 
   // TODO: 목표 수정 API 연결
   showToast('목표를 수정했어요.', 'success')
-  router.push({ name: 'MypageGoals' })
+  router.replace({ name: 'MypageGoals' })
 }
 
 const cancelEdit = () => {
-  router.push({ name: 'MypageGoals' })
+  router.replace({ name: 'MypageGoals' })
 }
 
 onMounted(() => {
@@ -64,7 +64,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top))] flex-col bg-[#eef9fe] bg-cover bg-top bg-no-repeat px-[18px] pt-5 pb-[calc(24px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]"
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col bg-[#eef9fe] bg-cover bg-top bg-no-repeat px-[18px] pt-5 pb-6 text-[var(--color-text-primary)]"
     :style="{
       backgroundImage: `linear-gradient(rgba(247, 250, 252, 0.28), rgba(247, 250, 252, 0.42)), url(${goalCloudBackground})`,
     }"
