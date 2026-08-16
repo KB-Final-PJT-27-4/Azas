@@ -1,11 +1,11 @@
 package com.azas.domain.timecapsule.mapper;
 
-import com.azas.domain.timecapsule.dto.TimeCapsuleSearchCondition;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Mapper
@@ -54,20 +54,16 @@ public interface TimeCapsuleMapper {
     );
 
     // [JMG] CAPSULE-13 삭제된 엔트리를 보관함 집계에서 제외하고 최신 기록 시각을 다시 계산한다.
-    int decreaseEntryCountAndRefreshLatestEntry(
-            @Param("timeCapsuleId") long timeCapsuleId
+    int decreaseEntryAggregates(
+            @Param("timeCapsuleId") long timeCapsuleId,
+            @Param("contributionAmount") BigDecimal contributionAmount
     );
 
     // [JMG] CAPSULE-6 하위 데이터를 정리한 뒤 타임캡슐 보관함 행을 영구 삭제한다.
     int deleteById(@Param("timeCapsuleId") long timeCapsuleId);
 
-    // [JMG] CAPSULE-2 카드형 보관함 목록을 keyset pagination으로 조회한다.
-    List<TimeCapsule> findCardSummaries(
-            TimeCapsuleSearchCondition condition
-    );
-
-    // [JMG] CAPSULE-2 캘린더형 보관함 목록을 keyset pagination으로 조회한다.
-    List<TimeCapsule> findCalendarSummaries(
-            TimeCapsuleSearchCondition condition
+    // [JMG] CAPSULE-2 삭제되지 않은 보관함을 공개일 순서로 조회한다.
+    List<TimeCapsule> findSummariesByChildId(
+            @Param("childId") long childId
     );
 }

@@ -337,10 +337,12 @@
           AND media_type = #{mediaType}
     </select>
 
-    <update id="increaseEntryCountAndRefreshLatestEntry"
+    <update id="increaseEntryAggregates"
             parameterType="com.azas.domain.timecapsule.entity.TimeCapsuleEntry">
         UPDATE time_capsule
         SET entry_count = entry_count + 1,
+            total_contribution_amount =
+                total_contribution_amount + #{contributionAmount},
             latest_entry_at = CASE
                 WHEN latest_entry_at IS NULL
                   OR latest_entry_at &lt; #{contributedAt}

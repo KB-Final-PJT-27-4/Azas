@@ -237,7 +237,10 @@ class TimeCapsuleEntryServiceTest {
                 .willReturn(2);
         given(timeCapsuleEntryMapper.markDraftEntryAsDeleted(1000L))
                 .willReturn(1);
-        given(timeCapsuleMapper.decreaseEntryCountAndRefreshLatestEntry(100L))
+        given(timeCapsuleMapper.decreaseEntryAggregates(
+                100L,
+                new BigDecimal("100000.00")
+        ))
                 .willReturn(1);
 
         timeCapsuleEntryService.deleteTimeCapsuleEntry(7L, 1000L);
@@ -250,7 +253,10 @@ class TimeCapsuleEntryServiceTest {
         );
         verify(timeCapsuleMediaMapper).markNotDeletedMediaAsDeleted(1000L);
         verify(timeCapsuleEntryMapper).markDraftEntryAsDeleted(1000L);
-        verify(timeCapsuleMapper).decreaseEntryCountAndRefreshLatestEntry(100L);
+        verify(timeCapsuleMapper).decreaseEntryAggregates(
+                100L,
+                new BigDecimal("100000.00")
+        );
     }
 
     @Test
@@ -293,7 +299,7 @@ class TimeCapsuleEntryServiceTest {
         verify(timeCapsuleEntryMapper, never())
                 .markDraftEntryAsDeleted(anyLong());
         verify(timeCapsuleMapper, never())
-                .decreaseEntryCountAndRefreshLatestEntry(anyLong());
+                .decreaseEntryAggregates(anyLong(), any(BigDecimal.class));
     }
 
     @Test
@@ -328,7 +334,7 @@ class TimeCapsuleEntryServiceTest {
             ReflectionTestUtils.setField(entry, "timeCapsuleEntryId", 1000L);
             return 1;
         }).when(timeCapsuleEntryMapper).insert(any(TimeCapsuleEntry.class));
-        given(timeCapsuleEntryMapper.increaseEntryCountAndRefreshLatestEntry(
+        given(timeCapsuleEntryMapper.increaseEntryAggregates(
                 any(TimeCapsuleEntry.class)
         )).willReturn(1);
 
@@ -355,8 +361,7 @@ class TimeCapsuleEntryServiceTest {
         assertEquals(TimeCapsuleEntryStatus.DRAFT, savedEntry.getStatus());
         assertEquals(new BigDecimal("150000.00"),
                 savedEntry.getContributionAmount());
-        verify(timeCapsuleEntryMapper)
-                .increaseEntryCountAndRefreshLatestEntry(savedEntry);
+        verify(timeCapsuleEntryMapper).increaseEntryAggregates(savedEntry);
     }
 
     @Test
@@ -397,7 +402,7 @@ class TimeCapsuleEntryServiceTest {
         assertEquals(1000L, result.get().getTimeCapsuleEntryId());
         verify(timeCapsuleEntryMapper, never()).insert(any());
         verify(timeCapsuleEntryMapper, never())
-                .increaseEntryCountAndRefreshLatestEntry(any());
+                .increaseEntryAggregates(any());
     }
 
     @Test

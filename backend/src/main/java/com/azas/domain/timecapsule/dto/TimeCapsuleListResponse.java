@@ -8,21 +8,14 @@ import java.util.List;
 @Getter
 public class TimeCapsuleListResponse {
 
-    private final List<TimeCapsuleSummaryResponse> items;
+    @JsonProperty("time_capsules")
+    private final List<TimeCapsuleSummaryResponse> timeCapsules;
 
-    @JsonProperty("next_cursor")
-    private final String nextCursor;
+    @JsonProperty("total_count")
+    private final int totalCount;
 
-    @JsonProperty("has_next")
-    private final boolean hasNext;
-
-    public TimeCapsuleListResponse(
-            List<TimeCapsuleSummaryResponse> items,
-            String nextCursor,
-            boolean hasNext
-    ) {
-        this.items = items;
-        this.nextCursor = nextCursor;
-        this.hasNext = hasNext;
+    public TimeCapsuleListResponse(List<TimeCapsuleSummaryResponse> timeCapsules) {
+        this.timeCapsules = List.copyOf(timeCapsules);
+        this.totalCount = timeCapsules.size();
     }
 }

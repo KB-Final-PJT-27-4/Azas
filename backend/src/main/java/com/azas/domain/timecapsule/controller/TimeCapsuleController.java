@@ -34,7 +34,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -77,8 +76,8 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-2 타임캡슐 보관함 목록 조회",
-            notes = "카드 또는 캘린더 화면용 보관함 목록을 커서 기반으로 조회합니다."
+            value = "TIMECAPSULE-2 타임캡슐 보관함 목록 조회",
+            notes = "부모가 접근 가능한 자녀의 타임캡슐 보관함을 공개 날짜 순서로 조회합니다. 카드 화면에 필요한 공개일·D-day·총 저축 금액을 반환합니다."
     )
     @GetMapping("/children/{child_id}/time-capsules")
     // [JMG] CAPSULE-2 부모에게 연결된 자녀의 타임캡슐 보관함 목록을 조회한다.
@@ -87,13 +86,7 @@ public class TimeCapsuleController {
             String authorizationHeader,
             @ApiParam(value = "자녀 ID", required = true)
             @PathVariable("child_id")
-            long childId,
-            @RequestParam(value = "view", required = false) String view,
-            @RequestParam(value = "status", required = false) String status,
-            @RequestParam(value = "cursor", required = false) String cursor,
-            @RequestParam(value = "size", required = false) Integer size,
-            @RequestParam(value = "year", required = false) Integer year,
-            @RequestParam(value = "month", required = false) Integer month
+            long childId
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
                 authorizationHeader
@@ -101,13 +94,7 @@ public class TimeCapsuleController {
 
         return ResponseEntity.ok(timeCapsuleService.getTimeCapsules(
                 memberId,
-                childId,
-                view,
-                status,
-                cursor,
-                size,
-                year,
-                month
+                childId
         ));
     }
 
