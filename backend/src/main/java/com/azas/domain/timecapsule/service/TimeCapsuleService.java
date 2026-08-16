@@ -1,6 +1,7 @@
 package com.azas.domain.timecapsule.service;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleCursor;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
@@ -15,6 +16,10 @@ import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleExportMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMediaMapper;
 import com.azas.domain.timecapsule.storage.TimeCapsuleObjectStorage;
+import com.azas.domain.member.entity.Member;
+import com.azas.domain.member.entity.MemberStatus;
+import com.azas.domain.member.entity.MemberType;
+import com.azas.domain.member.mapper.MemberMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -37,7 +43,9 @@ public class TimeCapsuleService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final int MAX_PAGE_SIZE = 50;
+    private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
 
+    private final MemberMapper memberMapper;
     private final TimeCapsuleMapper timeCapsuleMapper;
     private final TimeCapsuleEntryMapper timeCapsuleEntryMapper;
     private final TimeCapsuleMediaMapper timeCapsuleMediaMapper;
@@ -45,25 +53,29 @@ public class TimeCapsuleService {
     private final TimeCapsuleObjectStorage timeCapsuleObjectStorage;
 
     @Transactional
-    // [JMG] CAPSULE-1 활성 적금 계좌에 연결된 타임캡슐 보관함을 생성한다.
-    public TimeCapsuleResponse createTimeCapsule(
+    // [JMG] CAPSULE-1 부모 또는 자녀의 활성 계좌를 자녀 타임캡슐 보관함에 연결한다.
+    public CreateTimeCapsuleResponse createTimeCapsule(
             long requesterMemberId,
-            long financialAccountId,
+            long childId,
             CreateTimeCapsuleRequest request
     ) {
-        TimeCapsuleAccount account =
-                getAccessibleTimeCapsuleAccountOrThrow(
-                        requesterMemberId,
-                        financialAccountId
-                );
+        validateCreateRequest(childId, request);
+        assertCreateParentAccess(requesterMemberId, childId);
 
-        if (!account.isEligibleSavingsAccount()) {
+        long financialAccountId = request.getFinancialAccountId();
+        TimeCapsuleAccount account = getTimeCapsuleAccountOrThrow(
+                financialAccountId
+        );
+        assertAccountAccess(requesterMemberId, childId, account);
+
+        if (!account.isEligibleTimeCapsuleAccount()) {
             throw new BusinessException(
                     ErrorCode.INELIGIBLE_TIME_CAPSULE_ACCOUNT
             );
         }
 
-        if (timeCapsuleMapper.findByFinancialAccountId(
+        if (timeCapsuleMapper.findByChildIdAndFinancialAccountId(
+                childId,
                 financialAccountId
         ) != null) {
             throw new BusinessException(
@@ -72,10 +84,10 @@ public class TimeCapsuleService {
         }
 
         TimeCapsule timeCapsule = TimeCapsule.create(
-                account.getChildId(),
+                childId,
                 financialAccountId,
-                request.getTitle().trim(),
-                account.getMaturityDate()
+                account.getAccountName(),
+                request.getReleaseDate()
         );
 
         try {
@@ -87,11 +99,12 @@ public class TimeCapsuleService {
             );
         }
 
-        return TimeCapsuleResponse.from(
+        return CreateTimeCapsuleResponse.from(
                 getAccessibleTimeCapsuleOrThrow(
                         requesterMemberId,
                         timeCapsule.getTimeCapsuleId()
-                )
+                ),
+                account
         );
     }
 
@@ -201,16 +214,11 @@ public class TimeCapsuleService {
         }
     }
 
-    // [JMG] CAPSULE-1 요청 부모가 접근 가능한 금융 계좌의 생성 가능 정보를 조회한다.
-    private TimeCapsuleAccount getAccessibleTimeCapsuleAccountOrThrow(
-            long requesterMemberId,
+    private TimeCapsuleAccount getTimeCapsuleAccountOrThrow(
             long financialAccountId
     ) {
         TimeCapsuleAccount account =
-                timeCapsuleMapper.findAccessibleAccountById(
-                        financialAccountId,
-                        requesterMemberId
-                );
+                timeCapsuleMapper.findAccountById(financialAccountId);
 
         if (account == null) {
             throw new BusinessException(
@@ -219,6 +227,62 @@ public class TimeCapsuleService {
         }
 
         return account;
+    }
+
+    private void validateCreateRequest(
+            long childId,
+            CreateTimeCapsuleRequest request
+    ) {
+        if (childId < 1
+                || request == null
+                || request.getFinancialAccountId() == null
+                || request.getFinancialAccountId() < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        LocalDate releaseDate = request.getReleaseDate();
+        if (releaseDate != null
+                && !releaseDate.isAfter(LocalDate.now(SERVICE_ZONE))) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+    }
+
+    private void assertCreateParentAccess(
+            long requesterMemberId,
+            long childId
+    ) {
+        Member member = memberMapper.findById(requesterMemberId);
+        if (member == null
+                || member.getStatus() != MemberStatus.ACTIVE
+                || member.getMemberType() != MemberType.PARENT) {
+            throw new BusinessException(ErrorCode.PARENT_ACCESS_REQUIRED);
+        }
+
+        if (!timeCapsuleMapper.existsChildById(childId)) {
+            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
+        }
+
+        if (!timeCapsuleMapper.existsActiveParentRelation(
+                requesterMemberId,
+                childId
+        )) {
+            throw new BusinessException(ErrorCode.CHILD_ACCESS_DENIED);
+        }
+    }
+
+    private void assertAccountAccess(
+            long requesterMemberId,
+            long childId,
+            TimeCapsuleAccount account
+    ) {
+        if (account.isParentOwnedBy(requesterMemberId)
+                || account.isOwnedByChild(childId)) {
+            return;
+        }
+
+        throw new BusinessException(
+                ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED
+        );
     }
 
     // [JMG] CAPSULE-3 요청 부모가 접근 가능한 보관함을 조회하고 없으면 예외를 발생시킨다.

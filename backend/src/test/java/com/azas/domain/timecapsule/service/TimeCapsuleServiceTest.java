@@ -1,8 +1,11 @@
 package com.azas.domain.timecapsule.service;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
+import com.azas.domain.member.entity.Member;
+import com.azas.domain.member.mapper.MemberMapper;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
@@ -41,6 +44,9 @@ import static org.mockito.Mockito.verify;
 class TimeCapsuleServiceTest {
 
     @Mock
+    private MemberMapper memberMapper;
+
+    @Mock
     private TimeCapsuleMapper timeCapsuleMapper;
 
     @Mock
@@ -59,149 +65,186 @@ class TimeCapsuleServiceTest {
     private TimeCapsuleService timeCapsuleService;
 
     @Test
-    // [JMG] CAPSULE-1 활성 적금 계좌에 대한 보관함 생성 시 만기일을 공개 예정일로 저장한다.
-    void createTimeCapsuleCreatesLockerForEligibleSavingsAccount() {
+    void createTimeCapsuleUsesChildSavingsAccountAndRequestedReleaseDate() {
         TimeCapsuleAccount account = createAccount(
-                1L,
-                10L,
-                "SAVINGS",
-                "ACTIVE",
-                "ACTIVE",
-                LocalDate.of(2030, 7, 23)
+                1L, "CHILD", null, 10L,
+                "아이사랑적금", "SAVINGS", "ACTIVE", "ACTIVE"
         );
-        CreateTimeCapsuleRequest request =
-                createRequest("깨비의 첫 대학자금 저축");
-        TimeCapsule persistedTimeCapsule =
-                createTimeCapsule(
-                        100L,
-                        10L,
-                        "깨비의 첫 대학자금 저축",
-                        LocalDateTime.of(2030, 7, 23, 0, 0),
-                        LocalDateTime.of(2026, 8, 4, 10, 0)
-                );
+        LocalDate releaseDate = LocalDate.now().plusYears(1);
+        CreateTimeCapsuleRequest request = createRequest(1L, releaseDate);
+        stubSuccessfulCreation(account, releaseDate);
 
-        given(timeCapsuleMapper.findAccessibleAccountById(1L, 7L))
-                .willReturn(account);
-        given(timeCapsuleMapper.findByFinancialAccountId(1L))
-                .willReturn(null);
-        doAnswer(invocation -> {
-            TimeCapsule created = invocation.getArgument(0);
-            ReflectionTestUtils.setField(
-                    created,
-                    "timeCapsuleId",
-                    100L
-            );
-            return 1;
-        }).when(timeCapsuleMapper).insert(any(TimeCapsule.class));
-        given(timeCapsuleMapper.findAccessibleById(100L, 7L))
-                .willReturn(persistedTimeCapsule);
-
-        TimeCapsuleResponse response =
-                timeCapsuleService.createTimeCapsule(
-                        7L,
-                        1L,
-                        request
-                );
+        CreateTimeCapsuleResponse response =
+                timeCapsuleService.createTimeCapsule(7L, 10L, request);
 
         ArgumentCaptor<TimeCapsule> captor =
                 ArgumentCaptor.forClass(TimeCapsule.class);
         verify(timeCapsuleMapper).insert(captor.capture());
-        assertEquals(
-                LocalDateTime.of(2030, 7, 23, 0, 0),
-                captor.getValue().getExpectedReleaseAt()
-        );
+        assertEquals("아이사랑적금", captor.getValue().getTitle());
+        assertEquals(releaseDate.atStartOfDay(),
+                captor.getValue().getExpectedReleaseAt());
         assertEquals(100L, response.getTimeCapsuleId());
-        assertEquals(10L, response.getChildId());
-        assertEquals("COLLECTING", response.getStatus());
+        assertEquals("CHILD", response.getAccount().getOwnerType());
+        assertEquals("아이사랑적금", response.getTitle());
+        assertEquals(releaseDate, response.getReleaseDate());
     }
 
     @Test
-    // [JMG] CAPSULE-1 적금이 아니거나 비활성 계좌에는 보관함 생성을 거부한다.
-    void createTimeCapsuleRejectsIneligibleAccount() {
+    void createTimeCapsuleSupportsParentDemandDepositWithoutReleaseDate() {
         TimeCapsuleAccount account = createAccount(
-                1L,
-                10L,
-                "DEMAND_DEPOSIT",
-                "ACTIVE",
-                "ACTIVE",
-                null
+                1L, "PARENT", 7L, null,
+                "KB국민 입출금통장", "DEMAND_DEPOSIT",
+                "ACTIVE", "ACTIVE"
         );
+        CreateTimeCapsuleRequest request = createRequest(1L, null);
+        stubSuccessfulCreation(account, null);
 
-        given(timeCapsuleMapper.findAccessibleAccountById(1L, 7L))
-                .willReturn(account);
+        CreateTimeCapsuleResponse response =
+                timeCapsuleService.createTimeCapsule(7L, 10L, request);
 
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () ->
-                timeCapsuleService.createTimeCapsule(
-                        7L,
-                        1L,
-                        createRequest("제목")
-                )
-        );
-
-        assertEquals(
-                ErrorCode.INELIGIBLE_TIME_CAPSULE_ACCOUNT,
-                exception.getErrorCode()
-        );
-
-        verify(timeCapsuleMapper, never())
-                .insert(any(TimeCapsule.class));
+        assertEquals("PARENT", response.getAccount().getOwnerType());
+        assertEquals("DEMAND_DEPOSIT",
+                response.getAccount().getAccountProductType());
+        assertEquals(null, response.getReleaseDate());
     }
 
     @Test
-    // [JMG] CAPSULE-1 서비스 연결이 해제된 적금 계좌에는 보관함 생성을 거부한다.
     void createTimeCapsuleRejectsUnlinkedAccount() {
         TimeCapsuleAccount account = createAccount(
-                1L,
-                10L,
-                "SAVINGS",
-                "ACTIVE",
-                "UNLINKED",
-                LocalDate.of(2030, 7, 23)
+                1L, "CHILD", null, 10L,
+                "아이사랑적금", "SAVINGS", "ACTIVE", "UNLINKED"
         );
-
-        given(timeCapsuleMapper.findAccessibleAccountById(1L, 7L))
-                .willReturn(account);
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findAccountById(1L)).willReturn(account);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> timeCapsuleService.createTimeCapsule(
-                        7L,
-                        1L,
-                        createRequest("제목")
+                        7L, 10L, createRequest(1L, null)
                 )
         );
 
-        assertEquals(
-                ErrorCode.INELIGIBLE_TIME_CAPSULE_ACCOUNT,
-                exception.getErrorCode()
-        );
-        verify(timeCapsuleMapper, never())
-                .insert(any(TimeCapsule.class));
+        assertEquals(ErrorCode.INELIGIBLE_TIME_CAPSULE_ACCOUNT,
+                exception.getErrorCode());
+        verify(timeCapsuleMapper, never()).insert(any(TimeCapsule.class));
     }
 
     @Test
-    // [JMG] CAPSULE-1 접근 권한이 없는 계좌는 존재 여부를 노출하지 않는다.
-    void createTimeCapsuleHidesInaccessibleAccount() {
-        given(timeCapsuleMapper.findAccessibleAccountById(1L, 7L))
-                .willReturn(null);
+    void createTimeCapsuleRejectsAccountOwnedByAnotherMember() {
+        TimeCapsuleAccount account = createAccount(
+                1L, "PARENT", 8L, null,
+                "다른 부모 계좌", "DEMAND_DEPOSIT", "ACTIVE", "ACTIVE"
+        );
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findAccountById(1L)).willReturn(account);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> timeCapsuleService.createTimeCapsule(
-                        7L,
-                        1L,
-                        createRequest("제목")
+                        7L, 10L, createRequest(1L, null)
                 )
         );
 
-        assertEquals(
-                ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND,
-                exception.getErrorCode()
+        assertEquals(ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED,
+                exception.getErrorCode());
+    }
+
+    @Test
+    void createTimeCapsuleRejectsDuplicateChildAccountCombination() {
+        TimeCapsuleAccount account = createAccount(
+                1L, "CHILD", null, 10L,
+                "아이사랑적금", "SAVINGS", "ACTIVE", "ACTIVE"
         );
-        verify(timeCapsuleMapper, never())
-                .findByFinancialAccountId(1L);
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findAccountById(1L)).willReturn(account);
+        given(timeCapsuleMapper.findByChildIdAndFinancialAccountId(10L, 1L))
+                .willReturn(createTimeCapsule(
+                        99L, 10L, "아이사랑적금",
+                        LocalDateTime.now().plusYears(1),
+                        LocalDateTime.now()
+                ));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.createTimeCapsule(
+                        7L, 10L, createRequest(1L, null)
+                )
+        );
+
+        assertEquals(ErrorCode.DUPLICATE_TIME_CAPSULE,
+                exception.getErrorCode());
+    }
+
+    @Test
+    void createTimeCapsuleRejectsTodayAsReleaseDate() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.createTimeCapsule(
+                        7L, 10L,
+                        createRequest(1L, LocalDate.now())
+                )
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+    }
+
+    @Test
+    void createTimeCapsuleRequiresParentMember() {
+        given(memberMapper.findById(7L)).willReturn(
+                Member.createChild("child@example.com", "자녀", null)
+        );
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.createTimeCapsule(
+                        7L, 10L, createRequest(1L, null)
+                )
+        );
+
+        assertEquals(ErrorCode.PARENT_ACCESS_REQUIRED,
+                exception.getErrorCode());
+        verify(timeCapsuleMapper, never()).findAccountById(1L);
+    }
+
+    @Test
+    void createTimeCapsuleRejectsInaccessibleChild() {
+        given(memberMapper.findById(7L)).willReturn(
+                Member.createParent("parent@example.com", "부모", null)
+        );
+        given(timeCapsuleMapper.existsChildById(10L)).willReturn(true);
+        given(timeCapsuleMapper.existsActiveParentRelation(7L, 10L))
+                .willReturn(false);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.createTimeCapsule(
+                        7L, 10L, createRequest(1L, null)
+                )
+        );
+
+        assertEquals(ErrorCode.CHILD_ACCESS_DENIED,
+                exception.getErrorCode());
+        verify(timeCapsuleMapper, never()).findAccountById(1L);
+    }
+
+    @Test
+    void createTimeCapsuleRejectsChildAccountForDifferentChild() {
+        TimeCapsuleAccount account = createAccount(
+                1L, "CHILD", null, 11L,
+                "다른 자녀 적금", "SAVINGS", "ACTIVE", "ACTIVE"
+        );
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findAccountById(1L)).willReturn(account);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.createTimeCapsule(
+                        7L, 10L, createRequest(1L, null)
+                )
+        );
+
+        assertEquals(ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED,
+                exception.getErrorCode());
     }
 
     @Test
@@ -353,11 +396,13 @@ class TimeCapsuleServiceTest {
     // [JMG] CAPSULE-1 테스트용 보관함 생성 가능 계좌를 구성한다.
     private TimeCapsuleAccount createAccount(
             long financialAccountId,
-            long childId,
+            String ownerType,
+            Long ownerMemberId,
+            Long childId,
+            String accountName,
             String accountProductType,
             String accountStatus,
-            String linkStatus,
-            LocalDate maturityDate
+            String linkStatus
     ) {
         TimeCapsuleAccount account = new TimeCapsuleAccount();
         ReflectionTestUtils.setField(
@@ -365,7 +410,14 @@ class TimeCapsuleServiceTest {
                 "financialAccountId",
                 financialAccountId
         );
+        ReflectionTestUtils.setField(account, "ownerType", ownerType);
+        ReflectionTestUtils.setField(
+                account,
+                "ownerMemberId",
+                ownerMemberId
+        );
         ReflectionTestUtils.setField(account, "childId", childId);
+        ReflectionTestUtils.setField(account, "accountName", accountName);
         ReflectionTestUtils.setField(
                 account,
                 "accountProductType",
@@ -381,20 +433,61 @@ class TimeCapsuleServiceTest {
                 "linkStatus",
                 linkStatus
         );
-        ReflectionTestUtils.setField(
-                account,
-                "maturityDate",
-                maturityDate
-        );
         return account;
     }
 
-    // [JMG] CAPSULE-1 테스트용 보관함 생성 요청을 구성한다.
-    private CreateTimeCapsuleRequest createRequest(String title) {
+    private CreateTimeCapsuleRequest createRequest(
+            long financialAccountId,
+            LocalDate releaseDate
+    ) {
         CreateTimeCapsuleRequest request =
                 new CreateTimeCapsuleRequest();
-        ReflectionTestUtils.setField(request, "title", title);
+        ReflectionTestUtils.setField(
+                request,
+                "financialAccountId",
+                financialAccountId
+        );
+        ReflectionTestUtils.setField(request, "releaseDate", releaseDate);
         return request;
+    }
+
+    private void stubParentAndChildAccess() {
+        given(memberMapper.findById(7L)).willReturn(
+                Member.createParent("parent@example.com", "부모", null)
+        );
+        given(timeCapsuleMapper.existsChildById(10L)).willReturn(true);
+        given(timeCapsuleMapper.existsActiveParentRelation(7L, 10L))
+                .willReturn(true);
+    }
+
+    private void stubSuccessfulCreation(
+            TimeCapsuleAccount account,
+            LocalDate releaseDate
+    ) {
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findAccountById(1L)).willReturn(account);
+        given(timeCapsuleMapper.findByChildIdAndFinancialAccountId(10L, 1L))
+                .willReturn(null);
+        doAnswer(invocation -> {
+            TimeCapsule created = invocation.getArgument(0);
+            ReflectionTestUtils.setField(created, "timeCapsuleId", 100L);
+            return 1;
+        }).when(timeCapsuleMapper).insert(any(TimeCapsule.class));
+
+        TimeCapsule persisted = TimeCapsule.create(
+                10L,
+                1L,
+                account.getAccountName(),
+                releaseDate
+        );
+        ReflectionTestUtils.setField(persisted, "timeCapsuleId", 100L);
+        ReflectionTestUtils.setField(
+                persisted,
+                "createdAt",
+                LocalDateTime.of(2026, 8, 16, 10, 0)
+        );
+        given(timeCapsuleMapper.findAccessibleById(100L, 7L))
+                .willReturn(persisted);
     }
 
     // [JMG] CAPSULE-1~3 테스트용 ERD 타임캡슐 엔티티를 구성한다.
