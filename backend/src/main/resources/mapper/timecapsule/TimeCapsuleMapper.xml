@@ -114,12 +114,8 @@
     <select id="findByChildIdAndFinancialAccountId"
             resultMap="timeCapsuleResultMap">
         SELECT
-            <include refid="timeCapsuleColumnsWithAlias"/>
+            <include refid="timeCapsuleColumns"/>
         FROM time_capsule tc
-        INNER JOIN financial_account fa
-            ON fa.financial_account_id = tc.financial_account_id
-        LEFT JOIN financial_goal_template fgt
-            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.child_id = #{childId}
           AND tc.financial_account_id = #{financialAccountId}
           AND tc.deleted_at IS NULL
@@ -211,12 +207,16 @@
         FOR UPDATE
     </select>
 
-    <update id="decreaseEntryCountAndRefreshLatestEntry">
+    <update id="decreaseEntryAggregates">
         UPDATE time_capsule tc
         SET entry_count = CASE
                 WHEN tc.entry_count &gt; 0 THEN tc.entry_count - 1
                 ELSE 0
             END,
+            total_contribution_amount = GREATEST(
+                tc.total_contribution_amount - #{contributionAmount},
+                0
+            ),
             latest_entry_at = (
                 SELECT MAX(tce.contributed_at)
                 FROM time_capsule_entry tce
@@ -231,7 +231,7 @@
         WHERE time_capsule_id = #{timeCapsuleId}
     </delete>
 
-    <select id="findCardSummaries"
+    <select id="findSummariesByChildId"
             resultMap="timeCapsuleResultMap">
         SELECT
             <include refid="timeCapsuleColumnsWithAlias"/>
@@ -242,49 +242,11 @@
             ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.child_id = #{childId}
           AND tc.deleted_at IS NULL
-        <if test="status != null">
-            AND tc.status = #{status}
-        </if>
-        <if test="cursorAt != null">
-            AND (
-                tc.created_at &lt; #{cursorAt}
-                OR (
-                    tc.created_at = #{cursorAt}
-                    AND tc.time_capsule_id &lt; #{cursorId}
-                )
-            )
-        </if>
-        ORDER BY tc.created_at DESC, tc.time_capsule_id DESC
-        LIMIT #{limit}
-    </select>
-
-    <select id="findCalendarSummaries"
-            resultMap="timeCapsuleResultMap">
-        SELECT
-            <include refid="timeCapsuleColumnsWithAlias"/>
-        FROM time_capsule tc
-        INNER JOIN financial_account fa
-            ON fa.financial_account_id = tc.financial_account_id
-        LEFT JOIN financial_goal_template fgt
-            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
-        WHERE tc.child_id = #{childId}
-          AND tc.deleted_at IS NULL
-          AND tc.expected_release_at &gt;= #{calendarStart}
-          AND tc.expected_release_at &lt; #{calendarEnd}
-        <if test="status != null">
-            AND tc.status = #{status}
-        </if>
-        <if test="cursorAt != null">
-            AND (
-                tc.expected_release_at &gt; #{cursorAt}
-                OR (
-                    tc.expected_release_at = #{cursorAt}
-                    AND tc.time_capsule_id &gt; #{cursorId}
-                )
-            )
-        </if>
-        ORDER BY tc.expected_release_at ASC, tc.time_capsule_id ASC
-        LIMIT #{limit}
+        ORDER BY
+            CASE WHEN tc.expected_release_at IS NULL THEN 1 ELSE 0 END,
+            tc.expected_release_at ASC,
+            tc.created_at DESC,
+            tc.time_capsule_id DESC
     </select>
 
 </mapper>

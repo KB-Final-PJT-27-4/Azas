@@ -129,8 +129,9 @@ public class TimeCapsuleEntryService {
                 || timeCapsuleEntryMapper.markDraftEntryAsDeleted(
                 timeCapsuleEntryId
         ) != 1
-                || timeCapsuleMapper.decreaseEntryCountAndRefreshLatestEntry(
-                entry.getTimeCapsuleId()
+                || timeCapsuleMapper.decreaseEntryAggregates(
+                entry.getTimeCapsuleId(),
+                entry.getContributionAmount()
         ) != 1) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
@@ -191,8 +192,7 @@ public class TimeCapsuleEntryService {
             );
         }
 
-        if (timeCapsuleEntryMapper
-                .increaseEntryCountAndRefreshLatestEntry(entry) != 1) {
+        if (timeCapsuleEntryMapper.increaseEntryAggregates(entry) != 1) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED
             );

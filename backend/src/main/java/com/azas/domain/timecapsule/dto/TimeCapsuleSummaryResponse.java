@@ -4,8 +4,8 @@ import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 @Getter
@@ -14,43 +14,36 @@ public class TimeCapsuleSummaryResponse {
     @JsonProperty("time_capsule_id")
     private final Long timeCapsuleId;
 
-    @JsonProperty("financial_account_id")
-    private final Long financialAccountId;
+    @JsonProperty("account_id")
+    private final Long accountId;
 
     private final String title;
     private final String status;
 
-    @JsonProperty("expected_release_at")
-    private final LocalDateTime expectedReleaseAt;
+    @JsonProperty("release_date")
+    private final LocalDate releaseDate;
 
     @JsonProperty("d_day")
     private final Long dDay;
 
-    @JsonProperty("entry_count")
-    private final int entryCount;
-
-    @JsonProperty("latest_entry_at")
-    private final LocalDateTime latestEntryAt;
-
-    private final TimeCapsuleGoalResponse goal;
-
-    @JsonProperty("created_at")
-    private final LocalDateTime createdAt;
+    @JsonProperty("total_saved_amount")
+    private final BigDecimal totalSavedAmount;
 
     private TimeCapsuleSummaryResponse(
             TimeCapsule timeCapsule,
             LocalDate today
     ) {
         this.timeCapsuleId = timeCapsule.getTimeCapsuleId();
-        this.financialAccountId = timeCapsule.getFinancialAccountId();
+        this.accountId = timeCapsule.getFinancialAccountId();
         this.title = timeCapsule.getTitle();
         this.status = timeCapsule.getStatus().name();
-        this.expectedReleaseAt = timeCapsule.getExpectedReleaseAt();
+        this.releaseDate = timeCapsule.getExpectedReleaseAt() == null
+                ? null
+                : timeCapsule.getExpectedReleaseAt().toLocalDate();
         this.dDay = calculateDDay(timeCapsule, today);
-        this.entryCount = timeCapsule.getEntryCount();
-        this.latestEntryAt = timeCapsule.getLatestEntryAt();
-        this.goal = TimeCapsuleGoalResponse.fromOrNull(timeCapsule);
-        this.createdAt = timeCapsule.getCreatedAt();
+        this.totalSavedAmount = timeCapsule.getTotalContributionAmount() == null
+                ? BigDecimal.ZERO
+                : timeCapsule.getTotalContributionAmount();
     }
 
     // [JMG] CAPSULE-2 보관함 목록 항목을 카드·캘린더 화면 공용 응답으로 변환한다.
@@ -70,9 +63,10 @@ public class TimeCapsuleSummaryResponse {
             return null;
         }
 
-        return ChronoUnit.DAYS.between(
+        long remainingDays = ChronoUnit.DAYS.between(
                 today,
                 timeCapsule.getExpectedReleaseAt().toLocalDate()
         );
+        return Math.max(remainingDays, 0L);
     }
 }
