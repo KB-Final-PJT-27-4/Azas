@@ -12,8 +12,8 @@ import java.util.List;
 @Mapper
 public interface TimeCapsuleEntryMapper {
 
-    // [JMG] CAPSULE-4 삭제되지 않은 타임캡슐 기록과 활성 미디어 개수를 최신순으로 조회한다.
-    List<TimeCapsuleEntry> findVisibleEntriesByTimeCapsuleId(
+    // [JMG] CAPSULE-4 봉인된 타임캡슐 기록을 최신순으로 조회한다.
+    List<TimeCapsuleEntry> findSealedEntriesByTimeCapsuleId(
             @Param("timeCapsuleId") long timeCapsuleId
     );
 

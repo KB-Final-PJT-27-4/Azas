@@ -34,7 +34,7 @@
         <result property="occurredAt" column="occurred_at"/>
     </resultMap>
 
-    <select id="findVisibleEntriesByTimeCapsuleId"
+    <select id="findSealedEntriesByTimeCapsuleId"
             resultMap="timeCapsuleEntryResultMap">
         SELECT
             tce.time_capsule_entry_id,
@@ -59,7 +59,7 @@
             ON tcm.time_capsule_entry_id = tce.time_capsule_entry_id
            AND tcm.status = 'ACTIVE'
         WHERE tce.time_capsule_id = #{timeCapsuleId}
-          AND tce.status != 'DELETED'
+          AND tce.status = 'SEALED'
         GROUP BY
             tce.time_capsule_entry_id,
             tce.time_capsule_id,

@@ -4,9 +4,11 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySummaryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
+import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
@@ -28,6 +30,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.BDDMockito.given;
@@ -73,9 +76,24 @@ class TimeCapsuleEntryControllerTest {
     // [JMG] CAPSULE-4 엔트리 목록 URL은 프런트 계약에 맞는 안전한 필드만 반환한다.
     void getTimeCapsuleEntriesReturnsEntryList() throws Exception {
         TimeCapsuleEntry entry = createEntry(1000L);
-        ReflectionTestUtils.setField(entry, "mediaCount", 2);
+        TimeCapsule timeCapsule = TimeCapsule.create(
+                10L,
+                31L,
+                "아이사랑적금",
+                LocalDate.of(2027, 8, 8)
+        );
+        ReflectionTestUtils.setField(timeCapsule, "timeCapsuleId", 100L);
+        ReflectionTestUtils.setField(
+                timeCapsule,
+                "totalContributionAmount",
+                new BigDecimal("150000.00")
+        );
         TimeCapsuleEntryListResponse response =
                 new TimeCapsuleEntryListResponse(
+                        TimeCapsuleSummaryResponse.from(
+                                timeCapsule,
+                                LocalDate.of(2026, 8, 16)
+                        ),
                         List.of(TimeCapsuleEntrySummaryResponse.from(entry))
                 );
 
@@ -89,11 +107,23 @@ class TimeCapsuleEntryControllerTest {
                                 .header("Authorization", "Bearer access-token")
                 )
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.time_capsule.time_capsule_id")
+                        .value(100))
+                .andExpect(jsonPath("$.time_capsule.account_id")
+                        .value(31))
+                .andExpect(jsonPath("$.time_capsule.d_day")
+                        .value(357))
+                .andExpect(jsonPath("$.time_capsule.dday")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.total_count").value(1))
                 .andExpect(jsonPath("$.entries[0].time_capsule_entry_id")
                         .value(1000))
                 .andExpect(jsonPath("$.entries[0].media_mode")
-                        .value("NONE"))
-                .andExpect(jsonPath("$.entries[0].media_count").value(2))
+                        .doesNotExist())
+                .andExpect(jsonPath("$.entries[0].media_count")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.entries[0].status")
+                        .doesNotExist())
                 .andExpect(jsonPath("$.entries[0].thumbnail_object_key")
                         .doesNotExist())
                 .andExpect(jsonPath("$.entries[0].thumbnail_url").isEmpty());

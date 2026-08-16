@@ -91,19 +91,20 @@ class TimeCapsuleEntryServiceTest {
 
         given(timeCapsuleMapper.findAccessibleById(100L, 7L))
                 .willReturn(timeCapsule);
-        given(timeCapsuleEntryMapper.findVisibleEntriesByTimeCapsuleId(100L))
+        given(timeCapsuleEntryMapper.findSealedEntriesByTimeCapsuleId(100L))
                 .willReturn(List.of(entry));
 
         TimeCapsuleEntryListResponse response =
                 timeCapsuleEntryService.getTimeCapsuleEntries(7L, 100L);
 
+        assertEquals(100L, response.getTimeCapsule().getTimeCapsuleId());
+        assertEquals(4L, response.getTimeCapsule().getAccountId());
+        assertEquals(1, response.getTotalCount());
         assertEquals(1, response.getEntries().size());
         assertEquals(1000L,
                 response.getEntries().get(0).getTimeCapsuleEntryId());
         assertEquals(new BigDecimal("100000.00"),
                 response.getEntries().get(0).getContributionAmount());
-        assertEquals("IMAGE", response.getEntries().get(0).getMediaMode());
-        assertEquals(2, response.getEntries().get(0).getMediaCount());
         assertEquals(null, response.getEntries().get(0).getThumbnailUrl());
     }
 
@@ -129,7 +130,7 @@ class TimeCapsuleEntryServiceTest {
 
         given(timeCapsuleMapper.findAccessibleById(100L, 7L))
                 .willReturn(timeCapsule);
-        given(timeCapsuleEntryMapper.findVisibleEntriesByTimeCapsuleId(100L))
+        given(timeCapsuleEntryMapper.findSealedEntriesByTimeCapsuleId(100L))
                 .willReturn(List.of(entry));
         given(timeCapsuleObjectStorage.createDownloadUrl(
                 objectKey,
@@ -147,6 +148,36 @@ class TimeCapsuleEntryServiceTest {
         );
         assertTrue(response.getEntries().get(0).getThumbnailExpiresAt()
                 .isAfter(LocalDateTime.now()));
+    }
+
+    @Test
+    void getTimeCapsuleEntriesReturnsEmptyList() {
+        TimeCapsule timeCapsule = createTimeCapsule(
+                100L,
+                4L,
+                TimeCapsuleStatus.COLLECTING
+        );
+        given(timeCapsuleMapper.findAccessibleById(100L, 7L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleEntryMapper.findSealedEntriesByTimeCapsuleId(100L))
+                .willReturn(List.of());
+
+        TimeCapsuleEntryListResponse response =
+                timeCapsuleEntryService.getTimeCapsuleEntries(7L, 100L);
+
+        assertEquals(0, response.getTotalCount());
+        assertTrue(response.getEntries().isEmpty());
+    }
+
+    @Test
+    void getTimeCapsuleEntriesRejectsInvalidTimeCapsuleId() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.getTimeCapsuleEntries(7L, 0L)
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+        verify(timeCapsuleMapper, never()).findAccessibleById(anyLong(), anyLong());
     }
 
     @Test
