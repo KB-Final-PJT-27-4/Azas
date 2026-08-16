@@ -72,7 +72,7 @@ const closeAccountMenuOnFocusOut = (event: FocusEvent) => {
 const deleteAccount = async () => {
   removeLinkedAssetAccount(account.value.id)
   isDeleteDialogOpen.value = false
-  await router.replace({ name: 'Assets' })
+  await router.replace({ name: route.query.from === 'goals' ? 'MypageGoals' : 'Assets' })
   showToast('계좌를 삭제했어요.', 'success')
 }
 </script>

@@ -9,9 +9,11 @@ const props = withDefaults(
     targetDate: string
     goalNumber?: number
     showIntro?: boolean
+    appearance?: 'default' | 'management'
   }>(),
   {
     showIntro: true,
+    appearance: 'default',
   },
 )
 
@@ -48,7 +50,7 @@ const updateAmount = (event: Event) => {
 </script>
 
 <template>
-  <div class="min-w-0 w-full max-w-full overflow-x-clip">
+  <div class="min-w-0 w-full max-w-full overflow-visible">
     <h1
       v-if="showIntro"
       class="max-w-full break-keep text-[25px] leading-[1.35] font-bold tracking-[-0.04em] [overflow-wrap:anywhere]"
@@ -78,7 +80,12 @@ const updateAmount = (event: Event) => {
           </button>
         </span>
         <div
-          class="flex h-16 min-w-0 w-full max-w-full items-center rounded-2xl bg-[var(--color-brand-secondary)] px-5 text-[clamp(23px,7vw,27px)] font-bold"
+          class="flex h-16 min-w-0 w-full max-w-full items-center rounded-2xl border px-5 text-[clamp(23px,7vw,27px)] font-bold transition-colors focus-within:border-[var(--color-brand-primary)] focus-within:ring-2 focus-within:ring-[#dff5ff]"
+          :class="
+            appearance === 'management'
+              ? 'border-[#d9edf7] bg-white'
+              : 'border-transparent bg-[var(--color-brand-secondary)]'
+          "
         >
           <input
             class="w-0 min-w-0 flex-1 bg-transparent outline-none"
@@ -97,12 +104,20 @@ const updateAmount = (event: Event) => {
         label="목표 달성 시기"
         selection-mode="month"
         :min-date="todayValue"
+        :inline-panel="false"
         :min-year="currentYear"
         :max-year="currentYear + 100"
         @update:model-value="emit('update:targetDate', $event)"
       />
 
-      <div class="min-w-0 w-full max-w-full rounded-2xl bg-[var(--color-selected-background)] p-5">
+      <div
+        class="min-w-0 w-full max-w-full rounded-2xl p-5"
+        :class="
+          appearance === 'management'
+            ? 'border border-[#dceef7] bg-[#f5fbfe]'
+            : 'bg-[var(--color-selected-background)]'
+        "
+      >
         <div class="text-xl font-semibold text-[var(--color-selected-text)]">
           매월 약 {{ monthlySavings.toLocaleString('ko-KR') }}원
         </div>
