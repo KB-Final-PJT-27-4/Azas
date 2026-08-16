@@ -27,4 +27,8 @@ public interface NotificationMapper {
             @Param("memberId") Long memberId,
             @Param("notificationId") Long notificationId
     );
+
+    int markAllNotificationsAsRead(
+            @Param("memberId") Long memberId
+    );
 }

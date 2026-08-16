@@ -1,9 +1,6 @@
 package com.azas.domain.notification.service;
 
-import com.azas.domain.notification.dto.NotificationListResponse;
-import com.azas.domain.notification.dto.NotificationListRow;
-import com.azas.domain.notification.dto.NotificationReadResponse;
-import com.azas.domain.notification.dto.NotificationUnreadCountResponse;
+import com.azas.domain.notification.dto.*;
 import com.azas.domain.notification.entity.NotificationCategory;
 import com.azas.domain.notification.entity.NotificationType;
 import com.azas.domain.notification.mapper.NotificationMapper;
@@ -465,5 +462,44 @@ class NotificationServiceTest {
                 ErrorCode.BADREQUEST,
                 exception.getErrorCode()
         );
+    }
+
+    // 읽지 않은 알림 전체 처리
+    @Test
+    void readsAllUnreadNotifications() {
+        Long memberId = 7L;
+
+        when(notificationMapper.markAllNotificationsAsRead(
+                memberId
+        )).thenReturn(3);
+
+        NotificationReadAllResponse response =
+                notificationService.readAllNotifications(
+                        memberId
+                );
+
+        assertEquals(3, response.getUpdatedCount());
+        assertEquals(0L, response.getUnreadCount());
+
+        verify(notificationMapper)
+                .markAllNotificationsAsRead(memberId);
+    }
+
+    // 이미 전부 읽은 경우
+    @Test
+    void returnsZeroWhenAllNotificationsAreAlreadyRead() {
+        Long memberId = 7L;
+
+        when(notificationMapper.markAllNotificationsAsRead(
+                memberId
+        )).thenReturn(0);
+
+        NotificationReadAllResponse response =
+                notificationService.readAllNotifications(
+                        memberId
+                );
+
+        assertEquals(0, response.getUpdatedCount());
+        assertEquals(0L, response.getUnreadCount());
     }
 }

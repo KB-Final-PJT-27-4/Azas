@@ -1,6 +1,7 @@
 package com.azas.domain.notification.service;
 
 import com.azas.domain.notification.dto.NotificationListResponse;
+import com.azas.domain.notification.dto.NotificationReadAllResponse;
 import com.azas.domain.notification.dto.NotificationReadResponse;
 import com.azas.domain.notification.dto.NotificationUnreadCountResponse;
 
@@ -24,5 +25,9 @@ public interface NotificationService {
     NotificationReadResponse readNotification(
             Long memberId,
             Long notificationId
+    );
+
+    NotificationReadAllResponse readAllNotifications(
+            Long memberId
     );
 }

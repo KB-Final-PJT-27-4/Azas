@@ -120,4 +120,11 @@
           AND member_id = #{memberId}
           AND is_read = 0
     </update>
+
+    <update id="markAllNotificationsAsRead">
+        UPDATE notification
+        SET is_read = 1
+        WHERE member_id = #{memberId}
+          AND is_read = 0
+    </update>
 </mapper>

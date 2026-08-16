@@ -1,6 +1,7 @@
 package com.azas.domain.notification.controller;
 
 import com.azas.domain.notification.dto.NotificationListResponse;
+import com.azas.domain.notification.dto.NotificationReadAllResponse;
 import com.azas.domain.notification.dto.NotificationReadResponse;
 import com.azas.domain.notification.dto.NotificationUnreadCountResponse;
 import com.azas.domain.notification.service.NotificationService;
@@ -124,6 +125,31 @@ public class NotificationController {
                 notificationService.readNotification(
                         memberId,
                         notificationId
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @ApiOperation(
+            value = "알림 전체 읽음 처리",
+            notes = "현재 로그인한 회원의 모든 읽지 않은 알림을 읽음 처리합니다."
+    )
+    @PatchMapping("/read-all")
+    public ResponseEntity<NotificationReadAllResponse>
+    readAllNotifications(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader
+    ) {
+        Long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        NotificationReadAllResponse response =
+                notificationService.readAllNotifications(
+                        memberId
                 );
 
         return ResponseEntity.ok(response);

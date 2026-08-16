@@ -337,4 +337,20 @@ public class NotificationServiceImpl implements NotificationService {
                 true
         );
     }
+
+    @Override
+    @Transactional
+    public NotificationReadAllResponse readAllNotifications(
+            Long memberId
+    ) {
+        int updatedCount =
+                notificationMapper.markAllNotificationsAsRead(
+                        memberId
+                );
+
+        return new NotificationReadAllResponse(
+                updatedCount,
+                0L
+        );
+    }
 }
