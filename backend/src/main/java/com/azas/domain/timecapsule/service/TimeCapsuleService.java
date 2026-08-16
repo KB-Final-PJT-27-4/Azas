@@ -2,15 +2,11 @@ package com.azas.domain.timecapsule.service;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleCursor;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleSearchCondition;
 import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
-import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
-import com.azas.domain.timecapsule.entity.TimeCapsuleView;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleExportMapper;
@@ -27,11 +23,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,8 +34,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TimeCapsuleService {
 
-    private static final int DEFAULT_PAGE_SIZE = 20;
-    private static final int MAX_PAGE_SIZE = 50;
     private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
 
     private final MemberMapper memberMapper;
@@ -60,7 +51,7 @@ public class TimeCapsuleService {
             CreateTimeCapsuleRequest request
     ) {
         validateCreateRequest(childId, request);
-        assertCreateParentAccess(requesterMemberId, childId);
+        assertParentAccess(requesterMemberId, childId);
 
         long financialAccountId = request.getFinancialAccountId();
         TimeCapsuleAccount account = getTimeCapsuleAccountOrThrow(
@@ -112,56 +103,23 @@ public class TimeCapsuleService {
     // [JMG] CAPSULE-2 자녀의 타임캡슐 보관함을 카드 또는 캘린더 목록으로 조회한다.
     public TimeCapsuleListResponse getTimeCapsules(
             long requesterMemberId,
-            long childId,
-            String viewValue,
-            String statusValue,
-            String encodedCursor,
-            Integer size,
-            Integer year,
-            Integer month
+            long childId
     ) {
+        if (childId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
         assertParentAccess(requesterMemberId, childId);
 
-        TimeCapsuleView view = TimeCapsuleView.from(viewValue);
-        TimeCapsuleStatus status = parseStatus(statusValue);
-        TimeCapsuleCursor cursor = TimeCapsuleCursor.decode(
-                encodedCursor,
-                view
-        );
-        int pageSize = normalizePageSize(size);
+        List<TimeCapsuleSummaryResponse> summaries = timeCapsuleMapper
+                .findSummariesByChildId(childId)
+                .stream()
+                .map(timeCapsule -> TimeCapsuleSummaryResponse.from(
+                        timeCapsule,
+                        LocalDate.now(SERVICE_ZONE)
+                ))
+                .collect(Collectors.toList());
 
-        List<TimeCapsule> timeCapsules;
-        if (view == TimeCapsuleView.CARD) {
-            assertCardQueryHasNoCalendarPeriod(year, month);
-            timeCapsules = timeCapsuleMapper.findCardSummaries(
-                    TimeCapsuleSearchCondition.forCard(
-                            childId,
-                            status,
-                            cursor,
-                            pageSize + 1
-                    )
-            );
-        } else {
-            YearMonth yearMonth = getYearMonthOrThrow(year, month);
-            timeCapsules = timeCapsuleMapper.findCalendarSummaries(
-                    TimeCapsuleSearchCondition.forCalendar(
-                            childId,
-                            status,
-                            cursor,
-                            pageSize + 1,
-                            yearMonth.atDay(1).atStartOfDay(),
-                            yearMonth.plusMonths(1)
-                                    .atDay(1)
-                                    .atStartOfDay()
-                    )
-            );
-        }
-
-        return createListResponse(
-                timeCapsules,
-                pageSize,
-                view
-        );
+        return new TimeCapsuleListResponse(summaries);
     }
 
     @Transactional(readOnly = true)
@@ -247,29 +205,6 @@ public class TimeCapsuleService {
         }
     }
 
-    private void assertCreateParentAccess(
-            long requesterMemberId,
-            long childId
-    ) {
-        Member member = memberMapper.findById(requesterMemberId);
-        if (member == null
-                || member.getStatus() != MemberStatus.ACTIVE
-                || member.getMemberType() != MemberType.PARENT) {
-            throw new BusinessException(ErrorCode.PARENT_ACCESS_REQUIRED);
-        }
-
-        if (!timeCapsuleMapper.existsChildById(childId)) {
-            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
-        }
-
-        if (!timeCapsuleMapper.existsActiveParentRelation(
-                requesterMemberId,
-                childId
-        )) {
-            throw new BusinessException(ErrorCode.CHILD_ACCESS_DENIED);
-        }
-    }
-
     private void assertAccountAccess(
             long requesterMemberId,
             long childId,
@@ -340,95 +275,28 @@ public class TimeCapsuleService {
             long requesterMemberId,
             long childId
     ) {
+        Member member = memberMapper.findById(requesterMemberId);
+        if (member == null
+                || member.getStatus() != MemberStatus.ACTIVE
+                || member.getMemberType() != MemberType.PARENT) {
+            throw new BusinessException(ErrorCode.PARENT_ACCESS_REQUIRED);
+        }
+
+        if (!timeCapsuleMapper.existsChildById(childId)) {
+            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
+        }
+
         if (!timeCapsuleMapper.existsActiveParentRelation(
                 requesterMemberId,
                 childId
         )) {
-            throw new BusinessException(
-                    ErrorCode.CHILD_NOT_FOUND
-            );
+            throw new BusinessException(ErrorCode.CHILD_ACCESS_DENIED);
         }
     }
 
     // [JMG] CAPSULE-2 상태 필터 문자열을 ERD 상태값으로 변환한다.
-    private TimeCapsuleStatus parseStatus(String statusValue) {
-        if (statusValue == null || statusValue.isBlank()) {
-            return null;
-        }
-
-        return TimeCapsuleStatus.from(statusValue);
-    }
-
     // [JMG] CAPSULE-2 요청 페이지 크기를 기본값과 최대값 범위로 정규화한다.
-    private int normalizePageSize(Integer size) {
-        if (size == null) {
-            return DEFAULT_PAGE_SIZE;
-        }
-
-        if (size < 1 || size > MAX_PAGE_SIZE) {
-            throw new BusinessException(ErrorCode.BADREQUEST);
-        }
-
-        return size;
-    }
-
     // [JMG] CAPSULE-2 카드 조회에 캘린더 기간 파라미터가 섞이지 않도록 검증한다.
-    private void assertCardQueryHasNoCalendarPeriod(
-            Integer year,
-            Integer month
-    ) {
-        if (year != null || month != null) {
-            throw new BusinessException(ErrorCode.BADREQUEST);
-        }
-    }
-
     // [JMG] CAPSULE-2 캘린더 조회에 필요한 연도와 월을 검증해 월 범위를 생성한다.
-    private YearMonth getYearMonthOrThrow(
-            Integer year,
-            Integer month
-    ) {
-        if (year == null || month == null) {
-            throw new BusinessException(ErrorCode.BADREQUEST);
-        }
-
-        try {
-            return YearMonth.of(year, month);
-        } catch (DateTimeException exception) {
-            throw new BusinessException(ErrorCode.BADREQUEST);
-        }
-    }
-
     // [JMG] CAPSULE-2 조회 결과를 keyset pagination 응답 형태로 변환한다.
-    private TimeCapsuleListResponse createListResponse(
-            List<TimeCapsule> timeCapsules,
-            int pageSize,
-            TimeCapsuleView view
-    ) {
-        boolean hasNext = timeCapsules.size() > pageSize;
-        List<TimeCapsule> pageItems = hasNext
-                ? timeCapsules.subList(0, pageSize)
-                : timeCapsules;
-        String nextCursor = hasNext
-                ? TimeCapsuleCursor.encode(
-                view,
-                pageItems.get(pageItems.size() - 1)
-        )
-                : null;
-
-        List<TimeCapsuleSummaryResponse> summaries =
-                pageItems.stream()
-                        .map(timeCapsule ->
-                                TimeCapsuleSummaryResponse.from(
-                                        timeCapsule,
-                                        LocalDate.now()
-                                )
-                        )
-                        .collect(Collectors.toList());
-
-        return new TimeCapsuleListResponse(
-                new ArrayList<>(summaries),
-                nextCursor,
-                hasNext
-        );
-    }
 }

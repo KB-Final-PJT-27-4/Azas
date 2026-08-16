@@ -97,6 +97,6 @@ public interface TimeCapsuleEntryMapper {
             @Param("mediaType") TimeCapsuleMediaType mediaType
     );
 
-    // [JMG] CAPSULE-5 기록 저장 후 보관함의 기록 수와 가장 최근 기록 시각을 원자적으로 갱신한다.
-    int increaseEntryCountAndRefreshLatestEntry(TimeCapsuleEntry entry);
+    // [JMG] CAPSULE-5 기록 저장 후 보관함의 기록 수·금액·최근 기록 시각을 원자적으로 갱신한다.
+    int increaseEntryAggregates(TimeCapsuleEntry entry);
 }

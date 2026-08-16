@@ -24,13 +24,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -249,54 +249,109 @@ class TimeCapsuleServiceTest {
 
     @Test
     // [JMG] CAPSULE-2 카드 목록은 다음 페이지가 있으면 keyset cursor를 반환한다.
-    void getTimeCapsulesReturnsNextCursorForCardView() {
+    void getTimeCapsulesReturnsScreenSummaries() {
         TimeCapsule first = createTimeCapsule(
                 3L,
                 10L,
                 "첫 번째",
-                LocalDateTime.of(2030, 7, 23, 0, 0),
+                LocalDate.now().plusDays(23).atStartOfDay(),
                 LocalDateTime.of(2026, 8, 4, 12, 0)
         );
         TimeCapsule second = createTimeCapsule(
                 2L,
                 10L,
                 "두 번째",
-                LocalDateTime.of(2030, 8, 23, 0, 0),
+                LocalDate.now().minusDays(1).atStartOfDay(),
                 LocalDateTime.of(2026, 8, 3, 12, 0)
         );
         TimeCapsule third = createTimeCapsule(
                 1L,
                 10L,
                 "세 번째",
-                LocalDateTime.of(2030, 9, 23, 0, 0),
+                LocalDate.now().plusMonths(2).atStartOfDay(),
                 LocalDateTime.of(2026, 8, 2, 12, 0)
         );
 
+        ReflectionTestUtils.setField(first, "financialAccountId", 31L);
+        ReflectionTestUtils.setField(second, "financialAccountId", 32L);
+        ReflectionTestUtils.setField(third, "financialAccountId", 33L);
+        ReflectionTestUtils.setField(third, "expectedReleaseAt", null);
+        ReflectionTestUtils.setField(first, "totalContributionAmount",
+                new BigDecimal("200000.00"));
+        ReflectionTestUtils.setField(second, "totalContributionAmount",
+                new BigDecimal("50000.00"));
+        ReflectionTestUtils.setField(third, "totalContributionAmount",
+                BigDecimal.ZERO);
+
+        given(memberMapper.findById(7L)).willReturn(
+                Member.createParent("parent@example.com", "parent", null)
+        );
+        given(timeCapsuleMapper.existsChildById(10L)).willReturn(true);
         given(timeCapsuleMapper.existsActiveParentRelation(7L, 10L))
                 .willReturn(true);
-        given(timeCapsuleMapper.findCardSummaries(any()))
+        given(timeCapsuleMapper.findSummariesByChildId(10L))
                 .willReturn(List.of(first, second, third));
 
         TimeCapsuleListResponse response =
-                timeCapsuleService.getTimeCapsules(
-                        7L,
-                        10L,
-                        "CARD",
-                        "COLLECTING",
-                        null,
-                        2,
-                        null,
-                        null
-                );
+                timeCapsuleService.getTimeCapsules(7L, 10L);
 
-        assertTrue(response.isHasNext());
-        assertNotNull(response.getNextCursor());
-        assertEquals(
-                List.of(3L, 2L),
-                response.getItems().stream()
-                        .map(item -> item.getTimeCapsuleId())
-                        .collect(Collectors.toList())
+        assertEquals(3, response.getTotalCount());
+        assertEquals(3L,
+                response.getTimeCapsules().get(0).getTimeCapsuleId());
+        assertEquals(31L,
+                response.getTimeCapsules().get(0).getAccountId());
+        assertEquals(23, response.getTimeCapsules().get(0).getDDay());
+        assertEquals(new BigDecimal("200000.00"),
+                response.getTimeCapsules().get(0).getTotalSavedAmount());
+        assertEquals(0, response.getTimeCapsules().get(1).getDDay());
+        assertNull(response.getTimeCapsules().get(2).getReleaseDate());
+        assertNull(response.getTimeCapsules().get(2).getDDay());
+    }
+
+    @Test
+    void getTimeCapsulesReturnsEmptyList() {
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findSummariesByChildId(10L))
+                .willReturn(List.of());
+
+        TimeCapsuleListResponse response =
+                timeCapsuleService.getTimeCapsules(7L, 10L);
+
+        assertTrue(response.getTimeCapsules().isEmpty());
+        assertEquals(0, response.getTotalCount());
+    }
+
+    @Test
+    void getTimeCapsulesDistinguishesMissingChild() {
+        given(memberMapper.findById(7L)).willReturn(
+                Member.createParent("parent@example.com", "parent", null)
         );
+        given(timeCapsuleMapper.existsChildById(10L)).willReturn(false);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.getTimeCapsules(7L, 10L)
+        );
+
+        assertEquals(ErrorCode.CHILD_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    void getTimeCapsulesRejectsInaccessibleChild() {
+        given(memberMapper.findById(7L)).willReturn(
+                Member.createParent("parent@example.com", "parent", null)
+        );
+        given(timeCapsuleMapper.existsChildById(10L)).willReturn(true);
+        given(timeCapsuleMapper.existsActiveParentRelation(7L, 10L))
+                .willReturn(false);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.getTimeCapsules(7L, 10L)
+        );
+
+        assertEquals(ErrorCode.CHILD_ACCESS_DENIED,
+                exception.getErrorCode());
     }
 
     @Test
