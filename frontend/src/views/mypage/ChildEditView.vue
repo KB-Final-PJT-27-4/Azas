@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { Baby, Camera, Info } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { Info } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import childProfileUrl from '@/assets/images/home/home-profile-baby.png'
@@ -12,12 +12,13 @@ const { showToast } = useToast()
 
 const name = ref('깨비')
 const birthDate = ref('2014-07-15')
-const profileImage = ref<string | null>(childProfileUrl)
-const fileInput = ref<HTMLInputElement | null>(null)
-let profileObjectUrl: string | null = null
+const gender = ref<'남자' | '여자' | '아직 모름'>('남자')
+const genders = ['남자', '여자', '아직 모름'] as const
 
 const currentYear = new Date().getFullYear()
-const canSave = computed(() => name.value.trim().length > 0 && Boolean(birthDate.value))
+const canSave = computed(
+  () => name.value.trim().length > 0 && Boolean(birthDate.value) && Boolean(gender.value),
+)
 const ageText = computed(() => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthDate.value)
   if (!match) return ''
@@ -33,27 +34,6 @@ const ageText = computed(() => {
   return age >= 0 ? `만 ${age}세` : ''
 })
 
-const changeProfileImage = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  if (!file.type.startsWith('image/')) {
-    showToast('이미지 파일만 선택할 수 있어요.', 'error')
-    input.value = ''
-    return
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    showToast('5MB 이하의 이미지를 선택해 주세요.', 'error')
-    input.value = ''
-    return
-  }
-
-  if (profileObjectUrl) URL.revokeObjectURL(profileObjectUrl)
-  profileObjectUrl = URL.createObjectURL(file)
-  profileImage.value = profileObjectUrl
-}
-
 const saveChild = () => {
   if (!name.value.trim()) {
     showToast('자녀 이름을 입력해 주세요.', 'error')
@@ -68,74 +48,85 @@ const saveChild = () => {
   router.push({ name: 'Mypage' })
 }
 
-onBeforeUnmount(() => {
-  if (profileObjectUrl) URL.revokeObjectURL(profileObjectUrl)
-})
 </script>
 
 <template>
-  <main class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top))] flex-col bg-white px-5 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] text-[var(--color-text-primary)]">
-    <header>
-      <h1 class="m-0 text-[24px] font-extrabold">자녀 정보 수정</h1>
-      <p class="mt-1.5 mb-0 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-        자녀의 프로필과 기본 정보를 확인하고 변경할 수 있어요.
+  <main
+    class="flex h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] flex-col overflow-hidden px-5 pt-5 pb-3 text-[var(--color-text-primary)]"
+  >
+    <header class="px-0.5">
+      <h1 class="m-0 text-[26px] leading-tight font-extrabold tracking-[-0.04em]">자녀 정보 수정</h1>
+      <p class="mt-2 mb-0 text-sm leading-6 text-[var(--color-text-secondary)]">
+        아이에게 맞는 서비스를 위해 기본 정보를 확인해 주세요.
       </p>
     </header>
 
-    <form class="mt-7 flex flex-1 flex-col" @submit.prevent="saveChild">
-      <section class="profile-card" aria-label="자녀 프로필 사진">
-        <button
-          class="group relative grid size-[132px] place-items-center overflow-visible rounded-full border-0 bg-[#e6f7fe] text-[#6d9ebe] transition-transform active:scale-[0.98]"
-          type="button"
-          aria-label="자녀 프로필 사진 변경"
-          @click="fileInput?.click()"
-        >
-          <img v-if="profileImage" :src="profileImage" alt="자녀 프로필" class="size-full rounded-full object-cover" />
-          <Baby v-else :size="38" :stroke-width="1.8" />
-          <span class="absolute right-0 bottom-1 grid size-9 place-items-center rounded-full border-[3px] border-white bg-[var(--color-brand-primary)] text-white shadow-sm">
-            <Camera :size="16" :stroke-width="2.3" />
+    <form class="mt-3 flex min-h-0 flex-1 flex-col" @submit.prevent="saveChild">
+      <section class="flex items-center gap-4 rounded-[24px] border border-[#cfe8f3] bg-[#eaf8fe] p-4" aria-label="자녀 프로필">
+        <span class="size-[70px] shrink-0 overflow-hidden rounded-full bg-white">
+          <img :src="childProfileUrl" alt="깨비 프로필" class="size-full object-cover" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <span class="text-xs font-semibold text-[var(--color-selected-text)]">함께 관리 중인 아이</span>
+          <strong class="mt-1 block truncate text-[22px]">{{ name || '이름을 입력해주세요' }}</strong>
+          <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">
+            {{ [ageText, gender].filter(Boolean).join(' · ') }}
           </span>
-        </button>
-        <button class="mt-3 border-0 bg-transparent p-0 text-[12px] font-bold text-[var(--color-selected-text)]" type="button" @click="fileInput?.click()">
-          프로필 사진 변경
-        </button>
-        <input ref="fileInput" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" @change="changeProfileImage" />
+        </div>
       </section>
 
-      <div class="mt-6 space-y-5">
-        <label class="block">
-          <span class="field-label">이름 <em>*</em></span>
-          <span class="relative block">
-            <input v-model="name" class="field-input pr-[58px]" type="text" maxlength="20" autocomplete="off" placeholder="자녀 이름을 입력해 주세요" />
-            <span class="pointer-events-none absolute right-3.5 bottom-[15px] text-[11px] font-medium text-[#98a3ac]">{{ name.length }}/20</span>
-          </span>
-        </label>
-
-        <div>
-          <div class="flex items-center justify-between">
-            <span class="field-label">생년월일 <em>*</em></span>
-            <span v-if="ageText" class="rounded-full bg-[#edf8fd] px-2.5 py-1 text-[10px] font-bold text-[var(--color-selected-text)]">{{ ageText }}</span>
-          </div>
-          <BaseDatePicker
-            v-model="birthDate"
-            class="birth-date-picker mt-2"
-            placeholder="생년월일을 선택해 주세요"
-            :min-year="1900"
-            :max-year="currentYear"
-          />
+      <section class="mt-4 rounded-[22px] border border-[#d9e2e7] bg-white p-4">
+        <div class="mb-4">
+          <h2 class="text-lg font-extrabold">기본 정보</h2>
         </div>
-      </div>
 
-      <aside class="mt-5 flex gap-2.5 rounded-2xl bg-[#f6f8fa] p-4 text-[11px] leading-[1.65] text-[var(--color-text-secondary)]">
-        <Info class="mt-0.5 shrink-0 text-[#7f99a9]" :size="18" />
-        정확한 생년월일을 입력해 주세요. 자녀의 연령에 따라 이용 가능한 기능과 금융상품이 달라질 수 있어요.
-      </aside>
+        <div class="space-y-4">
+          <label class="block">
+            <span class="field-label">이름 <em>*</em></span>
+            <span class="relative block">
+              <input v-model="name" class="field-input pr-[58px]" type="text" maxlength="20" autocomplete="off" placeholder="자녀 이름을 입력해 주세요" />
+              <span class="pointer-events-none absolute right-3.5 bottom-[17px] text-[11px] font-medium text-[#98a3ac]">{{ name.length }}/20</span>
+            </span>
+          </label>
 
-      <div class="mt-auto grid grid-cols-2 gap-2.5 pt-8">
-        <button class="h-[52px] rounded-xl border border-[var(--color-border)] bg-white text-[14px] font-bold text-[var(--color-unselected-text)] active:bg-[#f5f7f8]" type="button" @click="router.back()">
+          <fieldset class="m-0 border-0 p-0">
+            <legend class="field-label">성별 <em>*</em></legend>
+            <div class="mt-2 grid grid-cols-3 gap-2.5">
+              <label v-for="item in genders" :key="item" class="cursor-pointer">
+                <input v-model="gender" class="peer sr-only" type="radio" name="gender" :value="item" />
+                <span class="grid h-13 place-items-center rounded-xl border border-transparent bg-[#f4f6f7] text-sm font-bold text-[#7b8995] transition peer-checked:border-[var(--color-brand-primary)] peer-checked:bg-[#e8f8ff] peer-checked:text-[var(--color-selected-text)] peer-focus-visible:ring-2 peer-focus-visible:ring-[#9cddfa]">
+                  {{ item }}
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="!mt-4">
+            <div class="flex items-center justify-between">
+              <span class="field-label">생년월일 <em>*</em></span>
+              <span
+                v-if="ageText"
+                class="rounded-full bg-[#edf8fd] px-2.5 py-1 text-[11px] font-bold text-[var(--color-selected-text)]"
+              >
+                {{ ageText }}
+              </span>
+            </div>
+            <BaseDatePicker
+              v-model="birthDate"
+              class="birth-date-picker mt-2"
+              placeholder="생년월일을 선택해 주세요"
+              :min-year="1900"
+              :max-year="currentYear"
+            />
+          </div>
+        </div>
+      </section>
+
+      <div class="mt-auto grid grid-cols-2 gap-3 pt-3">
+        <button class="h-14 rounded-2xl border border-[#d5dfe5] bg-white text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]" type="button" @click="router.back()">
           취소
         </button>
-        <button class="h-[52px] rounded-xl border-0 bg-[var(--color-brand-primary)] text-[14px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:opacity-45" type="submit" :disabled="!canSave">
+        <button class="h-14 rounded-2xl border-0 bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:opacity-45" type="submit" :disabled="!canSave">
           변경사항 저장
         </button>
       </div>
@@ -144,16 +135,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.profile-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 26px 20px 20px;
-  background: linear-gradient(180deg, #fbfdfe 0%, #fff 100%);
-  border: 1px solid #dce7ed;
-  border-radius: 20px;
-}
-
 .field-label {
   display: block;
   color: var(--color-text-primary);
@@ -170,7 +151,7 @@ onBeforeUnmount(() => {
 .field-input {
   box-sizing: border-box;
   width: 100%;
-  height: 48px;
+  height: 52px;
   margin-top: 8px;
   padding: 0 14px;
   color: var(--color-text-primary);
@@ -196,7 +177,7 @@ onBeforeUnmount(() => {
 }
 
 .birth-date-picker :deep(> button) {
-  height: 48px;
+  height: 52px;
   padding: 0 14px;
   font-size: 14px;
   border-color: #dce7ed;

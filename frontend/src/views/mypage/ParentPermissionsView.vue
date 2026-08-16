@@ -79,9 +79,11 @@ const disconnectChild = () => {
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] px-5 pt-6 pb-21">
+  <main
+    class="h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] overflow-hidden bg-white px-5 pt-4 pb-20"
+  >
     <section
-      class="flex items-center gap-3 rounded-[20px] border border-[var(--color-border)] bg-white p-4 shadow-[0_6px_20px_rgba(49,87,108,0.04)]"
+      class="flex items-center gap-3 rounded-[20px] border border-[#cfe8f3] bg-[#eaf8fe] p-3"
     >
       <span
         class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white"
@@ -97,9 +99,6 @@ const disconnectChild = () => {
           {{ selectedChild.age }}세 · {{ selectedChild.schoolLevel }}
         </span>
       </div>
-      <span class="shrink-0 rounded-full bg-[#eaf8ff] px-2.5 py-1 text-[10px] font-bold text-[var(--color-selected-text)]">
-        연결됨
-      </span>
       <button
         class="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-[11px] font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]"
         type="button"
@@ -109,11 +108,7 @@ const disconnectChild = () => {
       </button>
     </section>
 
-    <aside class="mt-3 rounded-xl bg-[#edf8fd] px-4 py-3 text-[11px] leading-relaxed text-[#587482]">
-      변경한 권한과 사용 한도는 저장 후 아이 화면에 바로 반영돼요.
-    </aside>
-
-    <form class="mt-7" @submit.prevent="savePermissions">
+    <form class="mt-6" @submit.prevent="savePermissions">
       <section>
         <h1 class="text-[19px] font-extrabold tracking-[-0.02em] text-[var(--color-text-primary)]">
           기본 이용 권한
@@ -122,11 +117,11 @@ const disconnectChild = () => {
           아이 화면에서 사용할 기능을 선택해주세요.
         </p>
 
-        <ul class="mt-4 m-0 list-none overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-white p-0 shadow-[0_6px_20px_rgba(49,87,108,0.04)]">
+        <ul class="mt-4 m-0 list-none overflow-hidden rounded-[20px] border border-[#d9e2e7] bg-white p-0">
           <li
             v-for="permission in permissions"
             :key="permission.id"
-            class="relative flex min-h-[78px] items-center gap-3 px-5 py-3.5 after:absolute after:right-5 after:bottom-0 after:left-5 after:h-px after:bg-[#edf1f3] last:after:hidden"
+            class="relative flex min-h-16 items-center gap-3 px-5 py-2.5 after:absolute after:right-5 after:bottom-0 after:left-5 after:h-px after:bg-[#edf1f3] last:after:hidden"
           >
             <label class="min-w-0 flex-1 cursor-pointer" :for="`permission-${permission.id}`">
               <strong class="block text-[14px] font-bold text-[var(--color-text-primary)]">
@@ -157,7 +152,7 @@ const disconnectChild = () => {
         </ul>
       </section>
 
-      <section class="mt-9">
+      <section class="mt-7">
         <h2 class="text-[19px] font-extrabold tracking-[-0.02em] text-[var(--color-text-primary)]">
           사용 금액 한도
         </h2>
@@ -165,11 +160,11 @@ const disconnectChild = () => {
           아이가 한 달 동안 사용할 수 있는 최대 금액이에요.
         </p>
 
-        <div class="mt-4 rounded-[20px] border border-[var(--color-border)] bg-white p-5 shadow-[0_6px_20px_rgba(49,87,108,0.04)]">
+        <div class="mt-4 rounded-[20px] border border-[#d9e2e7] bg-white p-4">
           <label class="block">
             <strong class="text-[13px] font-bold">한 달 사용 한도</strong>
             <span
-              class="mt-3 flex min-h-14 items-center rounded-xl border border-[var(--color-border)] bg-[#f7f9fa] px-4 focus-within:border-[var(--color-brand-primary)] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#e1f5fe]"
+              class="mt-2 flex min-h-12 items-center rounded-xl border border-[var(--color-border)] bg-[#f7f9fa] px-4 focus-within:border-[var(--color-brand-primary)] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#e1f5fe]"
             >
               <input
                 class="min-w-0 flex-1 bg-transparent text-right text-[20px] font-extrabold outline-none"
@@ -199,14 +194,14 @@ const disconnectChild = () => {
             </button>
           </div>
 
-          <p class="mt-3 text-[10px] leading-5 text-[var(--color-text-secondary)]">
+          <p class="mt-2 text-[10px] leading-4 text-[var(--color-text-secondary)]">
             한도를 초과하면 아이와 보호자에게 알림을 보내드려요.
           </p>
         </div>
       </section>
 
       <button
-        class="mt-2 min-h-11 w-full text-[12px] font-semibold text-[#dc6b6b] underline decoration-[#efcaca] underline-offset-4"
+        class="mt-2 min-h-9 w-full text-[12px] font-semibold text-[#dc6b6b] underline decoration-[#efcaca] underline-offset-4"
         type="button"
         @click="disconnectChild"
       >
@@ -215,10 +210,10 @@ const disconnectChild = () => {
     </form>
 
     <div
-      class="fixed bottom-0 left-1/2 z-10 w-full max-w-[var(--app-max-width)] -translate-x-1/2 bg-gradient-to-t from-white via-white to-white/0 px-5 pt-7 pb-[calc(16px+env(safe-area-inset-bottom))]"
+      class="pointer-events-none fixed bottom-[calc(var(--app-bottom-nav-height)+12px+env(safe-area-inset-bottom))] left-1/2 z-20 w-full max-w-[var(--app-max-width)] -translate-x-1/2 px-5"
     >
       <button
-        class="min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-[15px] font-bold text-white shadow-[0_8px_20px_rgba(85,192,244,0.22)] active:bg-[var(--color-brand-primary-pressed)]"
+        class="pointer-events-auto min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-[15px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
         type="button"
         @click="savePermissions"
       >
