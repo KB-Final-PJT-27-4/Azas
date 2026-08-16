@@ -173,7 +173,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/MypageEditView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '마이페이지',
+      headerTitle: '내 정보 수정',
       showHeaderBack: true,
       showHeaderNotification: false,
     },
@@ -184,7 +184,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/ChildEditView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '마이페이지',
+      headerTitle: '자녀 정보 수정',
       showHeaderBack: true,
       showHeaderNotification: false,
     },
@@ -195,7 +195,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/FamilyManagementView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '마이페이지',
+      headerTitle: '가족 관리',
       showHeaderBack: true,
       showHeaderNotification: false,
     },
@@ -254,7 +254,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/mypage/AlarmSettingsView.vue'),
     meta: {
       requiresAuth: true,
-      headerTitle: '마이페이지',
+      headerTitle: '알림 설정',
       showHeaderBack: true,
       showHeaderNotification: false,
     },
