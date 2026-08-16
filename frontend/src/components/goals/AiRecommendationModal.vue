@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Check, X } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   selectedAmount?: number
@@ -13,6 +13,20 @@ const emit = defineEmits<{
 
 const pendingAmount = ref<number | null>(props.selectedAmount ?? null)
 const isVisible = ref(true)
+const sheetRef = ref<HTMLElement | null>(null)
+const dragOffset = ref(0)
+const isDragging = ref(false)
+const isSettling = ref(false)
+let dragStartY = 0
+let lastPointerY = 0
+let lastPointerTime = 0
+let dragVelocity = 0
+
+const sheetStyle = computed(() => ({
+  transform:
+    isDragging.value || isSettling.value ? `translateY(${dragOffset.value}px)` : undefined,
+  transition: isDragging.value ? 'none' : undefined,
+}))
 
 const recommendations = [
   { label: '기본 준비안', amount: 30_000_000, items: ['등록금', '교재 및 학습비'] },
@@ -46,6 +60,56 @@ const closeSheet = () => {
 const finishClose = () => {
   emit('close')
 }
+
+const startDrag = (event: PointerEvent) => {
+  if (isSettling.value) return
+  isDragging.value = true
+  dragStartY = event.clientY - dragOffset.value
+  lastPointerY = event.clientY
+  lastPointerTime = performance.now()
+  dragVelocity = 0
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+
+const moveDrag = (event: PointerEvent) => {
+  if (!isDragging.value) return
+
+  const now = performance.now()
+  const elapsed = Math.max(now - lastPointerTime, 1)
+  dragVelocity = (event.clientY - lastPointerY) / elapsed
+  lastPointerY = event.clientY
+  lastPointerTime = now
+  dragOffset.value = Math.max(0, event.clientY - dragStartY)
+}
+
+const finishDrag = () => {
+  if (!isDragging.value) return
+  isDragging.value = false
+
+  const shouldClose = dragOffset.value >= 110 || (dragOffset.value >= 36 && dragVelocity > 0.55)
+  if (!shouldClose) {
+    isSettling.value = true
+    dragOffset.value = 0
+    window.setTimeout(() => { isSettling.value = false }, 240)
+    return
+  }
+
+  isSettling.value = true
+  dragOffset.value = sheetRef.value?.offsetHeight ?? window.innerHeight
+  window.setTimeout(() => {
+    isVisible.value = false
+    dragOffset.value = 0
+    isSettling.value = false
+  }, 200)
+}
+
+const cancelDrag = () => {
+  if (!isDragging.value) return
+  isDragging.value = false
+  isSettling.value = true
+  dragOffset.value = 0
+  window.setTimeout(() => { isSettling.value = false }, 240)
+}
 </script>
 
 <template>
@@ -58,14 +122,27 @@ const finishClose = () => {
         @click.self="closeSheet"
       >
         <section
+          ref="sheetRef"
           class="flex max-h-[calc(100dvh-72px)] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[24px] bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[0_-12px_40px_rgb(0_0_0_/_12%)]"
+          :class="{ 'sheet-settling': isSettling }"
+          :style="sheetStyle"
           role="dialog"
           aria-modal="true"
           aria-labelledby="ai-modal-title"
         >
-          <div class="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-[var(--color-border)]" aria-hidden="true"></div>
+          <button
+            class="sheet-handle mx-auto grid h-8 w-20 shrink-0 touch-none place-items-center border-0 bg-transparent p-0"
+            type="button"
+            aria-label="아래로 밀어 닫기"
+            @pointerdown="startDrag"
+            @pointermove="moveDrag"
+            @pointerup="finishDrag"
+            @pointercancel="cancelDrag"
+          >
+            <span class="block h-1 w-10 rounded-full bg-[var(--color-border)]"></span>
+          </button>
 
-          <header class="flex shrink-0 items-center justify-between px-6 pt-4 pb-1">
+          <header class="flex shrink-0 items-center justify-between px-6 pt-1 pb-1">
             <div>
               <h2 id="ai-modal-title" class="mt-1 text-xl font-bold">AI 추천 금액</h2>
             </div>
@@ -167,5 +244,19 @@ const finishClose = () => {
 .ai-sheet-enter-from > section,
 .ai-sheet-leave-to > section {
   transform: translateY(100%);
+}
+
+.sheet-settling {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.sheet-handle {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sheet-handle:active {
+  cursor: grabbing;
 }
 </style>

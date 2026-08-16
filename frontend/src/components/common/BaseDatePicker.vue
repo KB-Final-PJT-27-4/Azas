@@ -124,6 +124,7 @@ const selectYear = (year: number) => {
 }
 
 const selectMonth = (month: number) => {
+  if (isMonthDisabled(month)) return
   visibleMonth.value = new Date(visibleMonth.value.getFullYear(), month, 1)
   if (props.selectionMode === 'month') {
     emit('update:modelValue', formatMonthValue(visibleMonth.value))
@@ -144,6 +145,16 @@ const isToday = (date: Date) => formatDateValue(date) === formatDateValue(new Da
 const isDateDisabled = (date: Date) => {
   const value = formatDateValue(date)
   return Boolean((props.minDate && value < props.minDate) || (props.maxDate && value > props.maxDate))
+}
+const isMonthDisabled = (month: number) => {
+  const year = visibleMonth.value.getFullYear()
+  const firstDay = formatDateValue(new Date(year, month, 1))
+  const lastDay = formatDateValue(new Date(year, month + 1, 0))
+
+  return Boolean(
+    (props.minDate && lastDay < props.minDate) ||
+      (props.maxDate && firstDay > props.maxDate),
+  )
 }
 
 const closeOnOutsideClick = (event: PointerEvent) => {
@@ -320,13 +331,14 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside
           <button
             v-for="month in monthOptions"
             :key="month"
-            class="h-14 rounded-xl font-bold transition-colors hover:bg-[var(--color-selected-background)] hover:text-[var(--color-selected-text)]"
+            class="h-14 rounded-xl font-bold transition-colors hover:bg-[var(--color-selected-background)] hover:text-[var(--color-selected-text)] disabled:cursor-not-allowed disabled:bg-[var(--color-surface-muted)] disabled:text-[var(--color-unselected-text)] disabled:opacity-45 disabled:hover:bg-[var(--color-surface-muted)] disabled:hover:text-[var(--color-unselected-text)]"
             :class="
-              month === visibleMonth.getMonth()
+              month === visibleMonth.getMonth() && !isMonthDisabled(month)
                 ? 'bg-[var(--color-brand-primary)] text-white hover:bg-[var(--color-brand-primary-pressed)] hover:text-white'
                 : 'bg-[var(--color-surface-muted)]'
             "
             type="button"
+            :disabled="isMonthDisabled(month)"
             @click="selectMonth(month)"
           >
             {{ month + 1 }}월
