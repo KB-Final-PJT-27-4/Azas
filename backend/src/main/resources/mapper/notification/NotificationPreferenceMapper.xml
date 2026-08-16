@@ -27,4 +27,25 @@
         WHERE member_id = #{memberId}
 
     </select>
+
+    <insert id="upsertNotificationPreferences">
+        INSERT INTO notification_preference (
+        member_id,
+        notification_category,
+        enabled
+        )
+        VALUES
+        <foreach collection="items"
+                 item="item"
+                 separator=",">
+            (
+            #{memberId},
+            #{item.notificationCategory},
+            #{item.enabled}
+            )
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+        enabled = VALUES(enabled),
+        updated_at = CURRENT_TIMESTAMP(6)
+    </insert>
 </mapper>

@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationPreferenceControllerTest {
@@ -109,5 +110,81 @@ class NotificationPreferenceControllerTest {
 
         verify(notificationPreferenceService)
                 .getNotificationPreferences(MEMBER_ID);
+    }
+
+    @Test
+    void updatesNotificationPreferences() throws Exception {
+        when(accessTokenMemberResolver.resolveMemberId(
+                AUTHORIZATION
+        )).thenReturn(MEMBER_ID);
+
+        when(notificationPreferenceService
+                .updateNotificationPreferences(
+                        org.mockito.ArgumentMatchers.eq(MEMBER_ID),
+                        org.mockito.ArgumentMatchers.any()
+                ))
+                .thenReturn(
+                        new NotificationPreferenceListResponse(
+                                List.of(
+                                        new NotificationPreferenceItemResponse(
+                                                NotificationCategory.SAVINGS,
+                                                "저축·자동이체 알림",
+                                                "저축 예정일과 자동이체 처리 결과를 알려드려요.",
+                                                true
+                                        )
+                                )
+                        )
+                );
+
+        String body = """
+            {
+              "items": [
+                {
+                  "notification_category": "SAVINGS",
+                  "enabled": true
+                },
+                {
+                  "notification_category": "TIME_CAPSULE",
+                  "enabled": true
+                },
+                {
+                  "notification_category": "ALLOWANCE",
+                  "enabled": true
+                },
+                {
+                  "notification_category": "PREGNANCY",
+                  "enabled": true
+                },
+                {
+                  "notification_category": "USAGE_LIMIT",
+                  "enabled": false
+                },
+                {
+                  "notification_category": "MISSION",
+                  "enabled": true
+                }
+              ]
+            }
+            """;
+
+        mockMvc.perform(
+                        put("/api/v1/notification-preferences")
+                                .header(
+                                        "Authorization",
+                                        AUTHORIZATION
+                                )
+                                .contentType("application/json")
+                                .content(body)
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath(
+                                "$.items[0].notification_category"
+                        ).value("SAVINGS")
+                )
+                .andExpect(
+                        jsonPath("$.items[0].enabled")
+                                .value(true)
+                );
     }
 }

@@ -354,6 +354,10 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND(
             HttpStatus.NOT_FOUND,
         "알림을 찾을 수 없습니다."
+    ),
+    INVALID_NOTIFICATION_PREFERENCES(
+            HttpStatus.BAD_REQUEST,
+            "알림 수신 설정이 올바르지 않습니다."
     );
 
     private final HttpStatus httpStatus;

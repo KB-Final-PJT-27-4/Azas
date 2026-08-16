@@ -8,6 +8,11 @@ import com.azas.domain.notification.mapper.NotificationPreferenceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.azas.domain.notification.dto.UpdateNotificationPreferencesRequest;
+import com.azas.global.exception.BusinessException;
+import com.azas.global.exception.ErrorCode;
+
+import java.util.EnumSet;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -69,4 +74,66 @@ public class NotificationPreferenceServiceImpl
                 items
         );
     }
+    @Override
+    @Transactional
+    public NotificationPreferenceListResponse
+    updateNotificationPreferences(
+            Long memberId,
+            UpdateNotificationPreferencesRequest request
+    ) {
+        validateUpdateRequest(request);
+
+        notificationPreferenceMapper
+                .upsertNotificationPreferences(
+                        memberId,
+                        request.getItems()
+                );
+
+        return getNotificationPreferences(memberId);
+    }
+
+    private void validateUpdateRequest(
+            UpdateNotificationPreferencesRequest request
+    ) {
+        if (
+                request == null
+                        || request.getItems() == null
+                        || request.getItems().size()
+                        != NotificationCategory.values().length
+        ) {
+            throw invalidPreferences();
+        }
+
+        EnumSet<NotificationCategory> categories =
+                EnumSet.noneOf(NotificationCategory.class);
+
+        for (UpdateNotificationPreferencesRequest.Item item
+                : request.getItems()) {
+
+            if (
+                    item == null
+                            || item.getNotificationCategory() == null
+                            || item.getEnabled() == null
+                            || !categories.add(
+                            item.getNotificationCategory()
+                    )
+            ) {
+                throw invalidPreferences();
+            }
+        }
+
+        if (
+                categories.size()
+                        != NotificationCategory.values().length
+        ) {
+            throw invalidPreferences();
+        }
+    }
+
+    private BusinessException invalidPreferences() {
+        return new BusinessException(
+                ErrorCode.INVALID_NOTIFICATION_PREFERENCES
+        );
+    }
+
 }
