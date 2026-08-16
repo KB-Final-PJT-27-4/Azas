@@ -358,6 +358,10 @@ public enum ErrorCode {
     INVALID_NOTIFICATION_PREFERENCES(
             HttpStatus.BAD_REQUEST,
             "알림 수신 설정이 올바르지 않습니다."
+    ),
+    PREGNANCY_STATUS_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "출산 예정 상태인 자녀만 임신 주차를 조회할 수 있습니다."
     );
 
     private final HttpStatus httpStatus;
