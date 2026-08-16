@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowUpRight, ChevronDown, Target } from 'lucide-vue-next'
+import { ArrowUpRight, ChevronDown } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 type Period = '6개월' | '1년'
@@ -69,9 +69,9 @@ watch(selectedPeriod, () => {
 </script>
 
 <template>
-  <main class="min-h-full bg-[#f7fafc] px-[18px] py-5 text-[var(--color-text-primary)]">
+  <main class="min-h-full bg-white px-[18px] py-5 text-[var(--color-text-primary)]">
     <div
-      class="relative grid grid-cols-2 rounded-[14px] bg-[#e9eef1] p-1"
+      class="relative grid grid-cols-2 rounded-[14px] bg-[#f3f6f8] p-1"
       role="tablist"
       aria-label="조회 기간"
     >
@@ -108,12 +108,17 @@ watch(selectedPeriod, () => {
       </p>
 
       <div
-        class="mt-7 flex h-48 items-end justify-between gap-0.5 border-b border-[#e5ebef] px-0.5"
+        :key="selectedPeriod"
+        class="relative mt-7 flex h-48 items-end justify-between gap-0.5 px-0.5"
       >
+        <span
+          class="pointer-events-none absolute right-0 bottom-0 left-0 h-px bg-[#e5ebef]"
+          aria-hidden="true"
+        ></span>
         <button
-          v-for="item in visibleData"
+          v-for="(item, index) in visibleData"
           :key="item.key"
-          class="flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-t-lg focus-visible:outline-2 focus-visible:outline-[var(--color-brand-primary)]"
+          class="relative z-1 flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-t-lg focus-visible:outline-2 focus-visible:outline-[var(--color-brand-primary)]"
           type="button"
           :aria-label="`${item.month} ${formatWon(item.saving)}`"
           :aria-pressed="selectedMonth.key === item.key"
@@ -121,17 +126,24 @@ watch(selectedPeriod, () => {
         >
           <span
             v-if="selectedMonth.key === item.key"
-            class="mb-2 whitespace-nowrap rounded-lg bg-[var(--color-brand-primary)] px-1.5 py-1 text-[9px] font-bold text-white"
+            class="asset-history-tooltip mb-2 whitespace-nowrap rounded-lg bg-[var(--color-brand-primary)] px-1.5 py-1 text-[9px] font-bold text-white"
+            :style="{
+              animationDelay:
+                item.key === visibleData.at(-1)?.key ? `${760 + visibleData.length * 55}ms` : '0ms',
+            }"
           >
             {{ Math.round(item.saving / 10_000) }}만원
           </span>
           <span
-            class="w-[clamp(10px,4vw,20px)] rounded-t-md transition-[height,background-color] duration-200"
+            class="asset-history-bar w-[clamp(10px,4vw,20px)] rounded-t-md transition-[height,background-color] duration-200"
             :class="selectedMonth.key === item.key ? 'bg-[#218ced]' : 'bg-[#9bc7f4]'"
-            :style="{ height: `${Math.max(18, (item.saving / maxSaving) * 128)}px` }"
+            :style="{
+              height: `${Math.max(18, (item.saving / maxSaving) * 128)}px`,
+              animationDelay: `${80 + index * 55}ms`,
+            }"
           ></span>
           <span
-            class="mt-2 -mb-6 whitespace-nowrap text-[8px] font-medium tracking-[-0.05em] text-[var(--color-text-secondary)]"
+            class="absolute top-full mt-2 whitespace-nowrap text-[8px] font-medium tracking-[-0.05em] text-[var(--color-text-secondary)]"
           >
             {{ item.month }}
           </span>
@@ -172,7 +184,6 @@ watch(selectedPeriod, () => {
 
     <section class="mt-4 rounded-[22px] border border-[var(--color-border)] bg-white p-5">
       <div class="flex items-center gap-2">
-        <Target :size="20" class="text-[var(--color-selected-text)]" aria-hidden="true" />
         <h2 class="text-base font-bold">목표별 자산 구성</h2>
       </div>
       <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
@@ -262,3 +273,43 @@ watch(selectedPeriod, () => {
     </section>
   </main>
 </template>
+
+<style scoped>
+.asset-history-bar {
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  animation: grow-asset-history-bar 720ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.asset-history-tooltip {
+  animation: reveal-asset-history-tooltip 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: bottom center;
+}
+
+@keyframes grow-asset-history-bar {
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes reveal-asset-history-tooltip {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asset-history-bar,
+  .asset-history-tooltip {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+</style>

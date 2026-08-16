@@ -62,10 +62,10 @@ const selectPeriod = (nextPeriod: Period) => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[#f7fafc] px-[18px] py-6 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white px-[18px] py-6 text-[var(--color-text-primary)]"
   >
     <div
-      class="relative grid grid-cols-2 rounded-[14px] bg-[#e9eef1] p-1"
+      class="relative grid grid-cols-2 rounded-[14px] bg-[#f3f6f8] p-1"
       role="tablist"
       aria-label="조회 기간"
     >
@@ -104,9 +104,6 @@ const selectPeriod = (nextPeriod: Period) => {
         <strong class="mt-2 block text-[27px] tracking-[-0.035em]">{{
           formatReportWon(childcareReportSummary.currentMonthAmount)
         }}</strong>
-        <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-          이번 달 지출 · 월별 흐름을 함께 확인해보세요
-        </p>
         <div
           class="mt-4 flex items-center gap-5 text-[11px] font-bold text-[var(--color-text-secondary)]"
         >
@@ -129,6 +126,7 @@ const selectPeriod = (nextPeriod: Period) => {
             ><span>0</span>
           </div>
           <svg
+            :key="period"
             class="h-[210px] w-full overflow-visible"
             viewBox="0 0 320 200"
             role="img"
@@ -145,22 +143,26 @@ const selectPeriod = (nextPeriod: Period) => {
               <line x1="12" y1="104" x2="308" y2="104" />
               <line x1="12" y1="188" x2="308" y2="188" />
             </g>
-            <polygon :points="areaPoints" fill="url(#childcare-area)" />
+            <polygon :points="areaPoints" fill="url(#childcare-area)" class="trend-chart-area" />
             <polyline
               :points="linePoints(averagePoints)"
+              pathLength="1"
               fill="none"
               stroke="#c9cfd4"
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="3"
+              class="trend-chart-line trend-chart-line--average"
             />
             <polyline
               :points="linePoints(expensePoints)"
+              pathLength="1"
               fill="none"
               stroke="var(--color-accent-yellow)"
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="3"
+              class="trend-chart-line trend-chart-line--expense"
             />
             <circle
               v-for="(point, index) in averagePoints"
@@ -169,6 +171,8 @@ const selectPeriod = (nextPeriod: Period) => {
               :cy="point.y"
               r="3.5"
               fill="#c9cfd4"
+              class="trend-chart-point"
+              :style="{ animationDelay: `${380 + index * 45}ms` }"
             />
             <circle
               v-for="(point, index) in expensePoints"
@@ -177,6 +181,8 @@ const selectPeriod = (nextPeriod: Period) => {
               :cy="point.y"
               r="4"
               fill="var(--color-accent-yellow)"
+              class="trend-chart-point"
+              :style="{ animationDelay: `${520 + index * 45}ms` }"
             />
             <circle
               v-for="(point, index) in expensePoints"
@@ -273,10 +279,70 @@ const selectPeriod = (nextPeriod: Period) => {
       <h2 id="category-analysis-title" class="m-0 text-[21px] font-extrabold tracking-[-0.03em]">
         항목별 소비 분석
       </h2>
-      <p class="mt-1.5 mb-5 text-xs leading-5 text-[var(--color-text-secondary)]">
-        이번 달 양육비가 어떤 항목에 사용되었는지 함께 확인해보세요.
-      </p>
-      <ChildcareCategoryAnalysisContent />
+      <ChildcareCategoryAnalysisContent :key="`category-analysis-${period}`" />
     </section>
   </main>
 </template>
+
+<style scoped>
+.trend-chart-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-trend-line 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.trend-chart-line--average {
+  animation-delay: 80ms;
+}
+
+.trend-chart-line--expense {
+  animation-delay: 180ms;
+}
+
+.trend-chart-area {
+  opacity: 0;
+  animation: reveal-trend-area 600ms ease-out 680ms forwards;
+}
+
+.trend-chart-point {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: reveal-trend-point 320ms cubic-bezier(0.2, 1.5, 0.4, 1) forwards;
+}
+
+@keyframes draw-trend-line {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes reveal-trend-area {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes reveal-trend-point {
+  from {
+    opacity: 0;
+    transform: scale(0.25);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trend-chart-line,
+  .trend-chart-area,
+  .trend-chart-point {
+    animation: none;
+    opacity: 1;
+    stroke-dashoffset: 0;
+    transform: none;
+  }
+}
+</style>
