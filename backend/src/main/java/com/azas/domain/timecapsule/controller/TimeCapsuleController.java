@@ -12,7 +12,6 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleExportDownloadUrlResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleExportResponse;
 import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
@@ -95,29 +94,6 @@ public class TimeCapsuleController {
         return ResponseEntity.ok(timeCapsuleService.getTimeCapsules(
                 memberId,
                 childId
-        ));
-    }
-
-    @ApiOperation(
-            value = "TC-3 타임캡슐 보관함 상세 조회",
-            notes = "보관함 기본 정보와 적금 계좌에 설정된 목표를 조회합니다."
-    )
-    @GetMapping("/time-capsules/{time_capsule_id}")
-    // [JMG] CAPSULE-3 부모 권한을 확인한 뒤 타임캡슐 보관함 기본 정보를 조회한다.
-    public ResponseEntity<TimeCapsuleResponse> getTimeCapsule(
-            @RequestHeader(value = "Authorization", required = false)
-            String authorizationHeader,
-            @ApiParam(value = "타임캡슐 보관함 ID", required = true)
-            @PathVariable("time_capsule_id")
-            long timeCapsuleId
-    ) {
-        long memberId = accessTokenMemberResolver.resolveMemberId(
-                authorizationHeader
-        );
-
-        return ResponseEntity.ok(timeCapsuleService.getTimeCapsule(
-                memberId,
-                timeCapsuleId
         ));
     }
 
@@ -221,8 +197,8 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-4 타임캡슐 엔트리 목록 조회",
-            notes = "부모 또는 보호자가 삭제되지 않은 기록 목록을 조회합니다."
+            value = "TIMECAPSULE-4 타임캡슐 엔트리 목록 조회",
+            notes = "부모가 보관함 요약과 봉인된 엔트리 목록을 리스트·캘린더 공용 응답으로 조회합니다."
     )
     @GetMapping("/time-capsules/{time_capsule_id}/entries")
     // [JMG] CAPSULE-4 부모 권한을 확인한 뒤 타임캡슐 내부 엔트리 목록을 조회한다.

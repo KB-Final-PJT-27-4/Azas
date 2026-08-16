@@ -6,6 +6,7 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySummaryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
@@ -38,7 +39,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
@@ -46,6 +49,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TimeCapsuleEntryService {
 
+    private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
     private static final Duration UPLOAD_URL_VALIDITY = Duration.ofMinutes(15);
     private static final Duration DOWNLOAD_URL_VALIDITY = Duration.ofMinutes(10);
     private static final long MAX_IMAGE_FILE_SIZE = 10L * 1024 * 1024;
@@ -57,21 +61,34 @@ public class TimeCapsuleEntryService {
     private final TimeCapsuleObjectStorage timeCapsuleObjectStorage;
 
     @Transactional(readOnly = true)
-    // [JMG] CAPSULE-4 부모 권한을 확인한 뒤 삭제되지 않은 타임캡슐 엔트리 목록을 조회한다.
+    // [JMG] CAPSULE-4 부모 권한을 확인한 뒤 보관함 요약과 봉인된 엔트리 목록을 조회한다.
     public TimeCapsuleEntryListResponse getTimeCapsuleEntries(
             long requesterMemberId,
             long timeCapsuleId
     ) {
-        getAccessibleTimeCapsuleOrThrow(requesterMemberId, timeCapsuleId);
+        if (timeCapsuleId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        TimeCapsule timeCapsule = getAccessibleTimeCapsuleOrThrow(
+                requesterMemberId,
+                timeCapsuleId
+        );
 
         List<TimeCapsuleEntrySummaryResponse> entries =
                 timeCapsuleEntryMapper
-                        .findVisibleEntriesByTimeCapsuleId(timeCapsuleId)
+                        .findSealedEntriesByTimeCapsuleId(timeCapsuleId)
                         .stream()
                         .map(this::toEntrySummaryResponse)
                         .collect(Collectors.toList());
 
-        return new TimeCapsuleEntryListResponse(entries);
+        return new TimeCapsuleEntryListResponse(
+                TimeCapsuleSummaryResponse.from(
+                        timeCapsule,
+                        LocalDate.now(SERVICE_ZONE)
+                ),
+                entries
+        );
     }
 
     @Transactional(readOnly = true)
