@@ -348,6 +348,20 @@ public enum ErrorCode {
     TRANSFER_PROCESSING_FAILED(
             HttpStatus.BAD_GATEWAY,
             "이체 처리 중 오류가 발생했습니다."
+    ),
+
+    // Notification
+    NOTIFICATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+        "알림을 찾을 수 없습니다."
+    ),
+    INVALID_NOTIFICATION_PREFERENCES(
+            HttpStatus.BAD_REQUEST,
+            "알림 수신 설정이 올바르지 않습니다."
+    ),
+    PREGNANCY_STATUS_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "출산 예정 상태인 자녀만 임신 주차를 조회할 수 있습니다."
     );
 
     private final HttpStatus httpStatus;

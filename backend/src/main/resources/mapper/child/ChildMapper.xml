@@ -145,5 +145,21 @@
           AND status = 'ACTIVE'
     </update>
 
+    <select id="findPregnancyStatus"
+            resultType=
+                    "com.azas.domain.child.dto.PregnancyStatusRow">
 
+        SELECT
+            c.child_id AS childId,
+            c.name AS childName,
+            c.birth_status AS birthStatus,
+            c.expected_birth_date AS expectedBirthDate
+        FROM child c
+                 INNER JOIN child_parent cp
+                            ON cp.child_id = c.child_id
+        WHERE c.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+
+    </select>
 </mapper>

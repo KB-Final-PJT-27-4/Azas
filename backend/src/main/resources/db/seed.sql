@@ -630,28 +630,69 @@ INSERT INTO asset_report (
   );
 
 INSERT INTO notification_preference (
-  notification_preference_id,
-  member_id,
-  notification_type,
-  in_app_enabled,
-  push_enabled
+    notification_preference_id,
+    member_id,
+    notification_category,
+    enabled
 ) VALUES
-  (1, 1, 'TRANSFER', 1, 1),
-  (2, 1, 'CAPSULE_RELEASE', 1, 1),
-  (3, 2, 'CAPSULE_RELEASE', 1, 1);
+      (1, 1, 'SAVINGS', 1),
+      (2, 1, 'TIME_CAPSULE', 1),
+      (3, 1, 'ALLOWANCE', 1),
+      (4, 1, 'PREGNANCY', 1),
+      (5, 1, 'USAGE_LIMIT', 1),
+      (6, 1, 'MISSION', 1);
+
+INSERT INTO notification_preference (
+    notification_preference_id,
+    member_id,
+    notification_category,
+    enabled
+) VALUES
+      (7, 2, 'SAVINGS', 1),
+      (8, 2, 'ALLOWANCE', 1),
+      (9, 2, 'USAGE_LIMIT', 1),
+      (10, 2, 'MISSION', 1);
 
 INSERT INTO notification (
-  notification_id,
-  member_id,
-  child_id,
-  notification_type,
-  title,
-  content,
-  reference_type,
-  reference_id,
-  is_read,
-  sent_at
+    notification_id,
+    member_id,
+    child_id,
+    notification_category,
+    notification_type,
+    title,
+    content,
+    reference_type,
+    reference_id,
+    metadata_json,
+    deduplication_key,
+    is_read
 ) VALUES
-  (1, 1, 1, 'TRANSFER', '저축 이체가 완료됐어요', '깨비의 적금 계좌로 100,000원이 입금됐어요.', 'TRANSFER', 1, 0, NOW(6)),
-  (2, 2, 1, 'CAPSULE_OPEN', '타임캡슐이 쌓이고 있어요', '아직 열 수는 없지만 소중한 기록이 보관되고 있어요.', 'TIME_CAPSULE', 1, 0, NOW(6));
+      (
+          1,
+          1,
+          1,
+          'SAVINGS',
+          'AUTO_TRANSFER_SUCCEEDED',
+          '저축 이체가 완료됐어요',
+          '깨비의 적금 계좌로 100,000원이 입금됐어요.',
+          'TRANSFER',
+          1,
+          JSON_OBJECT('amount', 100000),
+          'AUTO_TRANSFER_SUCCEEDED:1',
+          0
+      ),
+      (
+          2,
+          2,
+          1,
+          'TIME_CAPSULE',
+          'TIME_CAPSULE_RELEASE_SOON',
+          '타임캡슐 공개일이 다가오고 있어요',
+          '소중한 추억을 만나는 날까지 이제 3일 남았어요.',
+          'TIME_CAPSULE',
+          1,
+          JSON_OBJECT('remaining_days', 3),
+          'TIME_CAPSULE_RELEASE_SOON:1:3',
+          0
+      );
 
