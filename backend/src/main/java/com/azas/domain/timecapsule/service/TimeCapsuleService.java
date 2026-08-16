@@ -3,7 +3,6 @@ package com.azas.domain.timecapsule.service;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
@@ -120,21 +119,6 @@ public class TimeCapsuleService {
                 .collect(Collectors.toList());
 
         return new TimeCapsuleListResponse(summaries);
-    }
-
-    @Transactional(readOnly = true)
-    // [JMG] CAPSULE-3 부모 권한을 확인한 뒤 타임캡슐 보관함 상세를 조회한다.
-    public TimeCapsuleResponse getTimeCapsule(
-            long requesterMemberId,
-            long timeCapsuleId
-    ) {
-        TimeCapsule timeCapsule =
-                getAccessibleTimeCapsuleOrThrow(
-                        requesterMemberId,
-                        timeCapsuleId
-                );
-
-        return TimeCapsuleResponse.from(timeCapsule);
     }
 
     @Transactional

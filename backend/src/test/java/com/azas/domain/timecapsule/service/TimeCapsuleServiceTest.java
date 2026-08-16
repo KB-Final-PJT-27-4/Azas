@@ -3,7 +3,6 @@ package com.azas.domain.timecapsule.service;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.mapper.MemberMapper;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
@@ -352,23 +351,6 @@ class TimeCapsuleServiceTest {
 
         assertEquals(ErrorCode.CHILD_ACCESS_DENIED,
                 exception.getErrorCode());
-    }
-
-    @Test
-    // [JMG] CAPSULE-3 접근 권한이 없는 보관함은 존재 여부를 노출하지 않는다.
-    void getTimeCapsuleHidesInaccessibleTimeCapsule() {
-        given(timeCapsuleMapper.findAccessibleById(100L, 7L))
-                .willReturn(null);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> timeCapsuleService.getTimeCapsule(7L, 100L)
-        );
-
-        assertEquals(
-                ErrorCode.TIME_CAPSULE_NOT_FOUND,
-                exception.getErrorCode()
-        );
     }
 
     @Test
