@@ -4,8 +4,8 @@ import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
-import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
-import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
@@ -243,26 +243,26 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-7 타임캡슐 엔트리 미디어 업로드 URL 발급",
-            notes = "DRAFT 엔트리에 서버가 생성한 S3 Presigned PUT URL을 발급합니다."
+            value = "TIMECAPSULE-7 타임캡슐 대표 이미지 업로드 URL 발급",
+            notes = "작성자 본인의 DRAFT 엔트리에 JPEG·PNG·WebP 대표 이미지 한 장을 업로드할 수 있는 15분 유효 S3 Presigned PUT URL을 발급합니다. 별도 썸네일 파일은 생성하지 않습니다."
     )
-    @PostMapping("/time-capsule-entries/{entry_id}/media/upload-urls")
-    // [JMG] CAPSULE-7 작성자 본인의 DRAFT 엔트리에 첨부할 미디어 업로드 URL 발급 요청을 처리한다.
-    public ResponseEntity<CreateTimeCapsuleMediaUploadUrlsResponse>
-    createMediaUploadUrls(
+    @PostMapping("/time-capsule-entries/{entry_id}/media/upload-url")
+    // [JMG] CAPSULE-7 작성자 본인의 DRAFT 엔트리에 대표 이미지 한 장의 업로드 URL을 발급한다.
+    public ResponseEntity<CreateTimeCapsuleMediaUploadUrlResponse>
+    createMediaUploadUrl(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
             @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
             @PathVariable("entry_id")
             long timeCapsuleEntryId,
-            @Valid @RequestBody CreateTimeCapsuleMediaUploadUrlsRequest request
+            @Valid @RequestBody CreateTimeCapsuleMediaUploadUrlRequest request
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
                 authorizationHeader
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                timeCapsuleEntryService.createMediaUploadUrls(
+                timeCapsuleEntryService.createMediaUploadUrl(
                         memberId,
                         timeCapsuleEntryId,
                         request
