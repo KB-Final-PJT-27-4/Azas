@@ -563,6 +563,11 @@ const routes: RouteRecordRaw[] = [
     path: '/404',
     name: 'NotFound',
     component: () => import('@/views/common/NotFoundView.vue'),
+    meta: {
+      requiresAuth: false,
+      hideNavigation: true,
+      pageBackgroundColor: '#eef9ff',
+    },
   },
   {
     path: '/:pathMatch(.*)*',
