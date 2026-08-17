@@ -57,7 +57,6 @@ public class TimeCapsuleEntryService {
     private final TimeCapsuleObjectStorage timeCapsuleObjectStorage;
 
     @Transactional(readOnly = true)
-    // [JMG] CAPSULE-4 부모 권한을 확인한 뒤 보관함 요약과 봉인된 엔트리 목록을 조회한다.
     public TimeCapsuleEntryListResponse getTimeCapsuleEntries(
             long requesterMemberId,
             long timeCapsuleId
@@ -88,7 +87,6 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional(readOnly = true)
-    // [JMG] CAPSULE-14 부모·보호자 권한을 확인한 뒤 엔트리와 활성 미디어의 임시 조회 URL을 반환한다.
     public TimeCapsuleEntryDetailResponse getTimeCapsuleEntry(
             long requesterMemberId,
             long timeCapsuleEntryId
@@ -115,7 +113,6 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional
-    // [JMG] CAPSULE-13 작성자 본인의 DRAFT 엔트리와 연결 미디어를 S3·DB에서 삭제 상태로 처리한다.
     public void deleteTimeCapsuleEntry(
             long requesterMemberId,
             long timeCapsuleEntryId
@@ -149,7 +146,6 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional
-    // [JMG] CAPSULE-5 부모가 선택한 타임캡슐 계좌의 입금 거래와 작성 내용으로 DRAFT 기록을 생성한다.
     public CreateTimeCapsuleEntryResponse createTimeCapsuleEntry(
             long requesterMemberId,
             long timeCapsuleId,
@@ -203,11 +199,14 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional
-    // [JMG] CAPSULE-15 미디어 조건을 충족한 DRAFT 엔트리를 작성자 본인이 봉인한다.
     public TimeCapsuleEntrySealResponse sealTimeCapsuleEntry(
             long requesterMemberId,
             long timeCapsuleEntryId
     ) {
+        if (timeCapsuleEntryId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
         TimeCapsuleEntry entry = getOwnedTimeCapsuleEntryForUpdateOrThrow(
                 requesterMemberId,
                 timeCapsuleEntryId
@@ -231,7 +230,6 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional
-    // [JMG] CAPSULE-7 DRAFT 엔트리에 대표 이미지 한 장의 서버 객체 키와 S3 Presigned PUT URL을 발급한다.
     public CreateTimeCapsuleMediaUploadUrlResponse
     createMediaUploadUrl(
             long requesterMemberId,
@@ -290,7 +288,6 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional
-    // [JMG] CAPSULE-8 S3 메타데이터를 검증한 뒤 PENDING_UPLOAD 미디어를 ACTIVE로 전환한다.
     public CompleteTimeCapsuleMediaUploadResponse completeMediaUpload(
             long requesterMemberId,
             long timeCapsuleEntryId,
@@ -363,7 +360,6 @@ public class TimeCapsuleEntryService {
         return new CompleteTimeCapsuleMediaUploadResponse(media);
     }
 
-    // [JMG] CAPSULE-4 부모에게 접근 가능한 보관함만 반환해 보관함 존재 여부를 보호한다.
     private TimeCapsule getAccessibleTimeCapsuleOrThrow(
             long requesterMemberId,
             long timeCapsuleId
@@ -380,7 +376,6 @@ public class TimeCapsuleEntryService {
         return timeCapsule;
     }
 
-    // [JMG] CAPSULE-14 부모·보호자 관계가 있고 삭제되지 않은 엔트리만 상세 조회 대상으로 반환한다.
     private TimeCapsuleEntry getAccessibleTimeCapsuleEntryOrThrow(
             long requesterMemberId,
             long timeCapsuleEntryId
@@ -396,7 +391,6 @@ public class TimeCapsuleEntryService {
         return entry;
     }
 
-    // [JMG] CAPSULE-7 작성자이면서 자녀와 연결된 부모에게만 엔트리를 노출한다.
     private TimeCapsuleEntry getOwnedTimeCapsuleEntryOrThrow(
             long requesterMemberId,
             long timeCapsuleEntryId
@@ -412,7 +406,6 @@ public class TimeCapsuleEntryService {
         return entry;
     }
 
-    // [JMG] CAPSULE-13·15 삭제·봉인 직전 엔트리 행을 잠가 상태 변경 경쟁 조건을 방지한다.
     private TimeCapsuleEntry getOwnedTimeCapsuleEntryForUpdateOrThrow(
             long requesterMemberId,
             long timeCapsuleEntryId
@@ -429,7 +422,6 @@ public class TimeCapsuleEntryService {
         return entry;
     }
 
-    // [JMG] CAPSULE-5 대상 타임캡슐 계좌에 실제로 기록된 거래만 조회해 임의 거래 연결을 차단한다.
     private TimeCapsuleEntryTransaction
     getContributionTransactionOrThrow(
             long financialAccountId,
@@ -450,7 +442,6 @@ public class TimeCapsuleEntryService {
         return transaction;
     }
 
-    // [JMG] CAPSULE-5 출금·0원·음수 거래를 타임캡슐 저축 기록으로 사용하지 못하게 검증한다.
     private void assertEligibleContributionTransaction(
             TimeCapsuleEntryTransaction transaction
     ) {
@@ -461,7 +452,6 @@ public class TimeCapsuleEntryService {
         }
     }
 
-    // [JMG] CAPSULE-5 수집 중이고 공개일이 지나지 않은 보관함에만 새 기록을 허용한다.
     private void assertCollectingTimeCapsule(TimeCapsule timeCapsule) {
         LocalDateTime releaseAt = timeCapsule.getExpectedReleaseAt();
         if (timeCapsule.getStatus() != TimeCapsuleStatus.COLLECTING
@@ -473,7 +463,6 @@ public class TimeCapsuleEntryService {
         }
     }
 
-    // [JMG] CAPSULE-4 썸네일 객체가 있는 엔트리에만 S3 임시 다운로드 URL을 발급한다.
     private TimeCapsuleEntrySummaryResponse toEntrySummaryResponse(
             TimeCapsuleEntry entry
     ) {
@@ -493,7 +482,6 @@ public class TimeCapsuleEntryService {
         );
     }
 
-    // [JMG] CAPSULE-14 활성 미디어 하나를 객체 키 없이 Presigned GET URL이 포함된 상세 응답 항목으로 변환한다.
     private TimeCapsuleEntryDetailResponse.MediaResponse
     toEntryDetailMediaResponse(
             TimeCapsuleMedia media,
@@ -511,7 +499,6 @@ public class TimeCapsuleEntryService {
         );
     }
 
-    // [JMG] CAPSULE-13·15 봉인 또는 삭제된 엔트리의 변경 시도를 상태 충돌 오류로 처리한다.
     private void assertDraftEntry(TimeCapsuleEntry entry) {
         if (!entry.isDraft()) {
             throw new BusinessException(
@@ -520,7 +507,6 @@ public class TimeCapsuleEntryService {
         }
     }
 
-    // [JMG] CAPSULE-15 엔트리의 미디어 유형별 활성 개수와 업로드 완료 상태를 봉인 전에 검증한다.
     private void assertMediaRequirementsForSeal(TimeCapsuleEntry entry) {
         if (timeCapsuleEntryMapper.countPendingMediaByEntryId(
                 entry.getTimeCapsuleEntryId()
@@ -541,10 +527,16 @@ public class TimeCapsuleEntryService {
                         TimeCapsuleMediaType.VIDEO
                 );
 
-        boolean isValid = entry.getMediaMode()
-                == TimeCapsuleEntryMediaMode.IMAGE
-                && activeImageCount == 1
-                && activeVideoCount == 0;
+        boolean hasRepresentativeImage =
+                entry.getThumbnailObjectKey() != null
+                        && !entry.getThumbnailObjectKey().isBlank();
+
+        boolean isValid =
+                entry.getMediaMode() == TimeCapsuleEntryMediaMode.IMAGE
+                        && activeImageCount == 1
+                        && activeVideoCount == 0
+                        && hasRepresentativeImage;
+
         if (!isValid) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET
@@ -552,7 +544,6 @@ public class TimeCapsuleEntryService {
         }
     }
 
-    // [JMG] CAPSULE-7 NONE 초안은 대표 이미지 업로드를 시작할 때 IMAGE 모드로 한 번만 전환한다.
     private void assertEntryCanReceiveRepresentativeImage(
             TimeCapsuleEntry entry
     ) {
@@ -584,7 +575,6 @@ public class TimeCapsuleEntryService {
         }
     }
 
-    // [JMG] CAPSULE-7 대표 이미지는 JPEG·PNG·WebP와 최대 10MiB만 허용한다.
     private void assertValidRepresentativeImageRequest(
             CreateTimeCapsuleMediaUploadUrlRequest request,
             String mimeType
@@ -598,7 +588,6 @@ public class TimeCapsuleEntryService {
         }
     }
 
-    // [JMG] CAPSULE-7 사용자 파일명 대신 UUID 기반 서버 객체 키를 만들어 경로 조작과 이름 충돌을 막는다.
     private String createObjectKey(
             TimeCapsuleEntry entry,
             String mimeType,
@@ -610,7 +599,6 @@ public class TimeCapsuleEntryService {
                 + "/slot-" + slotNo + getFileExtension(mimeType);
     }
 
-    // [JMG] CAPSULE-7 허용된 MIME 타입에 대응하는 서버 제어 확장자를 반환한다.
     private String getFileExtension(String mimeType) {
         return switch (mimeType.toLowerCase(Locale.ROOT)) {
             case "image/jpeg" -> ".jpg";
@@ -620,8 +608,6 @@ public class TimeCapsuleEntryService {
         };
     }
 
-    // [JMG] CAPSULE-8 중복된 미디어 ID를 제거하지 않고 오류로 처리해 부분 완료를 방지한다.
-    // [JMG] CAPSULE-5 DB 고유 제약과 재조회로 이체 이벤트 재시도에도 엔트리를 하나만 유지한다.
     private void insertEntryOrThrow(TimeCapsuleEntry entry) {
         try {
             if (timeCapsuleEntryMapper.insert(entry) != 1) {

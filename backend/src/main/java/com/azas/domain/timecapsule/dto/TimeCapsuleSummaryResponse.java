@@ -45,7 +45,6 @@ public class TimeCapsuleSummaryResponse {
                 : timeCapsule.getTotalContributionAmount();
     }
 
-    // [JMG] CAPSULE-2 보관함 목록 항목을 카드·캘린더 화면 공용 응답으로 변환한다.
     public static TimeCapsuleSummaryResponse from(
             TimeCapsule timeCapsule,
             LocalDate today
@@ -58,7 +57,6 @@ public class TimeCapsuleSummaryResponse {
         return dDay;
     }
 
-    // [JMG] CAPSULE-2 예상 공개일까지 남은 일수를 계산한다.
     private static Long calculateDDay(
             TimeCapsule timeCapsule,
             LocalDate today

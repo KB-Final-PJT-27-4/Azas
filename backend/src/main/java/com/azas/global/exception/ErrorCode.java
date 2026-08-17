@@ -220,7 +220,7 @@ public enum ErrorCode {
     ),
     TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED(
             HttpStatus.CONFLICT,
-            "봉인·삭제되었거나 수정 가능 횟수를 초과한 타임캡슐 엔트리는 수정할 수 없습니다."
+            "현재 상태의 타임캡슐 엔트리는 변경할 수 없습니다."
     ),
     TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET(
             HttpStatus.UNPROCESSABLE_ENTITY,
