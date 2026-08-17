@@ -661,20 +661,12 @@ CREATE TABLE time_capsule
     entry_count                 INT             NOT NULL DEFAULT 0 COMMENT '보관함 목록용 캐시',
     total_contribution_amount   DECIMAL(19, 2)  NOT NULL DEFAULT 0 COMMENT '활성 엔트리 저축 금액 합계 캐시',
     latest_entry_at             DATETIME(6)     NULL COMMENT '최근 기록 시각',
-    deleted_at                  DATETIME(6)     NULL COMMENT '보관함 삭제 시각',
-    active_financial_account_id BIGINT UNSIGNED
-        GENERATED ALWAYS AS (
-            CASE
-                WHEN deleted_at IS NULL THEN financial_account_id
-                ELSE NULL
-                END
-            ) STORED COMMENT '활성 보관함 중복 방지용 계좌 ID',
     created_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
     updated_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     PRIMARY KEY (time_capsule_id),
-    UNIQUE KEY uk_time_capsule_child_active_account (
-                                                     child_id,
-                                                     active_financial_account_id
+    UNIQUE KEY uk_time_capsule_child_account (
+                                              child_id,
+                                              financial_account_id
         ),
     KEY idx_time_capsule_child_status (child_id, status),
     CONSTRAINT fk_time_capsule_child
@@ -739,36 +731,6 @@ CREATE TABLE time_capsule_media
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='타임캡슐 미디어';
-
-CREATE TABLE time_capsule_export
-(
-    time_capsule_export_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '결과물 생성 ID',
-    time_capsule_id        BIGINT UNSIGNED NOT NULL COMMENT '타임캡슐 ID',
-    requested_by_member_id BIGINT UNSIGNED NOT NULL COMMENT '요청 회원 ID',
-    export_type            VARCHAR(30)     NOT NULL COMMENT 'VIDEO, ARCHIVE',
-    options_json           JSON            NULL COMMENT '생성 옵션',
-    status                 VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, PROCESSING, SUCCEEDED, FAILED, EXPIRED',
-    output_object_key      VARCHAR(1000)   NULL COMMENT '결과 객체 키',
-    output_mime_type       VARCHAR(100)    NULL COMMENT '결과 MIME 유형',
-    output_file_size       BIGINT UNSIGNED NULL COMMENT '결과 파일 크기',
-    error_code             VARCHAR(100)    NULL COMMENT '실패 코드',
-    error_message          VARCHAR(500)    NULL COMMENT '실패 메시지',
-    started_at             DATETIME(6)     NULL COMMENT '작업 시작 시각',
-    completed_at           DATETIME(6)     NULL COMMENT '작업 완료 시각',
-    expires_at             DATETIME(6)     NULL COMMENT '결과 보관 만료 시각',
-    created_at             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '요청 시각',
-    updated_at             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '상태 변경일',
-    PRIMARY KEY (time_capsule_export_id),
-    KEY idx_capsule_export_capsule_id (time_capsule_id),
-    KEY idx_capsule_export_requested_by (requested_by_member_id),
-    CONSTRAINT fk_capsule_export_capsule
-        FOREIGN KEY (time_capsule_id) REFERENCES time_capsule (time_capsule_id),
-    CONSTRAINT fk_capsule_export_requested_by
-        FOREIGN KEY (requested_by_member_id) REFERENCES member (member_id),
-    CONSTRAINT ck_capsule_export_type CHECK (export_type IN ('VIDEO', 'ARCHIVE'))
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT ='타임캡슐 결과물 생성 작업';
 
 CREATE TABLE asset_report
 (

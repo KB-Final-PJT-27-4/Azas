@@ -242,23 +242,6 @@ public enum ErrorCode {
             HttpStatus.BAD_GATEWAY,
             "타임캡슐 미디어 저장소에 연결할 수 없습니다."
     ),
-    TIME_CAPSULE_EXPORT_NOT_FOUND(
-            HttpStatus.NOT_FOUND,
-            "타임캡슐 결과물 생성 작업을 찾을 수 없습니다."
-    ),
-    TIME_CAPSULE_EXPORT_CREATION_NOT_ALLOWED(
-            HttpStatus.CONFLICT,
-            "공개되었고 봉인된 기록이 있는 타임캡슐에서만 결과물을 생성할 수 있습니다."
-    ),
-    TIME_CAPSULE_EXPORT_NOT_READY(
-            HttpStatus.CONFLICT,
-            "타임캡슐 결과물 생성 작업이 아직 완료되지 않았습니다."
-    ),
-    TIME_CAPSULE_EXPORT_EXPIRED(
-            HttpStatus.GONE,
-            "타임캡슐 결과물의 보관 기간이 만료되었습니다."
-    ),
-
     // Child
     CHILD_NOT_FOUND(
             HttpStatus.NOT_FOUND,

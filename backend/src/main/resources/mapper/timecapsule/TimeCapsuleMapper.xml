@@ -18,7 +18,6 @@
         <result property="totalContributionAmount"
                 column="total_contribution_amount"/>
         <result property="latestEntryAt" column="latest_entry_at"/>
-        <result property="deletedAt" column="deleted_at"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
         <result property="financialGoalTemplateId" column="financial_goal_template_id"/>
@@ -50,7 +49,6 @@
         entry_count,
         total_contribution_amount,
         latest_entry_at,
-        deleted_at,
         created_at,
         updated_at
     </sql>
@@ -66,7 +64,6 @@
         tc.entry_count,
         tc.total_contribution_amount,
         tc.latest_entry_at,
-        tc.deleted_at,
         tc.created_at,
         tc.updated_at,
         fa.financial_goal_template_id,
@@ -118,7 +115,6 @@
         FROM time_capsule tc
         WHERE tc.child_id = #{childId}
           AND tc.financial_account_id = #{financialAccountId}
-          AND tc.deleted_at IS NULL
     </select>
 
     <select id="findByFinancialAccountId"
@@ -131,7 +127,6 @@
         LEFT JOIN financial_goal_template fgt
             ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.financial_account_id = #{financialAccountId}
-          AND tc.deleted_at IS NULL
     </select>
 
     <insert id="insert"
@@ -170,7 +165,6 @@
             ON m.member_id = cp.member_id
            AND m.status = 'ACTIVE'
         WHERE tc.time_capsule_id = #{timeCapsuleId}
-          AND tc.deleted_at IS NULL
     </select>
 
     <select id="findAccessibleByIdForUpdate"
@@ -189,7 +183,6 @@
             ON m.member_id = cp.member_id
            AND m.status = 'ACTIVE'
         WHERE tc.time_capsule_id = #{timeCapsuleId}
-          AND tc.deleted_at IS NULL
         FOR UPDATE
     </select>
 
@@ -208,7 +201,6 @@
         LEFT JOIN financial_goal_template fgt
             ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.child_id = #{childId}
-          AND tc.deleted_at IS NULL
         ORDER BY
             CASE WHEN tc.expected_release_at IS NULL THEN 1 ELSE 0 END,
             tc.expected_release_at ASC,
