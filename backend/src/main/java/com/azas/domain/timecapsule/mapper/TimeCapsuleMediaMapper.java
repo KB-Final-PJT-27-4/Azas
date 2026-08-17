@@ -18,10 +18,10 @@ public interface TimeCapsuleMediaMapper {
             @Param("slotNo") int slotNo
     );
 
-    // [JMG] CAPSULE-8 지정된 미디어 ID가 해당 엔트리에 속하는지 잠금과 함께 확인한다.
-    List<TimeCapsuleMedia> findByEntryIdAndIdsForUpdate(
+    // [JMG] CAPSULE-8 단일 미디어가 해당 엔트리에 속하는지 잠금과 함께 확인한다.
+    TimeCapsuleMedia findByEntryIdAndIdForUpdate(
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId,
-            @Param("mediaIds") List<Long> mediaIds
+            @Param("timeCapsuleMediaId") long timeCapsuleMediaId
     );
 
     // [JMG] CAPSULE-14 엔트리 상세 화면에 노출할 활성 미디어를 슬롯 순서로 조회한다.
@@ -35,7 +35,9 @@ public interface TimeCapsuleMediaMapper {
     );
 
     // [JMG] CAPSULE-8 업로드 검증을 통과한 대기 미디어를 활성 상태로 전환한다.
-    int activatePendingMedia(@Param("mediaIds") List<Long> mediaIds);
+    int activatePendingMedia(
+            @Param("timeCapsuleMediaId") long timeCapsuleMediaId
+    );
 
     // [JMG] CAPSULE-8 엔트리의 첫 이미지 객체 키를 목록용 썸네일로 한 번만 저장한다.
     int setThumbnailIfAbsent(

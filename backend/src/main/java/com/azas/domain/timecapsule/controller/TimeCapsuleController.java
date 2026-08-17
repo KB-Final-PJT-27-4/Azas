@@ -271,8 +271,8 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-8 타임캡슐 엔트리 미디어 업로드 완료",
-            notes = "S3 객체 메타데이터를 검증한 뒤 업로드 대기 미디어를 활성화합니다."
+            value = "TIMECAPSULE-8 타임캡슐 단일 이미지 업로드 완료",
+            notes = "작성자 본인의 DRAFT 엔트리에 속한 단일 이미지의 S3 객체 존재 여부, MIME 타입, 파일 크기를 검증한 뒤 활성화합니다. 이미 활성화된 동일 이미지 요청은 멱등 성공으로 처리하며 엔트리 봉인은 별도 API에서 수행합니다."
     )
     @PostMapping("/time-capsule-entries/{entry_id}/media/complete")
     // [JMG] CAPSULE-8 S3 업로드가 끝난 작성자 본인의 미디어 완료 처리 요청을 검증한다.
