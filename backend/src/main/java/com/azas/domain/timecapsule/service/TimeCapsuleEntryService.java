@@ -9,8 +9,8 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySummaryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
-import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
-import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -51,7 +50,7 @@ public class TimeCapsuleEntryService {
     private static final Duration UPLOAD_URL_VALIDITY = Duration.ofMinutes(15);
     private static final Duration DOWNLOAD_URL_VALIDITY = Duration.ofMinutes(10);
     private static final long MAX_IMAGE_FILE_SIZE = 10L * 1024 * 1024;
-    private static final long MAX_VIDEO_FILE_SIZE = 100L * 1024 * 1024;
+    private static final int REPRESENTATIVE_IMAGE_SLOT_NO = 1;
 
     private final TimeCapsuleMapper timeCapsuleMapper;
     private final TimeCapsuleEntryMapper timeCapsuleEntryMapper;
@@ -233,71 +232,61 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional
-    // [JMG] CAPSULE-7 DRAFT 엔트리에 서버 생성 객체 키와 S3 Presigned PUT URL을 발급한다.
-    public CreateTimeCapsuleMediaUploadUrlsResponse
-    createMediaUploadUrls(
+    // [JMG] CAPSULE-7 DRAFT 엔트리에 대표 이미지 한 장의 서버 객체 키와 S3 Presigned PUT URL을 발급한다.
+    public CreateTimeCapsuleMediaUploadUrlResponse
+    createMediaUploadUrl(
             long requesterMemberId,
             long timeCapsuleEntryId,
-            CreateTimeCapsuleMediaUploadUrlsRequest request
+            CreateTimeCapsuleMediaUploadUrlRequest request
     ) {
         TimeCapsuleEntry entry = getOwnedTimeCapsuleEntryForUpdateOrThrow(
                 requesterMemberId,
                 timeCapsuleEntryId
         );
         assertDraftEntry(entry);
-        TimeCapsuleMediaType mediaType = resolveRequestedMediaTypeOrThrow(
-                request
+        String mimeType = request.normalizedMimeType();
+        assertValidRepresentativeImageRequest(request, mimeType);
+        assertEntryCanReceiveRepresentativeImage(entry);
+
+        TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
+                timeCapsuleEntryId,
+                TimeCapsuleMediaType.IMAGE,
+                createObjectKey(
+                        entry,
+                        mimeType,
+                        REPRESENTATIVE_IMAGE_SLOT_NO
+                ),
+                mimeType,
+                request.getFileSize(),
+                REPRESENTATIVE_IMAGE_SLOT_NO
         );
-        assertEntryMediaModeForUpload(entry, mediaType);
-        assertValidUploadRequest(entry, mediaType, request);
 
-        List<CreateTimeCapsuleMediaUploadUrlsResponse.UploadResponse> uploads =
-                new ArrayList<>();
-        for (CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file
-                : request.getFiles()) {
-            String mimeType = file.normalizedMimeType();
-            TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
-                    timeCapsuleEntryId,
-                    mediaType,
-                    createObjectKey(entry, mimeType, file.getSlotNo()),
-                    mimeType,
-                    file.getFileSize(),
-                    file.getSlotNo()
-            );
-
-            try {
-                if (timeCapsuleMediaMapper.insert(media) != 1) {
-                    throw new BusinessException(
-                            ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
-                    );
-                }
-            } catch (DuplicateKeyException exception) {
+        try {
+            if (timeCapsuleMediaMapper.insert(media) != 1) {
                 throw new BusinessException(
-                        ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED,
-                        exception
+                        ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
                 );
             }
-
-            TimeCapsuleObjectStorage.PresignedUrl presignedUrl =
-                    timeCapsuleObjectStorage.createUploadUrl(
-                            media.getObjectKey(),
-                            media.getMimeType(),
-                            UPLOAD_URL_VALIDITY
-                    );
-            uploads.add(
-                    new CreateTimeCapsuleMediaUploadUrlsResponse.UploadResponse(
-                            media.getTimeCapsuleMediaId(),
-                            media.getSlotNo(),
-                            presignedUrl.url(),
-                            LocalDateTime.now().plus(UPLOAD_URL_VALIDITY),
-                            Map.of("Content-Type", media.getMimeType())
-                    )
+        } catch (DuplicateKeyException exception) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED,
+                    exception
             );
         }
 
-        return new CreateTimeCapsuleMediaUploadUrlsResponse(
+        TimeCapsuleObjectStorage.PresignedUrl presignedUrl =
+                timeCapsuleObjectStorage.createUploadUrl(
+                        media.getObjectKey(),
+                        media.getMimeType(),
+                        UPLOAD_URL_VALIDITY
+                );
+
+        return new CreateTimeCapsuleMediaUploadUrlResponse(
                 timeCapsuleEntryId,
-                uploads
+                media.getTimeCapsuleMediaId(),
+                presignedUrl.url(),
+                LocalDateTime.now().plus(UPLOAD_URL_VALIDITY),
+                Map.of("Content-Type", media.getMimeType())
         );
     }
 
@@ -573,19 +562,23 @@ public class TimeCapsuleEntryService {
         };
     }
 
-    // [JMG] CAPSULE-7 NONE 초안은 첫 업로드의 MIME 유형으로 IMAGE 또는 VIDEO 모드를 한 번만 선택한다.
-    private void assertEntryMediaModeForUpload(
-            TimeCapsuleEntry entry,
-            TimeCapsuleMediaType requestedMediaType
+    // [JMG] CAPSULE-7 NONE 초안은 대표 이미지 업로드를 시작할 때 IMAGE 모드로 한 번만 전환한다.
+    private void assertEntryCanReceiveRepresentativeImage(
+            TimeCapsuleEntry entry
     ) {
+        if (timeCapsuleMediaMapper.countByEntryIdAndSlotNo(
+                entry.getTimeCapsuleEntryId(),
+                REPRESENTATIVE_IMAGE_SLOT_NO
+        ) > 0) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
+            );
+        }
+
         if (entry.getMediaMode() == TimeCapsuleEntryMediaMode.NONE) {
-            TimeCapsuleEntryMediaMode selectedMediaMode =
-                    TimeCapsuleEntryMediaMode.valueOf(
-                            requestedMediaType.name()
-                    );
             if (timeCapsuleEntryMapper.updateDraftMediaModeIfNone(
                     entry.getTimeCapsuleEntryId(),
-                    selectedMediaMode
+                    TimeCapsuleEntryMediaMode.IMAGE
             ) != 1) {
                 throw new BusinessException(
                         ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
@@ -594,100 +587,23 @@ public class TimeCapsuleEntryService {
             return;
         }
 
-        if (getMediaType(entry) != requestedMediaType) {
+        if (entry.getMediaMode() != TimeCapsuleEntryMediaMode.IMAGE) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
             );
         }
     }
 
-    // [JMG] CAPSULE-7 한 번의 업로드 요청에는 이미지 또는 영상 중 하나의 MIME 유형만 허용한다.
-    private TimeCapsuleMediaType resolveRequestedMediaTypeOrThrow(
-            CreateTimeCapsuleMediaUploadUrlsRequest request
+    // [JMG] CAPSULE-7 대표 이미지는 JPEG·PNG·WebP와 최대 10MiB만 허용한다.
+    private void assertValidRepresentativeImageRequest(
+            CreateTimeCapsuleMediaUploadUrlRequest request,
+            String mimeType
     ) {
-        if (request.getFiles() == null || request.getFiles().isEmpty()) {
-            throw new BusinessException(ErrorCode.BADREQUEST);
-        }
-
-        TimeCapsuleMediaType requestedMediaType = null;
-        for (CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file
-                : request.getFiles()) {
-            if (!file.hasRequiredValue()) {
-                throw new BusinessException(ErrorCode.BADREQUEST);
-            }
-
-            TimeCapsuleMediaType fileMediaType = getMediaTypeByMimeType(
-                    file.normalizedMimeType()
-            );
-            if (requestedMediaType != null
-                    && requestedMediaType != fileMediaType) {
-                throw new BusinessException(
-                        ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
-                );
-            }
-            requestedMediaType = fileMediaType;
-        }
-
-        return requestedMediaType;
-    }
-
-    // [JMG] CAPSULE-7 허용 MIME 타입을 저장 가능한 이미지·영상 유형으로 분류한다.
-    private TimeCapsuleMediaType getMediaTypeByMimeType(String mimeType) {
-        return switch (mimeType) {
-            case "image/jpeg", "image/png", "image/webp" ->
-                    TimeCapsuleMediaType.IMAGE;
-            case "video/mp4", "video/webm" ->
-                    TimeCapsuleMediaType.VIDEO;
-            default -> throw new BusinessException(ErrorCode.BADREQUEST);
-        };
-    }
-
-    // [JMG] CAPSULE-7 파일 개수·슬롯·MIME 타입·파일 크기와 DB 슬롯 중복을 업로드 전에 검증한다.
-    private void assertValidUploadRequest(
-            TimeCapsuleEntry entry,
-            TimeCapsuleMediaType mediaType,
-            CreateTimeCapsuleMediaUploadUrlsRequest request
-    ) {
-        Set<Integer> requestSlots = new HashSet<>();
-        for (CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file
-                : request.getFiles()) {
-            if (!file.hasRequiredValue()
-                    || !requestSlots.add(file.getSlotNo())) {
-                throw new BusinessException(ErrorCode.BADREQUEST);
-            }
-            assertValidMediaFile(mediaType, file);
-            if (timeCapsuleMediaMapper.countByEntryIdAndSlotNo(
-                    entry.getTimeCapsuleEntryId(),
-                    file.getSlotNo()
-            ) > 0) {
-                throw new BusinessException(
-                        ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
-                );
-            }
-        }
-    }
-
-    // [JMG] CAPSULE-7 이미지·영상 각각의 MIME 타입, 최대 파일 크기, 슬롯 범위를 제한한다.
-    private void assertValidMediaFile(
-            TimeCapsuleMediaType mediaType,
-            CreateTimeCapsuleMediaUploadUrlsRequest.FileRequest file
-    ) {
-        String mimeType = file.normalizedMimeType();
-        boolean isImage = mediaType == TimeCapsuleMediaType.IMAGE;
-        boolean hasValidMimeType = isImage
-                ? Set.of("image/jpeg", "image/png", "image/webp")
-                        .contains(mimeType)
-                : Set.of("video/mp4", "video/webm").contains(mimeType);
-        long maximumFileSize = isImage
-                ? MAX_IMAGE_FILE_SIZE
-                : MAX_VIDEO_FILE_SIZE;
-        boolean hasValidSlot = isImage
-                ? file.getSlotNo() >= 1 && file.getSlotNo() <= 3
-                : file.getSlotNo() == 1;
-
-        if (!hasValidMimeType
-                || file.getFileSize() > maximumFileSize
-                || !hasValidSlot) {
+        if (!Set.of("image/jpeg", "image/png", "image/webp")
+                .contains(mimeType)
+                || request.getFileSize() == null
+                || request.getFileSize() < 1
+                || request.getFileSize() > MAX_IMAGE_FILE_SIZE) {
             throw new BusinessException(ErrorCode.BADREQUEST);
         }
     }
@@ -710,8 +626,6 @@ public class TimeCapsuleEntryService {
             case "image/jpeg" -> ".jpg";
             case "image/png" -> ".png";
             case "image/webp" -> ".webp";
-            case "video/mp4" -> ".mp4";
-            case "video/webm" -> ".webm";
             default -> throw new BusinessException(ErrorCode.BADREQUEST);
         };
     }

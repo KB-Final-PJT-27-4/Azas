@@ -139,7 +139,7 @@ time_capsule_entry 1 ── N time_capsule_media
 | 적금 기반 보관함 생성·조회 | `POST /api/v1/accounts/{account_id}/time-capsule`, `GET /api/v1/children/{child_id}/time-capsules` |
 | 보관함·기록 조회 | `GET /api/v1/time-capsules/{time_capsule_id}`, `GET /api/v1/time-capsules/{time_capsule_id}/entries` |
 | 기록 생성·수정·봉인 | `POST /api/v1/time-capsules/{time_capsule_id}/entries`, `PATCH /api/v1/time-capsule-entries/{entry_id}`, `PATCH /api/v1/time-capsule-entries/{entry_id}/seal` |
-| 미디어 업로드 처리 | `POST /api/v1/time-capsule-entries/{entry_id}/media/upload-urls`, `POST /api/v1/time-capsule-entries/{entry_id}/media/complete` |
+| 대표 이미지 업로드 처리 | `POST /api/v1/time-capsule-entries/{entry_id}/media/upload-url`, `POST /api/v1/time-capsule-entries/{entry_id}/media/complete` |
 
 ## 6. 구현 시 하지 말 것
 
