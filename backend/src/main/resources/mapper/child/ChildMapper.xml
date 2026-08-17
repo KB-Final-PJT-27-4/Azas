@@ -104,19 +104,59 @@
     </select>
 
     <!-- TODO: 최신 ERD 반영 후 이체/거래/자동이체 테이블까지 금융 기록 검증 범위 확장 -->
-    <select id="countFinancialHistory" resultType="int">
-        SELECT
-            (
-                SELECT COUNT(*)
-                FROM financial_account
-                WHERE child_id = #{childId}
-            )
-                +
-            (
-                SELECT COUNT(*)
-                FROM time_capsule
-                WHERE child_id = #{childId}
-            )
+    <select id="countFinancialHistory"
+            resultType="int">
+
+        SELECT CASE
+                   WHEN EXISTS (
+                       SELECT 1
+                       FROM financial_account
+                       WHERE child_id = #{childId}
+                   )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM financial_goal
+                           WHERE child_id = #{childId}
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM allowance_request
+                           WHERE child_id = #{childId}
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM account_balance_snapshot
+                           WHERE child_id = #{childId}
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM account_transaction
+                           WHERE child_id = #{childId}
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM financial_transfer
+                           WHERE child_id = #{childId}
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM auto_transfer_schedule
+                           WHERE child_id = #{childId}
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM asset_report
+                           WHERE child_id = #{childId}
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM time_capsule
+                           WHERE child_id = #{childId}
+                       )
+                       THEN 1
+                   ELSE 0
+                   END
+
     </select>
 
     <update id="updateChild"
