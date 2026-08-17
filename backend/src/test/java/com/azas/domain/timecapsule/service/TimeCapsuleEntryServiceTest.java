@@ -494,9 +494,18 @@ class TimeCapsuleEntryServiceTest {
     @Test
     void sealTimeCapsuleEntryRequiresOneActiveImageAndUpdatesAggregates() {
         TimeCapsuleEntry draft = createEntry(
-                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
-                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
                 TimeCapsuleEntryMediaMode.IMAGE
+        );
+        ReflectionTestUtils.setField(
+                draft,
+                "thumbnailObjectKey",
+                "time-capsules/100/entries/1000/media/slot-1.jpg"
         );
         TimeCapsuleEntry sealed = createEntry(
                 1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
@@ -694,5 +703,67 @@ class TimeCapsuleEntryServiceTest {
         );
         ReflectionTestUtils.setField(media, "status", status);
         return media;
+    }
+
+    @Test
+    void sealTimeCapsuleEntryRejectsInvalidEntryId() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.sealTimeCapsuleEntry(
+                        7L,
+                        0L
+                )
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+
+        verify(timeCapsuleEntryMapper, never())
+                .findOwnedByIdForUpdate(
+                        org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.anyLong()
+                );
+    }
+
+    @Test
+    void sealTimeCapsuleEntryRejectsMissingRepresentativeImageReference() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleEntryMapper.countPendingMediaByEntryId(1000L))
+                .willReturn(0);
+        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
+                1000L,
+                TimeCapsuleMediaType.IMAGE
+        )).willReturn(1);
+        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
+                1000L,
+                TimeCapsuleMediaType.VIDEO
+        )).willReturn(0);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.sealTimeCapsuleEntry(
+                        7L,
+                        1000L
+                )
+        );
+
+        assertEquals(
+                ErrorCode.TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET,
+                exception.getErrorCode()
+        );
+
+        verify(timeCapsuleEntryMapper, never()).sealDraftEntry(1000L);
+        verify(timeCapsuleEntryMapper, never())
+                .increaseEntryAggregates(any());
     }
 }
