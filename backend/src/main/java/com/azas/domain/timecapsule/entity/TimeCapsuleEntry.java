@@ -21,7 +21,6 @@ public class TimeCapsuleEntry {
     private LocalDateTime contributedAt;
     private TimeCapsuleEntryMediaMode mediaMode;
     private String thumbnailObjectKey;
-    private String blurredThumbnailObjectKey;
     private TimeCapsuleEntryStatus status;
     private LocalDateTime sealedAt;
     private LocalDateTime createdAt;

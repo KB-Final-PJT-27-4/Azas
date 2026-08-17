@@ -17,7 +17,6 @@
         <result property="contributedAt" column="contributed_at"/>
         <result property="mediaMode" column="media_mode"/>
         <result property="thumbnailObjectKey" column="thumbnail_object_key"/>
-        <result property="blurredThumbnailObjectKey" column="blurred_thumbnail_object_key"/>
         <result property="status" column="status"/>
         <result property="sealedAt" column="sealed_at"/>
         <result property="createdAt" column="created_at"/>
@@ -46,7 +45,6 @@
             tce.contributed_at,
             tce.media_mode,
             tce.thumbnail_object_key,
-            tce.blurred_thumbnail_object_key,
             tce.status,
             tce.sealed_at,
             tce.created_at,
@@ -69,7 +67,6 @@
             tce.contributed_at,
             tce.media_mode,
             tce.thumbnail_object_key,
-            tce.blurred_thumbnail_object_key,
             tce.status,
             tce.sealed_at,
             tce.created_at,
@@ -90,7 +87,6 @@
             tce.contributed_at,
             tce.media_mode,
             tce.thumbnail_object_key,
-            tce.blurred_thumbnail_object_key,
             tce.status,
             tce.sealed_at,
             tce.created_at,
@@ -127,7 +123,6 @@
             tce.contributed_at,
             tce.media_mode,
             tce.thumbnail_object_key,
-            tce.blurred_thumbnail_object_key,
             tce.status,
             tce.sealed_at,
             tce.created_at,
@@ -164,7 +159,6 @@
             tce.contributed_at,
             tce.media_mode,
             tce.thumbnail_object_key,
-            tce.blurred_thumbnail_object_key,
             tce.status,
             tce.sealed_at,
             tce.created_at,
@@ -202,7 +196,6 @@
             tce.contributed_at,
             tce.media_mode,
             tce.thumbnail_object_key,
-            tce.blurred_thumbnail_object_key,
             tce.status,
             tce.sealed_at,
             tce.created_at,
