@@ -1,18 +1,15 @@
 ﻿<script setup lang="ts">
-import { computed, ref, type Component } from 'vue'
+import { computed, type Component } from 'vue'
 import { CheckSquare, Coins, Droplet } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import { childMissions } from '@/mocks/childFinanceFlow'
 
-const selectedTab = ref<'progress' | 'done'>('progress')
-const requestedMissionIds = ref<string[]>([])
 const missions = computed(() =>
-  childMissions.filter((mission) =>
-    selectedTab.value === 'progress'
-      ? !requestedMissionIds.value.includes(mission.id)
-      : requestedMissionIds.value.includes(mission.id),
-  ),
+  [...childMissions].sort((current, next) => {
+    if (current.status === next.status) return 0
+    return current.status === 'completed' ? 1 : -1
+  }),
 )
 
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
@@ -34,78 +31,71 @@ const missionVisuals: Record<string, { icon: Component; iconClass: string }> = {
     iconClass: 'bg-[#eef8ff] text-[var(--color-brand-primary)]',
   },
 }
-const getMissionVisual = (missionId: string) =>
-  missionVisuals[missionId] ?? defaultMissionVisual
-const requestMissionComplete = (missionId: string) => {
-  if (!requestedMissionIds.value.includes(missionId)) {
-    requestedMissionIds.value.push(missionId)
-  }
-}
+const getMissionVisual = (missionId: string) => missionVisuals[missionId] ?? defaultMissionVisual
+const getStatusLabel = (status: string) => (status === 'completed' ? '완료됨' : '진행 중')
 </script>
 
 <template>
   <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-5 pb-[104px] text-[var(--color-text-primary)]">
-    <div class="grid grid-cols-2 gap-2 rounded-[16px] bg-[#f4f8fb] p-1">
-      <button
-        class="h-11 rounded-[13px] border-0 text-[15px] font-bold transition-colors"
-        :class="selectedTab === 'progress' ? 'bg-white text-[var(--color-brand-primary)] shadow-[0_6px_14px_rgb(110_122_138_/_12%)]' : 'bg-transparent text-[var(--color-text-secondary)]'"
-        type="button"
-        @click="selectedTab = 'progress'"
-      >
-        진행 중
-      </button>
-      <button
-        class="h-11 rounded-[13px] border-0 text-[15px] font-bold transition-colors"
-        :class="selectedTab === 'done' ? 'bg-white text-[var(--color-brand-primary)] shadow-[0_6px_14px_rgb(110_122_138_/_12%)]' : 'bg-transparent text-[var(--color-text-secondary)]'"
-        type="button"
-        @click="selectedTab = 'done'"
-      >
-        완료
-      </button>
-    </div>
-
-    <section class="mt-6 grid gap-4">
+    <section class="grid gap-4">
       <article
         v-for="mission in missions"
         :key="mission.id"
-        class="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-[16px] border border-[var(--color-border)] bg-white px-4 py-4 shadow-[0_8px_20px_rgb(110_122_138_/_6%)]"
+        class="mission-ticket"
+        :class="
+          mission.status === 'completed'
+            ? 'mission-ticket--completed'
+            : 'mission-ticket--active'
+        "
       >
-        <div class="grid size-10 place-items-center rounded-[12px]" :class="getMissionVisual(mission.id).iconClass">
-          <component
-            :is="getMissionVisual(mission.id).icon"
-            :size="20"
-            :stroke-width="2.4"
-            aria-hidden="true"
-          />
+        <div class="mission-ticket__content">
+          <div
+            class="grid size-11 place-items-center rounded-[14px]"
+            :class="
+              mission.status === 'completed'
+                ? 'bg-[#e4e8ec] text-[#8b98a4]'
+                : getMissionVisual(mission.id).iconClass
+            "
+          >
+            <component
+              :is="getMissionVisual(mission.id).icon"
+              :size="21"
+              :stroke-width="2.4"
+              aria-hidden="true"
+            />
+          </div>
+          <div class="min-w-0">
+            <strong
+              class="block truncate text-[17px] leading-snug font-bold"
+              :class="mission.status === 'completed' ? 'text-[#7d8790]' : 'text-[var(--color-text-primary)]'"
+            >
+              {{ mission.title }}
+            </strong>
+            <span
+              class="mt-1 block truncate text-[14px] leading-snug"
+              :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-text-secondary)]'"
+            >
+              {{ mission.description }}
+            </span>
+          </div>
         </div>
-        <div class="min-w-0">
-          <strong class="block truncate text-[17px] leading-snug font-bold text-[var(--color-text-primary)]">
-            {{ mission.title }}
-          </strong>
-          <span class="mt-1 block truncate text-[14px] leading-snug text-[var(--color-text-secondary)]">
-            {{ mission.description }}
-          </span>
-        </div>
-        <div class="grid justify-items-end gap-2">
-          <strong class="text-[14px] leading-none font-bold text-[var(--color-brand-primary)]">
+
+        <div class="mission-ticket__reward">
+          <strong
+            class="text-[18px] leading-tight font-extrabold"
+            :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-brand-primary)]'"
+          >
             {{ formatCurrency(mission.reward) }}
           </strong>
-          <button
-            v-if="selectedTab === 'progress' && mission.status === 'completed'"
-            class="h-[34px] rounded-[10px] border border-[#bfeaff] bg-[#f7fdff] px-3 text-[14px] font-bold text-[var(--color-brand-primary)]"
-            type="button"
-            @click="requestMissionComplete(mission.id)"
-          >
-            완료 요청하기
-          </button>
           <span
-            v-else-if="selectedTab === 'progress'"
-            class="text-[14px] font-bold text-[var(--color-text-secondary)]"
+            class="text-[13px] leading-none font-bold"
+            :class="
+              mission.status === 'completed'
+                ? 'text-[#77828c]'
+                : 'text-[var(--color-text-secondary)]'
+            "
           >
-            진행 중
-          </span>
-          <span v-else class="text-[14px] font-bold text-[var(--color-text-secondary)]">
-            확인 대기
+            {{ getStatusLabel(mission.status) }}
           </span>
         </div>
       </article>
@@ -121,3 +111,66 @@ const requestMissionComplete = (missionId: string) => {
     <ChildBottomNavigation />
   </main>
 </template>
+
+<style scoped>
+.mission-ticket {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 94px;
+  min-height: 92px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 10px 24px rgb(110 122 138 / 7%);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
+}
+
+.mission-ticket__content {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px 16px;
+}
+
+.mission-ticket__reward {
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 16px 12px;
+}
+
+.mission-ticket__reward::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  content: '';
+  background-image: repeating-linear-gradient(
+    to bottom,
+    #8f9dab 0,
+    #8f9dab 10px,
+    transparent 10px,
+    transparent 18px
+  );
+}
+
+.mission-ticket--active {
+  border-color: #dce8ee;
+}
+
+.mission-ticket--completed {
+  border-color: #e5e9ed;
+  background: #f5f7f8;
+  opacity: 0.78;
+}
+</style>
