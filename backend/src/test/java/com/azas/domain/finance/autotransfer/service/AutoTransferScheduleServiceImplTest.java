@@ -12,6 +12,12 @@ import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListQuery;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListRow;
+
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -23,7 +29,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -373,6 +378,117 @@ class AutoTransferScheduleServiceImplTest {
         row.setStatus(AutoTransferScheduleStatus.ACTIVE);
         row.setCreatedAt(
                 LocalDateTime.of(2026, 8, 17, 6, 0)
+        );
+
+        return row;
+    }
+
+    @Test
+    void 자녀_자동이체_일정_목록을_커서로_조회한다() {
+        when(mapper.countChildAccess(1L, 1L))
+                .thenReturn(1);
+
+        when(mapper.findSchedules(any(
+                AutoTransferScheduleListQuery.class
+        ))).thenReturn(
+                List.of(
+                        listRow(30L),
+                        listRow(29L),
+                        listRow(28L)
+                )
+        );
+
+        var response = service.getSchedules(
+                1L,
+                1L,
+                "ACTIVE",
+                null,
+                2
+        );
+
+        assertEquals(2, response.getItems().size());
+        assertEquals("29", response.getNextCursor());
+        assertEquals(true, response.isHasNext());
+        assertEquals(
+                30L,
+                response.getItems()
+                        .get(0)
+                        .getAutoTransferScheduleId()
+        );
+    }
+
+    @Test
+    void 자녀_접근권한이_없으면_목록조회를_거절한다() {
+        when(mapper.countChildAccess(1L, 99L))
+                .thenReturn(0);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.getSchedules(
+                        99L,
+                        1L,
+                        null,
+                        null,
+                        null
+                )
+        );
+
+        assertEquals(
+                ErrorCode.CHILD_ACCESS_DENIED,
+                exception.getErrorCode()
+        );
+
+        verify(mapper, never())
+                .findSchedules(any());
+    }
+
+    @Test
+    void 잘못된_상태값은_400으로_거절한다() {
+        when(mapper.countChildAccess(1L, 1L))
+                .thenReturn(1);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.getSchedules(
+                        1L,
+                        1L,
+                        "UNKNOWN",
+                        null,
+                        20
+                )
+        );
+
+        assertEquals(
+                ErrorCode.BADREQUEST,
+                exception.getErrorCode()
+        );
+    }
+
+    private AutoTransferScheduleListRow listRow(
+            Long scheduleId
+    ) {
+        AutoTransferScheduleListRow row =
+                new AutoTransferScheduleListRow();
+
+        row.setAutoTransferScheduleId(scheduleId);
+        row.setFinancialGoalId(1L);
+        row.setGoalTitle("대학자금 마련");
+        row.setAmount(new BigDecimal("80000"));
+        row.setFrequency(
+                AutoTransferFrequency.MONTHLY
+        );
+        row.setTransferDay(10);
+        row.setNextTransferAt(
+                LocalDateTime.of(
+                        2026,
+                        9,
+                        10,
+                        0,
+                        0
+                )
+        );
+        row.setStatus(
+                AutoTransferScheduleStatus.ACTIVE
         );
 
         return row;

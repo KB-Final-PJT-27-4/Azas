@@ -16,12 +16,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListResponse;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.validation.Valid;
 
 @Api(tags = "자동이체")
 @RestController
-@RequestMapping("/api/v1/auto-transfer-schedules")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class AutoTransferScheduleController {
 
@@ -29,7 +33,7 @@ public class AutoTransferScheduleController {
     private final AccessTokenMemberResolver accessTokenMemberResolver;
 
     @ApiOperation("자동이체 일정 등록")
-    @PostMapping
+    @PostMapping("/auto-transfer-schedules")
     public ResponseEntity<AutoTransferScheduleResponse> createSchedule(
             @RequestHeader(
                     value = "Authorization",
@@ -57,5 +61,54 @@ public class AutoTransferScheduleController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @ApiOperation("자녀 자동이체 일정 목록 조회")
+    @ApiResponses({
+            @ApiResponse(
+                    code = 200,
+                    message = "자동이체 일정 목록 조회 성공",
+                    response = AutoTransferScheduleListResponse.class
+            ),
+            @ApiResponse(code = 400, message = "조회 조건 오류"),
+            @ApiResponse(code = 403, message = "자녀 접근 권한 없음")
+    })
+    @GetMapping(
+            "/children/{child_id}/auto-transfer-schedules"
+    )
+    public ResponseEntity<AutoTransferScheduleListResponse>
+    getSchedules(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader,
+            @PathVariable("child_id") Long childId,
+            @RequestParam(
+                    value = "status",
+                    required = false
+            ) String status,
+            @RequestParam(
+                    value = "cursor",
+                    required = false
+            ) String cursor,
+            @RequestParam(
+                    value = "size",
+                    required = false
+            ) Integer size
+    ) {
+        Long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        return ResponseEntity.ok(
+                service.getSchedules(
+                        memberId,
+                        childId,
+                        status,
+                        cursor,
+                        size
+                )
+        );
     }
 }

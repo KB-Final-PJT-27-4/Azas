@@ -18,6 +18,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListItemResponse;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListResponse;
+
+import java.util.List;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -218,5 +224,78 @@ class AutoTransferScheduleControllerTest {
                                         """
                         )
         ).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 자녀_자동이체_일정_목록을_조회한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(1L);
+
+        AutoTransferScheduleListItemResponse item =
+                new AutoTransferScheduleListItemResponse(
+                        21L,
+                        1L,
+                        "대학자금 마련",
+                        new BigDecimal("80000"),
+                        AutoTransferFrequency.MONTHLY,
+                        10,
+                        Instant.parse(
+                                "2026-09-10T00:00:00Z"
+                        ),
+                        null,
+                        null,
+                        AutoTransferScheduleStatus.ACTIVE
+                );
+
+        given(service.getSchedules(
+                1L,
+                1L,
+                "ACTIVE",
+                null,
+                20
+        )).willReturn(
+                new AutoTransferScheduleListResponse(
+                        List.of(item),
+                        null,
+                        false
+                )
+        );
+
+        mockMvc.perform(
+                        get(
+                                "/api/v1/children/1/"
+                                        + "auto-transfer-schedules"
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .param("status", "ACTIVE")
+                                .param("size", "20")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.items[0].auto_transfer_schedule_id"
+                ).value(21))
+                .andExpect(jsonPath(
+                        "$.items[0].financial_goal_id"
+                ).value(1))
+                .andExpect(jsonPath(
+                        "$.items[0].goal_title"
+                ).value("대학자금 마련"))
+                .andExpect(jsonPath(
+                        "$.items[0].next_transfer_at"
+                ).value("2026-09-10T00:00:00Z"))
+                .andExpect(jsonPath(
+                        "$.items[0].status"
+                ).value("ACTIVE"))
+                .andExpect(jsonPath(
+                        "$.next_cursor"
+                ).doesNotExist())
+                .andExpect(jsonPath(
+                        "$.has_next"
+                ).value(false));
     }
 }

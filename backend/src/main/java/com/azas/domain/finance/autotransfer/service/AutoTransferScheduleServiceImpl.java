@@ -1,10 +1,6 @@
 package com.azas.domain.finance.autotransfer.service;
 
-import com.azas.domain.finance.autotransfer.dto.AutoTransferAccountRow;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleInsertCommand;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleResponse;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleRow;
-import com.azas.domain.finance.autotransfer.dto.CreateAutoTransferScheduleRequest;
+import com.azas.domain.finance.autotransfer.dto.*;
 import com.azas.domain.finance.autotransfer.entity.AutoTransferFrequency;
 import com.azas.domain.finance.autotransfer.entity.AutoTransferScheduleStatus;
 import com.azas.domain.finance.autotransfer.mapper.AutoTransferScheduleMapper;
@@ -14,6 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListItemResponse;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListQuery;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListResponse;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListRow;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -30,6 +34,8 @@ public class AutoTransferScheduleServiceImpl
 
     private final AutoTransferScheduleMapper mapper;
     private final Clock clock;
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
 
     @Autowired
     public AutoTransferScheduleServiceImpl(
@@ -379,4 +385,130 @@ public class AutoTransferScheduleServiceImpl
                 ? null
                 : value.toInstant(ZoneOffset.UTC);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AutoTransferScheduleListResponse getSchedules(
+            Long memberId,
+            Long childId,
+            String status,
+            String cursor,
+            Integer size
+    ) {
+        if (childId == null || childId <= 0) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        validateChildAccess(memberId, childId);
+
+        AutoTransferScheduleStatus parsedStatus =
+                parseScheduleStatus(status);
+        Long cursorId = parseCursor(cursor);
+        int pageSize = normalizePageSize(size);
+
+        AutoTransferScheduleListQuery query =
+                new AutoTransferScheduleListQuery(
+                        childId,
+                        parsedStatus,
+                        cursorId,
+                        pageSize + 1
+                );
+
+        List<AutoTransferScheduleListRow> rows =
+                mapper.findSchedules(query);
+
+        boolean hasNext = rows.size() > pageSize;
+
+        List<AutoTransferScheduleListRow> pageRows =
+                hasNext
+                        ? new ArrayList<>(
+                        rows.subList(0, pageSize)
+                )
+                        : rows;
+
+        List<AutoTransferScheduleListItemResponse> items =
+                pageRows.stream()
+                        .map(this::toListItemResponse)
+                        .toList();
+
+        String nextCursor =
+                hasNext && !pageRows.isEmpty()
+                        ? String.valueOf(
+                        pageRows.get(
+                                pageRows.size() - 1
+                        ).getAutoTransferScheduleId()
+                )
+                        : null;
+
+        return new AutoTransferScheduleListResponse(
+                items,
+                nextCursor,
+                hasNext
+        );
+    }
+
+    private AutoTransferScheduleStatus parseScheduleStatus(
+            String value
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            return AutoTransferScheduleStatus.valueOf(
+                    value.toUpperCase(Locale.ROOT)
+            );
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+    }
+
+    private Long parseCursor(String cursor) {
+        if (cursor == null || cursor.isBlank()) {
+            return null;
+        }
+
+        try {
+            long value = Long.parseLong(cursor);
+
+            if (value <= 0) {
+                throw new NumberFormatException();
+            }
+
+            return value;
+        } catch (NumberFormatException exception) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+    }
+
+    private int normalizePageSize(Integer size) {
+        if (size == null) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        if (size <= 0 || size > MAX_PAGE_SIZE) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        return size;
+    }
+
+    private AutoTransferScheduleListItemResponse
+    toListItemResponse(
+            AutoTransferScheduleListRow row
+    ) {
+        return new AutoTransferScheduleListItemResponse(
+                row.getAutoTransferScheduleId(),
+                row.getFinancialGoalId(),
+                row.getGoalTitle(),
+                row.getAmount(),
+                row.getFrequency(),
+                row.getTransferDay(),
+                toInstant(row.getNextTransferAt()),
+                row.getLastTransferStatus(),
+                toInstant(row.getLastTransferredAt()),
+                row.getStatus()
+        );
+    }
+
 }

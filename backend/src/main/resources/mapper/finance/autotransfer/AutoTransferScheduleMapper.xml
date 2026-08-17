@@ -113,4 +113,32 @@
                  )
     </insert>
 
+    <select id="findSchedules"
+            resultType="com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListRow">
+        SELECT ats.auto_transfer_schedule_id AS autoTransferScheduleId,
+        ats.financial_goal_id AS financialGoalId,
+        fg.title AS goalTitle,
+        ats.amount,
+        ats.frequency,
+        ats.transfer_day AS transferDay,
+        ats.next_transfer_at AS nextTransferAt,
+        ats.last_transfer_status AS lastTransferStatus,
+        ats.last_transferred_at AS lastTransferredAt,
+        ats.status
+        FROM auto_transfer_schedule ats
+        INNER JOIN financial_goal fg
+        ON fg.financial_goal_id = ats.financial_goal_id
+        WHERE ats.child_id = #{childId}
+
+        <if test="status != null">
+            AND ats.status = #{status}
+        </if>
+
+        <if test="cursorId != null">
+            AND ats.auto_transfer_schedule_id <![CDATA[<]]> #{cursorId}
+        </if>
+
+        ORDER BY ats.auto_transfer_schedule_id DESC
+        LIMIT #{limit}
+    </select>
 </mapper>

@@ -1,13 +1,12 @@
 package com.azas.domain.finance.autotransfer.mapper;
 
-import com.azas.domain.finance.autotransfer.dto.AutoTransferAccountRow;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleInsertCommand;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleRow;
+import com.azas.domain.finance.autotransfer.dto.*;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Mapper
 public interface AutoTransferScheduleMapper {
@@ -38,4 +37,8 @@ public interface AutoTransferScheduleMapper {
     );
 
     int insertSchedule(AutoTransferScheduleInsertCommand command);
+
+    List<AutoTransferScheduleListRow> findSchedules(
+            AutoTransferScheduleListQuery query
+    );
 }
