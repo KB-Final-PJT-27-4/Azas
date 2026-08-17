@@ -17,6 +17,7 @@ import {
 const router = useRouter()
 
 const selectedInfoItem = ref<ChecklistItem | null>(null)
+const pendingRouteItem = ref<ChecklistItem | null>(null)
 const isCompleteSheetOpen = ref(false)
 const selectedStageId = ref(currentChildLifecycle.childStatus)
 const checkedItemIds = ref(
@@ -98,8 +99,20 @@ const openChecklistAction = (item: ChecklistItem) => {
   }
 
   if (item.route) {
-    router.push(item.route)
+    pendingRouteItem.value = item
   }
+}
+
+const closeRouteConfirm = () => {
+  pendingRouteItem.value = null
+}
+
+const confirmRouteNavigation = () => {
+  if (!pendingRouteItem.value?.route) return
+
+  const route = pendingRouteItem.value.route
+  pendingRouteItem.value = null
+  router.push(route)
 }
 
 const closeInfoSheet = () => {
@@ -206,27 +219,24 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
       <article
         class="rounded-[22px] border border-[#d5e8f8] bg-[#EBFAFF] px-5 py-5 shadow-[0_14px_34px_rgb(31_72_97_/_7%),inset_0_0_0_1px_rgb(255_255_255_/_70%)]"
       >
-        <div class="grid grid-cols-[1fr_auto] items-center gap-4">
-          <div class="min-w-0">
-            <span class="block text-[12px] font-bold text-[var(--color-text-secondary)]">
-              현재 단계
-            </span>
-            <strong class="mt-1 block text-[18px] leading-[1.35] font-bold text-[#55C0F4]">
-              {{ currentStage.ageRange }} · {{ currentStage.title }}
-            </strong>
-            <span class="mt-2 block text-[13px] leading-[1.45] text-[var(--color-text-secondary)]">
-              {{ currentStage.description }}
-            </span>
-          </div>
-          <strong class="self-end text-[22px] font-bold text-[#2BABE8]">
-            {{ progressPercent }}%
+        <div class="min-w-0">
+          <strong class="block text-[18px] leading-[1.35] font-bold text-[#55C0F4]">
+            {{ currentStage.ageRange }} · {{ currentStage.title }}
           </strong>
+          <span class="mt-2 block text-[13px] leading-[1.45] text-[var(--color-text-secondary)]">
+            {{ currentStage.description }}
+          </span>
         </div>
 
-        <div class="mt-4 grid grid-cols-[auto_1fr] items-center gap-4">
-          <strong class="text-[17px] font-bold text-[var(--color-text-primary)]">
-            {{ completedCount }} / {{ totalCount }} 완료
-          </strong>
+        <div class="mt-5">
+          <div class="mb-2 flex items-center justify-between gap-3">
+            <strong class="text-[17px] font-bold text-[var(--color-text-primary)]">
+              {{ completedCount }} / {{ totalCount }} 완료
+            </strong>
+            <strong class="text-[17px] font-bold text-[#2BABE8]">
+              {{ progressPercent }}%
+            </strong>
+          </div>
           <div class="h-2 overflow-hidden rounded-full bg-[#e9eef3]">
             <div
               class="h-full rounded-full bg-[#55C0F4] transition-[width] duration-300"
@@ -238,14 +248,11 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
     </section>
 
     <section class="px-5 pb-7">
-      <div class="flex items-end justify-between gap-4">
+      <div class="flex items-center justify-between gap-4">
         <div>
           <h2 class="m-0 text-[24px] font-bold text-[var(--color-text-primary)]">
             체크리스트
           </h2>
-          <p class="mt-1 mb-0 text-[13px] text-[var(--color-text-secondary)]">
-            지금 시기에 필요한 준비를 확인해보세요.
-          </p>
         </div>
         <span class="shrink-0 text-[13px] text-[var(--color-text-secondary)]">
           전체 {{ totalCount }}개
@@ -261,7 +268,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
           class="border-b border-[var(--color-border)] last:border-b-0"
         >
           <div
-            class="grid w-full cursor-pointer grid-cols-[26px_1fr_auto] items-center gap-3 bg-white px-4 py-4 text-left transition-colors active:bg-[#f7fbfe]"
+            class="grid min-h-[104px] w-full cursor-pointer grid-cols-[26px_minmax(0,1fr)_68px] items-center gap-3 bg-white py-0 pr-0 pl-4 text-left transition-colors active:bg-[#f7fbfe]"
             @click="toggleChecklistItem(item)"
           >
             <button
@@ -279,7 +286,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
             >
               <Check :size="14" :stroke-width="3" />
             </button>
-            <span class="min-w-0">
+            <span class="min-w-0 py-4">
               <span
                 class="mb-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold"
                 :class="getCategoryTone(item.category)"
@@ -297,14 +304,18 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
             </span>
             <button
               v-if="hasChecklistAction(item)"
-              class="grid size-8 shrink-0 place-items-center rounded-full border-0 bg-transparent p-0 text-[#8A95A3] transition-colors active:bg-[#f7fbfe]"
+              class="grid h-full min-h-[104px] w-full shrink-0 place-items-center border-0 bg-transparent p-0 text-[#8A95A3] transition-colors active:bg-[#f7fbfe]"
               type="button"
               :aria-label="`${item.title} 바로가기`"
               @click.stop="openChecklistAction(item)"
             >
               <ChevronRight :size="22" :stroke-width="3" />
             </button>
-            <span v-else class="size-[21px]" aria-hidden="true"></span>
+            <span
+              v-else
+              class="h-full min-h-[104px]"
+              aria-hidden="true"
+            ></span>
           </div>
         </li>
       </ul>
@@ -354,9 +365,6 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
               >
                 {{ selectedInfoItem.infoTitle }}
               </h2>
-              <p class="mt-3 mb-0 text-[14px] leading-[1.55] text-[var(--color-text-secondary)]">
-                {{ selectedInfoItem.infoDescription }}
-              </p>
             </div>
 
             <div class="mt-6">
@@ -384,22 +392,12 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                       >
                         {{ info.description }}
                       </span>
-                      <span class="mt-1 block text-[12px] font-bold text-[var(--color-selected-text)]">
-                        {{ info.actionLabel }}
-                      </span>
                     </span>
                     <ChevronRight :size="18" class="text-[#9cadba]" />
                   </button>
                 </li>
               </ul>
             </div>
-
-            <p
-              v-if="selectedInfoItem.infoNotice"
-              class="mt-4 rounded-[14px] bg-[#f6f8fa] px-4 py-3 text-[12px] leading-[1.5] text-[var(--color-text-secondary)]"
-            >
-              {{ selectedInfoItem.infoNotice }}
-            </p>
 
             <div class="mt-5 grid grid-cols-[0.9fr_1.4fr] gap-3">
               <button
@@ -419,6 +417,48 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                   {{ infoFullViewLabel }}
                 </span>
                 지원정보 전체 보기
+              </button>
+            </div>
+          </section>
+        </div>
+      </Transition>
+
+      <Transition name="checklist-modal">
+        <div
+          v-if="pendingRouteItem"
+          class="fixed inset-0 z-[var(--z-index-overlay)] grid place-items-center bg-black/40 px-6"
+          role="presentation"
+          @click.self="closeRouteConfirm"
+        >
+          <section
+            class="w-full max-w-[320px] rounded-[22px] bg-white px-5 py-5 text-center shadow-[0_18px_40px_rgb(15_23_42_/_18%)]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="route-confirm-title"
+          >
+            <h2
+              id="route-confirm-title"
+              class="m-0 text-[19px] font-bold text-[var(--color-text-primary)]"
+            >
+              페이지로 이동할까요?
+            </h2>
+            <p class="mt-3 mb-0 text-[14px] leading-[1.5] text-[var(--color-text-secondary)]">
+              {{ pendingRouteItem.title }} 관련 화면으로 이동합니다.
+            </p>
+            <div class="mt-5 grid grid-cols-2 gap-3">
+              <button
+                class="h-12 rounded-[14px] border-0 bg-[#f1f5f8] text-[15px] font-bold text-[var(--color-text-secondary)]"
+                type="button"
+                @click="closeRouteConfirm"
+              >
+                닫기
+              </button>
+              <button
+                class="h-12 rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-bold text-white"
+                type="button"
+                @click="confirmRouteNavigation"
+              >
+                확인
               </button>
             </div>
           </section>
@@ -532,5 +572,24 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
 .checklist-sheet-leave-to .checklist-sheet-panel {
   transform: translateY(100%);
 }
-</style>
 
+.checklist-modal-enter-active,
+.checklist-modal-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.checklist-modal-enter-active > section,
+.checklist-modal-leave-active > section {
+  transition: transform 180ms ease;
+}
+
+.checklist-modal-enter-from,
+.checklist-modal-leave-to {
+  opacity: 0;
+}
+
+.checklist-modal-enter-from > section,
+.checklist-modal-leave-to > section {
+  transform: translateY(8px) scale(0.98);
+}
+</style>
