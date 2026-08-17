@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -297,69 +296,71 @@ public class TimeCapsuleEntryService {
             long timeCapsuleEntryId,
             CompleteTimeCapsuleMediaUploadRequest request
     ) {
+        if (timeCapsuleEntryId < 1
+                || request == null
+                || request.getTimeCapsuleMediaId() == null
+                || request.getTimeCapsuleMediaId() < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
         TimeCapsuleEntry entry = getOwnedTimeCapsuleEntryForUpdateOrThrow(
                 requesterMemberId,
                 timeCapsuleEntryId
         );
         assertDraftEntry(entry);
 
-        List<Long> mediaIds = getDistinctMediaIdsOrThrow(request);
-        List<TimeCapsuleMedia> media =
-                timeCapsuleMediaMapper.findByEntryIdAndIdsForUpdate(
+        long timeCapsuleMediaId = request.getTimeCapsuleMediaId();
+        TimeCapsuleMedia media =
+                timeCapsuleMediaMapper.findByEntryIdAndIdForUpdate(
                         timeCapsuleEntryId,
-                        mediaIds
+                        timeCapsuleMediaId
                 );
-        if (media.size() != mediaIds.size()) {
+        if (media == null) {
             throw new BusinessException(ErrorCode.TIME_CAPSULE_MEDIA_NOT_FOUND);
         }
 
-        TimeCapsuleMediaType expectedMediaType = getMediaType(entry);
-        for (TimeCapsuleMedia currentMedia : media) {
-            if (currentMedia.getStatus()
-                    != TimeCapsuleMediaStatus.PENDING_UPLOAD
-                    || currentMedia.getMediaType() != expectedMediaType) {
-                throw new BusinessException(
-                        ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
-                );
-            }
-
-            TimeCapsuleObjectStorage.StoredObjectMetadata metadata =
-                    timeCapsuleObjectStorage.getObjectMetadata(
-                            currentMedia.getObjectKey()
-                    );
-            if (!currentMedia.matchesUploadedObject(
-                    metadata.mimeType(),
-                    metadata.fileSize()
-            )) {
-                throw new BusinessException(
-                        ErrorCode.TIME_CAPSULE_MEDIA_OBJECT_INVALID
-                );
-            }
-        }
-
-        if (timeCapsuleMediaMapper.activatePendingMedia(mediaIds)
-                != mediaIds.size()) {
+        if (entry.getMediaMode() != TimeCapsuleEntryMediaMode.IMAGE
+                || media.getMediaType() != TimeCapsuleMediaType.IMAGE) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
             );
         }
-        media.forEach(TimeCapsuleMedia::activate);
 
-        boolean thumbnailReady = entry.getThumbnailObjectKey() != null;
-        if (expectedMediaType == TimeCapsuleMediaType.IMAGE) {
-            timeCapsuleMediaMapper.setThumbnailIfAbsent(
-                    timeCapsuleEntryId,
-                    media.get(0).getObjectKey()
+        if (media.getStatus() == TimeCapsuleMediaStatus.ACTIVE) {
+            return new CompleteTimeCapsuleMediaUploadResponse(media);
+        }
+        if (media.getStatus() != TimeCapsuleMediaStatus.PENDING_UPLOAD) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
             );
-            thumbnailReady = true;
         }
 
-        return new CompleteTimeCapsuleMediaUploadResponse(
-                entry,
-                timeCapsuleMediaMapper.countActiveByEntryId(timeCapsuleEntryId),
-                thumbnailReady,
-                media
+        TimeCapsuleObjectStorage.StoredObjectMetadata metadata =
+                timeCapsuleObjectStorage.getObjectMetadata(
+                        media.getObjectKey()
+                );
+        if (!media.matchesUploadedObject(
+                metadata.mimeType(),
+                metadata.fileSize()
+        )) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_MEDIA_OBJECT_INVALID
+            );
+        }
+
+        if (timeCapsuleMediaMapper.activatePendingMedia(timeCapsuleMediaId)
+                != 1) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
+            );
+        }
+        media.activate();
+        timeCapsuleMediaMapper.setThumbnailIfAbsent(
+                timeCapsuleEntryId,
+                media.getObjectKey()
         );
+
+        return new CompleteTimeCapsuleMediaUploadResponse(media);
     }
 
     // [JMG] CAPSULE-4 부모에게 접근 가능한 보관함만 반환해 보관함 존재 여부를 보호한다.
@@ -551,17 +552,6 @@ public class TimeCapsuleEntryService {
         }
     }
 
-    // [JMG] CAPSULE-7 엔트리의 IMAGE·VIDEO·NONE 미디어 모드를 실제 S3 미디어 유형으로 변환한다.
-    private TimeCapsuleMediaType getMediaType(TimeCapsuleEntry entry) {
-        return switch (entry.getMediaMode()) {
-            case IMAGE -> TimeCapsuleMediaType.IMAGE;
-            case VIDEO -> TimeCapsuleMediaType.VIDEO;
-            case NONE -> throw new BusinessException(
-                    ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
-            );
-        };
-    }
-
     // [JMG] CAPSULE-7 NONE 초안은 대표 이미지 업로드를 시작할 때 IMAGE 모드로 한 번만 전환한다.
     private void assertEntryCanReceiveRepresentativeImage(
             TimeCapsuleEntry entry
@@ -631,21 +621,6 @@ public class TimeCapsuleEntryService {
     }
 
     // [JMG] CAPSULE-8 중복된 미디어 ID를 제거하지 않고 오류로 처리해 부분 완료를 방지한다.
-    private List<Long> getDistinctMediaIdsOrThrow(
-            CompleteTimeCapsuleMediaUploadRequest request
-    ) {
-        if (request.getMediaIds() == null || request.getMediaIds().isEmpty()) {
-            throw new BusinessException(ErrorCode.BADREQUEST);
-        }
-
-        Set<Long> distinctIds = new HashSet<>(request.getMediaIds());
-        if (distinctIds.size() != request.getMediaIds().size()) {
-            throw new BusinessException(ErrorCode.BADREQUEST);
-        }
-
-        return List.copyOf(request.getMediaIds());
-    }
-
     // [JMG] CAPSULE-5 DB 고유 제약과 재조회로 이체 이벤트 재시도에도 엔트리를 하나만 유지한다.
     private void insertEntryOrThrow(TimeCapsuleEntry entry) {
         try {
