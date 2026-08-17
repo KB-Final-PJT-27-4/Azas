@@ -13,15 +13,16 @@ class FinancialProductSeedSchemaTest {
     @Test
     void schemaDefinesProductListDisplayAndContractPeriodColumns() throws Exception {
         String schema = readResource("db/schema.sql");
+        String normalizedSchema = schema.replaceAll("\\s+", " ");
 
-        assertTrue(schema.contains("highlight_label VARCHAR(50) NULL"));
-        assertTrue(schema.contains("display_badges_json JSON NOT NULL"));
-        assertTrue(schema.contains("min_contract_period_months INT NULL"));
-        assertTrue(schema.contains("max_contract_period_months INT NULL"));
-        assertTrue(schema.contains("curation_reason VARCHAR(1000) NULL"));
-        assertTrue(schema.contains("interest_rate_reference VARCHAR(200) NULL"));
-        assertTrue(schema.contains("join_termination_method VARCHAR(1000) NULL"));
-        assertTrue(schema.contains("ck_financial_product_contract_period"));
+        assertTrue(normalizedSchema.contains("highlight_label VARCHAR(50) NULL"));
+        assertTrue(normalizedSchema.contains("display_badges_json JSON NOT NULL"));
+        assertTrue(normalizedSchema.contains("min_contract_period_months INT NULL"));
+        assertTrue(normalizedSchema.contains("max_contract_period_months INT NULL"));
+        assertTrue(normalizedSchema.contains("curation_reason VARCHAR(1000) NULL"));
+        assertTrue(normalizedSchema.contains("interest_rate_reference VARCHAR(200) NULL"));
+        assertTrue(normalizedSchema.contains("join_termination_method VARCHAR(1000) NULL"));
+        assertTrue(normalizedSchema.contains("ck_financial_product_contract_period"));
     }
 
     @Test
