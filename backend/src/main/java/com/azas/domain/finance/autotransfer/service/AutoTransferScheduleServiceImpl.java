@@ -16,6 +16,9 @@ import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListResponse
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListRow;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailResponse;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailRow;
+import java.time.LocalDateTime;
+import java.util.Objects;
+import org.springframework.transaction.annotation.Transactional;
 import com.azas.domain.finance.autotransfer.entity.AutoTransferAction;
 
 import java.util.ArrayList;
@@ -810,4 +813,50 @@ public class AutoTransferScheduleServiceImpl
         );
     }
 
+    @Override
+    @Transactional
+    public void cancelSchedule(Long memberId, Long scheduleId) {
+        if (scheduleId == null || scheduleId <= 0) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        AutoTransferScheduleRow schedule =
+                mapper.findScheduleForUpdate(scheduleId);
+
+        if (schedule == null) {
+            throw new BusinessException(
+                    ErrorCode.AUTO_TRANSFER_SCHEDULE_NOT_FOUND
+            );
+        }
+
+        validateChildAccess(memberId, schedule.getChildId());
+
+        if (!Objects.equals(schedule.getMemberId(), memberId)) {
+            throw new BusinessException(
+                    ErrorCode.AUTO_TRANSFER_SCHEDULE_ACCESS_DENIED
+            );
+        }
+
+        AutoTransferScheduleStatus currentStatus = schedule.getStatus();
+
+        if (currentStatus == AutoTransferScheduleStatus.CANCELED
+                || currentStatus == AutoTransferScheduleStatus.ENDED) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_AUTO_TRANSFER_STATUS_TRANSITION
+            );
+        }
+
+        LocalDateTime updatedAt = LocalDateTime.now(clock);
+
+        int updatedCount = mapper.cancelSchedule(
+                scheduleId,
+                updatedAt
+        );
+
+        if (updatedCount != 1) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
 }

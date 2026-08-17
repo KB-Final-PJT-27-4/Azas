@@ -12,17 +12,10 @@ import io.swagger.annotations.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListResponse;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import com.azas.domain.finance.autotransfer.dto.UpdateAutoTransferScheduleRequest;
-import org.springframework.web.bind.annotation.PatchMapping;
 
 import javax.validation.Valid;
 
@@ -32,7 +25,7 @@ import javax.validation.Valid;
 @RequiredArgsConstructor
 public class AutoTransferScheduleController {
 
-    private final AutoTransferScheduleService service;
+    private final AutoTransferScheduleService autoTransferScheduleService;
     private final AccessTokenMemberResolver accessTokenMemberResolver;
 
     @ApiOperation("자동이체 일정 등록")
@@ -55,7 +48,7 @@ public class AutoTransferScheduleController {
                 );
 
         AutoTransferScheduleResponse response =
-                service.createSchedule(
+                autoTransferScheduleService.createSchedule(
                         memberId,
                         idempotencyKey,
                         request
@@ -105,7 +98,7 @@ public class AutoTransferScheduleController {
                 );
 
         return ResponseEntity.ok(
-                service.getSchedules(
+                autoTransferScheduleService.getSchedules(
                         memberId,
                         childId,
                         status,
@@ -141,7 +134,7 @@ public class AutoTransferScheduleController {
                 );
 
         return ResponseEntity.ok(
-                service.getScheduleDetail(
+                autoTransferScheduleService.getScheduleDetail(
                         memberId,
                         scheduleId
                 )
@@ -179,11 +172,40 @@ public class AutoTransferScheduleController {
                 );
 
         return ResponseEntity.ok(
-                service.updateSchedule(
+                autoTransferScheduleService.updateSchedule(
                         memberId,
                         scheduleId,
                         request
                 )
         );
+    }
+
+    @ApiOperation(
+            value = "자동이체 일정 해지",
+            notes = "자동이체 일정을 삭제하지 않고 CANCELED 상태로 변경합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(code = 204, message = "자동이체 일정 해지 성공"),
+            @ApiResponse(code = 400, message = "잘못된 요청"),
+            @ApiResponse(code = 401, message = "인증 실패"),
+            @ApiResponse(code = 403, message = "일정 해지 권한 없음"),
+            @ApiResponse(code = 404, message = "자동이체 일정 없음"),
+            @ApiResponse(code = 409, message = "해지할 수 없는 일정 상태")
+    })
+
+    @DeleteMapping("/auto-transfer-schedules/{schedule_id}")
+    public ResponseEntity<Void> cancelSchedule(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorization,
+            @PathVariable("schedule_id") Long scheduleId
+    ) {
+        Long memberId =
+                accessTokenMemberResolver.resolveMemberId(authorization);
+
+        autoTransferScheduleService.cancelSchedule(memberId, scheduleId);
+
+        return ResponseEntity.noContent().build();
     }
 }

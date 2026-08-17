@@ -28,4 +28,6 @@ public interface AutoTransferScheduleService {
             Long scheduleId,
             UpdateAutoTransferScheduleRequest request
     );
+
+    void cancelSchedule(Long memberId, Long scheduleId);
 }

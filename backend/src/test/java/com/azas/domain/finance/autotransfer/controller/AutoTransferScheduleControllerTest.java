@@ -12,6 +12,7 @@ import com.azas.global.exception.GlobalExceptionHandler;
 import com.azas.global.security.AccessTokenMemberResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -37,9 +38,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AutoTransferScheduleControllerTest {
 
@@ -601,5 +605,48 @@ class AutoTransferScheduleControllerTest {
                                 )
                 )
                 .andExpect(status().isBadRequest());
+    }
+
+    // 정상 응답
+    @Test
+    void 자동이체_일정을_해지하면_204를_반환한다() throws Exception {
+        given(memberResolver.resolveMemberId("Bearer access-token"))
+                .willReturn(7L);
+
+        mockMvc.perform(
+                        delete("/api/v1/auto-transfer-schedules/{schedule_id}", 21L)
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        verify(service)
+                .cancelSchedule(7L, 21L);
+    }
+
+    // 이미 해지된 일정
+    @Test
+    void 이미_해지된_자동이체_일정이면_409를_반환한다() throws Exception {
+        given(memberResolver.resolveMemberId("Bearer access-token"))
+                .willReturn(7L);
+
+        doThrow(new BusinessException(
+                ErrorCode.INVALID_AUTO_TRANSFER_STATUS_TRANSITION
+        )).when(service)
+                .cancelSchedule(7L, 21L);
+
+        mockMvc.perform(
+                        delete("/api/v1/auto-transfer-schedules/{schedule_id}", 21L)
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code")
+                        .value("INVALID_AUTO_TRANSFER_STATUS_TRANSITION"));
     }
 }

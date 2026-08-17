@@ -253,4 +253,13 @@
             updated_at = #{updatedAt}
         WHERE auto_transfer_schedule_id = #{scheduleId}
     </update>
+
+    <update id="cancelSchedule">
+        UPDATE auto_transfer_schedule
+        SET status = 'CANCELED',
+            next_transfer_at = NULL,
+            updated_at = #{updatedAt}
+        WHERE auto_transfer_schedule_id = #{scheduleId}
+          AND status IN ('ACTIVE', 'PAUSED')
+    </update>
 </mapper>

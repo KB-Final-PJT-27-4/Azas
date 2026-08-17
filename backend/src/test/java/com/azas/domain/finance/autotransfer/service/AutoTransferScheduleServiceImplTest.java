@@ -34,23 +34,25 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 
 class AutoTransferScheduleServiceImplTest {
 
-    private AutoTransferScheduleMapper mapper;
-    private AutoTransferScheduleServiceImpl service;
+    private AutoTransferScheduleMapper autoTransferScheduleMapper;
+    private AutoTransferScheduleServiceImpl autoTransferScheduleService;
 
     @BeforeEach
     void setUp() {
-        mapper = mock(AutoTransferScheduleMapper.class);
+        autoTransferScheduleMapper = mock(AutoTransferScheduleMapper.class);
 
         Clock clock = Clock.fixed(
                 Instant.parse("2026-08-17T06:00:00Z"),
                 ZoneOffset.UTC
         );
 
-        service = new AutoTransferScheduleServiceImpl(
-                mapper,
+        autoTransferScheduleService = new AutoTransferScheduleServiceImpl(
+                autoTransferScheduleMapper,
                 clock
         );
     }
@@ -61,19 +63,19 @@ class AutoTransferScheduleServiceImplTest {
         CreateAutoTransferScheduleRequest request =
                 createRequest();
 
-        when(mapper.findByIdempotencyKey(key))
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
                 .thenReturn(null);
-        when(mapper.countChildAccess(6L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(6L, 7L))
                 .thenReturn(1);
-        when(mapper.findAccountForUpdate(1L))
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
                 .thenReturn(parentAccount(1L, 7L));
-        when(mapper.findAccountForUpdate(12L))
+        when(autoTransferScheduleMapper.findAccountForUpdate(12L))
                 .thenReturn(childSavingsAccount(
                         12L,
                         6L,
                         31L
                 ));
-        when(mapper.countEquivalentSchedule(
+        when(autoTransferScheduleMapper.countEquivalentSchedule(
                 7L,
                 6L,
                 1L,
@@ -85,7 +87,7 @@ class AutoTransferScheduleServiceImplTest {
                 LocalDate.of(2029, 2, 10)
         )).thenReturn(0);
 
-        when(mapper.insertSchedule(any()))
+        when(autoTransferScheduleMapper.insertSchedule(any()))
                 .thenAnswer(invocation -> {
                     AutoTransferScheduleInsertCommand command =
                             invocation.getArgument(0);
@@ -94,7 +96,7 @@ class AutoTransferScheduleServiceImplTest {
                     return 1;
                 });
 
-        var response = service.createSchedule(
+        var response = autoTransferScheduleService.createSchedule(
                 7L,
                 key,
                 request
@@ -117,7 +119,7 @@ class AutoTransferScheduleServiceImplTest {
                 response.getStatus()
         );
 
-        verify(mapper).insertSchedule(any());
+        verify(autoTransferScheduleMapper).insertSchedule(any());
     }
 
     @Test
@@ -126,10 +128,10 @@ class AutoTransferScheduleServiceImplTest {
         CreateAutoTransferScheduleRequest request =
                 createRequest();
 
-        when(mapper.findByIdempotencyKey(key))
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
                 .thenReturn(existingSchedule(key));
 
-        var response = service.createSchedule(
+        var response = autoTransferScheduleService.createSchedule(
                 7L,
                 key,
                 request
@@ -141,11 +143,11 @@ class AutoTransferScheduleServiceImplTest {
         );
 
         verify(
-                mapper,
+                autoTransferScheduleMapper,
                 never()
         ).insertSchedule(any());
         verify(
-                mapper,
+                autoTransferScheduleMapper,
                 never()
         ).findAccountForUpdate(any());
     }
@@ -156,19 +158,19 @@ class AutoTransferScheduleServiceImplTest {
         CreateAutoTransferScheduleRequest request =
                 createRequest();
 
-        when(mapper.findByIdempotencyKey(key))
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
                 .thenReturn(null);
-        when(mapper.countChildAccess(6L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(6L, 7L))
                 .thenReturn(1);
-        when(mapper.findAccountForUpdate(1L))
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
                 .thenReturn(parentAccount(1L, 7L));
-        when(mapper.findAccountForUpdate(12L))
+        when(autoTransferScheduleMapper.findAccountForUpdate(12L))
                 .thenReturn(childSavingsAccount(
                         12L,
                         6L,
                         31L
                 ));
-        when(mapper.countEquivalentSchedule(
+        when(autoTransferScheduleMapper.countEquivalentSchedule(
                 7L,
                 6L,
                 1L,
@@ -182,7 +184,7 @@ class AutoTransferScheduleServiceImplTest {
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.createSchedule(
+                () -> autoTransferScheduleService.createSchedule(
                         7L,
                         key,
                         request
@@ -194,7 +196,7 @@ class AutoTransferScheduleServiceImplTest {
                 exception.getErrorCode()
         );
 
-        verify(mapper, never())
+        verify(autoTransferScheduleMapper, never())
                 .insertSchedule(any());
     }
 
@@ -202,13 +204,13 @@ class AutoTransferScheduleServiceImplTest {
     void 출금계좌_소유자가_아니면_거절한다() {
         String key = UUID.randomUUID().toString();
 
-        when(mapper.findByIdempotencyKey(key))
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
                 .thenReturn(null);
-        when(mapper.countChildAccess(6L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(6L, 7L))
                 .thenReturn(1);
-        when(mapper.findAccountForUpdate(1L))
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
                 .thenReturn(parentAccount(1L, 99L));
-        when(mapper.findAccountForUpdate(12L))
+        when(autoTransferScheduleMapper.findAccountForUpdate(12L))
                 .thenReturn(childSavingsAccount(
                         12L,
                         6L,
@@ -217,7 +219,7 @@ class AutoTransferScheduleServiceImplTest {
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.createSchedule(
+                () -> autoTransferScheduleService.createSchedule(
                         7L,
                         key,
                         createRequest()
@@ -234,13 +236,13 @@ class AutoTransferScheduleServiceImplTest {
     void 목표가_없는_입금계좌는_거절한다() {
         String key = UUID.randomUUID().toString();
 
-        when(mapper.findByIdempotencyKey(key))
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
                 .thenReturn(null);
-        when(mapper.countChildAccess(6L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(6L, 7L))
                 .thenReturn(1);
-        when(mapper.findAccountForUpdate(1L))
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
                 .thenReturn(parentAccount(1L, 7L));
-        when(mapper.findAccountForUpdate(12L))
+        when(autoTransferScheduleMapper.findAccountForUpdate(12L))
                 .thenReturn(childSavingsAccount(
                         12L,
                         6L,
@@ -249,7 +251,7 @@ class AutoTransferScheduleServiceImplTest {
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.createSchedule(
+                () -> autoTransferScheduleService.createSchedule(
                         7L,
                         key,
                         createRequest()
@@ -266,7 +268,7 @@ class AutoTransferScheduleServiceImplTest {
     void 잘못된_멱등키는_400_오류이다() {
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.createSchedule(
+                () -> autoTransferScheduleService.createSchedule(
                         7L,
                         "not-a-uuid",
                         createRequest()
@@ -386,10 +388,10 @@ class AutoTransferScheduleServiceImplTest {
 
     @Test
     void 자녀_자동이체_일정_목록을_커서로_조회한다() {
-        when(mapper.countChildAccess(1L, 1L))
+        when(autoTransferScheduleMapper.countChildAccess(1L, 1L))
                 .thenReturn(1);
 
-        when(mapper.findSchedules(any(
+        when(autoTransferScheduleMapper.findSchedules(any(
                 AutoTransferScheduleListQuery.class
         ))).thenReturn(
                 List.of(
@@ -399,7 +401,7 @@ class AutoTransferScheduleServiceImplTest {
                 )
         );
 
-        var response = service.getSchedules(
+        var response = autoTransferScheduleService.getSchedules(
                 1L,
                 1L,
                 "ACTIVE",
@@ -420,12 +422,12 @@ class AutoTransferScheduleServiceImplTest {
 
     @Test
     void 자녀_접근권한이_없으면_목록조회를_거절한다() {
-        when(mapper.countChildAccess(1L, 99L))
+        when(autoTransferScheduleMapper.countChildAccess(1L, 99L))
                 .thenReturn(0);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.getSchedules(
+                () -> autoTransferScheduleService.getSchedules(
                         99L,
                         1L,
                         null,
@@ -439,18 +441,18 @@ class AutoTransferScheduleServiceImplTest {
                 exception.getErrorCode()
         );
 
-        verify(mapper, never())
+        verify(autoTransferScheduleMapper, never())
                 .findSchedules(any());
     }
 
     @Test
     void 잘못된_상태값은_400으로_거절한다() {
-        when(mapper.countChildAccess(1L, 1L))
+        when(autoTransferScheduleMapper.countChildAccess(1L, 1L))
                 .thenReturn(1);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.getSchedules(
+                () -> autoTransferScheduleService.getSchedules(
                         1L,
                         1L,
                         "UNKNOWN",
@@ -500,13 +502,13 @@ class AutoTransferScheduleServiceImplTest {
         AutoTransferScheduleDetailRow row =
                 detailRow();
 
-        when(mapper.findScheduleDetail(21L))
+        when(autoTransferScheduleMapper.findScheduleDetail(21L))
                 .thenReturn(row);
-        when(mapper.countChildAccess(5L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(5L, 7L))
                 .thenReturn(1);
 
         var response =
-                service.getScheduleDetail(7L, 21L);
+                autoTransferScheduleService.getScheduleDetail(7L, 21L);
 
         assertEquals(
                 21L,
@@ -544,14 +546,14 @@ class AutoTransferScheduleServiceImplTest {
 
     @Test
     void 자녀_접근권한이_없으면_상세조회를_거절한다() {
-        when(mapper.findScheduleDetail(21L))
+        when(autoTransferScheduleMapper.findScheduleDetail(21L))
                 .thenReturn(detailRow());
-        when(mapper.countChildAccess(5L, 99L))
+        when(autoTransferScheduleMapper.countChildAccess(5L, 99L))
                 .thenReturn(0);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.getScheduleDetail(
+                () -> autoTransferScheduleService.getScheduleDetail(
                         99L,
                         21L
                 )
@@ -645,11 +647,11 @@ class AutoTransferScheduleServiceImplTest {
                         true
                 );
 
-        when(mapper.findScheduleForUpdate(21L))
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
                 .thenReturn(schedule);
-        when(mapper.countChildAccess(5L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(5L, 7L))
                 .thenReturn(1);
-        when(mapper.countEquivalentScheduleExcludingId(
+        when(autoTransferScheduleMapper.countEquivalentScheduleExcludingId(
                 21L,
                 7L,
                 5L,
@@ -661,12 +663,12 @@ class AutoTransferScheduleServiceImplTest {
                 LocalDate.of(2026, 9, 10),
                 LocalDate.of(2029, 3, 20)
         )).thenReturn(0);
-        when(mapper.updateSchedule(any()))
+        when(autoTransferScheduleMapper.updateSchedule(any()))
                 .thenReturn(1);
-        when(mapper.findScheduleDetail(21L))
+        when(autoTransferScheduleMapper.findScheduleDetail(21L))
                 .thenReturn(detailRow());
 
-        service.updateSchedule(
+        autoTransferScheduleService.updateSchedule(
                 7L,
                 21L,
                 request
@@ -677,7 +679,7 @@ class AutoTransferScheduleServiceImplTest {
                 UpdateAutoTransferScheduleCommand.class
         );
 
-        verify(mapper).updateSchedule(
+        verify(autoTransferScheduleMapper).updateSchedule(
                 captor.capture()
         );
 
@@ -711,16 +713,16 @@ class AutoTransferScheduleServiceImplTest {
                         AutoTransferScheduleStatus.ACTIVE
                 );
 
-        when(mapper.findScheduleForUpdate(21L))
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
                 .thenReturn(schedule);
-        when(mapper.countChildAccess(5L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(5L, 7L))
                 .thenReturn(1);
-        when(mapper.updateSchedule(any()))
+        when(autoTransferScheduleMapper.updateSchedule(any()))
                 .thenReturn(1);
-        when(mapper.findScheduleDetail(21L))
+        when(autoTransferScheduleMapper.findScheduleDetail(21L))
                 .thenReturn(detailRow());
 
-        service.updateSchedule(
+        autoTransferScheduleService.updateSchedule(
                 7L,
                 21L,
                 updateRequest(
@@ -737,7 +739,7 @@ class AutoTransferScheduleServiceImplTest {
                 UpdateAutoTransferScheduleCommand.class
         );
 
-        verify(mapper).updateSchedule(
+        verify(autoTransferScheduleMapper).updateSchedule(
                 captor.capture()
         );
 
@@ -759,16 +761,16 @@ class AutoTransferScheduleServiceImplTest {
                         AutoTransferScheduleStatus.PAUSED
                 );
 
-        when(mapper.findScheduleForUpdate(21L))
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
                 .thenReturn(schedule);
-        when(mapper.countChildAccess(5L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(5L, 7L))
                 .thenReturn(1);
-        when(mapper.updateSchedule(any()))
+        when(autoTransferScheduleMapper.updateSchedule(any()))
                 .thenReturn(1);
-        when(mapper.findScheduleDetail(21L))
+        when(autoTransferScheduleMapper.findScheduleDetail(21L))
                 .thenReturn(detailRow());
 
-        service.updateSchedule(
+        autoTransferScheduleService.updateSchedule(
                 7L,
                 21L,
                 updateRequest(
@@ -785,7 +787,7 @@ class AutoTransferScheduleServiceImplTest {
                 UpdateAutoTransferScheduleCommand.class
         );
 
-        verify(mapper).updateSchedule(
+        verify(autoTransferScheduleMapper).updateSchedule(
                 captor.capture()
         );
 
@@ -802,18 +804,18 @@ class AutoTransferScheduleServiceImplTest {
     // 종료된 일정 방지
     @Test
     void 종료된_자동이체_일정은_변경할_수_없다() {
-        when(mapper.findScheduleForUpdate(21L))
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
                 .thenReturn(
                         modifiableSchedule(
                                 AutoTransferScheduleStatus.ENDED
                         )
                 );
-        when(mapper.countChildAccess(5L, 7L))
+        when(autoTransferScheduleMapper.countChildAccess(5L, 7L))
                 .thenReturn(1);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.updateSchedule(
+                () -> autoTransferScheduleService.updateSchedule(
                         7L,
                         21L,
                         updateRequest(
@@ -831,25 +833,25 @@ class AutoTransferScheduleServiceImplTest {
                 exception.getErrorCode()
         );
 
-        verify(mapper, never())
+        verify(autoTransferScheduleMapper, never())
                 .updateSchedule(any());
     }
 
     // 다른 보호자 일정 변경 방지
     @Test
     void 다른_보호자의_자동이체_일정은_변경할_수_없다() {
-        when(mapper.findScheduleForUpdate(21L))
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
                 .thenReturn(
                         modifiableSchedule(
                                 AutoTransferScheduleStatus.ACTIVE
                         )
                 );
-        when(mapper.countChildAccess(5L, 99L))
+        when(autoTransferScheduleMapper.countChildAccess(5L, 99L))
                 .thenReturn(1);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.updateSchedule(
+                () -> autoTransferScheduleService.updateSchedule(
                         99L,
                         21L,
                         updateRequest(
@@ -943,5 +945,120 @@ class AutoTransferScheduleServiceImplTest {
         );
 
         return request;
+    }
+
+    // 정상 해지
+    @Test
+    void 활성_자동이체_일정을_해지한다() {
+        AutoTransferScheduleRow schedule =
+                modifiableSchedule(AutoTransferScheduleStatus.ACTIVE);
+
+        LocalDateTime expectedUpdatedAt =
+                LocalDateTime.of(2026, 8, 17, 6, 0);
+
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
+                .thenReturn(schedule);
+        when(autoTransferScheduleMapper.countChildAccess(5L, 7L))
+                .thenReturn(1);
+        when(autoTransferScheduleMapper.cancelSchedule(
+                21L,
+                expectedUpdatedAt
+        )).thenReturn(1);
+
+        autoTransferScheduleService.cancelSchedule(7L, 21L);
+
+        verify(autoTransferScheduleMapper)
+                .cancelSchedule(21L, expectedUpdatedAt);
+    }
+
+    // 정상 상태도 해지 가능
+    @Test
+    void 일시정지된_자동이체_일정도_해지할_수_있다() {
+        AutoTransferScheduleRow schedule =
+                modifiableSchedule(AutoTransferScheduleStatus.PAUSED);
+
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
+                .thenReturn(schedule);
+        when(autoTransferScheduleMapper.countChildAccess(5L, 7L))
+                .thenReturn(1);
+        when(autoTransferScheduleMapper.cancelSchedule(
+                eq(21L),
+                any(LocalDateTime.class)
+        )).thenReturn(1);
+
+        autoTransferScheduleService.cancelSchedule(7L, 21L);
+
+        verify(autoTransferScheduleMapper)
+                .cancelSchedule(eq(21L), any(LocalDateTime.class));
+    }
+
+    // 일정 없음
+    @Test
+    void 존재하지_않는_자동이체_일정은_해지할_수_없다() {
+        when(autoTransferScheduleMapper.findScheduleForUpdate(999L))
+                .thenReturn(null);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> autoTransferScheduleService.cancelSchedule(7L, 999L)
+        );
+
+        assertEquals(
+                ErrorCode.AUTO_TRANSFER_SCHEDULE_NOT_FOUND,
+                exception.getErrorCode()
+        );
+
+        verify(autoTransferScheduleMapper, never())
+                .cancelSchedule(anyLong(), any(LocalDateTime.class));
+    }
+
+    // 다른 회원이 등록한 일정
+    @Test
+    void 다른_회원이_등록한_자동이체_일정은_해지할_수_없다() {
+        AutoTransferScheduleRow schedule =
+                modifiableSchedule(AutoTransferScheduleStatus.ACTIVE);
+
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
+                .thenReturn(schedule);
+        when(autoTransferScheduleMapper.countChildAccess(5L, 99L))
+                .thenReturn(1);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> autoTransferScheduleService.cancelSchedule(99L, 21L)
+        );
+
+        assertEquals(
+                ErrorCode.AUTO_TRANSFER_SCHEDULE_ACCESS_DENIED,
+                exception.getErrorCode()
+        );
+
+        verify(autoTransferScheduleMapper, never())
+                .cancelSchedule(anyLong(), any(LocalDateTime.class));
+    }
+
+    // 이미 해지된 일정
+    @Test
+    void 이미_해지된_자동이체_일정은_다시_해지할_수_없다() {
+        AutoTransferScheduleRow schedule =
+                modifiableSchedule(AutoTransferScheduleStatus.CANCELED);
+
+        when(autoTransferScheduleMapper.findScheduleForUpdate(21L))
+                .thenReturn(schedule);
+        when(autoTransferScheduleMapper.countChildAccess(5L, 7L))
+                .thenReturn(1);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> autoTransferScheduleService.cancelSchedule(7L, 21L)
+        );
+
+        assertEquals(
+                ErrorCode.INVALID_AUTO_TRANSFER_STATUS_TRANSITION,
+                exception.getErrorCode()
+        );
+
+        verify(autoTransferScheduleMapper, never())
+                .cancelSchedule(anyLong(), any(LocalDateTime.class));
     }
 }
