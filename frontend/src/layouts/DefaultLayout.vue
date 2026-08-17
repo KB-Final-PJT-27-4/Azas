@@ -23,7 +23,7 @@ const pageBackgroundColor = computed(() => String(route.meta.pageBackgroundColor
 const pageBackgroundStyle = computed(() =>
   pageBackgroundColor.value ? { backgroundColor: pageBackgroundColor.value } : undefined,
 )
-const { toastMessage, toastVariant } = useToast()
+const { toastMessage, toastVariant, toastPlacement } = useToast()
 </script>
 
 <template>
@@ -62,6 +62,7 @@ const { toastMessage, toastVariant } = useToast()
           :message="toastMessage"
           :variant="toastVariant"
           :with-bottom-navigation="!hideBottomNavigation"
+          :above-actions="toastPlacement === 'above-actions'"
         />
       </Transition>
     </div>

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { ChevronDown } from 'lucide-vue-next'
-import capsulePigImage from '@/assets/images/timeCapsules/archive/capsule-pig.png'
+import capsulePigImage from '@/assets/images/timeCapsules/archive/list-capsule-pig.png'
 import { getTimeCapsuleAccount } from '@/data/timeCapsuleDummyData'
 
 const route = useRoute()
 const router = useRouter()
 const activeTab = ref<'list' | 'calendar'>('list')
+const isOpeningRecord = ref(false)
 const today = new Date()
 const currentYear = today.getFullYear()
 const currentMonth = today.getMonth() + 1
@@ -50,11 +51,23 @@ const isToday = (year: number, month: number, day: number | null) =>
   year === currentYear && month === currentMonth && day === today.getDate()
 
 const formatDate = (date: string) => date.replaceAll('-', '.')
+const navigateForward = async (to: RouteLocationRaw) => {
+  if (isOpeningRecord.value) return
+  isOpeningRecord.value = true
+
+  try {
+    await new Promise((resolve) => window.setTimeout(resolve, 150))
+    await router.push(to)
+  } catch {
+    isOpeningRecord.value = false
+  }
+}
+
 const openRecord = (recordId: number) =>
-  router.push(`/time-capsules/${accountId.value}/${recordId}`)
+  navigateForward(`/time-capsules/${accountId.value}/${recordId}`)
 
 const createFirstRecord = () =>
-  router.push({
+  navigateForward({
     name: 'TimeCapsuleCreate',
     query: {
       account: accountId.value,
@@ -85,6 +98,7 @@ const changeYear = () => {
 <template>
   <main
     class="flex h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col overflow-hidden bg-white"
+    :class="isOpeningRecord ? 'time-capsule-list--leaving pointer-events-none' : ''"
   >
     <section class="shrink-0 px-5">
       <div class="flex items-center">
@@ -93,7 +107,7 @@ const changeYear = () => {
           <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ account.description }}</p>
         </div>
         <img
-          class="h-28 w-32 translate-y-4 translate-x-5 shrink-0 origin-right scale-[1.3] object-contain"
+          class="h-24 w-28 translate-x-3 translate-y-3 shrink-0 origin-right scale-110 object-contain"
           :src="capsulePigImage"
           alt="타임캡슐 저금통"
         />
@@ -267,3 +281,19 @@ const changeYear = () => {
     </section>
   </main>
 </template>
+
+<style scoped>
+.time-capsule-list--leaving {
+  transform: translateX(-18px);
+  opacity: 0;
+  transition:
+    transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .time-capsule-list--leaving {
+    transition-duration: 1ms;
+  }
+}
+</style>

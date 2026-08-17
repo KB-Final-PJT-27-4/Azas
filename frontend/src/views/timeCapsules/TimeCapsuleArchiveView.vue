@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Check, Plus, X } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
+import { useRouter, type RouteLocationRaw } from 'vue-router'
 import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
 import lockImage from '@/assets/images/timeCapsules/archive/lock.png'
+import archiveBackgroundImage from '@/assets/images/timeCapsules/archive/new-bg.png'
 import openImage from '@/assets/images/timeCapsules/archive/open.png'
 import avocadoImage from '@/assets/images/pregnancy/avocado.png'
 import bananaImage from '@/assets/images/pregnancy/banana.png'
@@ -23,7 +24,12 @@ import { loadRegistrationDraft } from '@/utils/registrationDraft'
 
 const router = useRouter()
 const { showToast } = useToast()
+const isPageLeaving = ref(false)
 const isFreeCapsuleSheetOpen = ref(false)
+const freeCapsuleSheetOffset = ref(0)
+const isFreeCapsuleSheetDragging = ref(false)
+let freeCapsuleDragStartY = 0
+let freeCapsuleDragStartTime = 0
 const freeCapsuleOpenDate = ref('')
 const isFreeCapsuleCreated = ref(false)
 const registration = loadRegistrationDraft()
@@ -94,18 +100,65 @@ const formattedFreeOpenDate = computed(() => {
   const [year, month, day] = freeCapsuleOpenDate.value.split('-')
   return `${year}.${month}.${day}`
 })
+const closeFreeCapsuleSheet = () => {
+  freeCapsuleSheetOffset.value = 0
+  isFreeCapsuleSheetDragging.value = false
+  isFreeCapsuleSheetOpen.value = false
+}
+
+const startFreeCapsuleSheetDrag = (event: PointerEvent) => {
+  if (event.button !== 0) return
+  freeCapsuleDragStartY = event.clientY
+  freeCapsuleDragStartTime = performance.now()
+  isFreeCapsuleSheetDragging.value = true
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+
+const moveFreeCapsuleSheetDrag = (event: PointerEvent) => {
+  if (!isFreeCapsuleSheetDragging.value) return
+  freeCapsuleSheetOffset.value = Math.max(0, event.clientY - freeCapsuleDragStartY)
+}
+
+const endFreeCapsuleSheetDrag = (event: PointerEvent) => {
+  if (!isFreeCapsuleSheetDragging.value) return
+  const elapsed = Math.max(performance.now() - freeCapsuleDragStartTime, 1)
+  const velocity = freeCapsuleSheetOffset.value / elapsed
+  isFreeCapsuleSheetDragging.value = false
+
+  if (freeCapsuleSheetOffset.value >= 72 || velocity >= 0.45) {
+    closeFreeCapsuleSheet()
+    return
+  }
+
+  freeCapsuleSheetOffset.value = 0
+  const target = event.currentTarget as HTMLElement
+  if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
+}
+
 const confirmFreeCapsule = () => {
   if (!freeCapsuleOpenDate.value) {
     showToast('오픈 날짜를 선택해주세요.', 'error')
     return
   }
   isFreeCapsuleCreated.value = true
-  isFreeCapsuleSheetOpen.value = false
+  closeFreeCapsuleSheet()
   showToast('입출금계좌의 오픈 날짜를 설정했습니다.', 'success')
 }
 
+const navigateForward = async (to: RouteLocationRaw) => {
+  if (isPageLeaving.value) return
+  isPageLeaving.value = true
+
+  try {
+    await new Promise((resolve) => window.setTimeout(resolve, 150))
+    await router.push(to)
+  } catch {
+    isPageLeaving.value = false
+  }
+}
+
 const openFreeCapsuleList = () => {
-  router.push({
+  navigateForward({
     name: 'TimeCapsuleList',
     params: { capsuleListId: '3' },
     query: { openDate: freeCapsuleOpenDate.value },
@@ -114,7 +167,7 @@ const openFreeCapsuleList = () => {
 
 const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean }) => {
   if (!capsule.isFree) {
-    router.push(
+    navigateForward(
       isCapsuleReleased(capsule)
         ? `/time-capsules/${capsule.id}/open`
         : `/time-capsules/${capsule.id}`,
@@ -159,8 +212,12 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 <template>
   <main
     class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col bg-white"
+    :class="isPageLeaving ? 'time-capsule-archive--leaving pointer-events-none' : ''"
   >
-    <section class="px-5 pt-7 pb-4">
+    <section
+      class="bg-cover bg-center bg-no-repeat px-5 pt-7 pb-5"
+      :style="{ backgroundImage: `url(${archiveBackgroundImage})` }"
+    >
       <div>
         <div class="relative min-h-[128px] overflow-visible">
           <h1
@@ -174,7 +231,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 
           <aside
             v-if="pregnancyGrowth"
-            class="pregnancy-growth-card absolute top-1 right-0 h-[156px] w-[184px]"
+            class="pregnancy-growth-card absolute top-1 right-0 h-[156px] w-[184px] translate-y-3"
             :aria-label="`임신 ${pregnancyGrowth.currentWeek}주, ${pregnancyGrowth.fruit}만큼 자랐어요`"
           >
             <div class="absolute right-[116px] bottom-14 z-10 whitespace-nowrap text-right">
@@ -199,7 +256,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
         </div>
 
         <article
-          class="mt-2 flex min-h-20 items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 shadow-[0_8px_24px_rgba(67,139,179,0.08)]"
+          class="relative z-10 mt-2 flex min-h-20 translate-y-7 items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 shadow-[0_8px_24px_rgba(67,139,179,0.08)]"
         >
           <img class="size-14 shrink-0 object-contain" :src="calendarImage" alt="공개 예정일" />
           <div class="ml-3 min-w-0 flex-1">
@@ -215,7 +272,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
       </div>
     </section>
 
-    <section class="grid grid-cols-2 gap-3 px-5 pt-1 pb-5" aria-label="타임캡슐 계좌 목록">
+    <section class="grid grid-cols-2 gap-3 px-5 pt-7 pb-5" aria-label="타임캡슐 계좌 목록">
       <article
         v-for="capsule in capsuleAccounts"
         :key="capsule.id"
@@ -272,7 +329,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
       class="time-capsule-create-button fixed z-[60]"
       type="button"
       aria-label="타임캡슐 생성하기"
-      @click="router.push('/time-capsules/new')"
+      @click="navigateForward('/time-capsules/new')"
     >
       <span class="time-capsule-create-button__surface">
         <Plus :size="23" :stroke-width="3" aria-hidden="true" />
@@ -284,16 +341,29 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
         <div
           v-if="isFreeCapsuleSheetOpen"
           class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40"
-          @click.self="isFreeCapsuleSheetOpen = false"
+          @click.self="closeFreeCapsuleSheet"
         >
           <section
             class="free-capsule-panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]"
+            :class="isFreeCapsuleSheetDragging ? 'free-capsule-panel--dragging' : ''"
+            :style="freeCapsuleSheetOffset ? { transform: `translateY(${freeCapsuleSheetOffset}px)` } : undefined"
             role="dialog"
             aria-modal="true"
             aria-labelledby="free-capsule-title"
           >
-            <span class="mx-auto block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
-            <header class="mt-4 flex items-start justify-between gap-4">
+            <div
+              class="-mx-5 -mt-3 flex h-10 touch-none cursor-grab items-center justify-center active:cursor-grabbing"
+              role="button"
+              tabindex="0"
+              aria-label="아래로 밀어 오픈 날짜 설정 닫기"
+              @pointerdown="startFreeCapsuleSheetDrag"
+              @pointermove="moveFreeCapsuleSheetDrag"
+              @pointerup="endFreeCapsuleSheetDrag"
+              @pointercancel="endFreeCapsuleSheetDrag"
+            >
+              <span class="block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
+            </div>
+            <header class="mt-1 flex items-start justify-between gap-4">
               <div>
                 <h2 id="free-capsule-title" class="m-0 text-[20px] font-bold">언제 열어볼까요?</h2>
               </div>
@@ -301,7 +371,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
                 class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f7]"
                 type="button"
                 aria-label="오픈 날짜 설정 닫기"
-                @click="isFreeCapsuleSheetOpen = false"
+                @click="closeFreeCapsuleSheet"
               >
                 <X :size="20" />
               </button>
@@ -338,6 +408,19 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 </template>
 
 <style scoped>
+.time-capsule-archive--leaving > section {
+  transform: translateX(-18px);
+  opacity: 0;
+  transition:
+    transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 120ms ease-out;
+}
+
+.time-capsule-archive--leaving > .time-capsule-create-button {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .pregnancy-growth-card__image {
     animation: pregnancy-character-float 3.2s ease-in-out infinite;
@@ -530,8 +613,18 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 .free-capsule-sheet-leave-to .free-capsule-panel {
   transform: translateY(100%);
 }
+.free-capsule-panel {
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.free-capsule-panel--dragging {
+  transition: none !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
+  .time-capsule-archive--leaving > section,
+  .time-capsule-archive--leaving > .time-capsule-create-button {
+    transition-duration: 1ms;
+  }
   .capsule-card--released::before {
     animation: none;
   }
