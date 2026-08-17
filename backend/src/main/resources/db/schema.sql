@@ -661,20 +661,12 @@ CREATE TABLE time_capsule
     entry_count                 INT             NOT NULL DEFAULT 0 COMMENT '보관함 목록용 캐시',
     total_contribution_amount   DECIMAL(19, 2)  NOT NULL DEFAULT 0 COMMENT '활성 엔트리 저축 금액 합계 캐시',
     latest_entry_at             DATETIME(6)     NULL COMMENT '최근 기록 시각',
-    deleted_at                  DATETIME(6)     NULL COMMENT '보관함 삭제 시각',
-    active_financial_account_id BIGINT UNSIGNED
-        GENERATED ALWAYS AS (
-            CASE
-                WHEN deleted_at IS NULL THEN financial_account_id
-                ELSE NULL
-                END
-            ) STORED COMMENT '활성 보관함 중복 방지용 계좌 ID',
     created_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
     updated_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     PRIMARY KEY (time_capsule_id),
-    UNIQUE KEY uk_time_capsule_child_active_account (
-                                                     child_id,
-                                                     active_financial_account_id
+    UNIQUE KEY uk_time_capsule_child_account (
+                                              child_id,
+                                              financial_account_id
         ),
     KEY idx_time_capsule_child_status (child_id, status),
     CONSTRAINT fk_time_capsule_child

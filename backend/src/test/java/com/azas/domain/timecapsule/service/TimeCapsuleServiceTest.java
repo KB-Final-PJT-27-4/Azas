@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -414,6 +415,36 @@ class TimeCapsuleServiceTest {
         verify(timeCapsuleMediaMapper, never()).deleteByTimeCapsuleId(100L);
         verify(timeCapsuleEntryMapper, never()).deleteByTimeCapsuleId(100L);
         verify(timeCapsuleMapper, never()).deleteById(100L);
+    }
+
+    @Test
+    void deleteTimeCapsuleRejectsInvalidIdentifier() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.deleteTimeCapsule(7L, 0L)
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+        verify(timeCapsuleMapper, never())
+                .findAccessibleByIdForUpdate(anyLong(), anyLong());
+    }
+
+    @Test
+    void deleteTimeCapsuleHidesMissingOrInaccessibleCapsule() {
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(null);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.deleteTimeCapsule(7L, 100L)
+        );
+
+        assertEquals(
+                ErrorCode.TIME_CAPSULE_NOT_FOUND,
+                exception.getErrorCode()
+        );
+        verify(timeCapsuleEntryMapper, never())
+                .lockByTimeCapsuleId(100L);
     }
 
 

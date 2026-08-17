@@ -22,7 +22,6 @@ public class TimeCapsule {
     private int entryCount;
     private BigDecimal totalContributionAmount;
     private LocalDateTime latestEntryAt;
-    private LocalDateTime deletedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long financialGoalTemplateId;

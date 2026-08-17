@@ -125,6 +125,10 @@ public class TimeCapsuleService {
             long requesterMemberId,
             long timeCapsuleId
     ) {
+        if (timeCapsuleId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
         TimeCapsule timeCapsule = getAccessibleTimeCapsuleForUpdateOrThrow(
                 requesterMemberId,
                 timeCapsuleId

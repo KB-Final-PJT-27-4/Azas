@@ -93,8 +93,8 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-6 타임캡슐 보관함 삭제",
-            notes = "부모 또는 보호자가 보관함과 내부 엔트리·미디어·결과물을 영구 삭제합니다."
+            value = "TIMECAPSULE-6 타임캡슐 보관함 삭제",
+            notes = "접근 가능한 부모 또는 보호자가 보관함과 내부 엔트리·미디어 및 원본 저장 객체를 복구할 수 없도록 영구 삭제합니다. 자녀·계좌·거래·목표 데이터는 유지됩니다."
     )
     @DeleteMapping("/time-capsules/{time_capsule_id}")
     // [JMG] CAPSULE-6 부모·보호자 권한을 확인한 뒤 타임캡슐 보관함을 영구 삭제한다.

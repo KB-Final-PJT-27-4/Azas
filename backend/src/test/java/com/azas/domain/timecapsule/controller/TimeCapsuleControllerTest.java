@@ -34,6 +34,8 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -287,6 +289,26 @@ class TimeCapsuleControllerTest {
                         .doesNotExist())
                 .andExpect(jsonPath("$.time_capsules[0].latest_entry_at")
                         .doesNotExist());
+    }
+
+    @Test
+    void deleteTimeCapsuleReturnsNoContent() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        mockMvc.perform(
+                        delete(
+                                "/api/v1/time-capsules/{timeCapsuleId}",
+                                100L
+                        ).header(
+                                "Authorization",
+                                "Bearer access-token"
+                        )
+                )
+                .andExpect(status().isNoContent());
+
+        verify(timeCapsuleService).deleteTimeCapsule(7L, 100L);
     }
 
     // [JMG] CAPSULE-1 테스트용 ERD 타임캡슐 응답 엔티티를 구성한다.
