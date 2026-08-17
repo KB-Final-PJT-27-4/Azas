@@ -1,6 +1,7 @@
 package com.azas.domain.timecapsule.controller;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
+import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
@@ -11,6 +12,8 @@ import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryStatus;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
+import com.azas.domain.timecapsule.entity.TimeCapsuleMedia;
+import com.azas.domain.timecapsule.entity.TimeCapsuleMediaType;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
 import com.azas.global.exception.GlobalExceptionHandler;
@@ -213,6 +216,54 @@ class TimeCapsuleEntryControllerTest {
                         .value("image/jpeg"))
                 .andExpect(jsonPath("$.uploads").doesNotExist())
                 .andExpect(jsonPath("$.slot_no").doesNotExist());
+    }
+
+    @Test
+    void completeMediaUploadReturnsSingleActiveImageContract()
+            throws Exception {
+        TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
+                1000L,
+                TimeCapsuleMediaType.IMAGE,
+                "time-capsules/100/entries/1000/media/slot-1.jpg",
+                "image/jpeg",
+                1048576L,
+                1
+        );
+        ReflectionTestUtils.setField(
+                media, "timeCapsuleMediaId", 2000L
+        );
+        media.activate();
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+        given(timeCapsuleEntryService.completeMediaUpload(
+                eq(7L), eq(1000L), any()
+        )).willReturn(new CompleteTimeCapsuleMediaUploadResponse(media));
+
+        mockMvc.perform(
+                        post(
+                                "/api/v1/time-capsule-entries/{entryId}/media/complete",
+                                1000L
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "time_capsule_media_id": 2000
+                                        }
+                                        """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.time_capsule_entry_id").value(1000))
+                .andExpect(jsonPath("$.time_capsule_media_id").value(2000))
+                .andExpect(jsonPath("$.media_status").value("ACTIVE"))
+                .andExpect(jsonPath("$.media_mode").doesNotExist())
+                .andExpect(jsonPath("$.media_count").doesNotExist())
+                .andExpect(jsonPath("$.thumbnail_ready").doesNotExist())
+                .andExpect(jsonPath("$.media").doesNotExist());
     }
 
     @Test
