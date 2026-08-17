@@ -380,7 +380,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       roles: ['CHILD'],
       hideBottomNavigation: true,
-      headerTitle: '미션 +',
+      headerTitle: '미션',
       showHeaderBack: true,
     },
   },

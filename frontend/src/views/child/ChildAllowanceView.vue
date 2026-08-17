@@ -4,30 +4,38 @@ import { useRouter } from 'vue-router'
 
 import allowancePageBgUrl from '@/assets/images/child/child-allowance-page-bg.png'
 import allowanceRequestPigUrl from '@/assets/images/child/child-allowance-request-pig.png'
-import { allowanceOptions } from '@/mocks/childHome'
 
 const router = useRouter()
-const selectedAmount = ref(10_000)
-const customAmount = ref('')
+const allowanceAmount = ref('')
 const reason = ref('')
+const maxMoneyDigits = 8
+const maxReasonLength = 200
 
-const customAmountValue = computed(() => Number(customAmount.value.replace(/\D/g, '')) || 0)
-const requestAmount = computed(() => customAmountValue.value || selectedAmount.value)
-const formattedCustomAmount = computed(() =>
-  customAmountValue.value > 0 ? customAmountValue.value.toLocaleString('ko-KR') : '',
-)
-const canSubmit = computed(() => requestAmount.value > 0 && reason.value.trim().length > 0)
+const allowanceAmountValue = computed(() => Number(allowanceAmount.value.replace(/\D/g, '')) || 0)
+const canSubmit = computed(() => allowanceAmountValue.value > 0 && reason.value.trim().length > 0)
 
-const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
-
-const selectAmount = (amount: number) => {
-  selectedAmount.value = amount
-  customAmount.value = ''
+const updateAllowanceAmount = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const digits = input.value.replace(/\D/g, '').slice(0, maxMoneyDigits)
+  allowanceAmount.value = digits ? Number(digits).toLocaleString('ko-KR') : ''
+  if (input.value !== allowanceAmount.value) input.value = allowanceAmount.value
 }
 
-const updateCustomAmount = (event: Event) => {
+const startAllowanceAmountEdit = (event: FocusEvent) => {
+  allowanceAmount.value = allowanceAmountValue.value > 0 ? String(allowanceAmountValue.value) : ''
   const input = event.target as HTMLInputElement
-  customAmount.value = input.value.replace(/\D/g, '')
+  requestAnimationFrame(() => input.select())
+}
+
+const finishAllowanceAmountEdit = () => {
+  allowanceAmount.value =
+    allowanceAmountValue.value > 0 ? allowanceAmountValue.value.toLocaleString('ko-KR') : ''
+}
+
+const updateReason = (event: Event) => {
+  const textarea = event.target as HTMLTextAreaElement
+  reason.value = textarea.value.slice(0, maxReasonLength)
+  if (textarea.value !== reason.value) textarea.value = reason.value
 }
 
 const submitRequest = () => {
@@ -61,64 +69,48 @@ const submitRequest = () => {
     <section
       class="mt-6 rounded-[22px] bg-white px-5 py-5 shadow-[0_14px_32px_rgb(110_122_138_/_10%)]"
     >
-      <div class="mb-5 flex items-end justify-between">
+      <div class="mb-5">
         <div>
           <p class="m-0 text-[length:var(--font-size-md)] font-bold">얼마가 필요한가요?</p>
-          <strong class="mt-3 block text-[32px] font-bold">{{ formatCurrency(requestAmount) }}</strong>
+          <div
+            class="mt-3 rounded-[14px] border border-[#dce8ee] bg-white px-4 py-3 transition focus-within:border-[var(--color-brand-primary)]"
+          >
+            <div class="flex min-w-0 items-baseline gap-1">
+              <input
+                :value="allowanceAmount"
+                class="allowance-amount-input min-w-0 flex-1 border-0 bg-transparent p-0 text-[clamp(30px,7vw,40px)] leading-tight font-extrabold text-[var(--color-text-primary)] outline-none placeholder:text-[#9da5ad]"
+                inputmode="numeric"
+                placeholder="0"
+                type="text"
+                @focus="startAllowanceAmountEdit"
+                @input="updateAllowanceAmount"
+                @blur="finishAllowanceAmountEdit"
+              />
+              <span class="shrink-0 text-[20px] leading-none font-extrabold">원</span>
+            </div>
+          </div>
         </div>
-        <button
-          class="h-9 rounded-[10px] border border-[#d8ebff] bg-white px-3 text-[length:var(--font-size-xs)] font-bold text-[var(--color-brand-primary)]"
-          type="button"
-          @click="customAmount = ''"
-        >
-          금액 변경
-        </button>
-      </div>
-
-      <div class="grid grid-cols-3 gap-2">
-        <button
-          v-for="amount in allowanceOptions"
-          :key="amount"
-          class="h-11 rounded-full border text-[length:var(--font-size-sm)] font-bold"
-          :class="
-            selectedAmount === amount && !customAmount
-              ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-white'
-              : 'border-[var(--color-border)] bg-white text-[var(--color-text-secondary)]'
-          "
-          type="button"
-          @click="selectAmount(amount)"
-        >
-          {{ formatCurrency(amount) }}
-        </button>
-      </div>
-
-      <div class="relative mt-3">
-        <input
-          :value="formattedCustomAmount"
-          class="h-11 w-full rounded-[12px] border border-[var(--color-border)] px-4 pr-10 text-center text-[length:var(--font-size-sm)] outline-none focus:border-[var(--color-brand-primary)]"
-          inputmode="numeric"
-          placeholder="직접 입력하기"
-          type="text"
-          @input="updateCustomAmount"
-        />
-        <span
-          v-if="customAmountValue > 0"
-          class="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[length:var(--font-size-sm)] font-bold text-[var(--color-text-secondary)]"
-        >
-          원
-        </span>
       </div>
 
       <div class="my-5 h-px bg-[var(--color-border)]" />
 
       <label class="block text-[length:var(--font-size-md)] font-bold">
         부모님께 하고 싶은 말
-        <textarea
-          v-model="reason"
-          class="mt-3 min-h-[118px] w-full resize-none rounded-[12px] border border-[var(--color-border)] px-4 py-4 text-[length:var(--font-size-sm)] font-normal outline-none focus:border-[var(--color-brand-primary)]"
-          maxlength="200"
-          placeholder="용돈이 왜 필요한지 적어보세요 :)"
-        />
+        <div class="relative mt-3">
+          <textarea
+            :value="reason"
+            class="block min-h-[132px] w-full resize-none rounded-[12px] border border-[var(--color-border)] px-4 py-4 pb-8 text-[length:var(--font-size-sm)] font-normal outline-none focus:border-[var(--color-brand-primary)]"
+            :maxlength="maxReasonLength"
+            placeholder="용돈이 왜 필요한지 적어보세요 :)"
+            @input="updateReason"
+            @compositionend="updateReason"
+          />
+          <span
+            class="pointer-events-none absolute right-4 bottom-3 text-[11px] font-normal tabular-nums text-[var(--color-text-secondary)]"
+          >
+            {{ reason.length }}/{{ maxReasonLength }}
+          </span>
+        </div>
       </label>
 
       <div class="mt-3 rounded-[12px] bg-[#f0fbff] px-4 py-4 text-[length:var(--font-size-xs)] leading-[1.65] text-[var(--color-text-secondary)]">
@@ -129,14 +121,11 @@ const submitRequest = () => {
         예) 친구 생일 선물을 사려고 해요.<br />
         이번 주 토요일에 친구 집 근처 문구점에서 10,000원 정도 선물을 살 예정이에요.
       </div>
-      <p class="mt-2 mb-0 text-right text-[11px] text-[var(--color-text-secondary)]">
-        {{ reason.length }} / 200
-      </p>
     </section>
 
     <button
       class="mt-5 h-14 w-full rounded-[14px] border-0 text-[length:var(--font-size-md)] font-bold text-white"
-      :class="canSubmit ? 'bg-[var(--color-brand-primary)]' : 'bg-[#c8d2da]'"
+      :class="canSubmit ? 'bg-[var(--color-brand-primary)]' : 'bg-[#cbd8df]'"
       type="button"
       :disabled="!canSubmit"
       @click="submitRequest"
@@ -145,3 +134,14 @@ const submitRequest = () => {
     </button>
   </main>
 </template>
+
+<style scoped>
+.allowance-amount-input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+</style>

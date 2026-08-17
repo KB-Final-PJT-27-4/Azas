@@ -130,8 +130,8 @@ const submitTransfer = () => {
     </section>
 
     <button
-      class="fixed bottom-[92px] left-1/2 h-14 w-[calc(100%-40px)] max-w-[calc(var(--app-max-width)-40px)] -translate-x-1/2 rounded-[12px] border-0 text-[length:var(--font-size-md)] font-bold text-white"
-      :class="canSubmit ? 'bg-[var(--color-brand-primary)]' : 'bg-[#c8d2da]'"
+      class="fixed bottom-[92px] left-1/2 h-14 w-[calc(100%-40px)] max-w-[calc(var(--app-max-width)-40px)] -translate-x-1/2 rounded-[14px] border-0 text-[length:var(--font-size-md)] font-bold text-white"
+      :class="canSubmit ? 'bg-[var(--color-brand-primary)]' : 'bg-[#cbd8df]'"
       type="button"
       :disabled="!canSubmit"
       @click="submitTransfer"
