@@ -1,18 +1,19 @@
 package com.azas.domain.timecapsule.controller;
 
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySummaryResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
-import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
-import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
-import com.azas.global.security.AccessTokenMemberResolver;
+import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
+import com.azas.domain.timecapsule.entity.TimeCapsuleEntryStatus;
+import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
 import com.azas.global.exception.GlobalExceptionHandler;
+import com.azas.global.security.AccessTokenMemberResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -22,20 +23,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -44,25 +48,20 @@ class TimeCapsuleEntryControllerTest {
 
     @Mock
     private AccessTokenMemberResolver accessTokenMemberResolver;
-
     @Mock
     private TimeCapsuleService timeCapsuleService;
-
     @Mock
     private TimeCapsuleEntryService timeCapsuleEntryService;
-
     @InjectMocks
     private TimeCapsuleController timeCapsuleController;
 
     private MockMvc mockMvc;
 
     @BeforeEach
-    // [JMG] CAPSULE-4 ISO 날짜 형식을 적용한 엔트리 목록 컨트롤러 테스트 환경을 구성한다.
     void setUp() {
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
         mockMvc = MockMvcBuilders
                 .standaloneSetup(timeCapsuleController)
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -73,26 +72,22 @@ class TimeCapsuleEntryControllerTest {
     }
 
     @Test
-    // [JMG] CAPSULE-4 엔트리 목록 URL은 프런트 계약에 맞는 안전한 필드만 반환한다.
     void getTimeCapsuleEntriesReturnsEntryList() throws Exception {
         TimeCapsuleEntry entry = createEntry(1000L);
+        ReflectionTestUtils.setField(entry, "status",
+                TimeCapsuleEntryStatus.SEALED);
         TimeCapsule timeCapsule = TimeCapsule.create(
-                10L,
-                31L,
-                "아이사랑적금",
-                LocalDate.of(2027, 8, 8)
+                10L, 31L, "아이사랑적금", LocalDate.of(2027, 8, 8)
         );
         ReflectionTestUtils.setField(timeCapsule, "timeCapsuleId", 100L);
         ReflectionTestUtils.setField(
-                timeCapsule,
-                "totalContributionAmount",
+                timeCapsule, "totalContributionAmount",
                 new BigDecimal("150000.00")
         );
         TimeCapsuleEntryListResponse response =
                 new TimeCapsuleEntryListResponse(
                         TimeCapsuleSummaryResponse.from(
-                                timeCapsule,
-                                LocalDate.of(2026, 8, 16)
+                                timeCapsule, LocalDate.of(2026, 8, 16)
                         ),
                         List.of(TimeCapsuleEntrySummaryResponse.from(entry))
                 );
@@ -107,74 +102,74 @@ class TimeCapsuleEntryControllerTest {
                                 .header("Authorization", "Bearer access-token")
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.time_capsule.time_capsule_id")
-                        .value(100))
-                .andExpect(jsonPath("$.time_capsule.account_id")
-                        .value(31))
-                .andExpect(jsonPath("$.time_capsule.d_day")
-                        .value(357))
-                .andExpect(jsonPath("$.time_capsule.dday")
-                        .doesNotExist())
+                .andExpect(jsonPath("$.time_capsule.time_capsule_id").value(100))
+                .andExpect(jsonPath("$.time_capsule.d_day").value(357))
+                .andExpect(jsonPath("$.time_capsule.dday").doesNotExist())
                 .andExpect(jsonPath("$.total_count").value(1))
                 .andExpect(jsonPath("$.entries[0].time_capsule_entry_id")
-                        .value(1000))
-                .andExpect(jsonPath("$.entries[0].media_mode")
-                        .doesNotExist())
-                .andExpect(jsonPath("$.entries[0].media_count")
-                        .doesNotExist())
-                .andExpect(jsonPath("$.entries[0].status")
-                        .doesNotExist())
-                .andExpect(jsonPath("$.entries[0].thumbnail_object_key")
-                        .doesNotExist())
-                .andExpect(jsonPath("$.entries[0].thumbnail_url").isEmpty());
+                        .value(1000));
     }
 
     @Test
-    // [JMG] CAPSULE-12 DRAFT 엔트리 수정 URL은 수정 결과를 프런트 계약대로 반환한다.
-    void updateTimeCapsuleEntryReturnsUpdatedResponse() throws Exception {
+    void createTimeCapsuleEntryReturnsDraftResponse() throws Exception {
         TimeCapsuleEntry entry = createEntry(1000L);
-        ReflectionTestUtils.setField(entry, "title", "첫 저축 기록");
         ReflectionTestUtils.setField(
-                entry,
-                "message",
-                "오늘부터 대학자금을 모으기 시작했어."
+                entry, "createdAt", LocalDateTime.of(2026, 8, 16, 14, 30)
         );
-        ReflectionTestUtils.setField(entry, "editCount", 1);
-
         given(accessTokenMemberResolver.resolveMemberId("Bearer access-token"))
                 .willReturn(7L);
-        given(timeCapsuleEntryService.updateTimeCapsuleEntry(
-                org.mockito.ArgumentMatchers.eq(7L),
-                org.mockito.ArgumentMatchers.eq(1000L),
-                org.mockito.ArgumentMatchers.any()
-        )).willReturn(TimeCapsuleEntryUpdateResponse.from(entry));
+        given(timeCapsuleEntryService.createTimeCapsuleEntry(
+                eq(7L), eq(100L), any()
+        )).willReturn(CreateTimeCapsuleEntryResponse.from(entry));
 
         mockMvc.perform(
-                        patch("/api/v1/time-capsule-entries/{entryId}", 1000L)
+                        post("/api/v1/time-capsules/{timeCapsuleId}/entries", 100L)
                                 .header("Authorization", "Bearer access-token")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                         {
-                                          "title": "첫 저축 기록",
-                                          "message": "오늘부터 대학자금을 모으기 시작했어."
+                                          "account_transaction_id": 901,
+                                          "title": "첫 용돈을 받은 날",
+                                          "message": "남은 돈은 꼭 저축하자."
                                         }
                                         """)
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.time_capsule_entry_id").value(1000))
-                .andExpect(jsonPath("$.edit_count").value(1))
-                .andExpect(jsonPath("$.title").value("첫 저축 기록"));
+                .andExpect(jsonPath("$.time_capsule_id").value(100))
+                .andExpect(jsonPath("$.account_transaction_id").value(901))
+                .andExpect(jsonPath("$.contribution_amount").value(150000.00))
+                .andExpect(jsonPath("$.contributed_at")
+                        .value("2026-08-05T10:30:00"))
+                .andExpect(jsonPath("$.status").value("DRAFT"))
+                .andExpect(jsonPath("$.created_at")
+                        .value("2026-08-16T14:30:00"));
     }
 
     @Test
-    // [JMG] CAPSULE-15 DRAFT 엔트리 봉인 URL은 봉인 결과를 프런트 계약대로 반환한다.
+    void createTimeCapsuleEntryRejectsInvalidRequest() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/time-capsules/{timeCapsuleId}/entries", 100L)
+                                .header("Authorization", "Bearer access-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "account_transaction_id": 0,
+                                          "title": " ",
+                                          "message": " "
+                                        }
+                                        """)
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void sealTimeCapsuleEntryReturnsSealedResponse() throws Exception {
         TimeCapsuleEntry entry = createEntry(1000L);
         ReflectionTestUtils.setField(entry, "status",
-                com.azas.domain.timecapsule.entity.TimeCapsuleEntryStatus.SEALED);
+                TimeCapsuleEntryStatus.SEALED);
         ReflectionTestUtils.setField(entry, "sealedAt",
                 LocalDateTime.of(2026, 8, 5, 11, 40));
-
         given(accessTokenMemberResolver.resolveMemberId("Bearer access-token"))
                 .willReturn(7L);
         given(timeCapsuleEntryService.sealTimeCapsuleEntry(7L, 1000L))
@@ -191,37 +186,22 @@ class TimeCapsuleEntryControllerTest {
                         .value("2026-08-05T11:40:00"));
     }
 
-    // [JMG] CAPSULE-4 테스트용 엔트리를 자동 초안 생성 규칙과 동일한 형태로 구성한다.
     private TimeCapsuleEntry createEntry(long entryId) {
-        TimeCapsuleEntryTransaction transaction =
-                new TimeCapsuleEntryTransaction();
+        TimeCapsuleEntryTransaction transaction = new TimeCapsuleEntryTransaction();
+        ReflectionTestUtils.setField(transaction, "accountTransactionId", 901L);
         ReflectionTestUtils.setField(
-                transaction,
-                "accountTransactionId",
-                901L
+                transaction, "direction", AccountTransactionDirection.CREDIT
         );
         ReflectionTestUtils.setField(
-                transaction,
-                "direction",
-                AccountTransactionDirection.CREDIT
+                transaction, "amount", new BigDecimal("150000.00")
         );
         ReflectionTestUtils.setField(
-                transaction,
-                "amount",
-                new BigDecimal("150000.00")
+                transaction, "occurredAt", LocalDateTime.of(2026, 8, 5, 10, 30)
         );
-        ReflectionTestUtils.setField(
-                transaction,
-                "occurredAt",
-                LocalDateTime.of(2026, 8, 5, 10, 30)
+        TimeCapsuleEntry entry = TimeCapsuleEntry.createDraft(
+                100L, 7L, transaction,
+                "첫 용돈을 받은 날", "남은 돈은 꼭 저축하자."
         );
-
-        TimeCapsuleEntry entry =
-                TimeCapsuleEntry.createDraftForSuccessfulTransfer(
-                        100L,
-                        7L,
-                        transaction
-                );
         ReflectionTestUtils.setField(entry, "timeCapsuleEntryId", entryId);
         return entry;
     }

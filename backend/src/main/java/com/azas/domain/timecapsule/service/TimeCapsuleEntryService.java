@@ -1,17 +1,16 @@
 package com.azas.domain.timecapsule.service;
 
-import com.azas.domain.timecapsule.dto.TimeCapsuleEntryAutoCreationResult;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySummaryResponse;
-import com.azas.domain.timecapsule.dto.TimeCapsuleEntryUpdateResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
-import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
@@ -35,7 +34,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.time.Duration;
@@ -145,10 +143,6 @@ public class TimeCapsuleEntryService {
         ) != media.size()
                 || timeCapsuleEntryMapper.markDraftEntryAsDeleted(
                 timeCapsuleEntryId
-        ) != 1
-                || timeCapsuleMapper.decreaseEntryAggregates(
-                entry.getTimeCapsuleId(),
-                entry.getContributionAmount()
         ) != 1) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
@@ -157,97 +151,56 @@ public class TimeCapsuleEntryService {
     }
 
     @Transactional
-    // [JMG] CAPSULE-5 성공한 적금 이체의 CREDIT 거래를 기준으로 엔트리 초안을 멱등하게 자동 생성한다.
-    public Optional<TimeCapsuleEntryAutoCreationResult>
-    createDraftForSuccessfulSavingsTransfer(
+    // [JMG] CAPSULE-5 부모가 선택한 타임캡슐 계좌의 입금 거래와 작성 내용으로 DRAFT 기록을 생성한다.
+    public CreateTimeCapsuleEntryResponse createTimeCapsuleEntry(
             long requesterMemberId,
-            long financialAccountId,
-            long accountTransactionId
+            long timeCapsuleId,
+            CreateTimeCapsuleEntryRequest request
     ) {
-        TimeCapsule timeCapsule =
-                timeCapsuleMapper.findByFinancialAccountIdForUpdate(
-                        financialAccountId
-                );
-
-        if (timeCapsule == null
-                || timeCapsule.getStatus() != TimeCapsuleStatus.COLLECTING) {
-            return Optional.empty();
+        if (timeCapsuleId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
         }
 
-        assertActiveParentRelation(requesterMemberId, timeCapsule);
+        TimeCapsule timeCapsule =
+                timeCapsuleMapper.findAccessibleByIdForUpdate(
+                        timeCapsuleId,
+                        requesterMemberId
+                );
+        if (timeCapsule == null) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_FOUND);
+        }
+        assertCollectingTimeCapsule(timeCapsule);
 
         TimeCapsuleEntry existingEntry =
                 timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
-                        timeCapsule.getTimeCapsuleId(),
-                        accountTransactionId
+                        timeCapsuleId,
+                        request.getAccountTransactionId()
                 );
         if (existingEntry != null) {
-            return Optional.of(
-                    TimeCapsuleEntryAutoCreationResult.from(existingEntry)
+            throw new BusinessException(
+                    ErrorCode.DUPLICATE_TIME_CAPSULE_ENTRY
             );
         }
 
         TimeCapsuleEntryTransaction transaction =
-                getCreditTransactionForSavingsAccountOrThrow(
-                        financialAccountId,
-                        accountTransactionId
+                getContributionTransactionOrThrow(
+                        timeCapsule.getFinancialAccountId(),
+                        request.getAccountTransactionId()
                 );
         assertEligibleContributionTransaction(transaction);
 
-        TimeCapsuleEntry entry =
-                TimeCapsuleEntry.createDraftForSuccessfulTransfer(
-                        timeCapsule.getTimeCapsuleId(),
-                        requesterMemberId,
-                        transaction
-                );
-
-        TimeCapsuleEntry savedEntry = insertEntryIdempotently(entry);
-
-        if (savedEntry != entry) {
-            return Optional.of(
-                    TimeCapsuleEntryAutoCreationResult.from(savedEntry)
-            );
-        }
-
-        if (timeCapsuleEntryMapper.increaseEntryAggregates(entry) != 1) {
-            throw new BusinessException(
-                    ErrorCode.TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED
-            );
-        }
-
-        return Optional.of(TimeCapsuleEntryAutoCreationResult.from(entry));
-    }
-
-    @Transactional
-    // [JMG] CAPSULE-12 작성자 본인이 DRAFT 엔트리의 제목 또는 편지를 수정한다.
-    public TimeCapsuleEntryUpdateResponse updateTimeCapsuleEntry(
-            long requesterMemberId,
-            long timeCapsuleEntryId,
-            UpdateTimeCapsuleEntryRequest request
-    ) {
-        assertValidUpdateRequest(request);
-        TimeCapsuleEntry entry = getOwnedTimeCapsuleEntryForUpdateOrThrow(
+        TimeCapsuleEntry entry = TimeCapsuleEntry.createDraft(
+                timeCapsuleId,
                 requesterMemberId,
-                timeCapsuleEntryId
-        );
-        assertDraftEntry(entry);
-        assertEditableEntry(entry);
-
-        if (timeCapsuleEntryMapper.updateDraftContent(
-                timeCapsuleEntryId,
+                transaction,
                 request.getTrimmedTitle(),
                 request.getTrimmedMessage()
-        ) != 1) {
-            throw new BusinessException(
-                    ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
-            );
-        }
+        );
+        insertEntryOrThrow(entry);
 
-        return TimeCapsuleEntryUpdateResponse.from(
-                getOwnedTimeCapsuleEntryOrThrow(
-                        requesterMemberId,
-                        timeCapsuleEntryId
-                )
+        return CreateTimeCapsuleEntryResponse.from(
+                getOwnedTimeCapsuleEntryOrThrow(requesterMemberId,
+                        entry.getTimeCapsuleEntryId())
         );
     }
 
@@ -264,7 +217,8 @@ public class TimeCapsuleEntryService {
         assertDraftEntry(entry);
         assertMediaRequirementsForSeal(entry);
 
-        if (timeCapsuleEntryMapper.sealDraftEntry(timeCapsuleEntryId) != 1) {
+        if (timeCapsuleEntryMapper.sealDraftEntry(timeCapsuleEntryId) != 1
+                || timeCapsuleEntryMapper.increaseEntryAggregates(entry) != 1) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
             );
@@ -452,7 +406,7 @@ public class TimeCapsuleEntryService {
         return entry;
     }
 
-    // [JMG] CAPSULE-12 작성자이면서 자녀와 연결된 부모에게만 엔트리를 노출한다.
+    // [JMG] CAPSULE-7 작성자이면서 자녀와 연결된 부모에게만 엔트리를 노출한다.
     private TimeCapsuleEntry getOwnedTimeCapsuleEntryOrThrow(
             long requesterMemberId,
             long timeCapsuleEntryId
@@ -468,7 +422,7 @@ public class TimeCapsuleEntryService {
         return entry;
     }
 
-    // [JMG] CAPSULE-12 수정·봉인 직전 엔트리 행을 잠가 상태 변경 경쟁 조건을 방지한다.
+    // [JMG] CAPSULE-13·15 삭제·봉인 직전 엔트리 행을 잠가 상태 변경 경쟁 조건을 방지한다.
     private TimeCapsuleEntry getOwnedTimeCapsuleEntryForUpdateOrThrow(
             long requesterMemberId,
             long timeCapsuleEntryId
@@ -485,22 +439,9 @@ public class TimeCapsuleEntryService {
         return entry;
     }
 
-    // [JMG] CAPSULE-5 내부 이체 이벤트도 실제 부모·보호자만 작성자로 기록되도록 관계를 다시 검증한다.
-    private void assertActiveParentRelation(
-            long requesterMemberId,
-            TimeCapsule timeCapsule
-    ) {
-        if (!timeCapsuleMapper.existsActiveParentRelation(
-                requesterMemberId,
-                timeCapsule.getChildId()
-        )) {
-            throw new BusinessException(ErrorCode.TIME_CAPSULE_ACCESS_DENIED);
-        }
-    }
-
-    // [JMG] CAPSULE-5 대상 적금 계좌에 실제로 기록된 거래만 조회해 임의 거래 연결을 차단한다.
+    // [JMG] CAPSULE-5 대상 타임캡슐 계좌에 실제로 기록된 거래만 조회해 임의 거래 연결을 차단한다.
     private TimeCapsuleEntryTransaction
-    getCreditTransactionForSavingsAccountOrThrow(
+    getContributionTransactionOrThrow(
             long financialAccountId,
             long accountTransactionId
     ) {
@@ -530,12 +471,15 @@ public class TimeCapsuleEntryService {
         }
     }
 
-    // [JMG] CAPSULE-12 빈 수정 요청과 공백뿐인 제목·편지를 400 오류로 차단한다.
-    private void assertValidUpdateRequest(
-            UpdateTimeCapsuleEntryRequest request
-    ) {
-        if (!request.hasUpdateField() || !request.hasOnlyValidText()) {
-            throw new BusinessException(ErrorCode.BADREQUEST);
+    // [JMG] CAPSULE-5 수집 중이고 공개일이 지나지 않은 보관함에만 새 기록을 허용한다.
+    private void assertCollectingTimeCapsule(TimeCapsule timeCapsule) {
+        LocalDateTime releaseAt = timeCapsule.getExpectedReleaseAt();
+        if (timeCapsule.getStatus() != TimeCapsuleStatus.COLLECTING
+                || (releaseAt != null
+                && !releaseAt.isAfter(LocalDateTime.now(SERVICE_ZONE)))) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED
+            );
         }
     }
 
@@ -577,18 +521,9 @@ public class TimeCapsuleEntryService {
         );
     }
 
-    // [JMG] CAPSULE-12 봉인 또는 삭제된 엔트리의 변경 시도를 상태 충돌 오류로 처리한다.
+    // [JMG] CAPSULE-13·15 봉인 또는 삭제된 엔트리의 변경 시도를 상태 충돌 오류로 처리한다.
     private void assertDraftEntry(TimeCapsuleEntry entry) {
         if (!entry.isDraft()) {
-            throw new BusinessException(
-                    ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
-            );
-        }
-    }
-
-    // [JMG] CAPSULE-12 현재 정책상 한 번 수정한 엔트리는 DRAFT 상태여도 추가 수정을 허용하지 않는다.
-    private void assertEditableEntry(TimeCapsuleEntry entry) {
-        if (entry.getEditCount() >= 1) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
             );
@@ -616,13 +551,10 @@ public class TimeCapsuleEntryService {
                         TimeCapsuleMediaType.VIDEO
                 );
 
-        boolean isValid = switch (entry.getMediaMode()) {
-            case NONE -> activeImageCount == 0 && activeVideoCount == 0;
-            case IMAGE -> activeImageCount >= 1
-                    && activeImageCount <= 3
-                    && activeVideoCount == 0;
-            case VIDEO -> activeImageCount == 0 && activeVideoCount == 1;
-        };
+        boolean isValid = entry.getMediaMode()
+                == TimeCapsuleEntryMediaMode.IMAGE
+                && activeImageCount == 1
+                && activeVideoCount == 0;
         if (!isValid) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET
@@ -801,24 +733,14 @@ public class TimeCapsuleEntryService {
     }
 
     // [JMG] CAPSULE-5 DB 고유 제약과 재조회로 이체 이벤트 재시도에도 엔트리를 하나만 유지한다.
-    private TimeCapsuleEntry insertEntryIdempotently(TimeCapsuleEntry entry) {
+    private void insertEntryOrThrow(TimeCapsuleEntry entry) {
         try {
             if (timeCapsuleEntryMapper.insert(entry) != 1) {
                 throw new BusinessException(
                         ErrorCode.TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED
                 );
             }
-            return entry;
         } catch (DuplicateKeyException exception) {
-            TimeCapsuleEntry existingEntry =
-                    timeCapsuleEntryMapper.findByTimeCapsuleAndTransactionId(
-                            entry.getTimeCapsuleId(),
-                            entry.getAccountTransactionId()
-                    );
-            if (existingEntry != null) {
-                return existingEntry;
-            }
-
             throw new BusinessException(
                     ErrorCode.DUPLICATE_TIME_CAPSULE_ENTRY,
                     exception
