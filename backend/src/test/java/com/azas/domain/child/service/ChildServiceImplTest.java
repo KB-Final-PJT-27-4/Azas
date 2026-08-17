@@ -727,4 +727,34 @@ class ChildServiceImplTest {
         );
     }
 
+    // 기능 :
+    @Test
+    void doesNotDeleteChildWhenDependentRecordExists() {
+        when(childMapper.countChildAccess(
+                CHILD_ID,
+                MEMBER_ID
+        )).thenReturn(1);
+
+        when(childMapper.countFinancialHistory(
+                CHILD_ID
+        )).thenReturn(1);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> childService.deleteChild(
+                                MEMBER_ID,
+                                CHILD_ID
+                        )
+                );
+
+        assertEquals(
+                ErrorCode.CHILD_HAS_FINANCIAL_HISTORY,
+                exception.getErrorCode()
+        );
+
+        verify(childMapper, never())
+                .softDeleteChild(CHILD_ID);
+    }
+
 }
