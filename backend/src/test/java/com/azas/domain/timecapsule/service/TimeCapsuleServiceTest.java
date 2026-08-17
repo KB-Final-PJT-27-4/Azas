@@ -10,7 +10,6 @@ import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
-import com.azas.domain.timecapsule.mapper.TimeCapsuleExportMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMediaMapper;
 import com.azas.domain.timecapsule.storage.TimeCapsuleObjectStorage;
 import com.azas.global.exception.BusinessException;
@@ -33,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -54,8 +54,6 @@ class TimeCapsuleServiceTest {
     @Mock
     private TimeCapsuleMediaMapper timeCapsuleMediaMapper;
 
-    @Mock
-    private TimeCapsuleExportMapper timeCapsuleExportMapper;
 
     @Mock
     private TimeCapsuleObjectStorage timeCapsuleObjectStorage;
@@ -372,9 +370,6 @@ class TimeCapsuleServiceTest {
                 .willReturn(List.of(
                         "time-capsules/100/entries/1000/slot-1.jpg"
                 ));
-        given(timeCapsuleExportMapper
-                .findOutputObjectKeysByTimeCapsuleIdForUpdate(100L))
-                .willReturn(List.of("time-capsules/100/exports/100.mp4"));
         given(timeCapsuleMapper.deleteById(100L)).willReturn(1);
 
         timeCapsuleService.deleteTimeCapsule(7L, 100L);
@@ -382,12 +377,8 @@ class TimeCapsuleServiceTest {
         verify(timeCapsuleObjectStorage).deleteObject(
                 "time-capsules/100/entries/1000/slot-1.jpg"
         );
-        verify(timeCapsuleObjectStorage).deleteObject(
-                "time-capsules/100/exports/100.mp4"
-        );
         verify(timeCapsuleMediaMapper).deleteByTimeCapsuleId(100L);
         verify(timeCapsuleEntryMapper).deleteByTimeCapsuleId(100L);
-        verify(timeCapsuleExportMapper).deleteByTimeCapsuleId(100L);
         verify(timeCapsuleMapper).deleteById(100L);
     }
 
@@ -410,9 +401,6 @@ class TimeCapsuleServiceTest {
         given(timeCapsuleMediaMapper
                 .findObjectKeysByTimeCapsuleIdForUpdate(100L))
                 .willReturn(List.of(mediaObjectKey));
-        given(timeCapsuleExportMapper
-                .findOutputObjectKeysByTimeCapsuleIdForUpdate(100L))
-                .willReturn(List.of());
         doThrow(new BusinessException(ErrorCode.TIME_CAPSULE_STORAGE_UNAVAILABLE))
                 .when(timeCapsuleObjectStorage)
                 .deleteObject(mediaObjectKey);
@@ -426,9 +414,39 @@ class TimeCapsuleServiceTest {
                 exception.getErrorCode());
         verify(timeCapsuleMediaMapper, never()).deleteByTimeCapsuleId(100L);
         verify(timeCapsuleEntryMapper, never()).deleteByTimeCapsuleId(100L);
-        verify(timeCapsuleExportMapper, never()).deleteByTimeCapsuleId(100L);
         verify(timeCapsuleMapper, never()).deleteById(100L);
     }
+
+    @Test
+    void deleteTimeCapsuleRejectsInvalidIdentifier() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.deleteTimeCapsule(7L, 0L)
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+        verify(timeCapsuleMapper, never())
+                .findAccessibleByIdForUpdate(anyLong(), anyLong());
+    }
+
+    @Test
+    void deleteTimeCapsuleHidesMissingOrInaccessibleCapsule() {
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(null);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.deleteTimeCapsule(7L, 100L)
+        );
+
+        assertEquals(
+                ErrorCode.TIME_CAPSULE_NOT_FOUND,
+                exception.getErrorCode()
+        );
+        verify(timeCapsuleEntryMapper, never())
+                .lockByTimeCapsuleId(100L);
+    }
+
 
     // [JMG] CAPSULE-1 테스트용 보관함 생성 가능 계좌를 구성한다.
     private TimeCapsuleAccount createAccount(

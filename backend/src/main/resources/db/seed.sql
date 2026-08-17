@@ -9,7 +9,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE notification;
 TRUNCATE TABLE notification_preference;
 TRUNCATE TABLE asset_report;
-TRUNCATE TABLE time_capsule_export;
 TRUNCATE TABLE time_capsule_media;
 TRUNCATE TABLE time_capsule_entry;
 TRUNCATE TABLE time_capsule;
