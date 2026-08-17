@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { X } from 'lucide-vue-next'
 
 import goalEducationIcon from '@/assets/images/goals/goals_1.png'
@@ -14,10 +15,14 @@ type GoalOption = {
   description: string
 }
 
-defineProps<{
-  selectedGoals: string[]
-  customGoal: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    selectedGoals: string[]
+    customGoal: string
+    singleSelection?: boolean
+  }>(),
+  { singleSelection: false },
+)
 
 const emit = defineEmits<{
   toggle: [goalId: string]
@@ -65,43 +70,86 @@ const goals: GoalOption[] = [
     description: '원하는 목표를 직접 입력해요',
   },
 ]
+
+const selectedGoal = computed(() => goals.find(({ id }) => id === props.selectedGoals[0]))
+
+const selectedGoalCardStyle = computed(() => {
+  const styles: Record<string, string> = {
+    education: 'border-sky-300 bg-sky-50',
+    housing: 'border-emerald-300 bg-emerald-50',
+    marriage: 'border-pink-300 bg-pink-50',
+    'lump-sum': 'border-amber-300 bg-amber-50',
+    custom: 'border-violet-300 bg-violet-50',
+  }
+
+  return selectedGoal.value ? styles[selectedGoal.value.id] : ''
+})
 </script>
 
 <template>
   <section>
-    <h1 class="text-[26px] font-bold tracking-[-0.04em]">어떤 목표를 준비할까요?</h1>
-    <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
-      여러 개를 선택하고 나중에 추가할 수도 있어요.
-    </p>
+    <div
+      class="goal-intro overflow-hidden"
+      :class="singleSelection && selectedGoal ? 'goal-intro--hidden' : ''"
+      :aria-hidden="singleSelection && Boolean(selectedGoal)"
+    >
+      <div>
+        <h1 class="text-[26px] font-bold tracking-[-0.04em]">어떤 목표를 준비할까요?</h1>
+        <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
+          {{ singleSelection ? '가장 먼저 준비하고 싶은 목표 하나를 골라주세요.' : '여러 개를 선택하고 나중에 추가할 수도 있어요.' }}
+        </p>
+      </div>
+    </div>
 
-    <div class="mt-7 grid gap-3">
+    <div
+      class="goal-list"
+      :class="singleSelection && selectedGoal ? 'goal-list--selected' : 'mt-7'"
+    >
       <button
         v-for="goal in goals"
         :key="goal.id"
-        class="flex min-h-[74px] items-center gap-3 rounded-2xl border px-4 text-left transition-colors"
-        :class="
+        class="goal-option mb-3 flex min-h-[74px] w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 text-left last:mb-0"
+        :class="[
           selectedGoals.includes(goal.id)
-            ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)]'
-            : 'border-[var(--color-border)] bg-[var(--color-surface)]'
-        "
+            ? selectedGoalCardStyle
+            : 'border-[var(--color-border)] bg-[var(--color-surface)]',
+          singleSelection && selectedGoal && !selectedGoals.includes(goal.id)
+            ? 'goal-option--hidden'
+            : '',
+        ]"
         type="button"
         :aria-pressed="selectedGoals.includes(goal.id)"
+        :tabindex="singleSelection && selectedGoal && !selectedGoals.includes(goal.id) ? -1 : 0"
         @click="emit('toggle', goal.id)"
       >
         <img class="size-11 object-contain" :src="goal.icon" alt="" />
         <span class="min-w-0 flex-1">
-          <strong class="block text-base">{{ goal.title }}</strong>
-          <span class="mt-1 block break-keep text-sm leading-5 text-[var(--color-text-secondary)]">
+          <span
+            v-if="singleSelection && selectedGoals.includes(goal.id)"
+            class="block text-[11px] font-bold text-[var(--color-selected-text)]"
+          >선택한 목표</span>
+          <strong
+            class="block text-base"
+            :class="singleSelection && selectedGoals.includes(goal.id) ? 'mt-0.5' : ''"
+          >{{ goal.title }}</strong>
+          <span
+            v-if="!singleSelection || !selectedGoals.includes(goal.id)"
+            class="mt-1 block break-keep text-sm leading-5 text-[var(--color-text-secondary)]"
+          >
             {{ goal.description }}
           </span>
         </span>
         <span
-          v-if="selectedGoals.includes(goal.id)"
+          v-if="selectedGoals.includes(goal.id) && !singleSelection"
           class="grid size-6 place-items-center rounded-full bg-[var(--color-brand-primary)] text-sm text-white"
           aria-hidden="true"
         >
           ✓
         </span>
+        <span
+          v-else-if="selectedGoals.includes(goal.id)"
+          class="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[var(--color-text-secondary)]"
+        >변경</span>
       </button>
     </div>
 
@@ -153,3 +201,60 @@ const goals: GoalOption[] = [
     </div>
   </section>
 </template>
+
+<style scoped>
+.goal-intro {
+  max-height: 88px;
+  transition:
+    max-height 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease;
+}
+
+.goal-intro--hidden {
+  max-height: 0;
+  transform: translateY(-8px);
+  opacity: 0;
+}
+
+.goal-list {
+  transition: margin-top 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.goal-list--selected {
+  margin-top: 0;
+}
+
+.goal-option {
+  max-height: 96px;
+  transition:
+    max-height 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    min-height 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    background-color 220ms ease,
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 170ms ease;
+}
+
+.goal-option--hidden {
+  min-height: 0;
+  max-height: 0;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-width: 0;
+  transform: translateY(-8px) scale(0.985);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-intro,
+  .goal-list,
+  .goal-option {
+    transition-duration: 1ms;
+  }
+}
+</style>
