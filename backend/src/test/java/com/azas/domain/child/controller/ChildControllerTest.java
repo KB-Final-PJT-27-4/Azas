@@ -120,7 +120,7 @@ class ChildControllerTest {
                                 )
                                 .content(body)
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(
                         jsonPath("$.child_id")
                                 .value(CHILD_ID)
