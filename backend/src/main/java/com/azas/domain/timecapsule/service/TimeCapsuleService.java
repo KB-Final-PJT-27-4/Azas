@@ -8,7 +8,6 @@ import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
-import com.azas.domain.timecapsule.mapper.TimeCapsuleExportMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMediaMapper;
 import com.azas.domain.timecapsule.storage.TimeCapsuleObjectStorage;
 import com.azas.domain.member.entity.Member;
@@ -39,7 +38,6 @@ public class TimeCapsuleService {
     private final TimeCapsuleMapper timeCapsuleMapper;
     private final TimeCapsuleEntryMapper timeCapsuleEntryMapper;
     private final TimeCapsuleMediaMapper timeCapsuleMediaMapper;
-    private final TimeCapsuleExportMapper timeCapsuleExportMapper;
     private final TimeCapsuleObjectStorage timeCapsuleObjectStorage;
 
     @Transactional
@@ -137,18 +135,12 @@ public class TimeCapsuleService {
         addObjectKeys(objectKeys,
                 timeCapsuleMediaMapper
                         .findObjectKeysByTimeCapsuleIdForUpdate(timeCapsuleId));
-        addObjectKeys(objectKeys,
-                timeCapsuleExportMapper
-                        .findOutputObjectKeysByTimeCapsuleIdForUpdate(
-                                timeCapsuleId
-                        ));
         for (String objectKey : objectKeys) {
             timeCapsuleObjectStorage.deleteObject(objectKey);
         }
 
         timeCapsuleMediaMapper.deleteByTimeCapsuleId(timeCapsuleId);
         timeCapsuleEntryMapper.deleteByTimeCapsuleId(timeCapsuleId);
-        timeCapsuleExportMapper.deleteByTimeCapsuleId(timeCapsuleId);
         if (timeCapsuleMapper.deleteById(
                 timeCapsule.getTimeCapsuleId()
         ) != 1) {
