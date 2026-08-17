@@ -27,7 +27,6 @@ public class TimeCapsuleEntry {
     private LocalDateTime updatedAt;
     private int mediaCount;
 
-    // [JMG] CAPSULE-5 부모가 선택한 입금 거래와 작성 내용을 기준으로 엔트리 초안을 생성한다.
     public static TimeCapsuleEntry createDraft(
             long timeCapsuleId,
             long authorMemberId,
@@ -48,7 +47,6 @@ public class TimeCapsuleEntry {
         return entry;
     }
 
-    // [JMG] CAPSULE-12 엔트리가 수정과 봉인이 가능한 작성 중 상태인지 반환한다.
     public boolean isDraft() {
         return status == TimeCapsuleEntryStatus.DRAFT;
     }

@@ -21,7 +21,6 @@ public class TimeCapsuleMedia {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // [JMG] CAPSULE-7 서버가 생성한 객체 키를 사용해 업로드 대기 미디어를 생성한다.
     public static TimeCapsuleMedia createPendingUpload(
             long timeCapsuleEntryId,
             TimeCapsuleMediaType mediaType,
@@ -41,7 +40,6 @@ public class TimeCapsuleMedia {
         return media;
     }
 
-    // [JMG] CAPSULE-8 저장소 객체의 MIME 타입과 파일 크기가 사전 요청과 일치하는지 검증한다.
     public boolean matchesUploadedObject(
             String uploadedMimeType,
             long uploadedFileSize
@@ -50,7 +48,6 @@ public class TimeCapsuleMedia {
                 && fileSize == uploadedFileSize;
     }
 
-    // [JMG] CAPSULE-8 저장소 검증을 통과한 업로드 대기 미디어를 활성 상태로 전환한다.
     public void activate() {
         status = TimeCapsuleMediaStatus.ACTIVE;
     }

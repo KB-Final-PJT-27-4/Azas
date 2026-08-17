@@ -41,7 +41,6 @@ public class TimeCapsuleService {
     private final TimeCapsuleObjectStorage timeCapsuleObjectStorage;
 
     @Transactional
-    // [JMG] CAPSULE-1 부모 또는 자녀의 활성 계좌를 자녀 타임캡슐 보관함에 연결한다.
     public CreateTimeCapsuleResponse createTimeCapsule(
             long requesterMemberId,
             long childId,
@@ -97,7 +96,6 @@ public class TimeCapsuleService {
     }
 
     @Transactional(readOnly = true)
-    // [JMG] CAPSULE-2 자녀의 타임캡슐 보관함을 카드 또는 캘린더 목록으로 조회한다.
     public TimeCapsuleListResponse getTimeCapsules(
             long requesterMemberId,
             long childId
@@ -120,7 +118,6 @@ public class TimeCapsuleService {
     }
 
     @Transactional
-    // [JMG] CAPSULE-6 부모·보호자 요청에 따라 보관함 하위 S3 객체와 DB 데이터를 영구 삭제한다.
     public void deleteTimeCapsule(
             long requesterMemberId,
             long timeCapsuleId
@@ -200,7 +197,6 @@ public class TimeCapsuleService {
         );
     }
 
-    // [JMG] CAPSULE-3 요청 부모가 접근 가능한 보관함을 조회하고 없으면 예외를 발생시킨다.
     private TimeCapsule getAccessibleTimeCapsuleOrThrow(
             long requesterMemberId,
             long timeCapsuleId
@@ -220,7 +216,6 @@ public class TimeCapsuleService {
         return timeCapsule;
     }
 
-    // [JMG] CAPSULE-6 삭제 처리 중 엔트리 생성·수정과의 경합을 막도록 보관함 행을 잠근다.
     private TimeCapsule getAccessibleTimeCapsuleForUpdateOrThrow(
             long requesterMemberId,
             long timeCapsuleId
@@ -237,7 +232,6 @@ public class TimeCapsuleService {
         return timeCapsule;
     }
 
-    // [JMG] CAPSULE-6 null·공백·중복 객체 키를 제외해 같은 S3 객체를 한 번만 삭제한다.
     private void addObjectKeys(Set<String> destination, List<String> source) {
         if (source == null) {
             return;
@@ -250,7 +244,6 @@ public class TimeCapsuleService {
         }
     }
 
-    // [JMG] CAPSULE-2 요청 회원의 자녀 접근 권한을 검증하고 존재 여부 노출을 막는다.
     private void assertParentAccess(
             long requesterMemberId,
             long childId
@@ -273,10 +266,4 @@ public class TimeCapsuleService {
             throw new BusinessException(ErrorCode.CHILD_ACCESS_DENIED);
         }
     }
-
-    // [JMG] CAPSULE-2 상태 필터 문자열을 ERD 상태값으로 변환한다.
-    // [JMG] CAPSULE-2 요청 페이지 크기를 기본값과 최대값 범위로 정규화한다.
-    // [JMG] CAPSULE-2 카드 조회에 캘린더 기간 파라미터가 섞이지 않도록 검증한다.
-    // [JMG] CAPSULE-2 캘린더 조회에 필요한 연도와 월을 검증해 월 범위를 생성한다.
-    // [JMG] CAPSULE-2 조회 결과를 keyset pagination 응답 형태로 변환한다.
 }

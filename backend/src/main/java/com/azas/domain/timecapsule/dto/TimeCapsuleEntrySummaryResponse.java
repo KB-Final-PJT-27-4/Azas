@@ -42,14 +42,12 @@ public class TimeCapsuleEntrySummaryResponse {
         this.thumbnailExpiresAt = thumbnailExpiresAt;
     }
 
-    // [JMG] CAPSULE-4 기록 조회 결과를 목록 응답 항목으로 변환한다.
     public static TimeCapsuleEntrySummaryResponse from(
             TimeCapsuleEntry entry
     ) {
         return new TimeCapsuleEntrySummaryResponse(entry, null, null);
     }
 
-    // [JMG] CAPSULE-4 서버가 발급한 안전한 썸네일 URL을 엔트리 목록 응답에 포함한다.
     public static TimeCapsuleEntrySummaryResponse from(
             TimeCapsuleEntry entry,
             String thumbnailUrl,
