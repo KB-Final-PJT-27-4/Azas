@@ -41,4 +41,8 @@ public interface AutoTransferScheduleMapper {
     List<AutoTransferScheduleListRow> findSchedules(
             AutoTransferScheduleListQuery query
     );
+
+    AutoTransferScheduleDetailRow findScheduleDetail(
+            @Param("scheduleId") Long scheduleId
+    );
 }

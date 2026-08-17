@@ -14,6 +14,8 @@ import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListItemResp
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListQuery;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListResponse;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListRow;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailResponse;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailRow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -511,4 +513,50 @@ public class AutoTransferScheduleServiceImpl
         );
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public AutoTransferScheduleDetailResponse getScheduleDetail(
+            Long memberId,
+            Long scheduleId
+    ) {
+        if (scheduleId == null || scheduleId <= 0) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        AutoTransferScheduleDetailRow row =
+                mapper.findScheduleDetail(scheduleId);
+
+        if (row == null) {
+            throw new BusinessException(
+                    ErrorCode.AUTO_TRANSFER_SCHEDULE_NOT_FOUND
+            );
+        }
+
+        validateChildAccess(memberId, row.getChildId());
+
+        return new AutoTransferScheduleDetailResponse(
+                row.getAutoTransferScheduleId(),
+                row.getChildId(),
+                row.getFinancialGoalId(),
+                row.getGoalTitle(),
+                row.getSourceAccountId(),
+                row.getSourceAccountName(),
+                row.getDestinationAccountId(),
+                row.getDestinationAccountName(),
+                row.getAmount(),
+                row.getFrequency(),
+                row.getTransferDay(),
+                row.getStartDate(),
+                row.getEndDate(),
+                toInstant(row.getNextTransferAt()),
+                row.getLastTransferId(),
+                row.getLastTransferStatus(),
+                row.getLastFailureCode(),
+                row.getLastFailureMessage(),
+                toInstant(row.getLastTransferredAt()),
+                row.getStatus(),
+                toInstant(row.getCreatedAt()),
+                toInstant(row.getUpdatedAt())
+        );
+    }
 }

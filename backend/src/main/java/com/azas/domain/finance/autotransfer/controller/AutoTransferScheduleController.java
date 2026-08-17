@@ -1,5 +1,6 @@
 package com.azas.domain.finance.autotransfer.controller;
 
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailResponse;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleResponse;
 import com.azas.domain.finance.autotransfer.dto.CreateAutoTransferScheduleRequest;
 import com.azas.domain.finance.autotransfer.service.AutoTransferScheduleService;
@@ -108,6 +109,39 @@ public class AutoTransferScheduleController {
                         status,
                         cursor,
                         size
+                )
+        );
+    }
+    @ApiOperation("자동이체 일정 상세 조회")
+    @ApiResponses({
+            @ApiResponse(
+                    code = 200,
+                    message = "자동이체 일정 상세 조회 성공",
+                    response = AutoTransferScheduleDetailResponse.class
+            ),
+            @ApiResponse(code = 400, message = "일정 ID 오류"),
+            @ApiResponse(code = 401, message = "인증 오류"),
+            @ApiResponse(code = 403, message = "자녀 접근 권한 없음"),
+            @ApiResponse(code = 404, message = "자동이체 일정 없음")
+    })
+    @GetMapping("/auto-transfer-schedules/{schedule_id}")
+    public ResponseEntity<AutoTransferScheduleDetailResponse>
+    getScheduleDetail(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader,
+            @PathVariable("schedule_id") Long scheduleId
+    ) {
+        Long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        return ResponseEntity.ok(
+                service.getScheduleDetail(
+                        memberId,
+                        scheduleId
                 )
         );
     }

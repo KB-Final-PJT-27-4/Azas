@@ -141,4 +141,64 @@
         ORDER BY ats.auto_transfer_schedule_id DESC
         LIMIT #{limit}
     </select>
+
+    <select id="findScheduleDetail"
+            resultType="com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailRow">
+        SELECT
+            ats.auto_transfer_schedule_id AS autoTransferScheduleId,
+            ats.child_id AS childId,
+            ats.financial_goal_id AS financialGoalId,
+            fg.title AS goalTitle,
+
+            ats.source_account_id AS sourceAccountId,
+            source_account.account_name AS sourceAccountName,
+
+            ats.destination_account_id AS destinationAccountId,
+            destination_account.account_name AS destinationAccountName,
+
+            ats.amount,
+            ats.frequency,
+            ats.transfer_day AS transferDay,
+            ats.start_date AS startDate,
+            ats.end_date AS endDate,
+            ats.next_transfer_at AS nextTransferAt,
+
+            recent_transfer.financial_transfer_id AS lastTransferId,
+            COALESCE(
+                    recent_transfer.status,
+                    ats.last_transfer_status
+            ) AS lastTransferStatus,
+            recent_transfer.failure_code AS lastFailureCode,
+            recent_transfer.failure_message AS lastFailureMessage,
+            COALESCE(
+                    recent_transfer.completed_at,
+                    recent_transfer.requested_at,
+                    ats.last_transferred_at
+            ) AS lastTransferredAt,
+
+            ats.status,
+            ats.created_at AS createdAt,
+            ats.updated_at AS updatedAt
+        FROM auto_transfer_schedule ats
+                 INNER JOIN financial_goal fg
+                            ON fg.financial_goal_id = ats.financial_goal_id
+                 INNER JOIN financial_account source_account
+                            ON source_account.financial_account_id =
+                               ats.source_account_id
+                 INNER JOIN financial_account destination_account
+                            ON destination_account.financial_account_id =
+                               ats.destination_account_id
+                 LEFT JOIN financial_transfer recent_transfer
+                           ON recent_transfer.financial_transfer_id = (
+                               SELECT ft.financial_transfer_id
+                               FROM financial_transfer ft
+                               WHERE ft.origin_type =
+                                     'AUTO_TRANSFER_SCHEDULE'
+                                 AND ft.origin_id =
+                                     ats.auto_transfer_schedule_id
+                               ORDER BY ft.financial_transfer_id DESC
+            LIMIT 1
+            )
+        WHERE ats.auto_transfer_schedule_id = #{scheduleId}
+    </select>
 </mapper>

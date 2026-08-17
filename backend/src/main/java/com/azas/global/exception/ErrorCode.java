@@ -340,6 +340,10 @@ public enum ErrorCode {
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자동이체 일정의 날짜·금액·계좌 또는 목표 조건이 올바르지 않습니다."
     ),
+    AUTO_TRANSFER_SCHEDULE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "자동이체 일정을 찾을 수 없습니다."
+    ),
 
     // Notification
     NOTIFICATION_NOT_FOUND(

@@ -1,9 +1,11 @@
 package com.azas.domain.finance.autotransfer.controller;
 
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailResponse;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleResponse;
 import com.azas.domain.finance.autotransfer.entity.AutoTransferFrequency;
 import com.azas.domain.finance.autotransfer.entity.AutoTransferScheduleStatus;
 import com.azas.domain.finance.autotransfer.service.AutoTransferScheduleService;
+import com.azas.domain.finance.transfer.entity.TransferStatus;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import com.azas.global.exception.GlobalExceptionHandler;
@@ -297,5 +299,125 @@ class AutoTransferScheduleControllerTest {
                 .andExpect(jsonPath(
                         "$.has_next"
                 ).value(false));
+    }
+
+    @Test
+    void 자동이체_일정_상세를_조회한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        given(service.getScheduleDetail(
+                7L,
+                21L
+        )).willReturn(
+                new AutoTransferScheduleDetailResponse(
+                        21L,
+                        5L,
+                        31L,
+                        "초등학교 입학 준비금",
+                        17L,
+                        "KB국민 1234",
+                        24L,
+                        "아이사랑적금",
+                        new BigDecimal("80000"),
+                        AutoTransferFrequency.MONTHLY,
+                        10,
+                        LocalDate.of(2026, 9, 10),
+                        LocalDate.of(2029, 2, 10),
+                        Instant.parse(
+                                "2026-09-10T00:00:00Z"
+                        ),
+                        101L,
+                        TransferStatus.FAILED,
+                        "INSUFFICIENT_BALANCE",
+                        "출금 계좌의 잔액이 부족합니다.",
+                        Instant.parse(
+                                "2026-08-10T00:00:01Z"
+                        ),
+                        AutoTransferScheduleStatus.ACTIVE,
+                        Instant.parse(
+                                "2026-08-17T06:00:00Z"
+                        ),
+                        Instant.parse(
+                                "2026-08-17T06:00:00Z"
+                        )
+                )
+        );
+
+        mockMvc.perform(
+                        get(
+                                "/api/v1/auto-transfer-schedules/21"
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.auto_transfer_schedule_id"
+                ).value(21))
+                .andExpect(jsonPath(
+                        "$.child_id"
+                ).value(5))
+                .andExpect(jsonPath(
+                        "$.financial_goal_id"
+                ).value(31))
+                .andExpect(jsonPath(
+                        "$.goal_title"
+                ).value("초등학교 입학 준비금"))
+                .andExpect(jsonPath(
+                        "$.source_account_id"
+                ).value(17))
+                .andExpect(jsonPath(
+                        "$.destination_account_id"
+                ).value(24))
+                .andExpect(jsonPath(
+                        "$.next_transfer_at"
+                ).value("2026-09-10T00:00:00Z"))
+                .andExpect(jsonPath(
+                        "$.last_transfer_status"
+                ).value("FAILED"))
+                .andExpect(jsonPath(
+                        "$.last_failure_code"
+                ).value("INSUFFICIENT_BALANCE"))
+                .andExpect(jsonPath(
+                        "$.status"
+                ).value("ACTIVE"));
+    }
+
+    @Test
+    void 존재하지_않는_자동이체_일정은_404를_반환한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        given(service.getScheduleDetail(
+                7L,
+                999L
+        )).willThrow(
+                new BusinessException(
+                        ErrorCode.AUTO_TRANSFER_SCHEDULE_NOT_FOUND
+                )
+        );
+
+        mockMvc.perform(
+                        get(
+                                "/api/v1/auto-transfer-schedules/999"
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath(
+                        "$.error.code"
+                ).value(
+                        "AUTO_TRANSFER_SCHEDULE_NOT_FOUND"
+                ));
     }
 }

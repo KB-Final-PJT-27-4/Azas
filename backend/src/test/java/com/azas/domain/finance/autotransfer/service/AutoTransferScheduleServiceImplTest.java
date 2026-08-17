@@ -1,19 +1,16 @@
 package com.azas.domain.finance.autotransfer.service;
 
-import com.azas.domain.finance.autotransfer.dto.AutoTransferAccountRow;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleInsertCommand;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleRow;
-import com.azas.domain.finance.autotransfer.dto.CreateAutoTransferScheduleRequest;
+import com.azas.domain.finance.autotransfer.dto.*;
 import com.azas.domain.finance.autotransfer.entity.AutoTransferFrequency;
 import com.azas.domain.finance.autotransfer.entity.AutoTransferScheduleStatus;
 import com.azas.domain.finance.autotransfer.mapper.AutoTransferScheduleMapper;
+import com.azas.domain.finance.transfer.entity.TransferStatus;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListQuery;
-import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListRow;
+import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailRow;
 
 import java.util.List;
 
@@ -489,6 +486,139 @@ class AutoTransferScheduleServiceImplTest {
         );
         row.setStatus(
                 AutoTransferScheduleStatus.ACTIVE
+        );
+
+        return row;
+    }
+
+    @Test
+    void 자동이체_일정_상세를_조회한다() {
+        AutoTransferScheduleDetailRow row =
+                detailRow();
+
+        when(mapper.findScheduleDetail(21L))
+                .thenReturn(row);
+        when(mapper.countChildAccess(5L, 7L))
+                .thenReturn(1);
+
+        var response =
+                service.getScheduleDetail(7L, 21L);
+
+        assertEquals(
+                21L,
+                response.getAutoTransferScheduleId()
+        );
+        assertEquals(
+                5L,
+                response.getChildId()
+        );
+        assertEquals(
+                31L,
+                response.getFinancialGoalId()
+        );
+        assertEquals(
+                "초등학교 입학 준비금",
+                response.getGoalTitle()
+        );
+        assertEquals(
+                17L,
+                response.getSourceAccountId()
+        );
+        assertEquals(
+                24L,
+                response.getDestinationAccountId()
+        );
+        assertEquals(
+                TransferStatus.FAILED,
+                response.getLastTransferStatus()
+        );
+        assertEquals(
+                "INSUFFICIENT_BALANCE",
+                response.getLastFailureCode()
+        );
+    }
+
+    @Test
+    void 자녀_접근권한이_없으면_상세조회를_거절한다() {
+        when(mapper.findScheduleDetail(21L))
+                .thenReturn(detailRow());
+        when(mapper.countChildAccess(5L, 99L))
+                .thenReturn(0);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.getScheduleDetail(
+                        99L,
+                        21L
+                )
+        );
+
+        assertEquals(
+                ErrorCode.CHILD_ACCESS_DENIED,
+                exception.getErrorCode()
+        );
+    }
+
+    private AutoTransferScheduleDetailRow detailRow() {
+        AutoTransferScheduleDetailRow row =
+                new AutoTransferScheduleDetailRow();
+
+        row.setAutoTransferScheduleId(21L);
+        row.setChildId(5L);
+        row.setFinancialGoalId(31L);
+        row.setGoalTitle("초등학교 입학 준비금");
+
+        row.setSourceAccountId(17L);
+        row.setSourceAccountName("KB국민 1234");
+
+        row.setDestinationAccountId(24L);
+        row.setDestinationAccountName("아이사랑적금");
+
+        row.setAmount(new BigDecimal("80000"));
+        row.setFrequency(
+                AutoTransferFrequency.MONTHLY
+        );
+        row.setTransferDay(10);
+        row.setStartDate(
+                LocalDate.of(2026, 9, 10)
+        );
+        row.setEndDate(
+                LocalDate.of(2029, 2, 10)
+        );
+        row.setNextTransferAt(
+                LocalDateTime.of(
+                        2026, 9, 10, 0, 0
+                )
+        );
+
+        row.setLastTransferId(101L);
+        row.setLastTransferStatus(
+                TransferStatus.FAILED
+        );
+        row.setLastFailureCode(
+                "INSUFFICIENT_BALANCE"
+        );
+        row.setLastFailureMessage(
+                "출금 계좌의 잔액이 부족합니다."
+        );
+        row.setLastTransferredAt(
+                LocalDateTime.of(
+                        2026, 8, 10, 0, 0, 1
+                )
+        );
+
+        row.setStatus(
+                AutoTransferScheduleStatus.ACTIVE
+        );
+        row.setCreatedAt(
+                LocalDateTime.of(
+                        2026, 8, 17, 6, 0
+                )
+        );
+        row.setUpdatedAt(
+                LocalDateTime.of(
+                        2026, 8, 17, 6, 0
+                )
         );
 
         return row;
