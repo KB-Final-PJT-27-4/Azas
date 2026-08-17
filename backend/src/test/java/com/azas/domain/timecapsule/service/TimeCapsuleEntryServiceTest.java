@@ -2,6 +2,8 @@ package com.azas.domain.timecapsule.service;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
@@ -29,6 +31,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,6 +57,117 @@ class TimeCapsuleEntryServiceTest {
     private TimeCapsuleObjectStorage timeCapsuleObjectStorage;
     @InjectMocks
     private TimeCapsuleEntryService timeCapsuleEntryService;
+
+    @Test
+    void createMediaUploadUrlReturnsSingleRepresentativeImageUrl() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        CreateTimeCapsuleMediaUploadUrlRequest request =
+                createMediaUploadUrlRequest(" image/jpeg ", 1048576L);
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleMediaMapper.countByEntryIdAndSlotNo(1000L, 1))
+                .willReturn(0);
+        given(timeCapsuleEntryMapper.updateDraftMediaModeIfNone(
+                1000L, TimeCapsuleEntryMediaMode.IMAGE
+        )).willReturn(1);
+        given(timeCapsuleMediaMapper.insert(any(TimeCapsuleMedia.class)))
+                .willAnswer(invocation -> {
+                    TimeCapsuleMedia media = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(
+                            media, "timeCapsuleMediaId", 2000L
+                    );
+                    return 1;
+                });
+        given(timeCapsuleObjectStorage.createUploadUrl(
+                any(String.class),
+                org.mockito.ArgumentMatchers.eq("image/jpeg"),
+                org.mockito.ArgumentMatchers.eq(Duration.ofMinutes(15))
+        )).willReturn(new TimeCapsuleObjectStorage.PresignedUrl(
+                "https://storage.example/presigned-put"
+        ));
+
+        CreateTimeCapsuleMediaUploadUrlResponse response =
+                timeCapsuleEntryService.createMediaUploadUrl(
+                        7L, 1000L, request
+                );
+
+        assertEquals(1000L, response.getTimeCapsuleEntryId());
+        assertEquals(2000L, response.getTimeCapsuleMediaId());
+        assertEquals("https://storage.example/presigned-put",
+                response.getUploadUrl());
+        assertEquals("image/jpeg",
+                response.getRequiredHeaders().get("Content-Type"));
+
+        ArgumentCaptor<TimeCapsuleMedia> mediaCaptor =
+                ArgumentCaptor.forClass(TimeCapsuleMedia.class);
+        verify(timeCapsuleMediaMapper).insert(mediaCaptor.capture());
+        TimeCapsuleMedia media = mediaCaptor.getValue();
+        assertEquals(TimeCapsuleMediaType.IMAGE, media.getMediaType());
+        assertEquals("image/jpeg", media.getMimeType());
+        assertEquals(1048576L, media.getFileSize());
+        assertEquals(1, media.getSlotNo());
+        assertTrue(media.getObjectKey().startsWith(
+                "time-capsules/100/entries/1000/"
+        ));
+        assertTrue(media.getObjectKey().endsWith("/slot-1.jpg"));
+    }
+
+    @Test
+    void createMediaUploadUrlRejectsSecondRepresentativeImage() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        CreateTimeCapsuleMediaUploadUrlRequest request =
+                createMediaUploadUrlRequest("image/png", 2048L);
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleMediaMapper.countByEntryIdAndSlotNo(1000L, 1))
+                .willReturn(1);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.createMediaUploadUrl(
+                        7L, 1000L, request
+                )
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED,
+                exception.getErrorCode());
+        verify(timeCapsuleMediaMapper, never())
+                .insert(any(TimeCapsuleMedia.class));
+        verify(timeCapsuleObjectStorage, never())
+                .createUploadUrl(any(), any(), any());
+    }
+
+    @Test
+    void createMediaUploadUrlRejectsVideoMimeType() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        CreateTimeCapsuleMediaUploadUrlRequest request =
+                createMediaUploadUrlRequest("video/mp4", 2048L);
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.createMediaUploadUrl(
+                        7L, 1000L, request
+                )
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+        verify(timeCapsuleMediaMapper, never())
+                .insert(any(TimeCapsuleMedia.class));
+    }
 
     @Test
     void getTimeCapsuleEntriesReturnsOnlySealedEntries() {
@@ -430,6 +544,15 @@ class TimeCapsuleEntryServiceTest {
         );
         ReflectionTestUtils.setField(request, "title", title);
         ReflectionTestUtils.setField(request, "message", message);
+        return request;
+    }
+
+    private CreateTimeCapsuleMediaUploadUrlRequest
+    createMediaUploadUrlRequest(String mimeType, long fileSize) {
+        CreateTimeCapsuleMediaUploadUrlRequest request =
+                new CreateTimeCapsuleMediaUploadUrlRequest();
+        ReflectionTestUtils.setField(request, "mimeType", mimeType);
+        ReflectionTestUtils.setField(request, "fileSize", fileSize);
         return request;
     }
 }
