@@ -23,13 +23,13 @@ public interface TimeCapsuleEntryMapper {
             @Param("memberId") long memberId
     );
 
-    // [JMG] CAPSULE-12 작성자 본인에게만 노출되는 엔트리를 잠금 없이 조회한다.
+    // [JMG] CAPSULE-7 작성자 본인에게만 노출되는 엔트리를 잠금 없이 조회한다.
     TimeCapsuleEntry findOwnedById(
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId,
             @Param("memberId") long memberId
     );
 
-    // [JMG] CAPSULE-12 수정·봉인 중 상태 전이를 안전하게 처리하도록 작성자 엔트리 행을 잠근다.
+    // [JMG] CAPSULE-13·15 삭제·봉인 중 상태 전이를 안전하게 처리하도록 작성자 엔트리 행을 잠근다.
     TimeCapsuleEntry findOwnedByIdForUpdate(
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId,
             @Param("memberId") long memberId
@@ -53,13 +53,13 @@ public interface TimeCapsuleEntryMapper {
             @Param("timeCapsuleId") long timeCapsuleId
     );
 
-    // [JMG] CAPSULE-5 해당 보관함의 적금 계좌에 실제로 속한 거래만 조회한다.
+    // [JMG] CAPSULE-5 해당 보관함에서 동일 거래로 생성된 엔트리가 있는지 조회한다.
     TimeCapsuleEntry findByTimeCapsuleAndTransactionId(
             @Param("timeCapsuleId") long timeCapsuleId,
             @Param("accountTransactionId") long accountTransactionId
     );
 
-    // [JMG] CAPSULE-5 대상 적금 계좌의 거래만 조회해 다른 계좌 거래 연결을 차단한다.
+    // [JMG] CAPSULE-5 대상 타임캡슐 계좌의 거래만 조회해 다른 계좌 거래 연결을 차단한다.
     TimeCapsuleEntryTransaction findTransactionByFinancialAccountId(
             @Param("financialAccountId") long financialAccountId,
             @Param("accountTransactionId") long accountTransactionId
@@ -67,13 +67,6 @@ public interface TimeCapsuleEntryMapper {
 
     // [JMG] CAPSULE-5 거래 금액과 발생 시각을 스냅샷으로 담은 기록을 저장하고 생성 ID를 채운다.
     int insert(TimeCapsuleEntry entry);
-
-    // [JMG] CAPSULE-12 DRAFT 엔트리의 제목·편지와 수정 횟수를 한 트랜잭션에서 갱신한다.
-    int updateDraftContent(
-            @Param("timeCapsuleEntryId") long timeCapsuleEntryId,
-            @Param("title") String title,
-            @Param("message") String message
-    );
 
     // [JMG] CAPSULE-7 첫 미디어 업로드 요청에서만 NONE 초안의 미디어 모드를 고정한다.
     int updateDraftMediaModeIfNone(
@@ -97,6 +90,6 @@ public interface TimeCapsuleEntryMapper {
             @Param("mediaType") TimeCapsuleMediaType mediaType
     );
 
-    // [JMG] CAPSULE-5 기록 저장 후 보관함의 기록 수·금액·최근 기록 시각을 원자적으로 갱신한다.
+    // [JMG] CAPSULE-15 봉인 완료 후 보관함 기록 수·금액·최근 기록 시각을 원자적으로 갱신한다.
     int increaseEntryAggregates(TimeCapsuleEntry entry);
 }

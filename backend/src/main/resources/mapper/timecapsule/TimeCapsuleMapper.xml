@@ -193,39 +193,6 @@
         FOR UPDATE
     </select>
 
-    <select id="findByFinancialAccountIdForUpdate"
-            resultMap="timeCapsuleResultMap">
-        SELECT
-            <include refid="timeCapsuleColumnsWithAlias"/>
-        FROM time_capsule tc
-        INNER JOIN financial_account fa
-            ON fa.financial_account_id = tc.financial_account_id
-        LEFT JOIN financial_goal_template fgt
-            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
-        WHERE tc.financial_account_id = #{financialAccountId}
-          AND tc.deleted_at IS NULL
-        FOR UPDATE
-    </select>
-
-    <update id="decreaseEntryAggregates">
-        UPDATE time_capsule tc
-        SET entry_count = CASE
-                WHEN tc.entry_count &gt; 0 THEN tc.entry_count - 1
-                ELSE 0
-            END,
-            total_contribution_amount = GREATEST(
-                tc.total_contribution_amount - #{contributionAmount},
-                0
-            ),
-            latest_entry_at = (
-                SELECT MAX(tce.contributed_at)
-                FROM time_capsule_entry tce
-                WHERE tce.time_capsule_id = tc.time_capsule_id
-                  AND tce.status != 'DELETED'
-            )
-        WHERE tc.time_capsule_id = #{timeCapsuleId}
-    </update>
-
     <delete id="deleteById">
         DELETE FROM time_capsule
         WHERE time_capsule_id = #{timeCapsuleId}

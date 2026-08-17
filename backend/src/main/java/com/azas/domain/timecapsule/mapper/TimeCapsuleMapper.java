@@ -5,7 +5,6 @@ import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Mapper
@@ -46,17 +45,6 @@ public interface TimeCapsuleMapper {
     TimeCapsule findAccessibleByIdForUpdate(
             @Param("timeCapsuleId") long timeCapsuleId,
             @Param("memberId") long memberId
-    );
-
-    // [JMG] CAPSULE-5 이체 성공 이벤트 처리 중 적금 계좌의 보관함을 잠가 중복 엔트리 생성을 막는다.
-    TimeCapsule findByFinancialAccountIdForUpdate(
-            @Param("financialAccountId") long financialAccountId
-    );
-
-    // [JMG] CAPSULE-13 삭제된 엔트리를 보관함 집계에서 제외하고 최신 기록 시각을 다시 계산한다.
-    int decreaseEntryAggregates(
-            @Param("timeCapsuleId") long timeCapsuleId,
-            @Param("contributionAmount") BigDecimal contributionAmount
     );
 
     // [JMG] CAPSULE-6 하위 데이터를 정리한 뒤 타임캡슐 보관함 행을 영구 삭제한다.
