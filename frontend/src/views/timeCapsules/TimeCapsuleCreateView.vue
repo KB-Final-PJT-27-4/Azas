@@ -10,6 +10,8 @@ const router = useRouter()
 const route = useRoute()
 const { showToast } = useToast()
 const step = ref<'form' | 'preview'>('form')
+const slideDirection = ref<'forward' | 'backward'>('forward')
+const isPageLeaving = ref(false)
 const isAccountMenuOpen = ref(false)
 const isTransferMenuOpen = ref(false)
 
@@ -68,6 +70,11 @@ const toggleTransferMenu = () => {
   isAccountMenuOpen.value = false
 }
 
+const closeSelectMenus = () => {
+  isAccountMenuOpen.value = false
+  isTransferMenuOpen.value = false
+}
+
 const selectMedia = (event: Event) => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -107,10 +114,18 @@ const removeMedia = (index: number) => {
 }
 
 const showPreview = () => {
-  if (canPreview.value) step.value = 'preview'
+  if (!canPreview.value) return
+  slideDirection.value = 'forward'
+  step.value = 'preview'
+}
+
+const showForm = () => {
+  slideDirection.value = 'backward'
+  step.value = 'form'
 }
 
 const createTimeCapsule = async () => {
+  if (isPageLeaving.value) return
   if (!canPreview.value) {
     showToast('필수 내용을 모두 입력해주세요.', 'error')
     return
@@ -139,12 +154,15 @@ const createTimeCapsule = async () => {
 
     account.records.push(newRecord)
     hasCreated.value = true
+    isPageLeaving.value = true
+    await new Promise((resolve) => window.setTimeout(resolve, 150))
     await router.push(`/time-capsules/${account.id}/${recordId}`)
-    showToast('저장되었습니다.', 'success')
+    showToast('저장되었습니다.', 'success', 2200, 'above-actions')
   } catch {
     const createdIndex = account.records.findIndex(({ id }) => id === recordId)
     if (createdIndex >= 0) account.records.splice(createdIndex, 1)
     hasCreated.value = false
+    isPageLeaving.value = false
     showToast('캡슐 저장에 실패했습니다. 다시 시도해주세요.', 'error')
   }
 }
@@ -156,23 +174,36 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col bg-white">
-    <section v-if="step === 'form'" class="flex flex-1 flex-col px-5 py-5">
-      <h1 class="text-[23px] leading-tight font-bold tracking-[-0.025em] text-[var(--color-text-primary)]">
+  <main
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col bg-white"
+    :class="isPageLeaving ? 'capsule-page-leaving pointer-events-none' : ''"
+  >
+    <Transition :name="`capsule-slide-${slideDirection}`" mode="out-in">
+    <section v-if="step === 'form'" key="form" class="flex flex-1 flex-col px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))]">
+      <h1 class="text-[24px] leading-tight font-extrabold tracking-[-0.035em] text-[var(--color-text-primary)]">
         오늘 어떤 순간을 기록할까요?
       </h1>
-      <p class="mt-1.5 text-xs text-[var(--color-text-secondary)]">
+      <p class="mt-2 text-[13px] leading-5 text-[var(--color-text-secondary)]">
         최근 저축 내역과 사진, 마음의 편지를 함께 남겨요.
       </p>
 
-      <form class="mt-7 flex flex-1 flex-col gap-5" @submit.prevent="showPreview">
+      <form class="mt-6 flex flex-1 flex-col gap-5" @submit.prevent="showPreview">
+        <button
+          v-if="isAccountMenuOpen || isTransferMenuOpen"
+          class="fixed inset-0 z-10 cursor-default border-0 bg-transparent"
+          type="button"
+          aria-label="선택 목록 닫기"
+          @click="closeSelectMenus"
+        ></button>
+
         <div class="relative">
+          <span class="mb-3 block text-sm font-bold">연결 계좌</span>
           <button
-            class="flex h-14 w-full items-center gap-3 rounded-[12px] border bg-white px-3 text-left transition-colors"
+            class="flex h-14 w-full items-center gap-3 rounded-2xl border bg-white px-4 text-left transition-colors"
             :class="
               isAccountMenuOpen
-                ? 'border-[var(--color-brand-primary)] ring-2 ring-[#e5f7ff]'
-                : 'border-[#dce8ee]'
+                ? 'border-[#91d5f1] bg-[#fbfeff]'
+                : 'border-[#d6e3e9]'
             "
             type="button"
             aria-haspopup="listbox"
@@ -206,27 +237,28 @@ onBeforeUnmount(() => {
           >
             <ul
               v-if="isAccountMenuOpen"
-              class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 m-0 max-h-48 list-none overflow-y-auto rounded-[14px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+              class="absolute top-[calc(100%+8px)] right-0 left-0 z-20 m-0 max-h-56 list-none overflow-y-auto rounded-[20px] border border-[#d6e3e9] bg-white p-2 shadow-[0_14px_36px_rgba(45,77,94,0.12)]"
               role="listbox"
               aria-label="계좌 목록"
             >
               <li v-for="item in accounts" :key="item.id" role="option" :aria-selected="item.id === selectedAccountId">
                 <button
-                  class="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left"
-                  :class="item.id === selectedAccountId ? 'bg-[#effaff]' : 'hover:bg-[#f6f9fb] active:bg-[#edf3f6]'"
+                  class="flex min-h-[62px] w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left transition-colors"
+                  :class="item.id === selectedAccountId ? 'bg-[#f0faff]' : 'active:bg-[#f5f8fa]'"
                   type="button"
                   @click="selectAccount(item.id)"
                 >
-                  <span class="grid size-7 shrink-0 place-items-center rounded-full border border-[#ffad20] bg-[#fffaf0] text-[#ff9f00]">
-                    <Landmark :size="14" />
-                  </span>
                   <span class="min-w-0 flex-1">
                     <strong class="block truncate text-[13px]">{{ item.name }}</strong>
                     <span class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]">{{ item.bank }} · {{ item.number }}</span>
                   </span>
                   <span
-                    class="grid size-5 shrink-0 place-items-center rounded-full"
-                    :class="item.id === selectedAccountId ? 'bg-[var(--color-brand-primary)] text-white' : 'text-transparent'"
+                    class="grid size-6 shrink-0 place-items-center rounded-full border"
+                    :class="
+                      item.id === selectedAccountId
+                        ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-white'
+                        : 'border-[#d5e1e7] bg-white text-transparent'
+                    "
                     aria-hidden="true"
                   >
                     <Check :size="13" :stroke-width="3" />
@@ -238,10 +270,10 @@ onBeforeUnmount(() => {
         </div>
 
         <label class="block">
-          <span class="mb-2 block text-sm font-bold">제목 <em class="not-italic text-red-500">*</em></span>
+          <span class="mb-3 block text-sm font-bold">제목 <em class="not-italic text-red-500">*</em></span>
           <input
             v-model="title"
-            class="min-h-13 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none placeholder:text-[#a1a9b4] focus:border-[var(--color-brand-primary)]"
+            class="h-14 w-full rounded-2xl border border-[#d6e3e9] bg-white px-4 text-sm outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
             maxlength="30"
             placeholder="제목을 입력해주세요"
             required
@@ -249,15 +281,15 @@ onBeforeUnmount(() => {
         </label>
 
         <fieldset class="relative">
-          <legend class="mb-2 text-sm font-bold">
+          <legend class="mb-3 text-sm font-bold">
             이체 내역 <em class="not-italic text-red-500">*</em>
           </legend>
           <button
-            class="flex h-12 w-full items-center gap-3 rounded-[12px] border bg-white px-3 text-left transition-colors"
+            class="flex h-14 w-full items-center gap-3 rounded-2xl border bg-white px-4 text-left transition-colors"
             :class="
               isTransferMenuOpen
-                ? 'border-[var(--color-brand-primary)] ring-2 ring-[#e5f7ff]'
-                : 'border-[#dce8ee]'
+                ? 'border-[#91d5f1] bg-[#fbfeff]'
+                : 'border-[#d6e3e9]'
             "
             type="button"
             aria-haspopup="listbox"
@@ -281,14 +313,14 @@ onBeforeUnmount(() => {
           >
             <ul
               v-if="isTransferMenuOpen"
-              class="absolute top-[calc(100%+6px)] right-0 left-0 z-20 m-0 max-h-48 list-none overflow-y-auto rounded-[14px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+              class="absolute top-[calc(100%+8px)] right-0 left-0 z-20 m-0 max-h-56 list-none overflow-y-auto rounded-[20px] border border-[#d6e3e9] bg-white p-2 shadow-[0_14px_36px_rgba(45,77,94,0.12)]"
               role="listbox"
               aria-label="이체 내역 목록"
             >
               <li v-for="item in transfers" :key="item.id" role="option" :aria-selected="item.id === selectedTransferId">
                 <button
-                  class="flex w-full items-center gap-3 rounded-[10px] px-2.5 py-2.5 text-left"
-                  :class="item.id === selectedTransferId ? 'bg-[#effaff]' : 'hover:bg-[#f6f9fb] active:bg-[#edf3f6]'"
+                  class="flex min-h-[58px] w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left transition-colors"
+                  :class="item.id === selectedTransferId ? 'bg-[#f0faff]' : 'active:bg-[#f5f8fa]'"
                   type="button"
                   @click="selectTransfer(item.id)"
                 >
@@ -303,10 +335,10 @@ onBeforeUnmount(() => {
         </fieldset>
 
         <label class="block">
-          <span class="mb-2 block text-sm font-bold">부모의 편지 <em class="not-italic text-red-500">*</em></span>
+          <span class="mb-3 block text-sm font-bold">부모의 편지 <em class="not-italic text-red-500">*</em></span>
           <textarea
             v-model="letter"
-            class="min-h-28 w-full resize-none rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm leading-relaxed outline-none placeholder:text-[#a1a9b4] focus:border-[var(--color-brand-primary)]"
+            class="min-h-[120px] w-full resize-none rounded-2xl border border-[#d6e3e9] bg-white px-4 py-3.5 text-sm leading-relaxed outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
             maxlength="300"
             placeholder="오늘 깨비가 처음 걸었어요.&#10;앞으로도 건강하게 자라길 바래"
             required
@@ -314,12 +346,12 @@ onBeforeUnmount(() => {
         </label>
 
         <div>
-          <div class="mb-2 flex items-center justify-between">
+          <div class="mb-3 flex items-center justify-between">
             <span class="text-sm font-bold">대표 사진</span>
           </div>
-          <div v-if="mediaItems[0]" class="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]">
+          <div v-if="mediaItems[0]" class="relative overflow-hidden rounded-[20px] border border-[#d6e3e9] bg-[#f5f8fa]">
             <img :src="mediaItems[0].url" alt="선택한 대표 사진" class="aspect-[16/10] w-full bg-[#f4f7f9] object-contain" />
-            <div class="absolute inset-x-0 bottom-0 flex items-center justify-end gap-2 bg-gradient-to-t from-black/55 to-transparent px-3 pt-8 pb-3">
+            <div class="absolute inset-x-0 bottom-0 flex items-center justify-end gap-2 bg-gradient-to-t from-black/35 via-black/10 to-transparent px-3 pt-16 pb-3">
               <label class="cursor-pointer rounded-lg bg-white/95 px-3 py-2 text-[11px] font-bold text-[var(--color-text-primary)] shadow-sm active:bg-white">
                 사진 바꾸기
                 <input class="sr-only" type="file" accept="image/*" @change="selectMedia" />
@@ -336,7 +368,7 @@ onBeforeUnmount(() => {
           </div>
           <label
             v-else
-            class="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)]"
+            class="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-[20px] border border-dashed border-[#cbdde6] bg-[#f5fbfe] text-[var(--color-text-secondary)] transition-colors active:bg-[#ebf8fd]"
           >
             <ImagePlus :size="30" class="text-[var(--color-brand-primary)]" />
             <span class="mt-3 text-xs font-semibold">대표 사진 한 장을 추가해주세요</span>
@@ -345,16 +377,16 @@ onBeforeUnmount(() => {
           </label>
         </div>
 
-        <div class="mt-auto grid grid-cols-2 gap-3 pt-1">
+        <div class="mt-auto grid grid-cols-2 gap-3 pt-2">
           <button
-            class="min-h-13 rounded-xl border border-[var(--color-border)] bg-white text-sm font-bold text-[var(--color-text-secondary)]"
+            class="h-14 rounded-2xl border border-[#d6e3e9] bg-white text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]"
             type="button"
             @click="router.push('/time-capsules')"
           >
             취소
           </button>
           <button
-            class="min-h-13 rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#c9d5dc]"
+            class="h-14 rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#c9d5dc]"
             type="submit"
             :disabled="!canPreview"
           >
@@ -366,47 +398,73 @@ onBeforeUnmount(() => {
 
     <section
       v-else
-      class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[#f6f8fa] px-5 py-5"
+      key="preview"
+      class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))]"
     >
       <div class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-40px)] flex-col">
-        <h1 class="text-xl font-bold text-[var(--color-text-primary)]">타임캡슐 미리보기</h1>
-        <p class="mt-1 text-xs text-[var(--color-text-secondary)]">작성한 타임캡슐을 미리 확인해요.</p>
+        <h1 class="text-[24px] font-extrabold tracking-[-0.035em] text-[var(--color-text-primary)]">타임캡슐 미리보기</h1>
+        <section
+          class="mt-5 flex min-h-[72px] items-center justify-between gap-4 rounded-[20px] bg-[#eefaff] px-4"
+          aria-label="연결된 저축 정보"
+        >
+          <div class="min-w-0">
+            <strong class="mt-1 block truncate text-[15ㅇpx] text-[var(--color-text-primary)]">
+              {{ selectedTransfer.name }}
+            </strong>
+          </div>
+          <div class="shrink-0 text-right">
+            <strong class="block text-[16px] font-extrabold text-[var(--color-selected-text)]">
+              +{{ formattedAmount }}
+            </strong>
+            <time class="mt-1 block text-[11px] text-[var(--color-text-secondary)]">
+              {{ selectedTransfer.date }}
+            </time>
+          </div>
+        </section>
 
-        <article class="mt-5 rounded-2xl bg-white p-4 shadow-[0_8px_28px_rgba(44,118,153,0.10)]">
-          <p class="text-sm font-bold text-[var(--color-selected-text)]">
-            저축 <span class="text-[var(--color-text-primary)]">{{ formattedAmount }}</span>
-          </p>
-
-          <div class="mt-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
+        <article class="mt-4 overflow-hidden rounded-[24px] border border-[#d6e3e9] bg-white">
+          <div v-if="mediaItems[0]" class="bg-[#f5f8fa] p-3">
             <img
-              v-if="mediaItems[0]"
               :src="mediaItems[0].url"
               alt="타임캡슐 대표 사진"
-              class="aspect-[6/7] w-full bg-[#f4f7f9] object-contain"
+              class="max-h-[300px] w-full rounded-[18px] bg-white object-contain"
             />
-            <div class="bg-white p-4">
-              <div class="flex items-center gap-2">
-                <h2 class="min-w-0 flex-1 truncate text-base font-bold">{{ title }}</h2>
-              </div>
-              <time class="mt-1 block text-xs text-[var(--color-text-secondary)]">{{ selectedTransfer.date }}</time>
+          </div>
 
-              <div class="my-3 h-px bg-[var(--color-border)]"></div>
-              <p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-primary)]">{{ letter }}</p>
+          <div class="p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <span class="text-[13px] font-bold text-[var(--color-brand-primary)]">오늘의 기록</span>
+                <h2 class="mt-2 break-words text-[20px] leading-snug font-extrabold tracking-[-0.025em]">
+                  {{ title }}
+                </h2>
+              </div>
+              <time
+                class="shrink-0 rounded-full bg-[#f3f6f7] px-2.5 py-1.5 text-[10px] font-medium text-[var(--color-text-secondary)]"
+              >
+                {{ selectedTransfer.date }}
+              </time>
             </div>
+
+            <div class="my-4 h-px bg-[#edf1f3]"></div>
+            <p class="whitespace-pre-wrap break-words text-[14px] leading-7 text-[var(--color-text-primary)]">
+              {{ letter }}
+            </p>
           </div>
         </article>
 
         <div class="mt-auto grid grid-cols-2 gap-3 pt-5">
           <button
-            class="min-h-13 rounded-xl border border-[var(--color-border)] bg-white text-sm font-bold text-[var(--color-text-secondary)]"
+            class="h-14 rounded-2xl border border-[#d6e3e9] bg-white text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]"
             type="button"
-            @click="step = 'form'"
+            @click="showForm"
           >
             수정하기
           </button>
           <button
-            class="min-h-13 rounded-xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+            class="h-14 rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
             type="button"
+            :disabled="isPageLeaving"
             @click="createTimeCapsule"
           >
             생성하기
@@ -414,5 +472,47 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </section>
+    </Transition>
   </main>
 </template>
+
+<style scoped>
+.capsule-page-leaving {
+  transform: translateX(-18px);
+  opacity: 0;
+  transition:
+    transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 120ms ease-out;
+}
+
+.capsule-slide-forward-enter-active,
+.capsule-slide-forward-leave-active,
+.capsule-slide-backward-enter-active,
+.capsule-slide-backward-leave-active {
+  transition:
+    transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 120ms ease-out;
+}
+
+.capsule-slide-forward-enter-from,
+.capsule-slide-backward-leave-to {
+  transform: translateX(18px);
+  opacity: 0;
+}
+
+.capsule-slide-forward-leave-to,
+.capsule-slide-backward-enter-from {
+  transform: translateX(-18px);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capsule-page-leaving,
+  .capsule-slide-forward-enter-active,
+  .capsule-slide-forward-leave-active,
+  .capsule-slide-backward-enter-active,
+  .capsule-slide-backward-leave-active {
+    transition-duration: 1ms;
+  }
+}
+</style>

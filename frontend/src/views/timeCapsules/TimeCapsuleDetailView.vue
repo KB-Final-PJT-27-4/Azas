@@ -12,6 +12,10 @@ const carousel = ref<HTMLElement | null>(null)
 const activePhotoIndex = ref(0)
 const isDeleteDialogOpen = ref(false)
 const isDeleting = ref(false)
+const deleteSheetOffset = ref(0)
+const isDeleteSheetDragging = ref(false)
+let deleteSheetDragStartY = 0
+let deleteSheetDragStartTime = 0
 
 const accountId = computed(() => String(route.params.capsuleListId))
 const recordId = computed(() => String(route.params.capsuleId))
@@ -31,7 +35,40 @@ const showPhoto = (index: number) => {
 
 const goToList = () => router.push(`/time-capsules/${accountId.value}`)
 const closeDeleteDialog = () => {
-  if (!isDeleting.value) isDeleteDialogOpen.value = false
+  if (!isDeleting.value) {
+    deleteSheetOffset.value = 0
+    isDeleteSheetDragging.value = false
+    isDeleteDialogOpen.value = false
+  }
+}
+
+const startDeleteSheetDrag = (event: PointerEvent) => {
+  if (isDeleting.value || event.button !== 0) return
+  deleteSheetDragStartY = event.clientY
+  deleteSheetDragStartTime = performance.now()
+  isDeleteSheetDragging.value = true
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+
+const moveDeleteSheetDrag = (event: PointerEvent) => {
+  if (!isDeleteSheetDragging.value) return
+  deleteSheetOffset.value = Math.max(0, event.clientY - deleteSheetDragStartY)
+}
+
+const endDeleteSheetDrag = (event: PointerEvent) => {
+  if (!isDeleteSheetDragging.value) return
+  const elapsed = Math.max(performance.now() - deleteSheetDragStartTime, 1)
+  const velocity = deleteSheetOffset.value / elapsed
+  isDeleteSheetDragging.value = false
+
+  if (deleteSheetOffset.value >= 72 || velocity >= 0.45) {
+    closeDeleteDialog()
+    return
+  }
+
+  deleteSheetOffset.value = 0
+  const target = event.currentTarget as HTMLElement
+  if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
 }
 
 const deleteRecord = async () => {
@@ -135,9 +172,28 @@ const deleteRecord = async () => {
     <Teleport to="body">
       <Transition name="delete-sheet">
         <div v-if="isDeleteDialogOpen" class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40" @click.self="closeDeleteDialog">
-          <section class="delete-sheet-panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]" role="alertdialog" aria-modal="true" aria-labelledby="detail-delete-title" aria-describedby="detail-delete-description">
-            <span class="mx-auto block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
-            <div class="mt-5 flex items-start gap-3.5">
+          <section
+            class="delete-sheet-panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]"
+            :class="isDeleteSheetDragging ? 'delete-sheet-panel--dragging' : ''"
+            :style="deleteSheetOffset ? { transform: `translateY(${deleteSheetOffset}px)` } : undefined"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="detail-delete-title"
+            aria-describedby="detail-delete-description"
+          >
+            <div
+              class="-mx-5 -mt-3 flex h-10 touch-none cursor-grab items-center justify-center active:cursor-grabbing"
+              role="button"
+              tabindex="0"
+              aria-label="아래로 밀어 삭제 확인창 닫기"
+              @pointerdown="startDeleteSheetDrag"
+              @pointermove="moveDeleteSheetDrag"
+              @pointerup="endDeleteSheetDrag"
+              @pointercancel="endDeleteSheetDrag"
+            >
+              <span class="block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
+            </div>
+            <div class="mt-2 flex items-start gap-3.5">
               <span class="grid size-11 shrink-0 place-items-center rounded-full bg-[#fff0f1] text-[#e2535a]"><AlertTriangle :size="22" /></span>
               <div class="min-w-0 flex-1 pt-0.5">
                 <h2 id="detail-delete-title" class="m-0 text-[19px] font-bold">타임캡슐을 삭제할까요?</h2>
@@ -175,6 +231,8 @@ const deleteRecord = async () => {
 .delete-sheet-leave-to { background-color: transparent; }
 .delete-sheet-enter-from .delete-sheet-panel,
 .delete-sheet-leave-to .delete-sheet-panel { transform: translateY(100%); }
+.delete-sheet-panel { transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.delete-sheet-panel--dragging { transition: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
   .delete-sheet-enter-active,

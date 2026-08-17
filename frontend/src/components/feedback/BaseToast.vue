@@ -6,10 +6,12 @@ withDefaults(
     message: string
     variant?: 'success' | 'error' | 'info'
     withBottomNavigation?: boolean
+    aboveActions?: boolean
   }>(),
   {
     variant: 'info',
     withBottomNavigation: true,
+    aboveActions: false,
   },
 )
 </script>
@@ -19,7 +21,10 @@ withDefaults(
     class="base-toast"
     :class="[
       `base-toast--${variant}`,
-      { 'base-toast--without-bottom-navigation': !withBottomNavigation },
+      {
+        'base-toast--without-bottom-navigation': !withBottomNavigation,
+        'base-toast--above-actions': aboveActions,
+      },
     ]"
     role="status"
   >
@@ -58,6 +63,14 @@ withDefaults(
 
 .base-toast--without-bottom-navigation {
   bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.base-toast--above-actions {
+  bottom: calc(var(--app-bottom-nav-height) + 130px + env(safe-area-inset-bottom));
+}
+
+.base-toast--without-bottom-navigation.base-toast--above-actions {
+  bottom: calc(130px + env(safe-area-inset-bottom));
 }
 
 .base-toast__icon {
