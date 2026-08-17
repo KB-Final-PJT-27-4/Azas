@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CheckSquare, ChevronRight, ClipboardList, Send, Shield, Trophy, Wallet } from 'lucide-vue-next'
+import { CheckSquare, ChevronRight, ClipboardList, Shield, Trophy } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import childHomePigUrl from '@/assets/images/child/child-home-pig.png'
@@ -113,24 +113,6 @@ const remainingLimit = computed(() =>
       </div>
     </section>
 
-    <section class="mt-4 grid grid-cols-2 gap-3" aria-label="주요 금융 행동">
-      <RouterLink
-        class="flex h-[56px] items-center justify-center gap-2 rounded-[16px] bg-[var(--color-brand-primary)] text-[15px] font-bold !text-white no-underline transition-transform active:scale-[0.98]"
-        to="/child/transfer"
-      >
-        <Send :size="21" :stroke-width="2.8" aria-hidden="true" />
-        돈 보내기
-      </RouterLink>
-
-      <RouterLink
-        class="flex h-[56px] items-center justify-center gap-2 rounded-[16px] border border-[#dce8ee] bg-white text-[15px] font-bold text-[var(--color-text-primary)] no-underline transition-transform active:scale-[0.98]"
-        to="/child/allowance"
-      >
-        <Wallet :size="21" :stroke-width="2.5" aria-hidden="true" />
-        용돈 요청하기
-      </RouterLink>
-    </section>
-
     <section class="mt-8" aria-labelledby="child-quick-title">
       <h1
         id="child-quick-title"
@@ -175,38 +157,52 @@ const remainingLimit = computed(() =>
         </RouterLink>
       </div>
 
-      <div
-        class="overflow-hidden rounded-[20px] border border-[#e1eaee] bg-white"
-      >
+      <div class="grid gap-3">
         <article
           v-for="mission in visibleMissions"
           :key="mission.id"
-          class="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 border-b border-[#edf1f3] px-4 py-4 last:border-b-0"
+          class="home-mission-ticket"
+          :class="mission.status === 'completed' ? 'home-mission-ticket--completed' : 'home-mission-ticket--active'"
         >
-          <div class="grid size-10 place-items-center rounded-[12px]" :class="mission.iconClass">
-            <component :is="mission.icon" :size="20" :stroke-width="2.4" aria-hidden="true" />
+          <div class="home-mission-ticket__content">
+            <div
+              class="grid size-10 place-items-center rounded-[12px]"
+              :class="mission.status === 'completed' ? 'bg-[#e4e8ec] text-[#8b98a4]' : mission.iconClass"
+            >
+              <component :is="mission.icon" :size="20" :stroke-width="2.4" aria-hidden="true" />
+            </div>
+            <div class="min-w-0">
+              <strong
+                class="block truncate text-[16px] font-bold"
+                :class="mission.status === 'completed' ? 'text-[#7d8790]' : 'text-[var(--color-text-primary)]'"
+              >
+                {{ mission.title }}
+              </strong>
+              <span
+                class="mt-1 block truncate text-[14px]"
+                :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-text-secondary)]'"
+              >
+                {{ mission.description }}
+              </span>
+            </div>
           </div>
-          <div class="min-w-0">
-            <strong class="block truncate text-[16px] font-bold text-[var(--color-text-primary)]">
-              {{ mission.title }}
-            </strong>
-            <span class="mt-1 block truncate text-[14px] text-[var(--color-text-secondary)]">
-              {{ mission.description }}
-            </span>
-          </div>
-          <div class="grid justify-items-end gap-2">
-            <strong class="text-[14px] font-bold text-[var(--color-brand-primary)]">
+
+          <div class="home-mission-ticket__reward">
+            <strong
+              class="text-[17px] leading-tight font-extrabold"
+              :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-brand-primary)]'"
+            >
               {{ formatCurrency(mission.reward) }}
             </strong>
-            <button
-              v-if="mission.status === 'completed'"
-              class="h-[34px] rounded-[10px] border-0 bg-[#e9f8ff] px-3 text-[13px] font-bold text-[var(--color-selected-text)] active:bg-[#d9f2fd]"
-              type="button"
+            <span
+              class="text-[12px] leading-none font-bold"
+              :class="
+                mission.status === 'completed'
+                  ? 'text-[#77828c]'
+                  : 'text-[var(--color-text-secondary)]'
+              "
             >
-              완료 요청하기
-            </button>
-            <span v-else class="text-[14px] font-bold text-[var(--color-text-secondary)]">
-              진행 중
+              {{ mission.status === 'completed' ? '완료됨' : '진행 중' }}
             </span>
           </div>
         </article>
@@ -236,3 +232,57 @@ const remainingLimit = computed(() =>
     <ChildBottomNavigation />
   </main>
 </template>
+
+<style scoped>
+.home-mission-ticket {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  min-height: 86px;
+  overflow: hidden;
+  border: 1px solid #e1eaee;
+  border-radius: 18px;
+  background: white;
+}
+
+.home-mission-ticket__content {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  padding: 16px 14px;
+}
+
+.home-mission-ticket__reward {
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 10px;
+}
+
+.home-mission-ticket__reward::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  content: '';
+  background-image: repeating-linear-gradient(
+    to bottom,
+    #8f9dab 0,
+    #8f9dab 10px,
+    transparent 10px,
+    transparent 18px
+  );
+}
+
+.home-mission-ticket--completed {
+  border-color: #e5e9ed;
+  background: #f5f7f8;
+  opacity: 0.78;
+}
+</style>
