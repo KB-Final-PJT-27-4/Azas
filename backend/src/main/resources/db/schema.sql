@@ -590,6 +590,11 @@ CREATE TABLE financial_transfer
     completed_at           DATETIME(6)     NULL COMMENT '최종 완료 시각',
     created_at             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
     updated_at             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    financial_goal_id      BIGINT UNSIGNED NULL COMMENT '연관된 금융 목표 ID (목표 기반 거래인 경우)',
+    origin_type            VARCHAR(50)     NOT NULL DEFAULT 'MANUAL' COMMENT '거래 발생 원천 타입 (예: MANUAL, AUTO 등)',
+    origin_id              BIGINT UNSIGNED NULL COMMENT '거래 발생 원천의 고유 ID (예: 자동이체 규칙 ID 등)',
+    retry_of_transfer_id   BIGINT UNSIGNED NULL COMMENT '재시도 대상이 된 이전 이체 내역 ID',
+    credit_transaction_id  BIGINT UNSIGNED NULL COMMENT '입금(크레딧) 거래 내역 ID',
     PRIMARY KEY (financial_transfer_id),
     UNIQUE KEY uk_financial_transfer_idempotency_key (idempotency_key),
     KEY idx_financial_transfer_child_id (child_id),
@@ -597,6 +602,30 @@ CREATE TABLE financial_transfer
     KEY idx_financial_transfer_source_account (source_account_id),
     KEY idx_financial_transfer_destination_account (destination_account_id),
     KEY idx_financial_transfer_transaction_id (account_transaction_id),
+    KEY idx_financial_transfer_origin (
+                                       origin_type,
+                                       origin_id
+        ),
+
+    KEY idx_financial_transfer_retry_of (
+                                         retry_of_transfer_id
+        ),
+
+    CONSTRAINT fk_financial_transfer_goal
+        FOREIGN KEY (financial_goal_id)
+            REFERENCES financial_goal (financial_goal_id),
+
+    CONSTRAINT fk_financial_transfer_retry_of
+        FOREIGN KEY (retry_of_transfer_id)
+            REFERENCES financial_transfer (financial_transfer_id),
+
+    CONSTRAINT fk_financial_transfer_credit_transaction
+        FOREIGN KEY (credit_transaction_id)
+            REFERENCES account_transaction (account_transaction_id),
+
+    CONSTRAINT ck_financial_transfer_origin_type
+        CHECK (origin_type IN ('MANUAL','ALLOWANCE_REQUEST','MISSION','AUTO_TRANSFER_SCHEDULE')
+        ),
     CONSTRAINT fk_financial_transfer_child
         FOREIGN KEY (child_id) REFERENCES child (child_id),
     CONSTRAINT fk_financial_transfer_requested_by
@@ -615,54 +644,83 @@ CREATE TABLE financial_transfer
 CREATE TABLE auto_transfer_schedule
 (
     auto_transfer_schedule_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '자동이체 일정 ID',
-    child_id                  BIGINT UNSIGNED NULL COMMENT '자동이체 대상 자녀',
+    child_id                  BIGINT UNSIGNED NOT NULL COMMENT '자동이체 대상 자녀',
     member_id                 BIGINT UNSIGNED NOT NULL COMMENT '일정 등록 회원 ID',
+    request_idempotency_key   CHAR(36)        NOT NULL COMMENT '일정 등록 멱등성 키',
+    financial_goal_id         BIGINT UNSIGNED NOT NULL COMMENT '대상 금융 목표 ID',
     source_account_id         BIGINT UNSIGNED NOT NULL COMMENT '출금 계좌 ID',
     destination_account_id    BIGINT UNSIGNED NOT NULL COMMENT '입금 계좌 ID',
-    amount                    DECIMAL(19, 2)  NOT NULL COMMENT '이체 금액',
-    frequency                 VARCHAR(20)     NOT NULL DEFAULT 'MONTHLY' COMMENT 'MONTHLY, WEEKLY, DAILY',
+    amount                    DECIMAL(19, 2)  NOT NULL COMMENT '회차별 이체 금액',
+    frequency                 VARCHAR(20)     NOT NULL DEFAULT 'MONTHLY' COMMENT 'MONTHLY',
     transfer_day              INT             NOT NULL COMMENT '매월 실행일',
-    start_date                DATE            NOT NULL COMMENT '자동이체 시작일',
-    end_date                  DATE            NULL COMMENT '자동이체 종료일',
+    start_date                DATE            NOT NULL COMMENT '시작일',
+    end_date                  DATE            NULL COMMENT '종료일',
     next_transfer_at          DATETIME(6)     NULL COMMENT '다음 이체 예정 시각',
-    provider_schedule_id      VARCHAR(255)    NULL COMMENT '제공기관 일정 ID',
+    last_transfer_status      VARCHAR(20)     NULL COMMENT 'SUCCEEDED, FAILED',
+    last_transferred_at       DATETIME(6)     NULL COMMENT '마지막 실행 시각',
     status                    VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, PAUSED, ENDED, CANCELED',
-    created_at                DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-    updated_at                DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    created_at                DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at                DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6),
+
     PRIMARY KEY (auto_transfer_schedule_id),
+    UNIQUE KEY uk_auto_transfer_request_key (request_idempotency_key),
     KEY idx_auto_transfer_child_id (child_id),
     KEY idx_auto_transfer_member_id (member_id),
+    KEY idx_auto_transfer_goal_id (financial_goal_id),
     KEY idx_auto_transfer_source_account (source_account_id),
     KEY idx_auto_transfer_destination_account (destination_account_id),
     KEY idx_auto_transfer_next_status (status, next_transfer_at),
+
     CONSTRAINT fk_auto_transfer_child
         FOREIGN KEY (child_id) REFERENCES child (child_id),
     CONSTRAINT fk_auto_transfer_member
         FOREIGN KEY (member_id) REFERENCES member (member_id),
+    CONSTRAINT fk_auto_transfer_goal
+        FOREIGN KEY (financial_goal_id)
+            REFERENCES financial_goal (financial_goal_id),
     CONSTRAINT fk_auto_transfer_source_account
-        FOREIGN KEY (source_account_id) REFERENCES financial_account (financial_account_id),
+        FOREIGN KEY (source_account_id)
+            REFERENCES financial_account (financial_account_id),
     CONSTRAINT fk_auto_transfer_destination_account
-        FOREIGN KEY (destination_account_id) REFERENCES financial_account (financial_account_id),
-    CONSTRAINT ck_auto_transfer_frequency CHECK (frequency IN ('MONTHLY', 'WEEKLY', 'DAILY')),
-    CONSTRAINT ck_auto_transfer_status CHECK (status IN ('ACTIVE', 'PAUSED', 'ENDED', 'CANCELED'))
+        FOREIGN KEY (destination_account_id)
+            REFERENCES financial_account (financial_account_id),
+
+    CONSTRAINT ck_auto_transfer_amount
+        CHECK (amount > 0),
+    CONSTRAINT ck_auto_transfer_frequency
+        CHECK (frequency = 'MONTHLY'),
+    CONSTRAINT ck_auto_transfer_day
+        CHECK (transfer_day BETWEEN 1 AND 28),
+    CONSTRAINT ck_auto_transfer_date_range
+        CHECK (end_date IS NULL OR end_date >= start_date),
+    CONSTRAINT ck_auto_transfer_last_status
+        CHECK (
+            last_transfer_status IS NULL
+                OR last_transfer_status IN ('SUCCEEDED', 'FAILED')
+            ),
+    CONSTRAINT ck_auto_transfer_status
+        CHECK (
+            status IN ('ACTIVE', 'PAUSED', 'ENDED', 'CANCELED')
+            )
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='자동이체 일정';
 
 CREATE TABLE time_capsule
 (
-    time_capsule_id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '타임캡슐 ID',
-    child_id                    BIGINT UNSIGNED NOT NULL COMMENT '자녀 ID',
-    financial_account_id        BIGINT UNSIGNED NOT NULL COMMENT '연결 금융 계좌 ID',
-    title                       VARCHAR(200)    NOT NULL COMMENT '생성 시점 계좌명 스냅샷',
-    status                      VARCHAR(20)     NOT NULL DEFAULT 'COLLECTING' COMMENT 'COLLECTING, RELEASED, ARCHIVED',
-    expected_release_at         DATETIME(6)     NULL COMMENT '예상 공개일',
-    released_at                 DATETIME(6)     NULL COMMENT '실제 공개 시각',
-    entry_count                 INT             NOT NULL DEFAULT 0 COMMENT '보관함 목록용 캐시',
-    total_contribution_amount   DECIMAL(19, 2)  NOT NULL DEFAULT 0 COMMENT '활성 엔트리 저축 금액 합계 캐시',
-    latest_entry_at             DATETIME(6)     NULL COMMENT '최근 기록 시각',
-    created_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-    updated_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    time_capsule_id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '타임캡슐 ID',
+    child_id                  BIGINT UNSIGNED NOT NULL COMMENT '자녀 ID',
+    financial_account_id      BIGINT UNSIGNED NOT NULL COMMENT '연결 금융 계좌 ID',
+    title                     VARCHAR(200)    NOT NULL COMMENT '생성 시점 계좌명 스냅샷',
+    status                    VARCHAR(20)     NOT NULL DEFAULT 'COLLECTING' COMMENT 'COLLECTING, RELEASED, ARCHIVED',
+    expected_release_at       DATETIME(6)     NULL COMMENT '예상 공개일',
+    released_at               DATETIME(6)     NULL COMMENT '실제 공개 시각',
+    entry_count               INT             NOT NULL DEFAULT 0 COMMENT '보관함 목록용 캐시',
+    total_contribution_amount DECIMAL(19, 2)  NOT NULL DEFAULT 0 COMMENT '활성 엔트리 저축 금액 합계 캐시',
+    latest_entry_at           DATETIME(6)     NULL COMMENT '최근 기록 시각',
+    created_at                DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     PRIMARY KEY (time_capsule_id),
     UNIQUE KEY uk_time_capsule_child_account (
                                               child_id,
@@ -680,20 +738,20 @@ CREATE TABLE time_capsule
 
 CREATE TABLE time_capsule_entry
 (
-    time_capsule_entry_id        BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '타임캡슐 기록 ID',
-    time_capsule_id              BIGINT UNSIGNED NOT NULL COMMENT '타임캡슐 ID',
-    author_member_id             BIGINT UNSIGNED NOT NULL COMMENT '작성 회원 ID',
-    account_transaction_id       BIGINT UNSIGNED NOT NULL COMMENT '계좌 거래 ID',
-    title                        VARCHAR(200)    NOT NULL COMMENT '기록 제목',
-    message                      TEXT            NULL COMMENT '부모 메시지',
-    contribution_amount          DECIMAL(19, 2)  NOT NULL COMMENT '기록 금액 스냅샷',
-    contributed_at               DATETIME(6)     NOT NULL COMMENT '기록 발생 시각 스냅샷',
-    media_mode                   VARCHAR(20)     NOT NULL DEFAULT 'NONE' COMMENT 'NONE, IMAGE, VIDEO',
-    thumbnail_object_key         VARCHAR(1000)   NULL COMMENT '대표 썸네일 객체 키',
-    status                       VARCHAR(20)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT, SEALED, DELETED',
-    sealed_at                    DATETIME(6)     NULL COMMENT '봉인 시각',
-    created_at                   DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-    updated_at                   DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    time_capsule_entry_id  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '타임캡슐 기록 ID',
+    time_capsule_id        BIGINT UNSIGNED NOT NULL COMMENT '타임캡슐 ID',
+    author_member_id       BIGINT UNSIGNED NOT NULL COMMENT '작성 회원 ID',
+    account_transaction_id BIGINT UNSIGNED NOT NULL COMMENT '계좌 거래 ID',
+    title                  VARCHAR(200)    NOT NULL COMMENT '기록 제목',
+    message                TEXT            NULL COMMENT '부모 메시지',
+    contribution_amount    DECIMAL(19, 2)  NOT NULL COMMENT '기록 금액 스냅샷',
+    contributed_at         DATETIME(6)     NOT NULL COMMENT '기록 발생 시각 스냅샷',
+    media_mode             VARCHAR(20)     NOT NULL DEFAULT 'NONE' COMMENT 'NONE, IMAGE, VIDEO',
+    thumbnail_object_key   VARCHAR(1000)   NULL COMMENT '대표 썸네일 객체 키',
+    status                 VARCHAR(20)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT, SEALED, DELETED',
+    sealed_at              DATETIME(6)     NULL COMMENT '봉인 시각',
+    created_at             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     PRIMARY KEY (time_capsule_entry_id),
     UNIQUE KEY uk_capsule_entry_transaction (time_capsule_id, account_transaction_id),
     KEY idx_capsule_entry_author_id (author_member_id),

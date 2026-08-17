@@ -332,6 +332,14 @@ public enum ErrorCode {
             HttpStatus.BAD_GATEWAY,
             "이체 처리 중 오류가 발생했습니다."
     ),
+    DUPLICATE_AUTO_TRANSFER_SCHEDULE(
+            HttpStatus.CONFLICT,
+            "동일한 자동이체 일정이 이미 존재합니다."
+    ),
+    INVALID_AUTO_TRANSFER_SCHEDULE(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "자동이체 일정의 날짜·금액·계좌 또는 목표 조건이 올바르지 않습니다."
+    ),
 
     // Notification
     NOTIFICATION_NOT_FOUND(
