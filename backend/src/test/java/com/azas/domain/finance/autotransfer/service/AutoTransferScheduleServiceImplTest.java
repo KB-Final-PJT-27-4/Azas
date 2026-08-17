@@ -11,6 +11,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailRow;
+import com.azas.domain.finance.autotransfer.dto.UpdateAutoTransferScheduleCommand;
+import com.azas.domain.finance.autotransfer.dto.UpdateAutoTransferScheduleRequest;
+import com.azas.domain.finance.autotransfer.entity.AutoTransferAction;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 
@@ -622,5 +626,322 @@ class AutoTransferScheduleServiceImplTest {
         );
 
         return row;
+    }
+
+    // 수정 테스트
+    @Test
+    void 자동이체_일정을_수정한다() {
+        AutoTransferScheduleRow schedule =
+                modifiableSchedule(
+                        AutoTransferScheduleStatus.ACTIVE
+                );
+
+        UpdateAutoTransferScheduleRequest request =
+                updateRequest(
+                        AutoTransferAction.UPDATE,
+                        new BigDecimal("100000"),
+                        20,
+                        LocalDate.of(2029, 3, 20),
+                        true
+                );
+
+        when(mapper.findScheduleForUpdate(21L))
+                .thenReturn(schedule);
+        when(mapper.countChildAccess(5L, 7L))
+                .thenReturn(1);
+        when(mapper.countEquivalentScheduleExcludingId(
+                21L,
+                7L,
+                5L,
+                17L,
+                24L,
+                new BigDecimal("100000"),
+                "MONTHLY",
+                20,
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2029, 3, 20)
+        )).thenReturn(0);
+        when(mapper.updateSchedule(any()))
+                .thenReturn(1);
+        when(mapper.findScheduleDetail(21L))
+                .thenReturn(detailRow());
+
+        service.updateSchedule(
+                7L,
+                21L,
+                request
+        );
+
+        ArgumentCaptor<UpdateAutoTransferScheduleCommand>
+                captor = ArgumentCaptor.forClass(
+                UpdateAutoTransferScheduleCommand.class
+        );
+
+        verify(mapper).updateSchedule(
+                captor.capture()
+        );
+
+        UpdateAutoTransferScheduleCommand command =
+                captor.getValue();
+
+        assertEquals(
+                new BigDecimal("100000"),
+                command.getAmount()
+        );
+        assertEquals(20, command.getTransferDay());
+        assertEquals(
+                LocalDate.of(2029, 3, 20),
+                command.getEndDate()
+        );
+        assertEquals(
+                LocalDateTime.of(2026, 9, 20, 0, 0),
+                command.getNextTransferAt()
+        );
+        assertEquals(
+                AutoTransferScheduleStatus.ACTIVE,
+                command.getStatus()
+        );
+    }
+
+    // 일시정지 테스트
+    @Test
+    void 활성_자동이체_일정을_일시정지한다() {
+        AutoTransferScheduleRow schedule =
+                modifiableSchedule(
+                        AutoTransferScheduleStatus.ACTIVE
+                );
+
+        when(mapper.findScheduleForUpdate(21L))
+                .thenReturn(schedule);
+        when(mapper.countChildAccess(5L, 7L))
+                .thenReturn(1);
+        when(mapper.updateSchedule(any()))
+                .thenReturn(1);
+        when(mapper.findScheduleDetail(21L))
+                .thenReturn(detailRow());
+
+        service.updateSchedule(
+                7L,
+                21L,
+                updateRequest(
+                        AutoTransferAction.PAUSE,
+                        null,
+                        null,
+                        null,
+                        false
+                )
+        );
+
+        ArgumentCaptor<UpdateAutoTransferScheduleCommand>
+                captor = ArgumentCaptor.forClass(
+                UpdateAutoTransferScheduleCommand.class
+        );
+
+        verify(mapper).updateSchedule(
+                captor.capture()
+        );
+
+        assertEquals(
+                AutoTransferScheduleStatus.PAUSED,
+                captor.getValue().getStatus()
+        );
+        assertEquals(
+                schedule.getNextTransferAt(),
+                captor.getValue().getNextTransferAt()
+        );
+    }
+
+    // 재개 테스트
+    @Test
+    void 일시정지된_자동이체_일정을_재개한다() {
+        AutoTransferScheduleRow schedule =
+                modifiableSchedule(
+                        AutoTransferScheduleStatus.PAUSED
+                );
+
+        when(mapper.findScheduleForUpdate(21L))
+                .thenReturn(schedule);
+        when(mapper.countChildAccess(5L, 7L))
+                .thenReturn(1);
+        when(mapper.updateSchedule(any()))
+                .thenReturn(1);
+        when(mapper.findScheduleDetail(21L))
+                .thenReturn(detailRow());
+
+        service.updateSchedule(
+                7L,
+                21L,
+                updateRequest(
+                        AutoTransferAction.RESUME,
+                        null,
+                        null,
+                        null,
+                        false
+                )
+        );
+
+        ArgumentCaptor<UpdateAutoTransferScheduleCommand>
+                captor = ArgumentCaptor.forClass(
+                UpdateAutoTransferScheduleCommand.class
+        );
+
+        verify(mapper).updateSchedule(
+                captor.capture()
+        );
+
+        assertEquals(
+                AutoTransferScheduleStatus.ACTIVE,
+                captor.getValue().getStatus()
+        );
+        assertEquals(
+                LocalDateTime.of(2026, 9, 10, 0, 0),
+                captor.getValue().getNextTransferAt()
+        );
+    }
+
+    // 종료된 일정 방지
+    @Test
+    void 종료된_자동이체_일정은_변경할_수_없다() {
+        when(mapper.findScheduleForUpdate(21L))
+                .thenReturn(
+                        modifiableSchedule(
+                                AutoTransferScheduleStatus.ENDED
+                        )
+                );
+        when(mapper.countChildAccess(5L, 7L))
+                .thenReturn(1);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.updateSchedule(
+                        7L,
+                        21L,
+                        updateRequest(
+                                AutoTransferAction.PAUSE,
+                                null,
+                                null,
+                                null,
+                                false
+                        )
+                )
+        );
+
+        assertEquals(
+                ErrorCode.INVALID_AUTO_TRANSFER_STATUS_TRANSITION,
+                exception.getErrorCode()
+        );
+
+        verify(mapper, never())
+                .updateSchedule(any());
+    }
+
+    // 다른 보호자 일정 변경 방지
+    @Test
+    void 다른_보호자의_자동이체_일정은_변경할_수_없다() {
+        when(mapper.findScheduleForUpdate(21L))
+                .thenReturn(
+                        modifiableSchedule(
+                                AutoTransferScheduleStatus.ACTIVE
+                        )
+                );
+        when(mapper.countChildAccess(5L, 99L))
+                .thenReturn(1);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.updateSchedule(
+                        99L,
+                        21L,
+                        updateRequest(
+                                AutoTransferAction.PAUSE,
+                                null,
+                                null,
+                                null,
+                                false
+                        )
+                )
+        );
+
+        assertEquals(
+                ErrorCode.AUTO_TRANSFER_SCHEDULE_ACCESS_DENIED,
+                exception.getErrorCode()
+        );
+    }
+
+    private AutoTransferScheduleRow modifiableSchedule(
+            AutoTransferScheduleStatus status
+    ) {
+        AutoTransferScheduleRow row =
+                new AutoTransferScheduleRow();
+
+        row.setAutoTransferScheduleId(21L);
+        row.setChildId(5L);
+        row.setMemberId(7L);
+        row.setFinancialGoalId(31L);
+        row.setSourceAccountId(17L);
+        row.setDestinationAccountId(24L);
+        row.setAmount(new BigDecimal("80000"));
+        row.setFrequency(
+                AutoTransferFrequency.MONTHLY
+        );
+        row.setTransferDay(10);
+        row.setStartDate(
+                LocalDate.of(2026, 9, 10)
+        );
+        row.setEndDate(
+                LocalDate.of(2029, 2, 10)
+        );
+        row.setNextTransferAt(
+                LocalDateTime.of(
+                        2026, 9, 10, 0, 0
+                )
+        );
+        row.setStatus(status);
+        row.setCreatedAt(
+                LocalDateTime.of(
+                        2026, 8, 17, 6, 0
+                )
+        );
+
+        return row;
+    }
+
+    private UpdateAutoTransferScheduleRequest updateRequest(
+            AutoTransferAction action,
+            BigDecimal amount,
+            Integer transferDay,
+            LocalDate endDate,
+            boolean endDatePresent
+    ) {
+        UpdateAutoTransferScheduleRequest request =
+                new UpdateAutoTransferScheduleRequest();
+
+        ReflectionTestUtils.setField(
+                request,
+                "action",
+                action
+        );
+        ReflectionTestUtils.setField(
+                request,
+                "amount",
+                amount
+        );
+        ReflectionTestUtils.setField(
+                request,
+                "transferDay",
+                transferDay
+        );
+        ReflectionTestUtils.setField(
+                request,
+                "endDate",
+                endDate
+        );
+        ReflectionTestUtils.setField(
+                request,
+                "endDatePresent",
+                endDatePresent
+        );
+
+        return request;
     }
 }

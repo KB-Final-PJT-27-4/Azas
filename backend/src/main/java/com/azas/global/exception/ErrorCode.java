@@ -344,6 +344,14 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "자동이체 일정을 찾을 수 없습니다."
     ),
+    AUTO_TRANSFER_SCHEDULE_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 자동이체 일정을 변경할 권한이 없습니다."
+    ),
+    INVALID_AUTO_TRANSFER_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "현재 상태에서는 요청한 자동이체 상태 변경을 수행할 수 없습니다."
+    ),
 
     // Notification
     NOTIFICATION_NOT_FOUND(

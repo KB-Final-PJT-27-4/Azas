@@ -39,6 +39,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 class AutoTransferScheduleControllerTest {
 
@@ -419,5 +420,186 @@ class AutoTransferScheduleControllerTest {
                 ).value(
                         "AUTO_TRANSFER_SCHEDULE_NOT_FOUND"
                 ));
+    }
+
+    // 수정 성공 테스트
+    @Test
+    void 자동이체_일정을_수정한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        given(service.updateSchedule(
+                eq(7L),
+                eq(21L),
+                any()
+        )).willReturn(
+                new AutoTransferScheduleDetailResponse(
+                        21L,
+                        5L,
+                        31L,
+                        "초등학교 입학 준비금",
+                        17L,
+                        "KB국민 1234",
+                        24L,
+                        "아이사랑적금",
+                        new BigDecimal("100000"),
+                        AutoTransferFrequency.MONTHLY,
+                        20,
+                        LocalDate.of(2026, 9, 10),
+                        LocalDate.of(2029, 3, 20),
+                        Instant.parse(
+                                "2026-09-20T00:00:00Z"
+                        ),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        AutoTransferScheduleStatus.ACTIVE,
+                        Instant.parse(
+                                "2026-08-17T06:00:00Z"
+                        ),
+                        Instant.parse(
+                                "2026-08-17T07:00:00Z"
+                        )
+                )
+        );
+
+        mockMvc.perform(
+                        patch(
+                                "/api/v1/auto-transfer-schedules/21"
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                                {
+                                                  "action": "UPDATE",
+                                                  "amount": 100000,
+                                                  "transfer_day": 20,
+                                                  "end_date": "2029-03-20"
+                                                }
+                                                """
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.auto_transfer_schedule_id"
+                ).value(21))
+                .andExpect(jsonPath(
+                        "$.amount"
+                ).value(100000))
+                .andExpect(jsonPath(
+                        "$.transfer_day"
+                ).value(20))
+                .andExpect(jsonPath(
+                        "$.next_transfer_at"
+                ).value("2026-09-20T00:00:00Z"))
+                .andExpect(jsonPath(
+                        "$.status"
+                ).value("ACTIVE"));
+    }
+
+    // 일시정지 테스트
+    @Test
+    void 자동이체_일정을_일시정지한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        given(service.updateSchedule(
+                eq(7L),
+                eq(21L),
+                any()
+        )).willReturn(
+                new AutoTransferScheduleDetailResponse(
+                        21L,
+                        5L,
+                        31L,
+                        "초등학교 입학 준비금",
+                        17L,
+                        "KB국민 1234",
+                        24L,
+                        "아이사랑적금",
+                        new BigDecimal("80000"),
+                        AutoTransferFrequency.MONTHLY,
+                        10,
+                        LocalDate.of(2026, 9, 10),
+                        LocalDate.of(2029, 2, 10),
+                        Instant.parse(
+                                "2026-09-10T00:00:00Z"
+                        ),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        AutoTransferScheduleStatus.PAUSED,
+                        Instant.parse(
+                                "2026-08-17T06:00:00Z"
+                        ),
+                        Instant.parse(
+                                "2026-08-17T07:00:00Z"
+                        )
+                )
+        );
+
+        mockMvc.perform(
+                        patch(
+                                "/api/v1/auto-transfer-schedules/21"
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                        {
+                                          "action": "PAUSE"
+                                        }
+                                        """
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.status"
+                ).value("PAUSED"));
+    }
+
+    // action 누락 검증
+    @Test
+    void 자동이체_변경_action이_없으면_400을_반환한다()
+            throws Exception {
+        mockMvc.perform(
+                        patch(
+                                "/api/v1/auto-transfer-schedules/21"
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                        {
+                                          "amount": 100000
+                                        }
+                                        """
+                                )
+                )
+                .andExpect(status().isBadRequest());
     }
 }

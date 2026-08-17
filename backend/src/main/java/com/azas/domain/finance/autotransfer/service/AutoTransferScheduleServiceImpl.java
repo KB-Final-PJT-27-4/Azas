@@ -16,6 +16,7 @@ import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListResponse
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListRow;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailResponse;
 import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailRow;
+import com.azas.domain.finance.autotransfer.entity.AutoTransferAction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -287,29 +288,11 @@ public class AutoTransferScheduleServiceImpl
     private LocalDate calculateNextTransferDate(
             CreateAutoTransferScheduleRequest request
     ) {
-        LocalDate today = LocalDate.now(clock);
-        LocalDate baseDate = request.getStartDate()
-                .isAfter(today)
-                ? request.getStartDate()
-                : today;
-
-        LocalDate candidate = YearMonth.from(baseDate)
-                .atDay(request.getTransferDay());
-
-        if (candidate.isBefore(baseDate)) {
-            candidate = YearMonth.from(baseDate)
-                    .plusMonths(1)
-                    .atDay(request.getTransferDay());
-        }
-
-        if (request.getEndDate() != null
-                && candidate.isAfter(request.getEndDate())) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE
-            );
-        }
-
-        return candidate;
+        return calculateNextTransferDate(
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getTransferDay()
+        );
     }
 
     private boolean sameRequest(
@@ -534,6 +517,273 @@ public class AutoTransferScheduleServiceImpl
 
         validateChildAccess(memberId, row.getChildId());
 
+        return toDetailResponse(row);
+    }
+    @Override
+    @Transactional
+    public AutoTransferScheduleDetailResponse updateSchedule(
+            Long memberId,
+            Long scheduleId,
+            UpdateAutoTransferScheduleRequest request
+    ) {
+        if (scheduleId == null || scheduleId <= 0) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        if (request == null || request.getAction() == null) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        AutoTransferScheduleRow schedule =
+                mapper.findScheduleForUpdate(scheduleId);
+
+        if (schedule == null) {
+            throw new BusinessException(
+                    ErrorCode.AUTO_TRANSFER_SCHEDULE_NOT_FOUND
+            );
+        }
+
+        validateChildAccess(
+                memberId,
+                schedule.getChildId()
+        );
+
+        /*
+         * 다른 보호자가 목록·상세를 보는 것은 허용하지만,
+         * 다른 보호자 계좌에서 출금되는 일정 변경은 허용하지 않는다.
+         */
+        if (!Objects.equals(
+                schedule.getMemberId(),
+                memberId
+        )) {
+            throw new BusinessException(
+                    ErrorCode.AUTO_TRANSFER_SCHEDULE_ACCESS_DENIED
+            );
+        }
+
+        if (schedule.getStatus()
+                == AutoTransferScheduleStatus.ENDED
+                || schedule.getStatus()
+                == AutoTransferScheduleStatus.CANCELED) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_AUTO_TRANSFER_STATUS_TRANSITION
+            );
+        }
+
+        BigDecimal amount = schedule.getAmount();
+        Integer transferDay = schedule.getTransferDay();
+        LocalDate endDate = schedule.getEndDate();
+        LocalDateTime nextTransferAt =
+                schedule.getNextTransferAt();
+        AutoTransferScheduleStatus nextStatus =
+                schedule.getStatus();
+
+        switch (request.getAction()) {
+            case UPDATE:
+                validateUpdateAction(request);
+
+                amount = request.getAmount() != null
+                        ? request.getAmount()
+                        : schedule.getAmount();
+
+                transferDay =
+                        request.getTransferDay() != null
+                                ? request.getTransferDay()
+                                : schedule.getTransferDay();
+
+                endDate = request.isEndDatePresent()
+                        ? request.getEndDate()
+                        : schedule.getEndDate();
+
+                validateUpdatedValues(
+                        amount,
+                        transferDay,
+                        schedule.getStartDate(),
+                        endDate
+                );
+
+                LocalDate nextDate =
+                        calculateNextTransferDate(
+                                schedule.getStartDate(),
+                                endDate,
+                                transferDay
+                        );
+
+                nextTransferAt = nextDate.atStartOfDay();
+
+                if (mapper.countEquivalentScheduleExcludingId(
+                        scheduleId,
+                        memberId,
+                        schedule.getChildId(),
+                        schedule.getSourceAccountId(),
+                        schedule.getDestinationAccountId(),
+                        amount,
+                        schedule.getFrequency().name(),
+                        transferDay,
+                        schedule.getStartDate(),
+                        endDate
+                ) > 0) {
+                    throw new BusinessException(
+                            ErrorCode.DUPLICATE_AUTO_TRANSFER_SCHEDULE
+                    );
+                }
+                break;
+
+            case PAUSE:
+                validateStatusOnlyAction(request);
+
+                if (schedule.getStatus()
+                        != AutoTransferScheduleStatus.ACTIVE) {
+                    throw new BusinessException(
+                            ErrorCode.INVALID_AUTO_TRANSFER_STATUS_TRANSITION
+                    );
+                }
+
+                nextStatus =
+                        AutoTransferScheduleStatus.PAUSED;
+
+                // 예정일은 화면 표시를 위해 보존한다.
+                nextTransferAt =
+                        schedule.getNextTransferAt();
+                break;
+
+            case RESUME:
+                validateStatusOnlyAction(request);
+
+                if (schedule.getStatus()
+                        != AutoTransferScheduleStatus.PAUSED) {
+                    throw new BusinessException(
+                            ErrorCode.INVALID_AUTO_TRANSFER_STATUS_TRANSITION
+                    );
+                }
+
+                nextStatus =
+                        AutoTransferScheduleStatus.ACTIVE;
+
+                nextTransferAt =
+                        calculateNextTransferDate(
+                                schedule.getStartDate(),
+                                schedule.getEndDate(),
+                                schedule.getTransferDay()
+                        ).atStartOfDay();
+                break;
+
+            default:
+                throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        UpdateAutoTransferScheduleCommand command =
+                new UpdateAutoTransferScheduleCommand(
+                        scheduleId,
+                        amount,
+                        transferDay,
+                        endDate,
+                        nextTransferAt,
+                        nextStatus,
+                        LocalDateTime.now(clock)
+                );
+
+        if (mapper.updateSchedule(command) != 1) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        AutoTransferScheduleDetailRow updated =
+                mapper.findScheduleDetail(scheduleId);
+
+        if (updated == null) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        return toDetailResponse(updated);
+    }
+
+    private void validateUpdateAction(
+            UpdateAutoTransferScheduleRequest request
+    ) {
+        boolean hasUpdateField =
+                request.getAmount() != null
+                        || request.getTransferDay() != null
+                        || request.isEndDatePresent();
+
+        if (!hasUpdateField) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+    }
+
+    private void validateStatusOnlyAction(
+            UpdateAutoTransferScheduleRequest request
+    ) {
+        boolean hasUpdateField =
+                request.getAmount() != null
+                        || request.getTransferDay() != null
+                        || request.isEndDatePresent();
+
+        if (hasUpdateField) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+    }
+
+    private void validateUpdatedValues(
+            BigDecimal amount,
+            Integer transferDay,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        if (amount == null
+                || amount.signum() <= 0
+                || transferDay == null
+                || transferDay < 1
+                || transferDay > 28
+                || startDate == null
+                || (
+                endDate != null
+                        && endDate.isBefore(startDate)
+        )) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE
+            );
+        }
+    }
+
+    private LocalDate calculateNextTransferDate(
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer transferDay
+    ) {
+        LocalDate today = LocalDate.now(clock);
+
+        LocalDate baseDate =
+                startDate.isAfter(today)
+                        ? startDate
+                        : today;
+
+        LocalDate candidate =
+                YearMonth.from(baseDate)
+                        .atDay(transferDay);
+
+        if (candidate.isBefore(baseDate)) {
+            candidate =
+                    YearMonth.from(baseDate)
+                            .plusMonths(1)
+                            .atDay(transferDay);
+        }
+
+        if (endDate != null
+                && candidate.isAfter(endDate)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE
+            );
+        }
+
+        return candidate;
+    }
+    private AutoTransferScheduleDetailResponse toDetailResponse(
+            AutoTransferScheduleDetailRow row
+    ) {
         return new AutoTransferScheduleDetailResponse(
                 row.getAutoTransferScheduleId(),
                 row.getChildId(),
@@ -559,4 +809,5 @@ public class AutoTransferScheduleServiceImpl
                 toInstant(row.getUpdatedAt())
         );
     }
+
 }

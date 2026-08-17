@@ -45,4 +45,25 @@ public interface AutoTransferScheduleMapper {
     AutoTransferScheduleDetailRow findScheduleDetail(
             @Param("scheduleId") Long scheduleId
     );
+
+    AutoTransferScheduleRow findScheduleForUpdate(
+            @Param("scheduleId") Long scheduleId
+    );
+
+    int countEquivalentScheduleExcludingId(
+            @Param("scheduleId") Long scheduleId,
+            @Param("memberId") Long memberId,
+            @Param("childId") Long childId,
+            @Param("sourceAccountId") Long sourceAccountId,
+            @Param("destinationAccountId") Long destinationAccountId,
+            @Param("amount") BigDecimal amount,
+            @Param("frequency") String frequency,
+            @Param("transferDay") Integer transferDay,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    int updateSchedule(
+            UpdateAutoTransferScheduleCommand command
+    );
 }

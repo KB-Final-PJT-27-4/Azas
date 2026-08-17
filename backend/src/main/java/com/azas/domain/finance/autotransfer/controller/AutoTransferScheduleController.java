@@ -21,6 +21,8 @@ import com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListResponse
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.azas.domain.finance.autotransfer.dto.UpdateAutoTransferScheduleRequest;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import javax.validation.Valid;
 
@@ -142,6 +144,45 @@ public class AutoTransferScheduleController {
                 service.getScheduleDetail(
                         memberId,
                         scheduleId
+                )
+        );
+    }
+
+    @ApiOperation("자동이체 일정 수정·일시정지·재개")
+    @ApiResponses({
+            @ApiResponse(
+                    code = 200,
+                    message = "자동이체 일정 변경 성공",
+                    response = AutoTransferScheduleDetailResponse.class
+            ),
+            @ApiResponse(code = 400, message = "요청 형식 오류"),
+            @ApiResponse(code = 401, message = "인증 오류"),
+            @ApiResponse(code = 403, message = "일정 변경 권한 없음"),
+            @ApiResponse(code = 404, message = "자동이체 일정 없음"),
+            @ApiResponse(code = 409, message = "중복 일정 또는 상태 전이 오류"),
+            @ApiResponse(code = 422, message = "일정 조건 오류")
+    })
+    @PatchMapping("/auto-transfer-schedules/{schedule_id}")
+    public ResponseEntity<AutoTransferScheduleDetailResponse>
+    updateSchedule(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorizationHeader,
+            @PathVariable("schedule_id") Long scheduleId,
+            @Valid @RequestBody
+            UpdateAutoTransferScheduleRequest request
+    ) {
+        Long memberId =
+                accessTokenMemberResolver.resolveMemberId(
+                        authorizationHeader
+                );
+
+        return ResponseEntity.ok(
+                service.updateSchedule(
+                        memberId,
+                        scheduleId,
+                        request
                 )
         );
     }
