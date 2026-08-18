@@ -312,7 +312,7 @@ const resultCount = computed(() =>
         />
         <input
           v-model="query"
-          class="h-13 w-full rounded-[15px] border border-[var(--color-border)] bg-[var(--color-surface-muted)] pr-12 pl-12 text-[14px] font-medium outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-brand-primary)] focus:bg-white focus:ring-2 focus:ring-[var(--color-selected-background)]"
+          class="h-13 w-full rounded-[15px] border border-[var(--color-border)] pr-12 pl-12 text-[14px] font-medium outline-none transition-colors placeholder:text-[var(--color-text-secondary)] [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:appearance-none"
           type="search"
           inputmode="search"
           autocomplete="off"
@@ -320,7 +320,7 @@ const resultCount = computed(() =>
         />
         <button
           v-if="query"
-          class="absolute top-1/2 right-2 grid size-9 -translate-y-1/2 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[var(--color-border)]"
+          class="absolute top-1/2 right-2 grid size-9 -translate-y-1/2 place-items-center rounded-full border-0 bg-transparent text-[var(--color-text-secondary)] transition-colors active:bg-[#f3f6f8]"
           type="button"
           aria-label="검색어 지우기"
           @click="query = ''"
@@ -379,7 +379,7 @@ const resultCount = computed(() =>
       class="mt-8 rounded-[18px] bg-[var(--color-surface-muted)] px-5 py-14 text-center"
       role="status"
     >
-      <h2 class="mt-4 mb-0 text-[15px] font-extrabold">검색 결과가 없어요</h2>
+      <h2 class="mb-0 text-[15px] font-extrabold">검색 결과가 없어요</h2>
       <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">
         다른 메뉴명이나 기능으로 검색해 주세요.
       </p>
