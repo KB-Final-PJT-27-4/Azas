@@ -9,6 +9,7 @@ import com.azas.global.security.AccessTokenMemberResolver;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestBody;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -36,8 +37,15 @@ public class ChildController {
                 authorizationHeader
         );
 
-        ChildResponse childResponse = childService.createChild(memberId, request);
-        return ResponseEntity.ok(childResponse);
+        ChildResponse childResponse =
+                childService.createChild(
+                        memberId,
+                        request
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(childResponse);
     }
 
     @ApiOperation(value = "자녀 목록 조회", notes = "현재 회원이 관리하는 자녀 목록을 조회합니다.")

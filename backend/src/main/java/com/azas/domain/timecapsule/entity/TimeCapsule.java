@@ -18,9 +18,9 @@ public class TimeCapsule {
     private String title;
     private TimeCapsuleStatus status;
     private LocalDateTime expectedReleaseAt;
-    private String releaseReason;
     private LocalDateTime releasedAt;
     private int entryCount;
+    private BigDecimal totalContributionAmount;
     private LocalDateTime latestEntryAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -29,21 +29,21 @@ public class TimeCapsule {
     private BigDecimal goalTargetAmount;
     private LocalDate goalTargetDate;
 
-    // [JMG] CAPSULE-1 적금 계좌의 만기일을 예상 공개일로 갖는 보관함을 생성한다.
     public static TimeCapsule create(
             long childId,
             long financialAccountId,
             String title,
-            LocalDate maturityDate
+            LocalDate releaseDate
     ) {
         TimeCapsule timeCapsule = new TimeCapsule();
         timeCapsule.childId = childId;
         timeCapsule.financialAccountId = financialAccountId;
         timeCapsule.title = title;
         timeCapsule.status = TimeCapsuleStatus.COLLECTING;
-        timeCapsule.expectedReleaseAt = maturityDate == null
+        timeCapsule.expectedReleaseAt = releaseDate == null
                 ? null
-                : maturityDate.atStartOfDay();
+                : releaseDate.atStartOfDay();
+        timeCapsule.totalContributionAmount = BigDecimal.ZERO;
         return timeCapsule;
     }
 }

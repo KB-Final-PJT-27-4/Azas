@@ -3,7 +3,6 @@ package com.azas.domain.auth.service;
 import com.azas.domain.auth.dto.OAuthProfile;
 import com.azas.domain.auth.dto.ParentInviteOAuthResult;
 import com.azas.domain.auth.entity.OAuthProvider;
-import com.azas.domain.child.entity.RelationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,15 +11,13 @@ import org.springframework.stereotype.Service;
 public class ParentInviteOAuthService {
 
     private final OAuthClientRegistry oauthClientRegistry;
-    private final ParentInviteAcceptanceService
-            parentInviteAcceptanceService;
+    private final ParentInviteLoginService parentInviteLoginService;
 
     public ParentInviteOAuthResult login(
             String providerValue,
             String authorizationCode,
             String redirectUri,
-            String inviteToken,
-            RelationType relationType
+            String inviteToken
     ) {
         OAuthProvider provider =
                 OAuthProvider.from(providerValue);
@@ -34,9 +31,8 @@ public class ParentInviteOAuthService {
                         redirectUri
                 );
 
-        return parentInviteAcceptanceService.accept(
+        return parentInviteLoginService.login(
                 inviteToken,
-                relationType,
                 profile
         );
     }

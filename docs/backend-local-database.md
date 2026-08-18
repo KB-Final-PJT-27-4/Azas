@@ -16,6 +16,12 @@ For a shared RDS instance, use its endpoint and port in `DB_URL`. Add the SSL mo
 
 ## Initialize a local database
 
+The application does not execute `schema.sql` or `seed.sql` automatically at startup.
+
+When a new table is added to an existing local database, rerunning the entire
+`schema.sql` resets all local data. To preserve existing data, execute only the
+new feature's `CREATE TABLE` statement against the local database.
+
 Run the schema first, then the seed data.
 
 ```powershell

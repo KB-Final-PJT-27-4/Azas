@@ -50,4 +50,37 @@ public class Member {
         member.status = MemberStatus.ACTIVE;
         return member;
     }
+
+    public void changeBirthDate(
+            LocalDate birthDate
+    ) {
+        this.birthDate = birthDate;
+    }
+
+    public void changeProfileImageUrl(
+            String profileImageUrl
+    ) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public void applyVerifiedPhoneNumber(
+            byte[] phoneNumberCiphertext,
+            String phoneNumberHash,
+            LocalDateTime phoneVerifiedAt
+    ) {
+        if (
+                phoneNumberCiphertext == null
+                        || phoneNumberHash == null
+                        || phoneVerifiedAt == null
+        ) {
+            throw new IllegalArgumentException(
+                    "인증된 휴대폰 정보가 필요합니다."
+            );
+        }
+
+        this.phoneNumberCiphertext =
+                phoneNumberCiphertext.clone();
+        this.phoneNumberHash = phoneNumberHash;
+        this.phoneVerifiedAt = phoneVerifiedAt;
+    }
 }

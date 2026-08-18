@@ -6,6 +6,7 @@ import com.azas.domain.child.entity.Child;
 import com.azas.domain.child.entity.RelationType;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import com.azas.domain.child.dto.PregnancyStatusRow;
 
 import java.util.List;
 
@@ -44,6 +45,12 @@ public interface ChildMapper {
     void updateChild(Child child);
 
     // 자녀 삭제
-    void softDeleteChild(@Param("childId") Long childId) ;
+    void softDeleteChild(@Param("childId") Long childId);
+
+    // 임신 주차 조회
+    PregnancyStatusRow findPregnancyStatus(
+            @Param("childId") Long childId,
+            @Param("memberId") Long memberId
+    );
 }
 

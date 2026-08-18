@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false, hideNavigation: true },
   },
   {
+    path: '/auth/:provider/callback',
+    name: 'OAuthCallback',
+    component: () => import('@/views/auth/OAuthCallbackView.vue'),
+    meta: { requiresAuth: false, hideNavigation: true },
+  },
+  {
     path: '/onboarding',
     name: 'Onboarding',
     component: () => import('@/views/auth/OnboardingView.vue'),
