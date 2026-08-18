@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
-    "generate:api": "openapi-generator-cli generate -i ./openapi/openapi.json -g typescript-axios -o ./src/api/generated --additional-properties=withSeparateModelsAndApi=true,apiPackage=apis,modelPackage=models",
+    "generate:api": "node ./scripts/generate-api.mjs",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
