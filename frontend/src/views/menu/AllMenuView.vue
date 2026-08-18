@@ -2,15 +2,16 @@
 import {
   Baby,
   Bell,
+  BellRing,
   BookOpen,
-  ChartNoAxesCombined,
   ChevronRight,
   CircleCheckBig,
+  CircleHelp,
   ClipboardCheck,
   Clock3,
-  House,
   Landmark,
   Search,
+  Settings,
   ShieldCheck,
   Sparkles,
   Target,
@@ -39,73 +40,17 @@ type MenuGroup = {
 
 const menuGroups: MenuGroup[] = [
   {
-    title: '주요 메뉴',
-    description: '자주 사용하는 서비스',
-    iconClass: 'bg-[#eaf7ff] text-[#279fd8]',
+    title: '자산·금융',
+    description: '계좌와 금융상품을 관리해요',
+    iconClass: 'bg-[#eaf8ff] text-[#2aa7e4]',
     items: [
       {
-        label: '홈',
-        description: '목표와 자산 현황을 한눈에 확인해요.',
-        keywords: ['메인', '대시보드'],
-        icon: House,
-        to: { name: 'Home' },
-      },
-      {
-        label: '계좌',
-        description: '목표별 계좌와 거래 내역을 확인해요.',
-        keywords: ['자산', '잔액', '거래'],
+        label: '계좌 관리',
+        description: '가족의 연결 계좌와 자동이체를 관리해요.',
+        keywords: ['자산', '계좌', '자동이체'],
         icon: WalletCards,
         to: { name: 'Assets' },
       },
-      {
-        label: '체크리스트',
-        description: '아이를 위한 준비 항목을 관리해요.',
-        keywords: ['할 일', '준비'],
-        icon: ClipboardCheck,
-        to: { name: 'Checklists' },
-      },
-      {
-        label: '용돈 미션 관리',
-        description: '아이에게 미션을 주고 완료 보상을 관리해요.',
-        keywords: ['미션', '용돈', '보상', '아이 할 일'],
-        icon: ClipboardCheck,
-        to: { name: 'ParentMissions' },
-      },
-      {
-        label: '자산 리포트',
-        description: '모은 자산과 소비 흐름을 분석해요.',
-        keywords: ['자산 관리', '분석', '리포트'],
-        icon: ChartNoAxesCombined,
-        to: { name: 'Reports' },
-      },
-      {
-        label: '양육비 리포트',
-        description: '아이 관련 지출과 또래 평균을 비교해요.',
-        keywords: ['양육비', '소비', '평균', '지출 리포트'],
-        icon: ChartNoAxesCombined,
-        to: { name: 'Reports', query: { tab: 'allowance' } },
-      },
-      {
-        label: '마이페이지',
-        description: '내 정보와 가족 설정을 관리해요.',
-        keywords: ['내 정보', '설정'],
-        icon: UserRound,
-        to: { name: 'Mypage' },
-      },
-      {
-        label: '알림',
-        description: '저축과 가족 활동 알림을 확인해요.',
-        keywords: ['소식', 'notification'],
-        icon: Bell,
-        to: { name: 'Alarm' },
-      },
-    ],
-  },
-  {
-    title: '계좌·금융상품',
-    description: '계좌 연결과 추천 금융상품',
-    iconClass: 'bg-[#eef2ff] text-[#687bd8]',
-    items: [
       {
         label: '계좌 연동',
         description: '은행 계좌를 서비스에 연결해요.',
@@ -120,26 +65,26 @@ const menuGroups: MenuGroup[] = [
         icon: Sparkles,
         to: { name: 'Products' },
       },
-      {
-        label: '적금 추천',
-        description: '아이에게 맞는 KB 적금을 추천받아요.',
-        keywords: ['저축', '상품 추천'],
-        icon: Sparkles,
-        to: { name: 'SavingsRecommendation' },
-      },
     ],
   },
   {
-    title: '목표·타임캡슐',
-    description: '목표를 세우고 추억을 기록해요',
+    title: '목표·생활',
+    description: '목표와 아이의 일상을 함께 관리해요',
     iconClass: 'bg-[#fff5d9] text-[#b88516]',
     items: [
       {
-        label: '목표 설정',
-        description: '아이를 위한 새로운 저축 목표를 만들어요.',
-        keywords: ['목표 추가', '목표 금액'],
+        label: '목표 관리',
+        description: '목표별 저축 현황과 연결 계좌를 관리해요.',
+        keywords: ['목표 목록', '저축 현황', '연결 계좌'],
         icon: Target,
-        to: { name: 'Goals' },
+        to: { name: 'MypageGoals' },
+      },
+      {
+        label: '체크리스트',
+        description: '가족이 함께할 할 일을 확인하고 관리해요.',
+        keywords: ['할 일', '생활 습관', '목록'],
+        icon: ClipboardCheck,
+        to: { name: 'Checklists' },
       },
       {
         label: '타임캡슐',
@@ -149,19 +94,47 @@ const menuGroups: MenuGroup[] = [
         to: { name: 'TimeCapsuleArchive' },
       },
       {
-        label: '타임캡슐 만들기',
-        description: '새로운 편지와 사진을 기록해요.',
-        keywords: ['작성', '새 기록', '편지'],
-        icon: Clock3,
-        to: { name: 'TimeCapsuleCreate' },
+        label: '용돈 미션',
+        description: '아이에게 용돈 미션을 만들고 보상해요.',
+        keywords: ['부모 미션', '보상', '용돈'],
+        icon: CircleCheckBig,
+        to: { name: 'ParentMissions' },
       },
     ],
   },
   {
-    title: '가족·마이페이지',
+    title: '리포트',
+    description: '우리 가족의 자산과 양육비 흐름을 살펴봐요',
+    iconClass: 'bg-[#eafbf3] text-[#2aa876]',
+    items: [
+      {
+        label: '자산 리포트',
+        description: '자산과 목표별 저축 현황을 확인해요.',
+        keywords: ['자산 분석', '저축 현황', '인사이트'],
+        icon: WalletCards,
+        to: { name: 'Reports' },
+      },
+      {
+        label: '양육비 리포트',
+        description: '아이 관련 지출과 양육비 인사이트를 확인해요.',
+        keywords: ['양육비 분석', '아이 지출', '인사이트'],
+        icon: BookOpen,
+        to: { name: 'Reports', query: { tab: 'allowance' } },
+      },
+    ],
+  },
+  {
+    title: '가족·설정',
     description: '가족과 서비스 이용 정보를 관리해요',
     iconClass: 'bg-[#fff0f4] text-[#d76585]',
     items: [
+      {
+        label: '마이페이지',
+        description: '내 정보와 가족 관리 메뉴를 확인해요.',
+        keywords: ['내 정보', '설정', '프로필'],
+        icon: Settings,
+        to: { name: 'Mypage' },
+      },
       {
         label: '내 정보 수정',
         description: '보호자 프로필과 연락처를 수정해요.',
@@ -191,24 +164,24 @@ const menuGroups: MenuGroup[] = [
         to: { name: 'ParentPermissions' },
       },
       {
-        label: '목표 관리',
-        description: '등록한 목표를 확인하고 관리해요.',
-        keywords: ['목표 목록', '목표 추가'],
-        icon: Target,
-        to: { name: 'MypageGoals' },
+        label: '알림',
+        description: '새로운 요청과 서비스 알림을 확인해요.',
+        keywords: ['알림 목록', 'notification'],
+        icon: Bell,
+        to: { name: 'Alarm' },
       },
       {
         label: '알림 설정',
         description: '받고 싶은 알림 종류를 설정해요.',
         keywords: ['푸시', 'notification', '설정'],
-        icon: Bell,
+        icon: BellRing,
         to: { name: 'AlarmSettings' },
       },
       {
         label: '도움말',
         description: '서비스 이용 방법과 자주 묻는 질문을 봐요.',
         keywords: ['가이드', 'FAQ', '문의'],
-        icon: BookOpen,
+        icon: CircleHelp,
         to: { name: 'Guide' },
       },
     ],
@@ -216,7 +189,7 @@ const menuGroups: MenuGroup[] = [
   {
     title: '아이 전용',
     description: '아이 모드에서 사용하는 화면',
-    iconClass: 'bg-[#eafbf3] text-[#2aa876]',
+    iconClass: 'bg-[#eef2ff] text-[#687bd8]',
     items: [
       {
         label: '아이 홈',
@@ -247,11 +220,39 @@ const menuGroups: MenuGroup[] = [
         to: { name: 'ChildAllowance' },
       },
       {
-        label: '용돈 요청 완료',
-        description: '용돈 요청을 보낸 뒤 완료 화면을 확인해요.',
-        keywords: ['용돈 완료', '요청 완료'],
+        label: '용돈 요청 내역',
+        description: '보호자에게 보낸 용돈 요청을 확인해요.',
+        keywords: ['용돈 내역', '요청 목록'],
         icon: CircleCheckBig,
-        to: { name: 'ChildAllowanceDone' },
+        to: { name: 'ChildAllowanceRequests' },
+      },
+      {
+        label: '아이 용돈 미션',
+        description: '부모님이 보내준 미션을 수행하고 보상받아요.',
+        keywords: ['아이 미션', '보상', '용돈'],
+        icon: CircleCheckBig,
+        to: { name: 'ChildMissions' },
+      },
+      {
+        label: '아이 체크리스트',
+        description: '오늘 해야 할 체크리스트를 확인해요.',
+        keywords: ['아이 할 일', '체크'],
+        icon: ClipboardCheck,
+        to: { name: 'ChildChecklists' },
+      },
+      {
+        label: '금융 퀴즈',
+        description: '재미있는 퀴즈로 금융 지식을 익혀요.',
+        keywords: ['아이 퀴즈', '금융 교육'],
+        icon: Sparkles,
+        to: { name: 'ChildQuiz' },
+      },
+      {
+        label: '아이 이체하기',
+        description: '아이 계좌에서 안전하게 이체해요.',
+        keywords: ['아이 송금', '계좌 이체'],
+        icon: WalletCards,
+        to: { name: 'ChildTransfer' },
       },
     ],
   },
@@ -289,13 +290,18 @@ const resultCount = computed(() =>
     class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-[var(--color-surface)] px-5 pt-5 pb-8 text-[var(--color-text-primary)]"
   >
     <section aria-labelledby="all-menu-title">
-      <p class="m-0 text-[12px] font-bold text-[var(--color-selected-text)]">서비스 한눈에 보기</p>
-      <h1
-        id="all-menu-title"
-        class="mt-1.5 mb-0 text-[24px] leading-[1.35] font-extrabold tracking-[-0.035em]"
-      >
-        어떤 메뉴를 찾으세요?
-      </h1>
+      <div class="flex justify-between">
+        <h1
+          id="all-menu-title"
+          class="mb-0 text-[24px] leading-[1.35] font-extrabold tracking-[-0.035em]"
+        >
+          서비스 한눈에 보기
+        </h1>
+
+        <p class="mt-3 mb-0 text-[11px] text-[var(--color-text-secondary)]" aria-live="polite">
+          {{ query ? `${resultCount}개의 검색 결과` : `총 ${totalMenuCount}개의 메뉴` }}
+        </p>
+      </div>
 
       <label class="relative mt-5 block">
         <span class="sr-only">메뉴 검색</span>
@@ -322,10 +328,6 @@ const resultCount = computed(() =>
           <X :size="18" />
         </button>
       </label>
-
-      <p class="mt-3 mb-0 text-[11px] text-[var(--color-text-secondary)]" aria-live="polite">
-        {{ query ? `${resultCount}개의 검색 결과` : `총 ${totalMenuCount}개의 메뉴` }}
-      </p>
     </section>
 
     <div v-if="filteredGroups.length" class="mt-7 grid gap-8">
@@ -338,9 +340,6 @@ const resultCount = computed(() =>
           <h2 :id="`menu-group-${group.title}`" class="m-0 text-[16px] font-extrabold">
             {{ group.title }}
           </h2>
-          <span class="text-[10px] text-[var(--color-text-secondary)]">
-            {{ group.description }}
-          </span>
         </div>
 
         <ul
@@ -380,7 +379,6 @@ const resultCount = computed(() =>
       class="mt-8 rounded-[18px] bg-[var(--color-surface-muted)] px-5 py-14 text-center"
       role="status"
     >
-      <Search class="mx-auto text-[var(--color-text-secondary)]" :size="28" />
       <h2 class="mt-4 mb-0 text-[15px] font-extrabold">검색 결과가 없어요</h2>
       <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">
         다른 메뉴명이나 기능으로 검색해 주세요.
