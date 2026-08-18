@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ChevronRight } from 'lucide-vue-next'
+import { Check, ChevronRight } from 'lucide-vue-next'
 
 import homeBubbleUrl from '@/assets/images/accounts/complete-circle.png'
 import homeDiamondUrl from '@/assets/images/accounts/complete-diamond.png'
 import homeStarUrl from '@/assets/images/accounts/complete-star.png'
 import homeMoneyUrl from '@/assets/images/home/money.png'
 import homePigUrl from '@/assets/images/login/logo-pig.png'
-import checklistIconUrl from '@/assets/images/home/icon-checklist.png'
 import goalIconUrl from '@/assets/images/home/icon-goal.png'
+import homeProductIconUrl from '@/assets/images/home/home-product.png'
 import timeCapsuleIconUrl from '@/assets/images/home/icon-time-capsule.png'
-import { productRecommendationGoal, recommendedProducts } from '@/data/productDummyData'
+import { productRecommendationGoal } from '@/data/productDummyData'
 import { currentHomeMemberType, homeDataByMemberType } from '@/mocks/home'
 
 const homeData = computed(() => homeDataByMemberType[currentHomeMemberType])
@@ -19,14 +19,18 @@ const currentAssetAmount = computed(() => goalSlides.value[0]?.currentAmount ?? 
 const selectedGoalIndex = ref(0)
 const goalCarouselRef = ref<HTMLElement | null>(null)
 let goalCarouselTimer: ReturnType<typeof window.setInterval> | null = null
-const featuredProducts = computed(() =>
-  recommendedProducts.filter(({ type }) => type === '적금').slice(0, 2),
-)
-
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
 const quickMenus = computed(() =>
   homeData.value.quickMenus.map((menu) => {
+    if (menu.icon === 'checklist') {
+      return {
+        ...menu,
+        title: '맞춤 금융상품',
+        subtitle: '추천 받기',
+        to: '/products',
+      }
+    }
     if (menu.icon === 'goal' && goalSlides.value.length > 0) {
       return {
         ...menu,
@@ -39,10 +43,17 @@ const quickMenus = computed(() =>
 )
 
 const quickMenuIconUrls = {
-  checklist: checklistIconUrl,
   timeCapsule: timeCapsuleIconUrl,
   goal: goalIconUrl,
 }
+
+const checklistItems = computed(() => [
+  { title: '아이 통장 준비하기', completed: currentHomeMemberType === 'existing' },
+  { title: '우리 아이 저축 목표 세우기', completed: currentHomeMemberType === 'existing' },
+  { title: '가족 금융 계획 점검하기', completed: false },
+])
+
+const checklistCompletedCount = computed(() => (currentHomeMemberType === 'existing' ? 3 : 0))
 
 const selectGoal = (index: number, behavior: ScrollBehavior = 'smooth') => {
   const goalCount = goalSlides.value.length
@@ -258,8 +269,16 @@ onBeforeUnmount(() => {
         :to="menu.to"
       >
         <img
+          v-if="menu.icon === 'checklist'"
+          class="block size-[36px] object-contain"
+          :src="homeProductIconUrl"
+          alt=""
+          aria-hidden="true"
+        />
+        <img
+          v-else
           class="home-quick-icon"
-          :src="quickMenuIconUrls[menu.icon]"
+          :src="quickMenuIconUrls[menu.icon as keyof typeof quickMenuIconUrls]"
           alt=""
           aria-hidden="true"
         />
@@ -270,52 +289,75 @@ onBeforeUnmount(() => {
       </RouterLink>
     </section>
 
-    <section class="mt-7" aria-labelledby="recommended-products-title">
-      <div class="flex items-center justify-between px-1">
-        <h2 id="recommended-products-title" class="m-0 text-[16px] font-extrabold">
-          추천 금융상품
-        </h2>
-        <RouterLink
-          class="inline-flex items-center gap-0.5 text-[10px] font-medium !text-[var(--color-text-secondary)]"
-          :to="homeData.productsMoreTo"
-        >
-          더보기 <ChevronRight :size="12" />
-        </RouterLink>
-      </div>
-
-      <div class="home-product-list">
-        <RouterLink
-          v-for="product in featuredProducts"
-          :key="product.id"
-          class="home-product-card"
-          :to="{ name: 'ProductDetail', params: { productId: product.id } }"
-        >
-          <div class="home-product-topline">
-            <span
-              class="rounded-full bg-[#eaf8ff] px-2 py-0.5 text-[9px] font-bold text-[var(--color-selected-text)]"
-            >
-              {{ product.type }}
-            </span>
-            <span class="truncate text-[9px] text-[var(--color-text-secondary)]">
-              {{ product.bankName }}
-            </span>
-          </div>
-
-          <div class="home-product-body">
-            <span class="home-product-info">
-              <strong class="home-product-name">{{ product.name }}</strong>
-              <span class="home-product-meta">
-                {{ product.period }} · 월 {{ product.monthlyLimit }}까지
+    <section class="mt-[16px]" aria-labelledby="home-checklist-title">
+      <RouterLink
+        to="/checklists"
+        class="block overflow-hidden rounded-[20px] border border-[#dce8ee] bg-white !text-[var(--color-text-primary)] shadow-[0_6px_18px_rgba(64,106,126,0.04)] transition-transform active:scale-[0.99]"
+      >
+        <div class="px-5 pb-4 pt-5">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <span class="text-[11px] font-semibold text-[var(--color-text-secondary)]">
+                체크리스트 현황
               </span>
-              <span class="home-product-eligibility">아이 명의 가입 가능</span>
-            </span>
-            <span class="home-product-rate">
-              <small>최고 연</small>
-              <strong>{{ product.rate }}</strong>
+              <p class="mt-1 text-[22px] font-extrabold leading-none">
+                {{ checklistCompletedCount
+                }}<span class="text-[14px] text-[var(--color-text-secondary)]"> / 6 완료</span>
+              </p>
+            </div>
+            <span
+              class="rounded-full bg-[#eaf8ff] px-3 py-1.5 text-[11px] font-bold text-[var(--color-selected-text)]"
+            >
+              {{ Math.round((checklistCompletedCount / 6) * 100) }}%
             </span>
           </div>
-        </RouterLink>
-      </div>
+
+          <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#e8eef2]">
+            <span
+              class="block h-full rounded-full bg-[var(--color-brand-primary)] transition-[width] duration-700"
+              :style="{ width: `${(checklistCompletedCount / 6) * 100}%` }"
+            />
+          </div>
+        </div>
+
+        <ul class="m-0 list-none border-t border-[#e7eef2] px-5 py-2">
+          <li
+            v-for="item in checklistItems"
+            :key="item.title"
+            class="flex min-h-10 items-center gap-3 border-b border-[#edf2f5] py-2 last:border-b-0"
+          >
+            <span
+              class="grid size-4.5 shrink-0 place-items-center rounded-full"
+              :class="
+                item.completed
+                  ? 'bg-[var(--color-brand-primary)] text-white'
+                  : 'border-2 border-[#b8b8b8] bg-white'
+              "
+            >
+              <Check v-if="item.completed" :size="12" :stroke-width="3" />
+            </span>
+            <span
+              class="min-w-0 flex-1 truncate text-[12px] font-semibold"
+              :class="item.completed ? 'text-[var(--color-text-secondary)] line-through' : ''"
+            >
+              {{ item.title }}
+            </span>
+            <!-- <span
+              v-if="!item.completed"
+              class="text-[10px] font-semibold text-[var(--color-selected-text)]"
+            >
+              준비하기
+            </span> -->
+          </li>
+        </ul>
+
+        <div class="flex items-center justify-between bg-[#f8fbfd] px-5 py-3 text-[11px] font-bold">
+          <span>남은 준비 항목 {{ 6 - checklistCompletedCount }}개</span>
+          <span class="inline-flex items-center gap-1 text-[var(--color-selected-text)]">
+            이어서 확인하기 <ChevronRight :size="14" />
+          </span>
+        </div>
+      </RouterLink>
     </section>
   </main>
 </template>
@@ -526,96 +568,6 @@ onBeforeUnmount(() => {
   min-height: 34px;
   max-height: 34px;
   object-fit: contain;
-}
-
-.home-product-list {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.home-product-card {
-  display: block;
-  padding: 15px 16px 16px;
-  border: 1px solid rgb(219 232 239 / 80%);
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 6px 18px rgb(64 106 126 / 4%);
-  color: var(--color-text-primary) !important;
-  transition:
-    transform 200ms ease,
-    box-shadow 200ms ease;
-}
-
-.home-product-card:active {
-  transform: scale(0.99);
-}
-
-.home-product-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.home-product-body {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  padding-top: 14px;
-}
-
-.home-product-info {
-  min-width: 0;
-}
-
-.home-product-name {
-  display: block;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home-product-meta {
-  display: block;
-  margin-top: 7px;
-  color: var(--color-text-secondary);
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-.home-product-eligibility {
-  display: block;
-  margin-top: 8px;
-  color: #8b9aa8;
-  font-size: 9px;
-}
-
-.home-product-rate {
-  display: grid;
-  grid-template-columns: auto auto;
-  min-width: 72px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: end;
-  column-gap: 2px;
-  color: var(--color-selected-text);
-}
-
-.home-product-rate small {
-  grid-column: 1 / -1;
-  justify-self: end;
-  margin-bottom: 3px;
-  font-size: 8px;
-  font-weight: 600;
-}
-
-.home-product-rate strong {
-  font-size: 19px;
-  line-height: 1;
 }
 
 .home-float {

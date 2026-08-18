@@ -12,6 +12,7 @@ let finishTimer: ReturnType<typeof setTimeout> | undefined
 let enterTimer: ReturnType<typeof setTimeout> | undefined
 let previousHtmlOverflow = ''
 let previousBodyOverflow = ''
+let letterAnimations: Animation[] = []
 
 onMounted(() => {
   previousHtmlOverflow = document.documentElement.style.overflow
@@ -20,12 +21,35 @@ onMounted(() => {
   document.body.style.overflow = 'hidden'
 
   enterTimer = setTimeout(() => (entered.value = true), 30)
-  finishTimer = setTimeout(() => emit('finished'), 2100)
+  finishTimer = setTimeout(() => emit('finished'), 2600)
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const letters = document.querySelectorAll<HTMLElement>('[data-splash-letter]')
+
+    letterAnimations = Array.from(letters).map((letter, index) =>
+      letter.animate(
+        [
+          { transform: 'translateY(0)', offset: 0 },
+          { transform: 'translateY(-6px)', offset: 0.46 },
+          { transform: 'translateY(-5px)', offset: 0.58 },
+          { transform: 'translateY(0)', offset: 1 },
+        ],
+        {
+          delay: 580 + index * 300,
+          duration: 1100,
+          easing: 'cubic-bezier(0.42, 0, 0.2, 1)',
+          fill: 'both',
+        },
+      ),
+    )
+  }
 })
 
 onBeforeUnmount(() => {
   if (enterTimer) clearTimeout(enterTimer)
   if (finishTimer) clearTimeout(finishTimer)
+  letterAnimations.forEach((animation) => animation.cancel())
+  letterAnimations = []
   document.documentElement.style.overflow = previousHtmlOverflow
   document.body.style.overflow = previousBodyOverflow
 })
@@ -90,14 +114,17 @@ onBeforeUnmount(() => {
         <h1 class="m-0 text-[28px] leading-[1.4] font-extrabold tracking-[-0.015em]">
           우리
           <strong
-            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)] motion-safe:animate-bounce motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            data-splash-letter
+            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)]"
             >아</strong
           >이
           <strong
-            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)] motion-safe:animate-bounce motion-safe:[animation-delay:130ms] motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            data-splash-letter
+            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)]"
             >자</strong
           >산관리 서비<strong
-            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)] motion-safe:animate-bounce motion-safe:[animation-delay:260ms] motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            data-splash-letter
+            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)]"
             >스</strong
           >
         </h1>
