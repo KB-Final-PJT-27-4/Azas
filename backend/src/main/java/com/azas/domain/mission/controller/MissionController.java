@@ -1,11 +1,8 @@
 package com.azas.domain.mission.controller;
 
-import com.azas.domain.mission.dto.CreateMissionRequest;
-import com.azas.domain.mission.dto.MissionCreateResponse;
-import com.azas.domain.mission.dto.MissionDetailResponse;
+import com.azas.domain.mission.dto.*;
 import com.azas.domain.mission.service.MissionService;
 import com.azas.global.security.AccessTokenMemberResolver;
-import com.azas.domain.mission.dto.MissionListResponse;
 import io.swagger.annotations.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -145,6 +142,48 @@ public class MissionController {
                 missionService.getMissionDetail(
                         memberId,
                         missionId
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "미션 상태 변경",
+            notes = "자녀 완료 요청 및 부모의 승인·거절·취소를 처리합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    code = 200,
+                    message = "미션 상태 변경 성공",
+                    response = MissionDetailResponse.class
+            ),
+            @ApiResponse(code = 400, message = "상태 변경 요청 오류"),
+            @ApiResponse(code = 401, message = "인증 오류"),
+            @ApiResponse(code = 403, message = "미션 처리 권한 없음"),
+            @ApiResponse(code = 404, message = "미션 또는 계좌 없음"),
+            @ApiResponse(code = 409, message = "상태 전이 또는 이체 오류"),
+            @ApiResponse(code = 422, message = "보상 계좌 조합 오류")
+    })
+    @PatchMapping("/missions/{mission_id}")
+    public ResponseEntity<MissionDetailResponse>
+    updateMissionStatus(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorization,
+            @PathVariable("mission_id") Long missionId,
+            @Valid @RequestBody
+            UpdateMissionStatusRequest request
+    ) {
+        Long memberId =
+                memberResolver.resolveMemberId(
+                        authorization
+                );
+
+        return ResponseEntity.ok(
+                missionService.updateMissionStatus(
+                        memberId,
+                        missionId,
+                        request
                 )
         );
     }

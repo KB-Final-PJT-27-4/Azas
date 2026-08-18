@@ -1,8 +1,12 @@
 package com.azas.domain.mission.service;
 
+import com.azas.domain.finance.transfer.dto.CreateTransferRequest;
+import com.azas.domain.finance.transfer.dto.TransferCreateResponse;
+import com.azas.domain.finance.transfer.service.TransferService;
 import com.azas.domain.mission.dto.CreateMissionRequest;
 import com.azas.domain.mission.dto.MissionCreateResponse;
 import com.azas.domain.mission.dto.MissionInsertCommand;
+import com.azas.domain.mission.entity.MissionAction;
 import com.azas.domain.mission.entity.MissionStatus;
 import com.azas.domain.mission.mapper.MissionMapper;
 import com.azas.global.exception.BusinessException;
@@ -13,9 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.azas.domain.mission.dto.*;
 import com.azas.domain.mission.entity.MissionListFilter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -28,22 +31,27 @@ public class MissionServiceImpl implements MissionService {
     private final Clock clock;
     private static final int DEFAULT_LIST_SIZE = 20;
     private static final int MAX_LIST_SIZE = 100;
+    private final TransferService transferService;
 
     @Autowired
     public MissionServiceImpl(
-            MissionMapper missionMapper
+            MissionMapper missionMapper,
+            TransferService transferService
     ) {
         this(
                 missionMapper,
+                transferService,
                 Clock.systemUTC()
         );
     }
 
     MissionServiceImpl(
             MissionMapper missionMapper,
+            TransferService transferService,
             Clock clock
     ) {
         this.missionMapper = missionMapper;
+        this.transferService = transferService;
         this.clock = clock;
     }
 
@@ -314,5 +322,327 @@ public class MissionServiceImpl implements MissionService {
         }
 
         return MissionDetailResponse.from(row);
+    }
+    @Override
+    @Transactional
+    public MissionDetailResponse updateMissionStatus(
+            Long memberId,
+            Long missionId,
+            UpdateMissionStatusRequest request
+    ) {
+        validateStatusRequest(
+                missionId,
+                request
+        );
+
+        MissionDetailRow mission =
+                missionMapper.findMissionDetailForUpdate(
+                        missionId
+                );
+
+        if (mission == null) {
+            throw new BusinessException(
+                    ErrorCode.MISSION_NOT_FOUND
+            );
+        }
+
+        LocalDateTime updatedAt =
+                LocalDateTime.now(clock);
+
+        switch (request.getAction()) {
+            case SUBMIT:
+                submitMission(
+                        memberId,
+                        mission,
+                        updatedAt
+                );
+                break;
+
+            case APPROVE:
+                approveMission(
+                        memberId,
+                        mission,
+                        request,
+                        updatedAt
+                );
+                break;
+
+            case REJECT:
+                rejectMission(
+                        memberId,
+                        mission,
+                        updatedAt
+                );
+                break;
+
+            case CANCEL:
+                cancelMission(
+                        memberId,
+                        mission,
+                        updatedAt
+                );
+                break;
+
+            default:
+                throw new BusinessException(
+                        ErrorCode.INVALID_MISSION_ACTION
+                );
+        }
+
+        mission.setUpdatedAt(updatedAt);
+
+        return MissionDetailResponse.from(mission);
+    }
+
+    private void validateStatusRequest(
+            Long missionId,
+            UpdateMissionStatusRequest request
+    ) {
+        if (missionId == null
+                || missionId <= 0
+                || request == null
+                || request.getAction() == null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_MISSION_ACTION
+            );
+        }
+
+        if (request.getAction()
+                == MissionAction.APPROVE) {
+            if (request.getSourceAccountId() == null
+                    || request.getSourceAccountId() <= 0
+                    || request.getDestinationAccountId() == null
+                    || request.getDestinationAccountId() <= 0) {
+                throw new BusinessException(
+                        ErrorCode.INVALID_MISSION_ACTION
+                );
+            }
+        } else if (request.getSourceAccountId() != null
+                || request.getDestinationAccountId() != null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_MISSION_ACTION
+            );
+        }
+    }
+
+    private void submitMission(
+            Long memberId,
+            MissionDetailRow mission,
+            LocalDateTime updatedAt
+    ) {
+        requireChildSelfAccess(
+                memberId,
+                mission.getChildId()
+        );
+
+        if (!EnumSet.of(
+                MissionStatus.ASSIGNED,
+                MissionStatus.REJECTED
+        ).contains(mission.getStatus())) {
+            throw invalidMissionTransition();
+        }
+
+        changeMissionStatus(
+                mission,
+                MissionStatus.SUBMITTED,
+                updatedAt
+        );
+
+        missionMapper.insertMissionSubmittedNotification(
+                mission.getMissionId(),
+                mission.getChildId(),
+                mission.getTitle(),
+                updatedAt
+        );
+    }
+
+    private void approveMission(
+            Long memberId,
+            MissionDetailRow mission,
+            UpdateMissionStatusRequest request,
+            LocalDateTime updatedAt
+    ) {
+        requireParentAccess(
+                memberId,
+                mission.getChildId()
+        );
+
+        if (mission.getStatus()
+                != MissionStatus.SUBMITTED) {
+            throw invalidMissionTransition();
+        }
+
+        String idempotencyKey =
+                createMissionRewardIdempotencyKey(
+                        mission.getMissionId()
+                );
+
+        CreateTransferRequest transferRequest =
+                new CreateTransferRequest(
+                        request.getSourceAccountId(),
+                        request.getDestinationAccountId(),
+                        mission.getRewardAmount(),
+                        mission.getTitle() + " 미션 보상"
+                );
+
+        TransferCreateResponse transferResponse =
+                transferService.createTransfer(
+                        memberId,
+                        idempotencyKey,
+                        transferRequest
+                );
+
+        if (missionMapper.linkRewardTransfer(
+                transferResponse.getFinancialTransferId(),
+                mission.getMissionId(),
+                memberId
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TRANSFER_PROCESSING_FAILED
+            );
+        }
+
+        changeMissionStatus(
+                mission,
+                MissionStatus.APPROVED,
+                updatedAt
+        );
+
+        missionMapper.insertChildMissionStatusNotification(
+                mission.getMissionId(),
+                mission.getChildId(),
+                "MISSION_APPROVED",
+                "미션 보상이 지급되었어요",
+                mission.getTitle()
+                        + " 미션이 승인되었어요.",
+                updatedAt
+        );
+    }
+
+    private void rejectMission(
+            Long memberId,
+            MissionDetailRow mission,
+            LocalDateTime updatedAt
+    ) {
+        requireParentAccess(
+                memberId,
+                mission.getChildId()
+        );
+
+        if (mission.getStatus()
+                != MissionStatus.SUBMITTED) {
+            throw invalidMissionTransition();
+        }
+
+        changeMissionStatus(
+                mission,
+                MissionStatus.REJECTED,
+                updatedAt
+        );
+
+        missionMapper.insertChildMissionStatusNotification(
+                mission.getMissionId(),
+                mission.getChildId(),
+                "MISSION_REJECTED",
+                "미션을 다시 확인해 주세요",
+                mission.getTitle()
+                        + " 미션이 반려되었어요.",
+                updatedAt
+        );
+    }
+    private void cancelMission(
+            Long memberId,
+            MissionDetailRow mission,
+            LocalDateTime updatedAt
+    ) {
+        requireParentAccess(
+                memberId,
+                mission.getChildId()
+        );
+
+        if (!EnumSet.of(
+                MissionStatus.ASSIGNED,
+                MissionStatus.REJECTED,
+                MissionStatus.SUBMITTED
+        ).contains(mission.getStatus())) {
+            throw invalidMissionTransition();
+        }
+
+        changeMissionStatus(
+                mission,
+                MissionStatus.CANCELED,
+                updatedAt
+        );
+
+        missionMapper.insertChildMissionStatusNotification(
+                mission.getMissionId(),
+                mission.getChildId(),
+                "MISSION_CANCELED",
+                "미션이 취소되었어요",
+                mission.getTitle()
+                        + " 미션이 취소되었어요.",
+                updatedAt
+        );
+    }
+
+    private void changeMissionStatus(
+            MissionDetailRow mission,
+            MissionStatus status,
+            LocalDateTime updatedAt
+    ) {
+        if (missionMapper.updateMissionStatus(
+                mission.getMissionId(),
+                status,
+                updatedAt
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        mission.setStatus(status);
+    }
+
+    private void requireParentAccess(
+            Long memberId,
+            Long childId
+    ) {
+        if (missionMapper.countParentAccess(
+                memberId,
+                childId
+        ) <= 0) {
+            throw new BusinessException(
+                    ErrorCode.MISSION_ACCESS_DENIED
+            );
+        }
+    }
+
+    private void requireChildSelfAccess(
+            Long memberId,
+            Long childId
+    ) {
+        if (missionMapper.countChildSelfAccess(
+                memberId,
+                childId
+        ) <= 0) {
+            throw new BusinessException(
+                    ErrorCode.MISSION_ACCESS_DENIED
+            );
+        }
+    }
+
+    private BusinessException invalidMissionTransition() {
+        return new BusinessException(
+                ErrorCode.INVALID_MISSION_STATUS_TRANSITION
+        );
+    }
+
+    private String createMissionRewardIdempotencyKey(
+            Long missionId
+    ) {
+        return UUID.nameUUIDFromBytes(
+                ("MISSION_REWARD:" + missionId)
+                        .getBytes(StandardCharsets.UTF_8)
+        ).toString();
     }
 }

@@ -1,5 +1,6 @@
 package com.azas.domain.mission.service;
 
+import com.azas.domain.finance.transfer.service.TransferService;
 import com.azas.domain.mission.dto.CreateMissionRequest;
 import com.azas.domain.mission.dto.MissionInsertCommand;
 import com.azas.domain.mission.entity.MissionStatus;
@@ -9,6 +10,13 @@ import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.azas.domain.finance.transfer.dto.CreateTransferRequest;
+import com.azas.domain.finance.transfer.dto.TransferCreateResponse;
+import com.azas.domain.finance.transfer.entity.TransferStatus;
+import com.azas.domain.finance.transfer.entity.TransferType;
+import com.azas.domain.mission.dto.MissionDetailRow;
+import com.azas.domain.mission.dto.UpdateMissionStatusRequest;
+import com.azas.domain.mission.entity.MissionAction;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -28,19 +36,21 @@ class MissionServiceImplTest {
 
     private MissionMapper missionMapper;
     private MissionServiceImpl missionService;
+    private TransferService transferService;
+    private static final Instant FIXED_NOW =
+            Instant.parse("2026-08-18T03:00:00Z");
 
     @BeforeEach
     void setUp() {
         missionMapper = mock(MissionMapper.class);
+        transferService = mock(TransferService.class);
 
-        Clock clock = Clock.fixed(
-                Instant.parse("2026-08-18T01:00:00Z"),
-                ZoneOffset.UTC
-        );
+        Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
 
         missionService =
                 new MissionServiceImpl(
                         missionMapper,
+                        transferService,
                         clock
                 );
     }
@@ -97,7 +107,7 @@ class MissionServiceImplTest {
                 response.getStatus()
         );
         assertEquals(
-                Instant.parse("2026-08-18T01:00:00Z"),
+                FIXED_NOW,
                 response.getCreatedAt()
         );
 
@@ -596,4 +606,253 @@ class MissionServiceImplTest {
 
         return row;
     }
+
+
+    // 자녀 제출 테스트
+    @Test
+    void 자녀가_미션_완료를_요청한다() {
+        MissionDetailRow row =
+                missionDetailRow(
+                        MissionStatus.ASSIGNED
+                );
+
+        when(missionMapper.findMissionDetailForUpdate(13L))
+                .thenReturn(row);
+
+        when(missionMapper.countChildSelfAccess(
+                20L,
+                6L
+        )).thenReturn(1);
+
+        when(missionMapper.updateMissionStatus(
+                eq(13L),
+                eq(MissionStatus.SUBMITTED),
+                any()
+        )).thenReturn(1);
+
+        var response =
+                missionService.updateMissionStatus(
+                        20L,
+                        13L,
+                        new UpdateMissionStatusRequest(
+                                MissionAction.SUBMIT,
+                                null,
+                                null
+                        )
+                );
+
+        assertEquals(
+                MissionStatus.SUBMITTED,
+                response.getStatus()
+        );
+
+        verify(missionMapper)
+                .insertMissionSubmittedNotification(
+                        eq(13L),
+                        eq(6L),
+                        eq("소비 계획 지키기"),
+                        any()
+                );
+
+        verifyNoInteractions(transferService);
+    }
+
+    // 부모 승인 및 보상 테스트
+    @Test
+    void 부모가_제출된_미션을_승인하고_보상한다() {
+        MissionDetailRow row =
+                missionDetailRow(
+                        MissionStatus.SUBMITTED
+                );
+
+        when(missionMapper.findMissionDetailForUpdate(13L))
+                .thenReturn(row);
+
+        when(missionMapper.countParentAccess(
+                7L,
+                6L
+        )).thenReturn(1);
+
+        when(transferService.createTransfer(
+                eq(7L),
+                anyString(),
+                any(CreateTransferRequest.class)
+        )).thenReturn(
+                new TransferCreateResponse(
+                        81L,
+                        null,
+                        null,
+                        null,
+                        new BigDecimal("2000"),
+                        "소비 계획 지키기 미션 보상",
+                        TransferType.MANUAL,
+                        TransferStatus.SUCCEEDED,
+                        Instant.parse(
+                                "2026-08-18T03:00:00Z"
+                        )
+                )
+        );
+
+        when(missionMapper.linkRewardTransfer(
+                81L,
+                13L,
+                7L
+        )).thenReturn(1);
+
+        when(missionMapper.updateMissionStatus(
+                eq(13L),
+                eq(MissionStatus.APPROVED),
+                any()
+        )).thenReturn(1);
+
+        var response =
+                missionService.updateMissionStatus(
+                        7L,
+                        13L,
+                        new UpdateMissionStatusRequest(
+                                MissionAction.APPROVE,
+                                1L,
+                                12L
+                        )
+                );
+
+        assertEquals(
+                MissionStatus.APPROVED,
+                response.getStatus()
+        );
+
+        verify(transferService).createTransfer(
+                eq(7L),
+                anyString(),
+                argThat(request ->
+                        request.getSourceAccountId()
+                                .equals(1L)
+                                && request
+                                .getDestinationAccountId()
+                                .equals(12L)
+                                && request.getAmount()
+                                .compareTo(
+                                        new BigDecimal("2000")
+                                ) == 0
+                )
+        );
+
+        verify(missionMapper).linkRewardTransfer(
+                81L,
+                13L,
+                7L
+        );
+    }
+
+    // 잘못된 상태 전이 테스트
+    @Test
+    void 승인된_미션은_다시_제출할_수_없다() {
+        when(missionMapper.findMissionDetailForUpdate(13L))
+                .thenReturn(
+                        missionDetailRow(
+                                MissionStatus.APPROVED
+                        )
+                );
+
+        when(missionMapper.countChildSelfAccess(
+                20L,
+                6L
+        )).thenReturn(1);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> missionService
+                                .updateMissionStatus(
+                                        20L,
+                                        13L,
+                                        new UpdateMissionStatusRequest(
+                                                MissionAction.SUBMIT,
+                                                null,
+                                                null
+                                        )
+                                )
+                );
+
+        assertEquals(
+                ErrorCode.INVALID_MISSION_STATUS_TRANSITION,
+                exception.getErrorCode()
+        );
+
+        verify(missionMapper, never())
+                .updateMissionStatus(
+                        anyLong(),
+                        any(),
+                        any()
+                );
+    }
+
+    // 부모가 아닌 다른 회원의 승인 방지
+    @Test
+    void 자녀는_미션을_승인할_수_없다() {
+        when(missionMapper.findMissionDetailForUpdate(13L))
+                .thenReturn(
+                        missionDetailRow(
+                                MissionStatus.SUBMITTED
+                        )
+                );
+
+        when(missionMapper.countParentAccess(
+                20L,
+                6L
+        )).thenReturn(0);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> missionService
+                                .updateMissionStatus(
+                                        20L,
+                                        13L,
+                                        new UpdateMissionStatusRequest(
+                                                MissionAction.APPROVE,
+                                                1L,
+                                                12L
+                                        )
+                                )
+                );
+
+        assertEquals(
+                ErrorCode.MISSION_ACCESS_DENIED,
+                exception.getErrorCode()
+        );
+
+        verifyNoInteractions(transferService);
+    }
+    private MissionDetailRow missionDetailRow(
+            MissionStatus status
+    ) {
+        MissionDetailRow row =
+                new MissionDetailRow();
+
+        row.setMissionId(13L);
+        row.setChildId(6L);
+        row.setTitle("소비 계획 지키기");
+        row.setDescription(
+                "이번 주 계획한 소비 지키기"
+        );
+        row.setRewardAmount(
+                new BigDecimal("2000")
+        );
+        row.setStatus(status);
+        row.setCreatedAt(
+                LocalDateTime.of(
+                        2026, 8, 18, 1, 0
+                )
+        );
+        row.setUpdatedAt(
+                LocalDateTime.of(
+                        2026, 8, 18, 2, 0
+                )
+        );
+
+        return row;
+    }
+
+
 }

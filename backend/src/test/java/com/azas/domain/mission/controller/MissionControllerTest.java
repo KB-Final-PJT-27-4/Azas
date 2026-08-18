@@ -29,9 +29,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 class MissionControllerTest {
 
@@ -366,5 +365,155 @@ class MissionControllerTest {
                 ).value("MISSION_NOT_FOUND"));
     }
 
+    // 자녀 완료
+    @Test
+    void 자녀가_미션_완료를_요청한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer child-token"
+        )).willReturn(20L);
 
+        given(missionService.updateMissionStatus(
+                eq(20L),
+                eq(13L),
+                any()
+        )).willReturn(
+                new MissionDetailResponse(
+                        13L,
+                        6L,
+                        "소비 계획 지키기",
+                        "이번 주 계획한 소비 지키기",
+                        new BigDecimal("2000"),
+                        MissionStatus.SUBMITTED,
+                        Instant.parse(
+                                "2026-08-18T01:00:00Z"
+                        ),
+                        Instant.parse(
+                                "2026-08-18T03:00:00Z"
+                        )
+                )
+        );
+
+        mockMvc.perform(
+                        patch(
+                                "/api/v1/missions/{mission_id}",
+                                13L
+                        )
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        "Bearer child-token"
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                {
+                                  "action": "SUBMIT"
+                                }
+                                """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.mission_id"
+                ).value(13))
+                .andExpect(jsonPath(
+                        "$.status"
+                ).value("SUBMITTED"));
+    }
+
+    // 부모 승인
+    @Test
+    void 부모가_미션을_승인하고_보상한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer parent-token"
+        )).willReturn(7L);
+
+        given(missionService.updateMissionStatus(
+                eq(7L),
+                eq(13L),
+                any()
+        )).willReturn(
+                new MissionDetailResponse(
+                        13L,
+                        6L,
+                        "소비 계획 지키기",
+                        "이번 주 계획한 소비 지키기",
+                        new BigDecimal("2000"),
+                        MissionStatus.APPROVED,
+                        Instant.parse(
+                                "2026-08-18T01:00:00Z"
+                        ),
+                        Instant.parse(
+                                "2026-08-18T03:00:00Z"
+                        )
+                )
+        );
+
+        mockMvc.perform(
+                        patch(
+                                "/api/v1/missions/{mission_id}",
+                                13L
+                        )
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        "Bearer parent-token"
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                {
+                                  "action": "APPROVE",
+                                  "source_account_id": 1,
+                                  "destination_account_id": 12
+                                }
+                                """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.status"
+                ).value("APPROVED"));
+    }
+    // 승인 계좌 누락
+    @Test
+    void 승인할_때_보상_계좌가_없으면_400을_반환한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer parent-token"
+        )).willReturn(7L);
+
+        given(missionService.updateMissionStatus(
+                eq(7L),
+                eq(13L),
+                any()
+        )).willThrow(
+                new BusinessException(
+                        ErrorCode.INVALID_MISSION_ACTION
+                )
+        );
+
+        mockMvc.perform(
+                        patch(
+                                "/api/v1/missions/{mission_id}",
+                                13L
+                        )
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        "Bearer parent-token"
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                {
+                                  "action": "APPROVE"
+                                }
+                                """)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath(
+                        "$.error.code"
+                ).value("INVALID_MISSION_ACTION"));
+    }
 }

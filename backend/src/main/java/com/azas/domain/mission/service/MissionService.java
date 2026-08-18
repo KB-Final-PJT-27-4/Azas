@@ -4,6 +4,7 @@ import com.azas.domain.mission.dto.CreateMissionRequest;
 import com.azas.domain.mission.dto.MissionCreateResponse;
 import com.azas.domain.mission.dto.MissionDetailResponse;
 import com.azas.domain.mission.dto.MissionListResponse;
+import com.azas.domain.mission.dto.UpdateMissionStatusRequest;
 
 public interface MissionService {
 
@@ -24,5 +25,11 @@ public interface MissionService {
     MissionDetailResponse getMissionDetail(
             Long memberId,
             Long missionId
+    );
+
+    MissionDetailResponse updateMissionStatus(
+            Long memberId,
+            Long missionId,
+            UpdateMissionStatusRequest request
     );
 }

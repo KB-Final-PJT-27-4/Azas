@@ -387,6 +387,10 @@ public enum ErrorCode {
     INVALID_MISSION_STATUS_TRANSITION(
             HttpStatus.CONFLICT,
         "현재 상태에서는 요청한 미션 처리를 수행할 수 없습니다."
+    ),
+    INVALID_MISSION_ACTION(
+            HttpStatus.BAD_REQUEST,
+        "미션 상태 변경 요청이 올바르지 않습니다."
     );
 
     private final HttpStatus httpStatus;
