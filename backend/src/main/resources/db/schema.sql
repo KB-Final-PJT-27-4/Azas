@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS time_capsule_entry;
 DROP TABLE IF EXISTS time_capsule;
 DROP TABLE IF EXISTS auto_transfer_schedule;
 DROP TABLE IF EXISTS financial_transfer;
+DROP TABLE IF EXISTS mission;
 DROP TABLE IF EXISTS account_transaction;
 DROP TABLE IF EXISTS account_balance_snapshot;
 DROP TABLE IF EXISTS financial_sync_job;
@@ -625,6 +626,59 @@ CREATE TABLE account_transaction
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='계좌 거래내역';
+
+CREATE TABLE mission
+(
+    mission_id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '미션 ID',
+    child_id              BIGINT UNSIGNED NOT NULL COMMENT '미션 대상 자녀',
+    created_by_member_id  BIGINT UNSIGNED NOT NULL COMMENT '미션 생성 부모 회원',
+    title                 VARCHAR(100)    NOT NULL COMMENT '미션 이름',
+    description           VARCHAR(1000)   NOT NULL COMMENT '미션 내용',
+    reward_amount         DECIMAL(19, 2)  NOT NULL COMMENT '승인 시 지급할 보상 금액',
+    status                VARCHAR(20)     NOT NULL DEFAULT 'ASSIGNED'
+        COMMENT 'ASSIGNED, SUBMITTED, APPROVED, REJECTED, CANCELED',
+    created_at            DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at            DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6),
+
+    PRIMARY KEY (mission_id),
+
+    KEY idx_mission_child_status_id (
+        child_id,
+        status,
+        mission_id
+    ),
+
+    KEY idx_mission_creator_id (
+        created_by_member_id,
+        mission_id
+    ),
+
+    CONSTRAINT fk_mission_child
+        FOREIGN KEY (child_id)
+            REFERENCES child (child_id),
+
+    CONSTRAINT fk_mission_creator
+        FOREIGN KEY (created_by_member_id)
+            REFERENCES member (member_id),
+
+    CONSTRAINT ck_mission_reward_amount
+        CHECK (reward_amount > 0),
+
+    CONSTRAINT ck_mission_status
+        CHECK (
+            status IN (
+                       'ASSIGNED',
+                       'SUBMITTED',
+                       'APPROVED',
+                       'REJECTED',
+                       'CANCELED'
+                )
+            )
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = '자녀 보상형 용돈 미션';
 
 CREATE TABLE financial_transfer
 (

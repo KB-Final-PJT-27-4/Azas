@@ -390,6 +390,28 @@ public enum ErrorCode {
     PREGNANCY_STATUS_NOT_AVAILABLE(
             HttpStatus.CONFLICT,
             "출산 예정 상태인 자녀만 임신 주차를 조회할 수 있습니다."
+    ),
+
+    // Mission
+    INVALID_MISSION(
+            HttpStatus.BAD_REQUEST,
+        "미션의 이름·내용 또는 보상 금액이 올바르지 않습니다."
+    ),
+    MISSION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+        "미션을 찾을 수 없습니다."
+    ),
+    MISSION_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+        "해당 미션에 접근할 권한이 없습니다."
+    ),
+    INVALID_MISSION_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+        "현재 상태에서는 요청한 미션 처리를 수행할 수 없습니다."
+    ),
+    INVALID_MISSION_ACTION(
+            HttpStatus.BAD_REQUEST,
+        "미션 상태 변경 요청이 올바르지 않습니다."
     );
 
     private final HttpStatus httpStatus;
