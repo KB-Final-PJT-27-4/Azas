@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.mission.mapper.MissionMapper">
+
+    <select id="findActiveChildId"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="countParentAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                                AND c.status = 'ACTIVE'
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+    </select>
+
+    <insert id="insertMission"
+            useGeneratedKeys="true"
+            keyProperty="missionId"
+            keyColumn="mission_id">
+        INSERT INTO mission (
+            child_id,
+            created_by_member_id,
+            title,
+            description,
+            reward_amount,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+                     #{childId},
+                     #{createdByMemberId},
+                     #{title},
+                     #{description},
+                     #{rewardAmount},
+                     'ASSIGNED',
+                     #{createdAt},
+                     #{createdAt}
+                 )
+    </insert>
+
+    <insert id="insertMissionAssignedNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            c.member_id,
+            c.child_id,
+            'MISSION',
+            'MISSION_ASSIGNED',
+            '새 용돈 미션이 도착했어요',
+            CONCAT(
+                    #{missionTitle},
+                    ' 미션을 확인해 보세요. 완료 보상은 ',
+                    FORMAT(#{rewardAmount}, 0),
+                    '원이에요.'
+            ),
+            'MISSION',
+            #{missionId},
+            JSON_OBJECT(
+                    'mission_id', #{missionId},
+                    'reward_amount', #{rewardAmount}
+            ),
+            CONCAT('MISSION_ASSIGNED:', #{missionId}),
+            0,
+            #{createdAt}
+        FROM child c
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND c.member_id IS NOT NULL
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = c.member_id
+                            AND np.notification_category = 'MISSION'
+                      ),
+                      1
+              ) = 1
+    </insert>
+
+</mapper>
