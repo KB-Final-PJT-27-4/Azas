@@ -48,8 +48,11 @@
                fa.link_status AS linkStatus,
                fg.financial_goal_id AS financialGoalId
         FROM financial_account fa
+                 LEFT JOIN financial_goal_account fga
+                           ON fga.financial_account_id =
+                              fa.financial_account_id
                  LEFT JOIN financial_goal fg
-                           ON fg.financial_account_id = fa.financial_account_id
+                           ON fg.financial_goal_id = fga.financial_goal_id
                                AND fg.status = 'ACTIVE'
         WHERE fa.financial_account_id = #{accountId}
             FOR UPDATE

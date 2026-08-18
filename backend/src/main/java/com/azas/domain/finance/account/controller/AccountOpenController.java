@@ -15,8 +15,11 @@ public class AccountOpenController {
     private final AccountOpenService service;
     private final AccessTokenMemberResolver resolver;
 
-    @ApiOperation(value = "ACCOUNT-4 KB 금융상품 기반 Mock 계좌 개설",
-            notes = "실제 금융기관 호출 없이 KB 금융상품 정보로 Mock 계좌를 개설합니다. 자녀 적금은 목표를 함께 생성합니다.")
+    @ApiOperation(
+            value = "ACCOUNT-4 KB 금융상품 기반 Mock 계좌 개설",
+            notes = "실제 금융기관 호출 없이 KB 금융상품 정보로 Mock 계좌를 개설합니다. "
+                    + "자녀 적금 목표는 계좌 개설 후 GOAL-2에서 별도로 생성하고 연결합니다."
+    )
     @PostMapping("/api/v1/accounts/open")
     public ResponseEntity<AccountOpenResponse> open(
             @RequestHeader(value = "Authorization", required = false) String authorization,

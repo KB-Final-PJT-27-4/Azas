@@ -22,14 +22,23 @@ public class AccountOpenResponse {
     @JsonProperty("account_status") private final String accountStatus;
     @JsonProperty("link_status") private final String linkStatus;
     @JsonProperty("is_primary") private final boolean primary;
-    @JsonProperty("financial_goal") private final OpenedFinancialGoalResult financialGoal;
     @JsonProperty("created_at") private final Instant createdAt;
 
-    public static AccountOpenResponse from(AccountOpenResult r) {
-        return new AccountOpenResponse(r.getAccountId(), r.getOwnerType(),
-                r.getChildId(), r.getFinancialProductId(), r.getBankName(),
-                r.getAccountName(), r.getAccountNumber(), r.getAccountProductType(),
-                r.getBalance(), "ACTIVE", "ACTIVE", r.isPrimary(),
-                r.getFinancialGoal(), r.getCreatedAt().toInstant(ZoneOffset.UTC));
+    public static AccountOpenResponse from(AccountOpenResult result) {
+        return new AccountOpenResponse(
+                result.getAccountId(),
+                result.getOwnerType(),
+                result.getChildId(),
+                result.getFinancialProductId(),
+                result.getBankName(),
+                result.getAccountName(),
+                result.getAccountNumber(),
+                result.getAccountProductType(),
+                result.getBalance(),
+                "ACTIVE",
+                "ACTIVE",
+                result.isPrimary(),
+                result.getCreatedAt().toInstant(ZoneOffset.UTC)
+        );
     }
 }
