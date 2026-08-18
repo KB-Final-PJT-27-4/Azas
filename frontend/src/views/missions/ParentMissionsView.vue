@@ -112,7 +112,7 @@ const createMission = () => {
     class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-[18px] pt-[18px] pb-[154px] text-[var(--color-text-primary)] max-[350px]:px-3.5"
   >
     <section
-      class="overflow-hidden rounded-3xl border border-[#cfeaf7] bg-[linear-gradient(145deg,#eaf8ff,#f8fdff)] p-5 shadow-[0_14px_30px_rgb(61_157_203_/_10%)]"
+      class="overflow-hidden rounded-3xl border border-[#cfeaf7] bg-[#eef9fe] p-5 shadow-[0_12px_26px_rgb(61_157_203_/_5%)]"
     >
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2.5">
@@ -160,7 +160,7 @@ const createMission = () => {
 
     <section class="mt-4" aria-labelledby="mission-list-title">
       <div
-        class="mt-[17px] grid grid-cols-4 gap-1 rounded-[14px] bg-[#eaf0f4] p-1"
+        class="mt-[17px] grid grid-cols-4 gap-1 rounded-[14px] bg-[#f2f5f7] p-1"
         role="tablist"
         aria-label="미션 상태 필터"
       >
@@ -173,7 +173,7 @@ const createMission = () => {
           class="relative min-w-0 rounded-[11px] border-0 px-0.5 py-2.5 text-[11px] font-semibold transition-colors max-[350px]:text-[10px]"
           :class="
             selectedFilter === filter.value
-              ? 'bg-white text-[var(--color-text-primary)] shadow-[0_3px_10px_rgb(80_102_117_/_10%)]'
+              ? 'bg-white text-[var(--color-text-primary)] shadow-[0_3px_10px_rgb(80_102_117_/_6%)]'
               : 'bg-transparent text-[var(--color-text-secondary)]'
           "
           @click="selectedFilter = filter.value"
