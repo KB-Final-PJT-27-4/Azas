@@ -3,7 +3,11 @@ package com.azas.domain.finance.goal.controller;
 import com.azas.domain.finance.goal.dto.FinancialGoalCreateCommand;
 import com.azas.domain.finance.goal.dto.FinancialGoalCreateResult;
 import com.azas.domain.finance.goal.dto.FinancialGoalLinkedAccountResult;
+import com.azas.domain.finance.goal.dto.FinancialGoalListAccountResult;
+import com.azas.domain.finance.goal.dto.FinancialGoalListItemResult;
+import com.azas.domain.finance.goal.dto.FinancialGoalListResult;
 import com.azas.domain.finance.goal.service.FinancialGoalCreateService;
+import com.azas.domain.finance.goal.service.FinancialGoalListService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import com.azas.global.exception.GlobalExceptionHandler;
@@ -35,6 +39,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,6 +51,9 @@ class FinancialGoalControllerTest {
 
     @Mock
     private FinancialGoalCreateService financialGoalCreateService;
+
+    @Mock
+    private FinancialGoalListService financialGoalListService;
 
     @InjectMocks
     private FinancialGoalController financialGoalController;
@@ -129,6 +137,53 @@ class FinancialGoalControllerTest {
     }
 
     @Test
+    void returnsFinancialGoalsWithDecryptedAccountNumbers() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(8L);
+        given(financialGoalListService.getGoals(8L, 6L))
+                .willReturn(listResult());
+
+        mockMvc.perform(get("/api/v1/children/6/financial-goals")
+                        .header("Authorization", "Bearer access-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.child_id").value(6))
+                .andExpect(jsonPath("$.total_count").value(1))
+                .andExpect(jsonPath("$.financial_goals[0].financial_goal_id")
+                        .value(31))
+                .andExpect(jsonPath("$.financial_goals[0].financial_goal_template_id")
+                        .value(1))
+                .andExpect(jsonPath("$.financial_goals[0].icon_key")
+                        .value("goal-university"))
+                .andExpect(jsonPath("$.financial_goals[0].remaining_amount")
+                        .value(20400000))
+                .andExpect(jsonPath("$.financial_goals[0].linked_account_count")
+                        .value(1))
+                .andExpect(jsonPath("$.financial_goals[0].linked_accounts[0].account_number")
+                        .value("952-17362605-43"))
+                .andExpect(jsonPath("$..account_number_ciphertext")
+                        .doesNotExist());
+
+        verify(financialGoalListService).getGoals(8L, 6L);
+    }
+
+    @Test
+    void returnsEmptyGoalList() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(8L);
+        given(financialGoalListService.getGoals(8L, 6L))
+                .willReturn(new FinancialGoalListResult(6L, List.of()));
+
+        mockMvc.perform(get("/api/v1/children/6/financial-goals")
+                        .header("Authorization", "Bearer access-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.child_id").value(6))
+                .andExpect(jsonPath("$.total_count").value(0))
+                .andExpect(jsonPath("$.financial_goals").isEmpty());
+    }
+
+    @Test
     void returnsConflictWhenSavingsAccountAlreadyHasGoal() throws Exception {
         given(accessTokenMemberResolver.resolveMemberId(
                 "Bearer access-token"
@@ -184,6 +239,31 @@ class FinancialGoalControllerTest {
                         )
                 ),
                 Instant.parse("2026-08-18T03:00:00Z")
+        );
+    }
+
+    private FinancialGoalListResult listResult() {
+        return new FinancialGoalListResult(
+                6L,
+                List.of(new FinancialGoalListItemResult(
+                        31L,
+                        1L,
+                        "대학자금",
+                        "goal-university",
+                        new BigDecimal("30000000"),
+                        new BigDecimal("9600000"),
+                        new BigDecimal("20400000"),
+                        new BigDecimal("32.0"),
+                        LocalDate.of(2045, 3, 31),
+                        "ACTIVE",
+                        List.of(new FinancialGoalListAccountResult(
+                                11L,
+                                "KB 아이사랑적금1",
+                                "KB국민은행",
+                                "952-17362605-43",
+                                new BigDecimal("4800000")
+                        ))
+                ))
         );
     }
 }
