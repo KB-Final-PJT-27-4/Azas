@@ -230,6 +230,14 @@
         WHERE financial_account_id = #{financialAccountId}
     </update>
 
+    <update id="archiveFinancialGoal">
+        UPDATE financial_goal
+        SET status = 'ARCHIVED',
+            updated_at = UTC_TIMESTAMP(6)
+        WHERE financial_goal_id = #{financialGoalId}
+          AND status IN ('ACTIVE', 'ACHIEVED')
+    </update>
+
     <update id="updateFinancialGoalCheckpoint">
         UPDATE financial_goal_checkpoint
         SET target_amount = #{targetAmount},

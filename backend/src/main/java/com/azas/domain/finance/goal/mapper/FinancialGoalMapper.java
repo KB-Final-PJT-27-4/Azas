@@ -79,6 +79,10 @@ public interface FinancialGoalMapper {
             @Param("financialAccountId") long financialAccountId
     );
 
+    int archiveFinancialGoal(
+            @Param("financialGoalId") long financialGoalId
+    );
+
     int updateFinancialGoalCheckpoint(
             @Param("financialGoalCheckpointId") long financialGoalCheckpointId,
             @Param("targetAmount") BigDecimal targetAmount,
