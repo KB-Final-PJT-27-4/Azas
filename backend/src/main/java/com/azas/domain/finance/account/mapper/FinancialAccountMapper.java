@@ -12,7 +12,6 @@ import com.azas.domain.finance.account.dto.ChildAvailableAmountAccountRow;
 import com.azas.domain.finance.account.dto.DiscoveredAccountRow;
 import com.azas.domain.finance.account.dto.AccountLinkTargetRow;
 import com.azas.domain.finance.account.dto.AccountOpenRecord;
-import com.azas.domain.finance.account.dto.FinancialGoalOpenRecord;
 import com.azas.domain.finance.account.dto.ParentAccountListRow;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
 import com.azas.domain.finance.account.entity.FinancialAccountUsagePolicy;
@@ -90,13 +89,6 @@ public interface FinancialAccountMapper {
 
     int insertOpenedAccount(AccountOpenRecord record);
 
-    int insertFinancialGoal(FinancialGoalOpenRecord record);
-
-    int insertFinancialGoalCheckpoints(
-            @Param("financialGoalId") long financialGoalId,
-            @Param("targetAmount") BigDecimal targetAmount
-    );
-
     List<ChildAccountListRow> findActiveChildAccounts(
             @Param("childId")
             long childId
@@ -108,10 +100,6 @@ public interface FinancialAccountMapper {
     );
 
     Long findActiveChildMemberIdByChildId(@Param("childId") long childId);
-
-    int countActiveFinancialGoalTemplate(
-            @Param("financialGoalTemplateId") long financialGoalTemplateId
-    );
 
     ChildAvailableAmountAccountRow
     findActivePrimaryChildDemandDepositByMemberId(

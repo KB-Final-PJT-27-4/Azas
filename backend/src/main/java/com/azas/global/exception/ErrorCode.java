@@ -127,10 +127,6 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "Mock 계좌 개설 요청이 올바르지 않습니다."
     ),
-    SAVINGS_GOAL_REQUIRED(
-            HttpStatus.UNPROCESSABLE_ENTITY,
-            "자녀 적금 개설에는 금융 목표가 필요합니다."
-    ),
     PARENT_DEMAND_DEPOSIT_REQUIRED(
             HttpStatus.CONFLICT,
             "자녀 계좌 이용 전 부모 입출금계좌 연결이 필요합니다."

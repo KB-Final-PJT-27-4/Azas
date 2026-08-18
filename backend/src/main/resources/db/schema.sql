@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS financial_account;
 DROP TABLE IF EXISTS financial_connection;
 DROP TABLE IF EXISTS financial_product_bookmark;
 DROP TABLE IF EXISTS financial_goal_checkpoint;
+DROP TABLE IF EXISTS financial_goal_account;
 DROP TABLE IF EXISTS financial_goal;
 DROP TABLE IF EXISTS financial_product;
 DROP TABLE IF EXISTS child_checklist_item;
@@ -479,26 +480,81 @@ CREATE TABLE financial_goal
 (
     financial_goal_id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '금융 목표 ID',
     child_id                   BIGINT UNSIGNED NOT NULL COMMENT '자녀 ID',
-    financial_account_id       BIGINT UNSIGNED NOT NULL COMMENT '연결 자녀 적금계좌 ID',
     financial_goal_template_id BIGINT UNSIGNED NULL COMMENT '선택 목표 템플릿 ID',
-    title                      VARCHAR(100)    NOT NULL COMMENT '목표명 스냅샷',
+    title                      VARCHAR(100)    NOT NULL COMMENT '목표명',
     target_amount              DECIMAL(19, 2)  NOT NULL COMMENT '목표 금액',
-    target_date                DATE            NOT NULL COMMENT '목표일',
+    target_date                DATE            NOT NULL COMMENT '목표 달성일',
     monthly_saving_amount      DECIMAL(19, 2)  NOT NULL COMMENT '월 저축 계획 금액',
-    status                     VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, ACHIEVED, ARCHIVED',
-    created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    status                     VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE'
+        COMMENT 'ACTIVE, ACHIEVED, ARCHIVED',
+    created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6),
+
     PRIMARY KEY (financial_goal_id),
-    UNIQUE KEY uk_financial_goal_account (financial_account_id),
     KEY idx_financial_goal_child_status (child_id, status),
-    CONSTRAINT fk_financial_goal_child FOREIGN KEY (child_id) REFERENCES child (child_id),
-    CONSTRAINT fk_financial_goal_account FOREIGN KEY (financial_account_id) REFERENCES financial_account (financial_account_id),
-    CONSTRAINT fk_financial_goal_template FOREIGN KEY (financial_goal_template_id) REFERENCES financial_goal_template (financial_goal_template_id),
-    CONSTRAINT ck_financial_goal_amount CHECK (target_amount > 0 AND monthly_saving_amount > 0),
-    CONSTRAINT ck_financial_goal_status CHECK (status IN ('ACTIVE', 'ACHIEVED', 'ARCHIVED'))
+
+    CONSTRAINT fk_financial_goal_child
+        FOREIGN KEY (child_id)
+            REFERENCES child (child_id),
+
+    CONSTRAINT fk_financial_goal_template
+        FOREIGN KEY (financial_goal_template_id)
+            REFERENCES financial_goal_template (financial_goal_template_id),
+
+    CONSTRAINT ck_financial_goal_amount
+        CHECK (
+            target_amount > 0
+                AND monthly_saving_amount > 0
+            ),
+
+    CONSTRAINT ck_financial_goal_status
+        CHECK (
+            status IN ('ACTIVE', 'ACHIEVED', 'ARCHIVED')
+            )
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT ='자녀 적금 금융 목표';
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT ='자녀 금융 목표';
+
+CREATE TABLE financial_goal_account
+(
+    financial_goal_account_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT
+        COMMENT '금융 목표 계좌 연결 ID',
+    financial_goal_id         BIGINT UNSIGNED NOT NULL
+        COMMENT '금융 목표 ID',
+    financial_account_id      BIGINT UNSIGNED NOT NULL
+        COMMENT '연결 적금 계좌 ID',
+    linked_at                 DATETIME(6)     NOT NULL
+        DEFAULT CURRENT_TIMESTAMP(6)
+        COMMENT '연결 시각',
+
+    PRIMARY KEY (financial_goal_account_id),
+
+    UNIQUE KEY uk_financial_goal_account_pair (
+        financial_goal_id,
+        financial_account_id
+        ),
+
+    UNIQUE KEY uk_financial_goal_account_account (
+        financial_account_id
+        ),
+
+    KEY idx_financial_goal_account_goal (
+        financial_goal_id
+    ),
+
+    CONSTRAINT fk_financial_goal_account_goal
+        FOREIGN KEY (financial_goal_id)
+            REFERENCES financial_goal (financial_goal_id),
+
+    CONSTRAINT fk_financial_goal_account_account
+        FOREIGN KEY (financial_account_id)
+            REFERENCES financial_account (financial_account_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT ='금융 목표와 적금 계좌 연결';
 
 CREATE TABLE financial_goal_checkpoint
 (
