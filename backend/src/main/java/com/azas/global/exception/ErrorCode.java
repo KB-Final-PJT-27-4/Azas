@@ -185,6 +185,10 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "금융 목표 템플릿을 찾을 수 없습니다."
     ),
+    FINANCIAL_GOAL_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 목표를 찾을 수 없습니다."
+    ),
     FINANCIAL_ACCOUNT_GOAL_ALREADY_ASSIGNED(
             HttpStatus.CONFLICT,
             "이미 다른 금융 목표에 연결된 적금 계좌입니다."

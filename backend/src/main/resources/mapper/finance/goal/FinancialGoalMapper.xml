@@ -5,6 +5,55 @@
 
 <mapper namespace="com.azas.domain.finance.goal.mapper.FinancialGoalMapper">
 
+    <select id="findAccessibleGoalDetailWithAccounts"
+            resultType="com.azas.domain.finance.goal.dto.FinancialGoalDetailRow">
+        SELECT
+            fg.financial_goal_id AS financialGoalId,
+            fg.child_id AS childId,
+            fg.financial_goal_template_id AS financialGoalTemplateId,
+            fg.title,
+            fgt.icon_key AS iconKey,
+            fg.target_amount AS targetAmount,
+            fg.target_date AS targetDate,
+            fg.monthly_saving_amount AS monthlySavingAmount,
+            fg.status,
+            fa.financial_account_id AS accountId,
+            fa.account_name AS accountName,
+            fa.bank_name AS bankName,
+            fa.account_number_ciphertext AS accountNumberCiphertext,
+            fa.balance
+        FROM financial_goal fg
+        LEFT JOIN financial_goal_template fgt
+            ON fgt.financial_goal_template_id = fg.financial_goal_template_id
+        INNER JOIN financial_goal_account fga
+            ON fga.financial_goal_id = fg.financial_goal_id
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = fga.financial_account_id
+        INNER JOIN child c
+            ON c.child_id = fg.child_id
+           AND c.status = 'ACTIVE'
+        INNER JOIN child_parent cp
+            ON cp.child_id = fg.child_id
+           AND cp.member_id = #{memberId}
+        WHERE fg.financial_goal_id = #{financialGoalId}
+          AND fg.status IN ('ACTIVE', 'ACHIEVED')
+        ORDER BY
+            fga.linked_at ASC,
+            fga.financial_goal_account_id ASC
+    </select>
+
+    <select id="findGoalCheckpoints"
+            resultType="com.azas.domain.finance.goal.dto.FinancialGoalCheckpointRow">
+        SELECT
+            financial_goal_checkpoint_id AS financialGoalCheckpointId,
+            percentage,
+            target_amount AS targetAmount,
+            reached_at AS reachedAt
+        FROM financial_goal_checkpoint
+        WHERE financial_goal_id = #{financialGoalId}
+        ORDER BY percentage ASC
+    </select>
+
     <select id="findActiveAndAchievedGoalsWithAccounts"
             resultType="com.azas.domain.finance.goal.dto.FinancialGoalListRow">
         SELECT
