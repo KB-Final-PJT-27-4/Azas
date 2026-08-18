@@ -7,8 +7,11 @@ import { childMissions } from '@/mocks/childFinanceFlow'
 
 const missions = computed(() =>
   [...childMissions].sort((current, next) => {
-    if (current.status === next.status) return 0
-    return current.status === 'completed' ? 1 : -1
+    const order = { review: 0, progress: 1, completed: 2 }
+    return (
+      (order[current.status as keyof typeof order] ?? 1) -
+      (order[next.status as keyof typeof order] ?? 1)
+    )
   }),
 )
 
@@ -92,9 +95,7 @@ const activeRewardTotal = computed(() =>
         :key="mission.id"
         class="mission-ticket"
         :class="
-          mission.status === 'completed'
-            ? 'mission-ticket--completed'
-            : 'mission-ticket--active'
+          mission.status === 'completed' ? 'mission-ticket--completed' : 'mission-ticket--active'
         "
       >
         <div class="mission-ticket__content">

@@ -65,6 +65,13 @@ const menuGroups: MenuGroup[] = [
         to: { name: 'Checklists' },
       },
       {
+        label: '용돈 미션 관리',
+        description: '아이에게 미션을 주고 완료 보상을 관리해요.',
+        keywords: ['미션', '용돈', '보상', '아이 할 일'],
+        icon: ClipboardCheck,
+        to: { name: 'ParentMissions' },
+      },
+      {
         label: '자산 리포트',
         description: '모은 자산과 소비 흐름을 분석해요.',
         keywords: ['자산 관리', '분석', '리포트'],
