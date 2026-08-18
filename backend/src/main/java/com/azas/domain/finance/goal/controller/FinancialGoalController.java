@@ -2,8 +2,10 @@ package com.azas.domain.finance.goal.controller;
 
 import com.azas.domain.finance.goal.dto.FinancialGoalCreateRequest;
 import com.azas.domain.finance.goal.dto.FinancialGoalCreateResponse;
+import com.azas.domain.finance.goal.dto.FinancialGoalDetailResponse;
 import com.azas.domain.finance.goal.dto.FinancialGoalListResponse;
 import com.azas.domain.finance.goal.service.FinancialGoalCreateService;
+import com.azas.domain.finance.goal.service.FinancialGoalDetailService;
 import com.azas.domain.finance.goal.service.FinancialGoalListService;
 import com.azas.global.response.ApiErrorResponse;
 import com.azas.global.security.AccessTokenMemberResolver;
@@ -30,7 +32,64 @@ public class FinancialGoalController {
 
     private final AccessTokenMemberResolver accessTokenMemberResolver;
     private final FinancialGoalCreateService financialGoalCreateService;
+    private final FinancialGoalDetailService financialGoalDetailService;
     private final FinancialGoalListService financialGoalListService;
+
+    @ApiOperation(
+            value = "GOAL-4 자녀 금융 목표 상세 조회",
+            notes = "부모가 접근 가능한 자녀의 단일 금융 목표와 연결 적금 계좌, "
+                    + "현재 금액, 남은 금액, 달성률 및 체크포인트를 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    code = 200,
+                    message = "자녀 금융 목표 상세 조회 성공",
+                    response = FinancialGoalDetailResponse.class
+            ),
+            @ApiResponse(
+                    code = 400,
+                    message = "금융 목표 ID 오류",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
+                    code = 401,
+                    message = "유효하지 않은 Access Token",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
+                    code = 403,
+                    message = "부모 권한 없음",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
+                    code = 404,
+                    message = "금융 목표를 찾을 수 없음",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
+                    code = 500,
+                    message = "서버 오류",
+                    response = ApiErrorResponse.class
+            )
+    })
+    @GetMapping("/financial-goals/{financial_goal_id}")
+    public ResponseEntity<FinancialGoalDetailResponse> getGoal(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @PathVariable("financial_goal_id") long financialGoalId
+    ) {
+        long requesterMemberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+        return ResponseEntity.ok(
+                FinancialGoalDetailResponse.from(
+                        financialGoalDetailService.getGoal(
+                                requesterMemberId,
+                                financialGoalId
+                        )
+                )
+        );
+    }
 
     @ApiOperation(
             value = "GOAL-3 자녀 금융 목표 목록 조회",
