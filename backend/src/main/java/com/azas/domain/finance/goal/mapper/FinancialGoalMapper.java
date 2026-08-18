@@ -6,6 +6,7 @@ import com.azas.domain.finance.goal.dto.FinancialGoalCheckpointRow;
 import com.azas.domain.finance.goal.dto.FinancialGoalDetailRow;
 import com.azas.domain.finance.goal.dto.FinancialGoalInsertCommand;
 import com.azas.domain.finance.goal.dto.FinancialGoalListRow;
+import com.azas.domain.finance.goal.dto.FinancialGoalUpdateTargetRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,6 +16,15 @@ import java.util.List;
 
 @Mapper
 public interface FinancialGoalMapper {
+
+    FinancialGoalUpdateTargetRow findAccessibleGoalForUpdate(
+            @Param("financialGoalId") long financialGoalId,
+            @Param("memberId") long memberId
+    );
+
+    List<Long> findGoalAccountIds(
+            @Param("financialGoalId") long financialGoalId
+    );
 
     List<FinancialGoalDetailRow> findAccessibleGoalDetailWithAccounts(
             @Param("financialGoalId") long financialGoalId,
@@ -50,5 +60,28 @@ public interface FinancialGoalMapper {
             @Param("title") String title,
             @Param("targetAmount") BigDecimal targetAmount,
             @Param("targetDate") LocalDate targetDate
+    );
+
+    int updateFinancialGoal(
+            @Param("financialGoalId") long financialGoalId,
+            @Param("targetAmount") BigDecimal targetAmount,
+            @Param("targetDate") LocalDate targetDate,
+            @Param("monthlySavingAmount") BigDecimal monthlySavingAmount,
+            @Param("status") String status
+    );
+
+    int deleteFinancialGoalAccount(
+            @Param("financialGoalId") long financialGoalId,
+            @Param("financialAccountId") long financialAccountId
+    );
+
+    int clearAccountGoalSnapshot(
+            @Param("financialAccountId") long financialAccountId
+    );
+
+    int updateFinancialGoalCheckpoint(
+            @Param("financialGoalCheckpointId") long financialGoalCheckpointId,
+            @Param("targetAmount") BigDecimal targetAmount,
+            @Param("reachedAt") java.time.LocalDateTime reachedAt
     );
 }

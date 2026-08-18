@@ -5,6 +5,35 @@
 
 <mapper namespace="com.azas.domain.finance.goal.mapper.FinancialGoalMapper">
 
+    <select id="findAccessibleGoalForUpdate"
+            resultType="com.azas.domain.finance.goal.dto.FinancialGoalUpdateTargetRow">
+        SELECT
+            fg.financial_goal_id AS financialGoalId,
+            fg.child_id AS childId,
+            fg.financial_goal_template_id AS financialGoalTemplateId,
+            fg.title,
+            fg.target_amount AS targetAmount,
+            fg.target_date AS targetDate,
+            fg.status
+        FROM financial_goal fg
+        INNER JOIN child c
+            ON c.child_id = fg.child_id
+           AND c.status = 'ACTIVE'
+        INNER JOIN child_parent cp
+            ON cp.child_id = fg.child_id
+           AND cp.member_id = #{memberId}
+        WHERE fg.financial_goal_id = #{financialGoalId}
+          AND fg.status IN ('ACTIVE', 'ACHIEVED')
+        FOR UPDATE
+    </select>
+
+    <select id="findGoalAccountIds" resultType="long">
+        SELECT financial_account_id
+        FROM financial_goal_account
+        WHERE financial_goal_id = #{financialGoalId}
+        ORDER BY linked_at ASC, financial_goal_account_id ASC
+    </select>
+
     <select id="findAccessibleGoalDetailWithAccounts"
             resultType="com.azas.domain.finance.goal.dto.FinancialGoalDetailRow">
         SELECT
@@ -173,6 +202,39 @@
             goal_target_date = #{targetDate},
             updated_at = UTC_TIMESTAMP(6)
         WHERE financial_account_id = #{financialAccountId}
+    </update>
+
+    <update id="updateFinancialGoal">
+        UPDATE financial_goal
+        SET target_amount = #{targetAmount},
+            target_date = #{targetDate},
+            monthly_saving_amount = #{monthlySavingAmount},
+            status = #{status},
+            updated_at = UTC_TIMESTAMP(6)
+        WHERE financial_goal_id = #{financialGoalId}
+    </update>
+
+    <delete id="deleteFinancialGoalAccount">
+        DELETE FROM financial_goal_account
+        WHERE financial_goal_id = #{financialGoalId}
+          AND financial_account_id = #{financialAccountId}
+    </delete>
+
+    <update id="clearAccountGoalSnapshot">
+        UPDATE financial_account
+        SET financial_goal_template_id = NULL,
+            goal_name_snapshot = NULL,
+            goal_target_amount = NULL,
+            goal_target_date = NULL,
+            updated_at = UTC_TIMESTAMP(6)
+        WHERE financial_account_id = #{financialAccountId}
+    </update>
+
+    <update id="updateFinancialGoalCheckpoint">
+        UPDATE financial_goal_checkpoint
+        SET target_amount = #{targetAmount},
+            reached_at = #{reachedAt}
+        WHERE financial_goal_checkpoint_id = #{financialGoalCheckpointId}
     </update>
 
 </mapper>

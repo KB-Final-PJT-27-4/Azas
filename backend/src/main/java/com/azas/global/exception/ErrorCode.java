@@ -179,7 +179,7 @@ public enum ErrorCode {
 
     INVALID_FINANCIAL_GOAL_REQUEST(
             HttpStatus.BAD_REQUEST,
-            "금융 목표 생성 요청이 올바르지 않습니다."
+            "금융 목표 요청이 올바르지 않습니다."
     ),
     FINANCIAL_GOAL_TEMPLATE_NOT_FOUND(
             HttpStatus.NOT_FOUND,
