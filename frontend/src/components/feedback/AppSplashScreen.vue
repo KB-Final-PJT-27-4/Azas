@@ -87,31 +87,33 @@ onBeforeUnmount(() => {
         class="mt-[30px] w-[min(100%,340px)] transition-all delay-500 duration-500 [@media(max-height:700px)]:mt-4"
         :class="entered ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'"
       >
-        <h1 class="m-0 text-[28px] leading-[1.4] font-extrabold tracking-[-0.04em]">
+        <h1 class="m-0 text-[28px] leading-[1.4] font-extrabold tracking-[-0.015em]">
           우리
           <strong
-            class="inline-block text-[35px] leading-none font-black text-[var(--color-brand-primary-pressed)] drop-shadow-[0_5px_16px_rgb(85_192_244_/_24%)] motion-safe:animate-bounce motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)] motion-safe:animate-bounce motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
             >아</strong
           >이
           <strong
-            class="inline-block text-[35px] leading-none font-black text-[var(--color-brand-primary-pressed)] drop-shadow-[0_5px_16px_rgb(85_192_244_/_24%)] motion-safe:animate-bounce motion-safe:[animation-delay:130ms] motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)] motion-safe:animate-bounce motion-safe:[animation-delay:130ms] motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
             >자</strong
           >산관리 서비<strong
-            class="inline-block text-[35px] leading-none font-black text-[var(--color-brand-primary-pressed)] drop-shadow-[0_5px_16px_rgb(85_192_244_/_24%)] motion-safe:animate-bounce motion-safe:[animation-delay:260ms] motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            class="inline-block text-[35px] leading-none font-black text-[#f2769d] drop-shadow-[0_5px_16px_rgb(242_118_157_/_24%)] motion-safe:animate-bounce motion-safe:[animation-delay:260ms] motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
             >스</strong
           >
         </h1>
-        <p class="mt-2.5 mb-0 text-sm font-medium text-[var(--color-text-secondary)]">
-          아이의 오늘을 기록하고 내일의 자산을 키워요
-        </p>
-        <div
-          class="mx-auto mt-6 h-[5px] w-[min(54%,172px)] overflow-hidden rounded-full bg-white/85 shadow-[inset_0_0_0_1px_rgb(85_192_244_/_9%)]"
-          aria-hidden="true"
-        >
-          <span
-            class="block h-full origin-left rounded-[inherit] bg-[var(--color-brand-primary)] transition-transform delay-300 duration-[1650ms] ease-out motion-reduce:scale-x-100"
-            :class="entered ? 'scale-x-100' : 'scale-x-0'"
-          ></span>
+        <div class="mx-auto mt-2.5 w-fit max-w-full">
+          <p class="m-0 text-sm font-medium text-[var(--color-text-secondary)]">
+            아이의 오늘을 기록하고 내일의 자산을 키워요
+          </p>
+          <div
+            class="mt-6 h-[5px] w-full overflow-hidden rounded-full bg-white/85 shadow-[inset_0_0_0_1px_rgb(85_192_244_/_9%)]"
+            aria-hidden="true"
+          >
+            <span
+              class="block h-full origin-left rounded-[inherit] bg-[var(--color-brand-primary)] transition-transform delay-300 duration-[1650ms] ease-out motion-reduce:scale-x-100"
+              :class="entered ? 'scale-x-100' : 'scale-x-0'"
+            ></span>
+          </div>
         </div>
       </div>
     </div>
