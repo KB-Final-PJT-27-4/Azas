@@ -177,6 +177,27 @@ public enum ErrorCode {
     ),
 
 
+    INVALID_FINANCIAL_GOAL_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "금융 목표 생성 요청이 올바르지 않습니다."
+    ),
+    FINANCIAL_GOAL_TEMPLATE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 목표 템플릿을 찾을 수 없습니다."
+    ),
+    FINANCIAL_ACCOUNT_GOAL_ALREADY_ASSIGNED(
+            HttpStatus.CONFLICT,
+            "이미 다른 금융 목표에 연결된 적금 계좌입니다."
+    ),
+    INELIGIBLE_FINANCIAL_GOAL_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "금융 목표에 연결할 수 없는 계좌입니다."
+    ),
+    FINANCIAL_GOAL_ALREADY_REACHED(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "현재 모은 금액이 이미 목표 금액 이상입니다."
+    ),
+
     // Time Capsule
     TIME_CAPSULE_ACCESS_DENIED(
             HttpStatus.FORBIDDEN,
