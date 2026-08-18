@@ -7,6 +7,7 @@ import com.azas.domain.finance.goal.dto.FinancialGoalListResponse;
 import com.azas.domain.finance.goal.dto.FinancialGoalUpdateRequest;
 import com.azas.domain.finance.goal.service.FinancialGoalCreateService;
 import com.azas.domain.finance.goal.service.FinancialGoalDetailService;
+import com.azas.domain.finance.goal.service.FinancialGoalDeleteService;
 import com.azas.domain.finance.goal.service.FinancialGoalListService;
 import com.azas.domain.finance.goal.service.FinancialGoalUpdateService;
 import com.azas.global.response.ApiErrorResponse;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +40,37 @@ public class FinancialGoalController {
     private final FinancialGoalDetailService financialGoalDetailService;
     private final FinancialGoalListService financialGoalListService;
     private final FinancialGoalUpdateService financialGoalUpdateService;
+    private final FinancialGoalDeleteService financialGoalDeleteService;
+
+    @ApiOperation(
+            value = "GOAL-6 자녀 금융 목표 삭제",
+            notes = "부모가 접근 가능한 자녀 금융 목표를 보관하고 연결된 모든 적금 계좌를 해제합니다. "
+                    + "계좌, 잔액, 거래, 체크포인트와 타임캡슐 데이터는 보존합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(code = 204, message = "자녀 금융 목표 삭제 성공"),
+            @ApiResponse(code = 400, message = "금융 목표 ID 오류",
+                    response = ApiErrorResponse.class),
+            @ApiResponse(code = 401, message = "유효하지 않은 Access Token",
+                    response = ApiErrorResponse.class),
+            @ApiResponse(code = 403, message = "부모 권한 없음",
+                    response = ApiErrorResponse.class),
+            @ApiResponse(code = 404, message = "금융 목표를 찾을 수 없음",
+                    response = ApiErrorResponse.class),
+            @ApiResponse(code = 500, message = "서버 오류",
+                    response = ApiErrorResponse.class)
+    })
+    @DeleteMapping("/financial-goals/{financial_goal_id}")
+    public ResponseEntity<Void> deleteGoal(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @PathVariable("financial_goal_id") long financialGoalId
+    ) {
+        long requesterMemberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader);
+        financialGoalDeleteService.delete(requesterMemberId, financialGoalId);
+        return ResponseEntity.noContent().build();
+    }
 
     @ApiOperation(
             value = "GOAL-5 자녀 금융 목표 수정",

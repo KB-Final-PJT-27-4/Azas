@@ -10,6 +10,7 @@ import com.azas.domain.finance.goal.dto.FinancialGoalListItemResult;
 import com.azas.domain.finance.goal.dto.FinancialGoalListResult;
 import com.azas.domain.finance.goal.service.FinancialGoalCreateService;
 import com.azas.domain.finance.goal.service.FinancialGoalDetailService;
+import com.azas.domain.finance.goal.service.FinancialGoalDeleteService;
 import com.azas.domain.finance.goal.service.FinancialGoalListService;
 import com.azas.domain.finance.goal.service.FinancialGoalUpdateService;
 import com.azas.global.exception.BusinessException;
@@ -43,6 +44,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -66,6 +68,9 @@ class FinancialGoalControllerTest {
     @Mock
     private FinancialGoalUpdateService financialGoalUpdateService;
 
+    @Mock
+    private FinancialGoalDeleteService financialGoalDeleteService;
+
     @InjectMocks
     private FinancialGoalController financialGoalController;
 
@@ -83,6 +88,37 @@ class FinancialGoalControllerTest {
                         new MappingJackson2HttpMessageConverter(objectMapper)
                 )
                 .build();
+    }
+
+    @Test
+    void deletesFinancialGoalWithoutResponseBody() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(8L);
+
+        mockMvc.perform(delete("/api/v1/financial-goals/31")
+                        .header("Authorization", "Bearer access-token"))
+                .andExpect(status().isNoContent())
+                .andExpect(org.springframework.test.web.servlet.result
+                        .MockMvcResultMatchers.content().string(""));
+
+        verify(financialGoalDeleteService).delete(8L, 31L);
+    }
+
+    @Test
+    void returnsNotFoundWhenDeletingHiddenFinancialGoal() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(8L);
+        org.mockito.Mockito.doThrow(new BusinessException(
+                        ErrorCode.FINANCIAL_GOAL_NOT_FOUND))
+                .when(financialGoalDeleteService).delete(8L, 31L);
+
+        mockMvc.perform(delete("/api/v1/financial-goals/31")
+                        .header("Authorization", "Bearer access-token"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code")
+                        .value("FINANCIAL_GOAL_NOT_FOUND"));
     }
 
     @Test
