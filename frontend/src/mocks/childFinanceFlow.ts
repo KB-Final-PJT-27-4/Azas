@@ -69,7 +69,7 @@ export const childMissions = reactive([
     title: '소비 계획 지키기',
     description: '이번 주 계획한 소비 지키기',
     reward: 2_000,
-    status: 'progress',
+    status: 'review',
     icon: '💧',
   },
 ])
@@ -111,7 +111,12 @@ export const childQuizQuestions = [
   {
     id: 'quiz-1',
     question: '돈을 모으는 가장 좋은 방법은 무엇일까요?',
-    options: ['필요와 불필요를 나누어 산다', '가지고 싶은 건 바로 산다', '돈을 주면 다 쓴다', '친구가 사면 나도 산다'],
+    options: [
+      '필요와 불필요를 나누어 산다',
+      '가지고 싶은 건 바로 산다',
+      '돈을 주면 다 쓴다',
+      '친구가 사면 나도 산다',
+    ],
     answerIndex: 0,
     explanation: '필요한 물건을 사고 남은 돈을 저축하면 돈을 모을 수 있어요!',
   },
@@ -132,14 +137,24 @@ export const childQuizQuestions = [
   {
     id: 'quiz-4',
     question: '월 한도는 왜 필요할까요?',
-    options: ['돈을 계획적으로 쓰려고', '돈을 더 빨리 쓰려고', '알림을 없애려고', '기록을 안 하려고'],
+    options: [
+      '돈을 계획적으로 쓰려고',
+      '돈을 더 빨리 쓰려고',
+      '알림을 없애려고',
+      '기록을 안 하려고',
+    ],
     answerIndex: 0,
     explanation: '한도는 내가 쓸 수 있는 돈을 지키도록 도와줘요.',
   },
   {
     id: 'quiz-5',
     question: '미션 보상은 언제 받을 수 있을까요?',
-    options: ['부모님이 확인하고 승인하면', '미션을 안 해도', '버튼만 누르면 바로', '친구가 대신하면'],
+    options: [
+      '부모님이 확인하고 승인하면',
+      '미션을 안 해도',
+      '버튼만 누르면 바로',
+      '친구가 대신하면',
+    ],
     answerIndex: 0,
     explanation: '미션을 완료하고 부모님이 확인하면 보상 용돈을 받을 수 있어요.',
   },
