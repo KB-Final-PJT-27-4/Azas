@@ -352,6 +352,10 @@ public enum ErrorCode {
             HttpStatus.CONFLICT,
             "현재 상태에서는 요청한 자동이체 상태 변경을 수행할 수 없습니다."
     ),
+    AUTO_TRANSFER_RETRY_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "재시도할 수 있는 실패 자동이체 회차가 없습니다."
+    ),
 
     // Notification
     NOTIFICATION_NOT_FOUND(
