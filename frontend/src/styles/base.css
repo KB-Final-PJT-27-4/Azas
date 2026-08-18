@@ -1,16 +1,21 @@
+@import "tailwindcss";
+@import './tokens.css';
+
 * {
   box-sizing: border-box;
 }
 
 html {
+  scrollbar-gutter: stable;
   font-family:
+    'Pretendard',
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  color: #111827;
-  background: #ffffff;
+  color: var(--color-text-primary);
+  background: var(--color-app-background);
 }
 
 body {
@@ -22,9 +27,22 @@ button,
 input,
 textarea,
 select {
-  font: inherit;
+  font-family: inherit;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+#app {
+  min-height: 100dvh;
 }
