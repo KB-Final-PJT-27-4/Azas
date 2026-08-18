@@ -23,7 +23,7 @@ const sourceAccountId = ref('child-main')
 const selectedContactId = ref(firstContact.id)
 const transferAmount = ref('0')
 const transferMessage = ref('')
-const allowanceAmount = ref('')
+const allowanceAmount = ref('0')
 const reason = ref('')
 const dragStartY = ref(0)
 const dragOffset = ref(0)
@@ -106,7 +106,7 @@ const resetSheet = () => {
   selectedContactId.value = firstContact.id
   transferAmount.value = '0'
   transferMessage.value = ''
-  allowanceAmount.value = ''
+  allowanceAmount.value = '0'
   reason.value = ''
   dragOffset.value = 0
   isDragging.value = false
@@ -115,12 +115,12 @@ const resetSheet = () => {
 const updateTransferAmount = (event: Event) => {
   const input = event.target as HTMLInputElement
   const digits = input.value.replace(/\D/g, '').slice(0, maxMoneyDigits)
-  transferAmount.value = digits || '0'
+  transferAmount.value = digits ? Number(digits).toLocaleString('ko-KR') : '0'
   if (input.value !== transferAmount.value) input.value = transferAmount.value
 }
 
 const startTransferAmountEdit = (event: FocusEvent) => {
-  transferAmount.value = String(transferAmountValue.value)
+  transferAmount.value = transferAmountValue.value.toLocaleString('ko-KR')
   const input = event.target as HTMLInputElement
   requestAnimationFrame(() => {
     if (input.value === '0') input.select()
@@ -155,19 +155,24 @@ const submitTransfer = () => {
 const updateAllowanceAmount = (event: Event) => {
   const input = event.target as HTMLInputElement
   const digits = input.value.replace(/\D/g, '').slice(0, maxMoneyDigits)
-  allowanceAmount.value = digits ? Number(digits).toLocaleString('ko-KR') : ''
+  allowanceAmount.value = digits ? Number(digits).toLocaleString('ko-KR') : '0'
   if (input.value !== allowanceAmount.value) input.value = allowanceAmount.value
 }
 
 const startAllowanceAmountEdit = (event: FocusEvent) => {
-  allowanceAmount.value = allowanceAmountValue.value > 0 ? String(allowanceAmountValue.value) : ''
+  allowanceAmount.value = allowanceAmountValue.value.toLocaleString('ko-KR')
   const input = event.target as HTMLInputElement
-  requestAnimationFrame(() => input.select())
+  requestAnimationFrame(() => {
+    if (input.value === '0') input.select()
+  })
 }
 
 const finishAllowanceAmountEdit = () => {
-  allowanceAmount.value =
-    allowanceAmountValue.value > 0 ? allowanceAmountValue.value.toLocaleString('ko-KR') : ''
+  allowanceAmount.value = allowanceAmountValue.value.toLocaleString('ko-KR')
+}
+
+const clearAllowanceAmount = () => {
+  allowanceAmount.value = '0'
 }
 
 const updateReason = (event: Event) => {
@@ -403,23 +408,35 @@ watch(
 
               <section v-else-if="mode === 'allowance'" key="allowance" class="grid min-w-0 gap-4 overflow-x-hidden">
                 <div>
-                  <p class="m-0 text-[16px] font-bold">얼마가 필요한가요?</p>
-                  <div
-                    class="mt-3 rounded-[14px] border border-[#dce8ee] bg-white px-4 py-3 transition focus-within:border-[var(--color-brand-primary)]"
-                  >
-                    <div class="flex min-w-0 items-baseline gap-1">
-                      <input
-                        :value="allowanceAmount"
-                        class="allowance-amount-input min-w-0 flex-1 border-0 bg-transparent p-0 text-[28px] leading-tight font-bold text-[var(--color-text-primary)] outline-none placeholder:text-[#9da5ad]"
-                        inputmode="numeric"
-                        placeholder="0"
-                        type="text"
-                        @focus="startAllowanceAmountEdit"
-                        @input="updateAllowanceAmount"
-                        @blur="finishAllowanceAmountEdit"
-                      />
-                      <span class="shrink-0 text-[18px] leading-none font-bold">원</span>
-                    </div>
+                  <label for="child-allowance-amount" class="block text-[12px] font-semibold">
+                    요청 금액 <span class="text-[#f04444]">*</span>
+                  </label>
+                  <div class="relative mt-2">
+                    <input
+                      id="child-allowance-amount"
+                      :value="allowanceAmount"
+                      class="h-10 w-full rounded-[12px] border border-[#dce8ee] pr-16 pl-3 text-[15px] outline-none transition focus:border-[var(--color-brand-primary)]"
+                      inputmode="numeric"
+                      type="text"
+                      @focus="startAllowanceAmountEdit"
+                      @input="updateAllowanceAmount"
+                      @blur="finishAllowanceAmountEdit"
+                    />
+                    <span
+                      class="pointer-events-none absolute top-1/2 -translate-y-1/2 text-[15px]"
+                      :class="allowanceAmountValue > 0 ? 'right-10' : 'right-3'"
+                    >
+                      원
+                    </span>
+                    <button
+                      v-if="allowanceAmountValue > 0"
+                      class="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-full text-[#9aa6b2] active:bg-[#eef3f6]"
+                      type="button"
+                      aria-label="요청 금액 지우기"
+                      @click="clearAllowanceAmount"
+                    >
+                      <X :size="16" :stroke-width="2.5" />
+                    </button>
                   </div>
                 </div>
 
@@ -571,15 +588,6 @@ watch(
   transform: translateY(8px);
 }
 
-.allowance-amount-input {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-
 .quick-done-panel {
   display: grid;
   min-width: 0;
@@ -647,12 +655,12 @@ watch(
 }
 
 .quick-done-panel__image--allowance {
-  bottom: 46px;
+  bottom: 82px;
   width: 258px;
 }
 
 .quick-done-panel__image--transfer {
-  bottom: 64px;
+  bottom: 96px;
   width: 220px;
 }
 
