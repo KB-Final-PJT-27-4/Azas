@@ -78,7 +78,8 @@ class MemberProfileResponseTest {
                 MemberProfileResponse.from(
                         new MemberProfileResult(
                                 member,
-                                List.of(socialAccount)
+                                List.of(socialAccount),
+                                "010-****-5678"
                         )
                 );
 
@@ -101,8 +102,9 @@ class MemberProfileResponseTest {
                 "1992-04-15",
                 json.get("birth_date").asText()
         );
-        assertTrue(
-                json.get("phone_number").isNull()
+        assertEquals(
+                "010-****-5678",
+                json.get("phone_number").asText()
         );
         assertTrue(
                 json.get("phone_verified").asBoolean()

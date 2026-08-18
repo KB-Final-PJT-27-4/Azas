@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import java.time.Instant;
 import java.time.ZoneOffset;
 
-@ApiModel(description = "수락 완료된 자녀 초대 정보")
+@ApiModel(description = "수락 대기 중인 자녀 초대 정보")
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class ChildInviteInvitationResponse {
@@ -37,18 +37,18 @@ public class ChildInviteInvitationResponse {
     @ApiModelProperty(
             value = "초대 상태",
             required = true,
-            allowableValues = "ACCEPTED",
-            example = "ACCEPTED"
+            allowableValues = "PENDING",
+            example = "PENDING"
     )
     private final FamilyInvitationStatus status;
 
     @ApiModelProperty(
-            value = "초대 수락 시각",
+            value = "초대 만료 시각",
             required = true,
-            example = "2026-08-05T03:00:00Z"
+            example = "2026-08-08T03:00:00Z"
     )
-    @JsonProperty("accepted_at")
-    private final Instant acceptedAt;
+    @JsonProperty("expires_at")
+    private final Instant expiresAt;
 
     public static ChildInviteInvitationResponse from(
             ChildInviteOAuthResult result
@@ -56,8 +56,8 @@ public class ChildInviteInvitationResponse {
         return new ChildInviteInvitationResponse(
                 result.getFamilyInvitationId(),
                 FamilyInviteeType.CHILD,
-                FamilyInvitationStatus.ACCEPTED,
-                result.getAcceptedAt()
+                FamilyInvitationStatus.PENDING,
+                result.getExpiresAt()
                         .toInstant(ZoneOffset.UTC)
         );
     }

@@ -404,25 +404,16 @@ class OAuthControllerTest {
                                 .value("김자녀")
                 )
                 .andExpect(
-                        jsonPath("$.child.member_linked")
-                                .value(true)
-                )
-                .andExpect(
-                        jsonPath(
-                                "$.invitation.family_invitation_id"
-                        ).value(30)
-                )
-                .andExpect(
-                        jsonPath("$.invitation.invitee_type")
-                                .value("CHILD")
-                )
-                .andExpect(
                         jsonPath("$.invitation.status")
-                                .value("ACCEPTED")
+                                .value("PENDING")
+                )
+                .andExpect(
+                        jsonPath("$.invitation.expires_at")
+                                .value("2026-08-05T03:00:00Z")
                 )
                 .andExpect(
                         jsonPath("$.invitation.accepted_at")
-                                .value("2026-08-05T03:00:00Z")
+                                .doesNotExist()
                 );
 
         verify(childInviteOAuthService)
@@ -512,9 +503,6 @@ class OAuthControllerTest {
                         ErrorCode.INVALID_FAMILY_INVITATION
                 ),
                 Arguments.of(
-                        ErrorCode.FAMILY_MEMBER_ALREADY_LINKED
-                ),
-                Arguments.of(
                         ErrorCode.MEMBER_TYPE_CONFLICT
                 )
         );
@@ -551,7 +539,6 @@ class OAuthControllerTest {
                         true,
                         10L,
                         "김자녀",
-                        RelationType.GUARDIAN,
                         50L,
                         LocalDateTime.of(
                                 2026,
@@ -567,8 +554,7 @@ class OAuthControllerTest {
                         "google",
                         "oauth-code",
                         "http://localhost:5173/auth/google/parent-invite/callback",
-                        "raw-parent-invite-token",
-                        RelationType.GUARDIAN
+                        "raw-parent-invite-token"
                 )
         ).thenReturn(result);
 
@@ -583,8 +569,7 @@ class OAuthControllerTest {
                                     {
                                       "authorization_code": "oauth-code",
                                       "redirect_uri": "http://localhost:5173/auth/google/parent-invite/callback",
-                                      "invite_token": "raw-parent-invite-token",
-                                      "relation_type": "GUARDIAN"
+                                      "invite_token": "raw-parent-invite-token"
                                     }
                                     """)
                 )
@@ -619,7 +604,7 @@ class OAuthControllerTest {
                 )
                 .andExpect(
                         jsonPath("$.child.relation_type")
-                                .value("GUARDIAN")
+                                .doesNotExist()
                 )
                 .andExpect(
                         jsonPath(
@@ -632,11 +617,15 @@ class OAuthControllerTest {
                 )
                 .andExpect(
                         jsonPath("$.invitation.status")
-                                .value("ACCEPTED")
+                                .value("PENDING")
+                )
+                .andExpect(
+                        jsonPath("$.invitation.expires_at")
+                                .value("2026-08-05T03:00:00Z")
                 )
                 .andExpect(
                         jsonPath("$.invitation.accepted_at")
-                                .value("2026-08-05T03:00:00Z")
+                                .doesNotExist()
                 );
 
         verify(parentInviteOAuthService)
@@ -644,64 +633,8 @@ class OAuthControllerTest {
                         "google",
                         "oauth-code",
                         "http://localhost:5173/auth/google/parent-invite/callback",
-                        "raw-parent-invite-token",
-                        RelationType.GUARDIAN
+                        "raw-parent-invite-token"
                 );
-    }
-
-    @Test
-    void returnsBadRequestWhenParentRelationTypeIsMissing()
-            throws Exception {
-        mockMvc.perform(
-                        post(
-                                "/api/v1/auth/oauth/google/parent-invite"
-                        )
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
-                                    {
-                                      "authorization_code": "oauth-code",
-                                      "redirect_uri": "http://localhost:5173/auth/google/parent-invite/callback",
-                                      "invite_token": "raw-parent-invite-token"
-                                    }
-                                    """)
-                )
-                .andExpect(status().isBadRequest())
-                .andExpect(
-                        jsonPath("$.error.code")
-                                .value("BADREQUEST")
-                );
-
-        verifyNoInteractions(parentInviteOAuthService);
-    }
-
-    @Test
-    void returnsBadRequestForInvalidParentRelationType()
-            throws Exception {
-        mockMvc.perform(
-                        post(
-                                "/api/v1/auth/oauth/google/parent-invite"
-                        )
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
-                                    {
-                                      "authorization_code": "oauth-code",
-                                      "redirect_uri": "http://localhost:5173/auth/google/parent-invite/callback",
-                                      "invite_token": "raw-parent-invite-token",
-                                      "relation_type": "SIBLING"
-                                    }
-                                    """)
-                )
-                .andExpect(status().isBadRequest())
-                .andExpect(
-                        jsonPath("$.error.code")
-                                .value("BADREQUEST")
-                );
-
-        verifyNoInteractions(parentInviteOAuthService);
     }
 
     @ParameterizedTest
@@ -714,8 +647,7 @@ class OAuthControllerTest {
                         "google",
                         "oauth-code",
                         "http://localhost:5173/auth/google/parent-invite/callback",
-                        "raw-parent-invite-token",
-                        RelationType.GUARDIAN
+                        "raw-parent-invite-token"
                 )
         ).thenThrow(
                 new BusinessException(errorCode)
@@ -732,8 +664,7 @@ class OAuthControllerTest {
                                     {
                                       "authorization_code": "oauth-code",
                                       "redirect_uri": "http://localhost:5173/auth/google/parent-invite/callback",
-                                      "invite_token": "raw-parent-invite-token",
-                                      "relation_type": "GUARDIAN"
+                                      "invite_token": "raw-parent-invite-token"
                                     }
                                     """)
                 )
@@ -756,9 +687,6 @@ class OAuthControllerTest {
         return Stream.of(
                 Arguments.of(
                         ErrorCode.INVALID_FAMILY_INVITATION
-                ),
-                Arguments.of(
-                        ErrorCode.FAMILY_MEMBER_ALREADY_LINKED
                 ),
                 Arguments.of(
                         ErrorCode.MEMBER_TYPE_CONFLICT

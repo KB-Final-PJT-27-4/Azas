@@ -44,7 +44,6 @@ public class TimeCapsuleEntryResponse {
         this.mediaMode = entry.getMediaMode().name();
     }
 
-    // [JMG] CAPSULE-5 생성된 기록 엔티티를 프론트엔드 계약의 생성 응답으로 변환한다.
     public static TimeCapsuleEntryResponse from(TimeCapsuleEntry entry) {
         return new TimeCapsuleEntryResponse(entry);
     }

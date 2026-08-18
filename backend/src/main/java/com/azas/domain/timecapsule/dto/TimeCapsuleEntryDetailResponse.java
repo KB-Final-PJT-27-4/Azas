@@ -37,9 +37,6 @@ public class TimeCapsuleEntryDetailResponse {
     private final String mediaMode;
     private final String status;
 
-    @JsonProperty("edit_count")
-    private final int editCount;
-
     @JsonProperty("sealed_at")
     private final LocalDateTime sealedAt;
     private final List<MediaResponse> media;
@@ -47,7 +44,6 @@ public class TimeCapsuleEntryDetailResponse {
     @JsonProperty("created_at")
     private final LocalDateTime createdAt;
 
-    // [JMG] CAPSULE-14 권한 검증된 엔트리와 활성 미디어의 임시 URL을 상세 응답으로 구성한다.
     public TimeCapsuleEntryDetailResponse(
             TimeCapsuleEntry entry,
             List<MediaResponse> media
@@ -62,7 +58,6 @@ public class TimeCapsuleEntryDetailResponse {
         this.contributedAt = entry.getContributedAt();
         this.mediaMode = entry.getMediaMode().name();
         this.status = entry.getStatus().name();
-        this.editCount = entry.getEditCount();
         this.sealedAt = entry.getSealedAt();
         this.media = List.copyOf(media);
         this.createdAt = entry.getCreatedAt();
@@ -92,7 +87,6 @@ public class TimeCapsuleEntryDetailResponse {
         @JsonProperty("expires_at")
         private final LocalDateTime expiresAt;
 
-        // [JMG] CAPSULE-14 저장소 객체 키 대신 만료되는 다운로드 URL만 미디어 응답에 담는다.
         public MediaResponse(
                 TimeCapsuleMedia media,
                 String downloadUrl,

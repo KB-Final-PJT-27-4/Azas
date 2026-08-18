@@ -1,6 +1,5 @@
 package com.azas.domain.auth.dto;
 
-import com.azas.domain.child.entity.RelationType;
 import com.azas.domain.member.entity.Member;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +15,6 @@ public class ParentInviteOAuthResult {
     private final boolean newMember;
     private final Long childId;
     private final String childName;
-    private final RelationType relationType;
     private final Long familyInvitationId;
-    private final LocalDateTime acceptedAt;
+    private final LocalDateTime expiresAt;
 }

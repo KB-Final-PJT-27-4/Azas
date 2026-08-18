@@ -57,17 +57,134 @@ public class ChildServiceImpl implements ChildService {
     // 자녀 프로필 수정
     @Override
     @Transactional
-    public ChildResponse updateChild(Long memberId, Long childId, ChildUpdateRequest request) {
+    public ChildResponse updateChild(
+            Long memberId,
+            Long childId,
+            ChildUpdateRequest request
+    ) {
+        if (request == null) {
+            throw new BusinessException(
+                    ErrorCode.BADREQUEST
+            );
+        }
+
         validateChildAccess(memberId, childId);
 
-        Child child = new Child();
-        child.setChildId(childId);
-        child.update(request);
+        ChildResponse current =
+                childMapper.findChildByIdForMember(
+                        childId,
+                        memberId
+                );
 
-        childMapper.updateChild(child);
+        if (current == null) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_NOT_FOUND
+            );
+        }
 
-        return childMapper.findChildByIdForMember(childId, memberId);
+        Child mergedChild =
+                mergeChild(
+                        childId,
+                        current,
+                        request
+                );
+
+        validateUpdateState(mergedChild);
+
+        childMapper.updateChild(mergedChild);
+
+        return childMapper.findChildByIdForMember(
+                childId,
+                memberId
+        );
     }
+
+    // 병합 메서드
+    private Child mergeChild(
+            Long childId,
+            ChildResponse current,
+            ChildUpdateRequest request
+    ) {
+        Child child = new Child();
+
+        child.setChildId(childId);
+
+        child.setName(
+                request.getName() != null
+                        ? request.getName()
+                        : current.getName()
+        );
+
+        child.setBirthStatus(
+                request.getBirthStatus() != null
+                        ? request.getBirthStatus()
+                        : current.getBirthStatus()
+        );
+
+        child.setExpectedBirthDate(
+                request.getExpectedBirthDate() != null
+                        ? request.getExpectedBirthDate()
+                        : current.getExpectedBirthDate()
+        );
+
+        child.setBirthDate(
+                request.getBirthDate() != null
+                        ? request.getBirthDate()
+                        : current.getBirthDate()
+        );
+
+        child.setGender(
+                request.getGender() != null
+                        ? request.getGender()
+                        : current.getGender()
+        );
+
+        child.setProfileImageUrl(
+                request.getProfileImageUrl() != null
+                        ? request.getProfileImageUrl()
+                        : current.getProfileImageUrl()
+        );
+
+        return child;
+    }
+
+
+    // 검증
+    private void validateUpdateState(Child child) {
+        if (
+                child.getName() == null
+                        || child.getName().trim().isEmpty()
+        ) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_INVALID_NAME
+            );
+        }
+
+        if (child.getBirthStatus() == null) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_INVALID_BIRTH_STATUS
+            );
+        }
+
+        if (
+                child.getBirthStatus() == BirthStatus.EXPECTED
+                        && child.getExpectedBirthDate() == null
+        ) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_EXPECTED_BIRTH_DATE_REQUIRED
+            );
+        }
+
+        if (
+                child.getBirthStatus() == BirthStatus.BORN
+                        && child.getBirthDate() == null
+        ) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_BIRTH_DATE_REQUIRED
+            );
+        }
+    }
+
 
     // 자녀 프로필 삭제
     @Override
