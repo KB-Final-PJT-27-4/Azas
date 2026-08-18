@@ -222,11 +222,11 @@ INSERT INTO financial_product (
     0,
     NULL,
     NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
     'Azas의 Mock 계좌 개설 화면에서 가입·해지할 수 있습니다.',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
     JSON_ARRAY(JSON_OBJECT('label', '가입 대상', 'content', 'Azas Mock 금융 사용자')),
     JSON_ARRAY(JSON_OBJECT('label', '초기 금액', 'content', '0원 이상')),
     JSON_ARRAY(),
@@ -538,21 +538,40 @@ INSERT INTO financial_transfer (
   (1, 1, 1, 1, 3, 100000, '7월 저축', 'MANUAL', 'SUCCEEDED', '00000000-0000-0000-0000-000000000001', 'mock-transfer-1', 1, '2026-07-20 08:59:00.000000', '2026-07-20 09:00:00.000000');
 
 INSERT INTO auto_transfer_schedule (
-  auto_transfer_schedule_id,
-  child_id,
-  member_id,
-  source_account_id,
-  destination_account_id,
-  amount,
-  frequency,
-  transfer_day,
-  start_date,
-  end_date,
-  next_transfer_at,
-  provider_schedule_id,
-  status
-) VALUES
-  (1, 1, 1, 1, 3, 100000, 'MONTHLY', 25, '2026-08-25', NULL, '2026-08-25 09:00:00.000000', NULL, 'ACTIVE');
+    auto_transfer_schedule_id,
+    child_id,
+    member_id,
+    request_idempotency_key,
+    financial_goal_id,
+    source_account_id,
+    destination_account_id,
+    amount,
+    frequency,
+    transfer_day,
+    start_date,
+    end_date,
+    next_transfer_at,
+    last_transfer_status,
+    last_transferred_at,
+    status
+) VALUES (
+             1,
+             1,
+             1,
+             '00000000-0000-0000-0000-000000000101',
+             1,
+             1,
+             3,
+             100000,
+             'MONTHLY',
+             25,
+             '2026-08-25',
+             NULL,
+             '2026-08-25 00:00:00.000000',
+             NULL,
+             NULL,
+             'ACTIVE'
+         );
 
 INSERT INTO time_capsule (
   time_capsule_id,

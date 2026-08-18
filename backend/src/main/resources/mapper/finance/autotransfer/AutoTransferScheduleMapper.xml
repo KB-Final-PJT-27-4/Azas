@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.finance.autotransfer.mapper.AutoTransferScheduleMapper">
+
+    <select id="countChildAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                                AND c.status = 'ACTIVE'
+        WHERE cp.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+    </select>
+
+    <select id="findByIdempotencyKey"
+            resultType="com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleRow">
+        SELECT auto_transfer_schedule_id AS autoTransferScheduleId,
+               child_id AS childId,
+               member_id AS memberId,
+               request_idempotency_key AS requestIdempotencyKey,
+               financial_goal_id AS financialGoalId,
+               source_account_id AS sourceAccountId,
+               destination_account_id AS destinationAccountId,
+               amount,
+               frequency,
+               transfer_day AS transferDay,
+               start_date AS startDate,
+               end_date AS endDate,
+               next_transfer_at AS nextTransferAt,
+               last_transfer_status AS lastTransferStatus,
+               last_transferred_at AS lastTransferredAt,
+               status,
+               created_at AS createdAt
+        FROM auto_transfer_schedule
+        WHERE request_idempotency_key = #{idempotencyKey}
+    </select>
+
+    <select id="findAccountForUpdate"
+            resultType="com.azas.domain.finance.autotransfer.dto.AutoTransferAccountRow">
+        SELECT fa.financial_account_id AS financialAccountId,
+               fa.owner_type AS ownerType,
+               fa.owner_member_id AS ownerMemberId,
+               fa.child_id AS childId,
+               fa.account_product_type AS accountProductType,
+               fa.account_status AS accountStatus,
+               fa.link_status AS linkStatus,
+               fg.financial_goal_id AS financialGoalId
+        FROM financial_account fa
+                 LEFT JOIN financial_goal fg
+                           ON fg.financial_account_id = fa.financial_account_id
+                               AND fg.status = 'ACTIVE'
+        WHERE fa.financial_account_id = #{accountId}
+            FOR UPDATE
+    </select>
+
+    <select id="countEquivalentSchedule" resultType="int">
+        SELECT COUNT(*)
+        FROM auto_transfer_schedule
+        WHERE member_id = #{memberId}
+          AND child_id = #{childId}
+          AND source_account_id = #{sourceAccountId}
+          AND destination_account_id = #{destinationAccountId}
+          AND amount = #{amount}
+          AND frequency = #{frequency}
+          AND transfer_day = #{transferDay}
+          AND start_date = #{startDate}
+          AND end_date <![CDATA[<=>]]> #{endDate}
+          AND status IN ('ACTIVE', 'PAUSED')
+    </select>
+
+    <insert id="insertSchedule"
+            useGeneratedKeys="true"
+            keyProperty="autoTransferScheduleId"
+            keyColumn="auto_transfer_schedule_id">
+        INSERT INTO auto_transfer_schedule (
+            child_id,
+            member_id,
+            request_idempotency_key,
+            financial_goal_id,
+            source_account_id,
+            destination_account_id,
+            amount,
+            frequency,
+            transfer_day,
+            start_date,
+            end_date,
+            next_transfer_at,
+            last_transfer_status,
+            last_transferred_at,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+                     #{childId},
+                     #{memberId},
+                     #{requestIdempotencyKey},
+                     #{financialGoalId},
+                     #{sourceAccountId},
+                     #{destinationAccountId},
+                     #{amount},
+                     #{frequency},
+                     #{transferDay},
+                     #{startDate},
+                     #{endDate},
+                     #{nextTransferAt},
+                     NULL,
+                     NULL,
+                     'ACTIVE',
+                     #{createdAt},
+                     #{createdAt}
+                 )
+    </insert>
+
+    <select id="findSchedules"
+            resultType="com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleListRow">
+        SELECT ats.auto_transfer_schedule_id AS autoTransferScheduleId,
+        ats.financial_goal_id AS financialGoalId,
+        fg.title AS goalTitle,
+        ats.amount,
+        ats.frequency,
+        ats.transfer_day AS transferDay,
+        ats.next_transfer_at AS nextTransferAt,
+        ats.last_transfer_status AS lastTransferStatus,
+        ats.last_transferred_at AS lastTransferredAt,
+        ats.status
+        FROM auto_transfer_schedule ats
+        INNER JOIN financial_goal fg
+        ON fg.financial_goal_id = ats.financial_goal_id
+        WHERE ats.child_id = #{childId}
+
+        <if test="status != null">
+            AND ats.status = #{status}
+        </if>
+
+        <if test="cursorId != null">
+            AND ats.auto_transfer_schedule_id <![CDATA[<]]> #{cursorId}
+        </if>
+
+        ORDER BY ats.auto_transfer_schedule_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findScheduleDetail"
+            resultType="com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleDetailRow">
+        SELECT
+            ats.auto_transfer_schedule_id AS autoTransferScheduleId,
+            ats.child_id AS childId,
+            ats.financial_goal_id AS financialGoalId,
+            fg.title AS goalTitle,
+
+            ats.source_account_id AS sourceAccountId,
+            source_account.account_name AS sourceAccountName,
+
+            ats.destination_account_id AS destinationAccountId,
+            destination_account.account_name AS destinationAccountName,
+
+            ats.amount,
+            ats.frequency,
+            ats.transfer_day AS transferDay,
+            ats.start_date AS startDate,
+            ats.end_date AS endDate,
+            ats.next_transfer_at AS nextTransferAt,
+
+            recent_transfer.financial_transfer_id AS lastTransferId,
+            COALESCE(
+                    recent_transfer.status,
+                    ats.last_transfer_status
+            ) AS lastTransferStatus,
+            recent_transfer.failure_code AS lastFailureCode,
+            recent_transfer.failure_message AS lastFailureMessage,
+            COALESCE(
+                    recent_transfer.completed_at,
+                    recent_transfer.requested_at,
+                    ats.last_transferred_at
+            ) AS lastTransferredAt,
+
+            ats.status,
+            ats.created_at AS createdAt,
+            ats.updated_at AS updatedAt
+        FROM auto_transfer_schedule ats
+                 INNER JOIN financial_goal fg
+                            ON fg.financial_goal_id = ats.financial_goal_id
+                 INNER JOIN financial_account source_account
+                            ON source_account.financial_account_id =
+                               ats.source_account_id
+                 INNER JOIN financial_account destination_account
+                            ON destination_account.financial_account_id =
+                               ats.destination_account_id
+                 LEFT JOIN financial_transfer recent_transfer
+                           ON recent_transfer.financial_transfer_id = (
+                               SELECT ft.financial_transfer_id
+                               FROM financial_transfer ft
+                               WHERE ft.origin_type =
+                                     'AUTO_TRANSFER_SCHEDULE'
+                                 AND ft.origin_id =
+                                     ats.auto_transfer_schedule_id
+                               ORDER BY ft.financial_transfer_id DESC
+            LIMIT 1
+            )
+        WHERE ats.auto_transfer_schedule_id = #{scheduleId}
+    </select>
+    <select id="findScheduleForUpdate"
+            resultType="com.azas.domain.finance.autotransfer.dto.AutoTransferScheduleRow">
+        SELECT
+            auto_transfer_schedule_id AS autoTransferScheduleId,
+            child_id AS childId,
+            member_id AS memberId,
+            request_idempotency_key AS requestIdempotencyKey,
+            financial_goal_id AS financialGoalId,
+            source_account_id AS sourceAccountId,
+            destination_account_id AS destinationAccountId,
+            amount,
+            frequency,
+            transfer_day AS transferDay,
+            start_date AS startDate,
+            end_date AS endDate,
+            next_transfer_at AS nextTransferAt,
+            last_transfer_status AS lastTransferStatus,
+            last_transferred_at AS lastTransferredAt,
+            status,
+            created_at AS createdAt
+        FROM auto_transfer_schedule
+        WHERE auto_transfer_schedule_id = #{scheduleId}
+            FOR UPDATE
+    </select>
+
+    <select id="countEquivalentScheduleExcludingId"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM auto_transfer_schedule
+        WHERE auto_transfer_schedule_id != #{scheduleId}
+          AND member_id = #{memberId}
+          AND child_id = #{childId}
+          AND source_account_id = #{sourceAccountId}
+          AND destination_account_id = #{destinationAccountId}
+          AND amount = #{amount}
+          AND frequency = #{frequency}
+          AND transfer_day = #{transferDay}
+          AND start_date = #{startDate}
+          AND end_date <![CDATA[<=>]]> #{endDate}
+          AND status IN ('ACTIVE', 'PAUSED')
+    </select>
+
+    <update id="updateSchedule">
+        UPDATE auto_transfer_schedule
+        SET amount = #{amount},
+            transfer_day = #{transferDay},
+            end_date = #{endDate},
+            next_transfer_at = #{nextTransferAt},
+            status = #{status},
+            updated_at = #{updatedAt}
+        WHERE auto_transfer_schedule_id = #{scheduleId}
+    </update>
+
+    <update id="cancelSchedule">
+        UPDATE auto_transfer_schedule
+        SET status = 'CANCELED',
+            next_transfer_at = NULL,
+            updated_at = #{updatedAt}
+        WHERE auto_transfer_schedule_id = #{scheduleId}
+          AND status IN ('ACTIVE', 'PAUSED')
+    </update>
+</mapper>

@@ -332,6 +332,30 @@ public enum ErrorCode {
             HttpStatus.BAD_GATEWAY,
             "이체 처리 중 오류가 발생했습니다."
     ),
+    DUPLICATE_AUTO_TRANSFER_SCHEDULE(
+            HttpStatus.CONFLICT,
+            "동일한 자동이체 일정이 이미 존재합니다."
+    ),
+    INVALID_AUTO_TRANSFER_SCHEDULE(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "자동이체 일정의 날짜·금액·계좌 또는 목표 조건이 올바르지 않습니다."
+    ),
+    AUTO_TRANSFER_SCHEDULE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "자동이체 일정을 찾을 수 없습니다."
+    ),
+    AUTO_TRANSFER_SCHEDULE_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 자동이체 일정을 변경할 권한이 없습니다."
+    ),
+    INVALID_AUTO_TRANSFER_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "현재 상태에서는 요청한 자동이체 상태 변경을 수행할 수 없습니다."
+    ),
+    AUTO_TRANSFER_RETRY_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "재시도할 수 있는 실패 자동이체 회차가 없습니다."
+    ),
 
     // Notification
     NOTIFICATION_NOT_FOUND(
