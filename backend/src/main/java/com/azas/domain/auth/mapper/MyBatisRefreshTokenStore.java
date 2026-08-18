@@ -10,7 +10,8 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class MyBatisRefreshTokenStore implements RefreshTokenStore {
+public class MyBatisRefreshTokenStore
+        implements RefreshTokenStore {
 
     private final RefreshTokenMapper refreshTokenMapper;
 
@@ -24,7 +25,9 @@ public class MyBatisRefreshTokenStore implements RefreshTokenStore {
             String tokenHash
     ) {
         return Optional.ofNullable(
-                refreshTokenMapper.findByTokenHash(tokenHash)
+                refreshTokenMapper.findByTokenHash(
+                        tokenHash
+                )
         );
     }
 
@@ -37,5 +40,17 @@ public class MyBatisRefreshTokenStore implements RefreshTokenStore {
                 tokenHash,
                 revokedAt
         ) == 1;
+    }
+
+    @Override
+    public int revokeAllActiveByMemberId(
+            long memberId,
+            LocalDateTime revokedAt
+    ) {
+        return refreshTokenMapper
+                .revokeAllActiveByMemberId(
+                        memberId,
+                        revokedAt
+                );
     }
 }

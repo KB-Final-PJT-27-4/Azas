@@ -91,42 +91,6 @@ public class FamilyServiceImpl implements FamilyService {
         return response;
     }
 
-    @Override
-    @Transactional
-    public AllowanceRequestResponse requestAllowance(Long memberId, Long childId) {
-        validateChildMemberAccess(memberId, childId);
-
-        LocalDate requestMonth = LocalDate.now().withDayOfMonth(1);
-        LocalDate lastRequestMonth =
-                familyMapper.findLastAllowanceRequestMonth(childId);
-
-        if (requestMonth.equals(lastRequestMonth)) {
-            throw new BusinessException(
-                    ErrorCode.ALLOWANCE_REQUEST_ALREADY_EXISTS
-            );
-        }
-
-        int updatedCount = familyMapper.updateAllowanceRequest(
-                childId,
-                requestMonth
-        );
-
-        if (updatedCount == 0) {
-            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
-        }
-
-        BigDecimal childAvailableAmount =
-                familyMapper.findChildAvailableAmount(childId);
-
-        return new AllowanceRequestResponse(
-                childId,
-                true,
-                requestMonth,
-                LocalDateTime.now(),
-                childAvailableAmount,
-                "용돈 요청이 등록되었습니다."
-        );
-    }
 
     @Override
     @Transactional
@@ -393,11 +357,6 @@ public class FamilyServiceImpl implements FamilyService {
         }
     }
 
-    private void validateChildMemberAccess(Long memberId, Long childId) {
-        if (familyMapper.countChildMemberAccess(childId, memberId) == 0) {
-            throw new BusinessException(ErrorCode.CHILD_ACCESS_DENIED);
-        }
-    }
 
     private boolean isInvitationUsable(
             FamilyInvitationStatus status,

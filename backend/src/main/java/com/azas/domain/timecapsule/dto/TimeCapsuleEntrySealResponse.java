@@ -23,7 +23,6 @@ public class TimeCapsuleEntrySealResponse {
         this.sealedAt = entry.getSealedAt();
     }
 
-    // [JMG] CAPSULE-15 봉인된 엔트리 엔티티를 프런트엔드 봉인 결과 응답으로 변환한다.
     public static TimeCapsuleEntrySealResponse from(TimeCapsuleEntry entry) {
         return new TimeCapsuleEntrySealResponse(entry);
     }

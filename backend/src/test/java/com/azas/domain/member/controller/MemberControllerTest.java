@@ -3,8 +3,11 @@ package com.azas.domain.member.controller;
 import com.azas.domain.auth.entity.OAuthProvider;
 import com.azas.domain.auth.entity.SocialAccount;
 import com.azas.domain.member.dto.MemberProfileResult;
+import com.azas.domain.member.dto.MemberProfileUpdateCommand;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.service.MemberProfileService;
+import com.azas.domain.member.service.MemberProfileUpdateService;
+import com.azas.domain.member.service.MemberWithdrawalService;
 import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
@@ -15,6 +18,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,10 +30,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -40,7 +45,14 @@ class MemberControllerTest {
     private MemberProfileService memberProfileService;
 
     @Mock
+    private MemberProfileUpdateService memberProfileUpdateService;
+
+    @Mock
     private AccessTokenMemberResolver accessTokenMemberResolver;
+
+    @Mock
+    private MemberWithdrawalService
+            memberWithdrawalService;
 
     @InjectMocks
     private MemberController memberController;
@@ -117,7 +129,8 @@ class MemberControllerTest {
                 .thenReturn(
                         new MemberProfileResult(
                                 member,
-                                List.of(socialAccount)
+                                List.of(socialAccount),
+                                null
                         )
                 );
 
@@ -182,5 +195,200 @@ class MemberControllerTest {
                 );
 
         verifyNoInteractions(memberProfileService);
+    }
+
+    @Test
+    void updatesCurrentMemberProfile()
+            throws Exception {
+        Member member = Member.createParent(
+                "parent@example.com",
+                "김하나",
+                "https://example.com/new-profile.png"
+        );
+
+        ReflectionTestUtils.setField(
+                member,
+                "memberId",
+                1L
+        );
+        ReflectionTestUtils.setField(
+                member,
+                "birthDate",
+                java.time.LocalDate.of(
+                        1992,
+                        4,
+                        15
+                )
+        );
+
+        when(
+                accessTokenMemberResolver.resolveMemberId(
+                        "Bearer access-token"
+                )
+        ).thenReturn(1L);
+
+        when(memberProfileService.getMyProfile(1L))
+                .thenReturn(
+                        new MemberProfileResult(
+                                member,
+                                List.of(),
+                                "010-****-5678"
+                        )
+                );
+
+        mockMvc.perform(
+                        patch("/api/v1/members/me")
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .contentType(
+                                        org.springframework.http
+                                                .MediaType
+                                                .APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                        {
+                                          "birth_date": "1992-04-15",
+                                          "profile_image_url":
+                                            "https://example.com/new-profile.png",
+                                          "phone_verification_token":
+                                            "verification-token"
+                                        }
+                                        """
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.birth_date")
+                                .value("1992-04-15")
+                )
+                .andExpect(
+                        jsonPath("$.profile_image_url")
+                                .value(
+                                        "https://example.com/new-profile.png"
+                                )
+                )
+                .andExpect(
+                        jsonPath("$.phone_number")
+                                .value("010-****-5678")
+                );
+
+        ArgumentCaptor<MemberProfileUpdateCommand> captor =
+                ArgumentCaptor.forClass(
+                        MemberProfileUpdateCommand.class
+                );
+
+        verify(memberProfileUpdateService)
+                .updateMyProfile(
+                        eq(1L),
+                        captor.capture()
+                );
+
+        MemberProfileUpdateCommand command =
+                captor.getValue();
+
+        assertTrue(command.isBirthDateProvided());
+        assertEquals(
+                java.time.LocalDate.of(1992, 4, 15),
+                command.getBirthDate()
+        );
+        assertTrue(
+                command.isPhoneVerificationTokenProvided()
+        );
+        assertEquals(
+                "verification-token",
+                command.getPhoneVerificationToken()
+        );
+
+        verify(memberProfileService)
+                .getMyProfile(1L);
+    }
+
+    @Test
+    void withdrawsCurrentMember()
+            throws Exception {
+        when(
+                accessTokenMemberResolver.resolveMemberId(
+                        "Bearer access-token"
+                )
+        ).thenReturn(1L);
+
+        mockMvc.perform(
+                        delete("/api/v1/members/me")
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isNoContent());
+
+        verify(accessTokenMemberResolver)
+                .resolveMemberId(
+                        "Bearer access-token"
+                );
+        verify(memberWithdrawalService)
+                .withdrawMyMembership(1L);
+    }
+
+    @Test
+    void rejectsWithdrawalWithoutAccessToken()
+            throws Exception {
+        when(
+                accessTokenMemberResolver.resolveMemberId(
+                        null
+                )
+        ).thenThrow(
+                new BusinessException(
+                        ErrorCode.ACCESS_TOKEN_REQUIRED
+                )
+        );
+
+        mockMvc.perform(
+                        delete("/api/v1/members/me")
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(
+                        jsonPath("$.error.code")
+                                .value(
+                                        "ACCESS_TOKEN_REQUIRED"
+                                )
+                );
+
+        verifyNoInteractions(memberWithdrawalService);
+    }
+
+    @Test
+    void rejectsAlreadyWithdrawnMember()
+            throws Exception {
+        when(
+                accessTokenMemberResolver.resolveMemberId(
+                        "Bearer access-token"
+                )
+        ).thenReturn(1L);
+
+        doThrow(
+                new BusinessException(
+                        ErrorCode.WITHDRAWN_MEMBER
+                )
+        ).when(memberWithdrawalService)
+                .withdrawMyMembership(1L);
+
+        mockMvc.perform(
+                        delete("/api/v1/members/me")
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(
+                        jsonPath("$.error.code")
+                                .value("WITHDRAWN_MEMBER")
+                );
+
+        verify(memberWithdrawalService)
+                .withdrawMyMembership(1L);
     }
 }

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.finance.product.mapper.FinancialProductMapper">
+
+    <sql id="productColumns">
+        financial_product_id,
+        bank_name,
+        external_product_id,
+        product_type,
+        target_owner_type,
+        product_subtype,
+        name,
+        summary,
+        highlight_label,
+        display_badges_json,
+        curation_reason,
+        detail_url,
+        product_image_key,
+        base_interest_rate,
+        max_interest_rate,
+        interest_rate_reference,
+        min_age,
+        max_age,
+        min_monthly_amount,
+        max_monthly_amount,
+        contract_period_months,
+        min_contract_period_months,
+        max_contract_period_months,
+        renewal_description,
+        interest_payment_method,
+        join_termination_method,
+        eligibility_conditions_json,
+        deposit_conditions_json,
+        preferential_conditions_json,
+        additional_benefits_json,
+        cautions_json,
+        is_active AS active,
+        source_base_date,
+        updated_at
+    </sql>
+
+    <select id="countActiveChild" resultType="int">
+        SELECT COUNT(*)
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="countChildAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN child_parent cp ON cp.child_id = c.child_id
+        WHERE c.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="findActiveProductById"
+            resultType="com.azas.domain.finance.product.entity.FinancialProduct">
+        SELECT <include refid="productColumns"/>
+        FROM financial_product
+        WHERE financial_product_id = #{financialProductId}
+          AND is_active = 1
+    </select>
+
+    <select id="findActiveProducts"
+            resultType="com.azas.domain.finance.product.entity.FinancialProduct">
+        SELECT <include refid="productColumns"/>
+        FROM financial_product
+        WHERE is_active = 1
+        <if test="productType != null and productType != ''">
+            AND product_type = #{productType}
+        </if>
+        <if test="lastProductId != null">
+            AND financial_product_id &gt; #{lastProductId}
+        </if>
+        ORDER BY financial_product_id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countBookmark" resultType="int">
+        SELECT COUNT(*)
+        FROM financial_product_bookmark
+        WHERE member_id = #{memberId}
+          AND child_id = #{childId}
+          AND financial_product_id = #{financialProductId}
+    </select>
+
+    <insert id="insertBookmarkIfAbsent">
+        INSERT INTO financial_product_bookmark (
+            member_id,
+            child_id,
+            financial_product_id
+        ) VALUES (
+            #{memberId},
+            #{childId},
+            #{financialProductId}
+        ) ON DUPLICATE KEY UPDATE
+            financial_product_bookmark_id = financial_product_bookmark_id
+    </insert>
+
+    <delete id="deleteBookmark">
+        DELETE FROM financial_product_bookmark
+        WHERE member_id = #{memberId}
+          AND child_id = #{childId}
+          AND financial_product_id = #{financialProductId}
+    </delete>
+
+    <select id="countBookmarks" resultType="long">
+        SELECT COUNT(*)
+        FROM financial_product_bookmark b
+                 INNER JOIN financial_product p
+                            ON p.financial_product_id = b.financial_product_id
+        WHERE b.member_id = #{memberId}
+          AND b.child_id = #{childId}
+          AND p.is_active = 1
+          AND p.target_owner_type IN ('CHILD', 'BOTH')
+        <if test="productType != null and productType != ''">
+            AND p.product_type = #{productType}
+        </if>
+    </select>
+
+    <select id="findBookmarks"
+            resultType="com.azas.domain.finance.product.entity.FinancialProduct">
+        SELECT
+            b.financial_product_bookmark_id,
+            b.created_at AS bookmarked_at,
+            p.financial_product_id,
+            p.bank_name,
+            p.external_product_id,
+            p.product_type,
+            p.target_owner_type,
+            p.product_subtype,
+            p.name,
+            p.summary,
+            p.highlight_label,
+            p.display_badges_json,
+            p.curation_reason,
+            p.detail_url,
+            p.product_image_key,
+            p.base_interest_rate,
+            p.max_interest_rate,
+            p.interest_rate_reference,
+            p.min_age,
+            p.max_age,
+            p.min_monthly_amount,
+            p.max_monthly_amount,
+            p.contract_period_months,
+            p.min_contract_period_months,
+            p.max_contract_period_months,
+            p.renewal_description,
+            p.interest_payment_method,
+            p.join_termination_method,
+            p.eligibility_conditions_json,
+            p.deposit_conditions_json,
+            p.preferential_conditions_json,
+            p.additional_benefits_json,
+            p.cautions_json,
+            p.is_active AS active,
+            p.source_base_date,
+            p.updated_at
+        FROM financial_product_bookmark b
+                 INNER JOIN financial_product p
+                            ON p.financial_product_id = b.financial_product_id
+        WHERE b.member_id = #{memberId}
+          AND b.child_id = #{childId}
+          AND p.is_active = 1
+          AND p.target_owner_type IN ('CHILD', 'BOTH')
+        <if test="productType != null and productType != ''">
+            AND p.product_type = #{productType}
+        </if>
+        ORDER BY b.created_at DESC, b.financial_product_bookmark_id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

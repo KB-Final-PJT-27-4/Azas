@@ -20,6 +20,7 @@ public class MemberProfileService {
 
     private final MemberMapper memberMapper;
     private final SocialAccountMapper socialAccountMapper;
+    private final PhoneNumberProtector phoneNumberProtector;
 
     @Transactional(readOnly = true)
     public MemberProfileResult getMyProfile(
@@ -46,7 +47,35 @@ public class MemberProfileService {
 
         return new MemberProfileResult(
                 member,
-                socialAccounts
+                socialAccounts,
+                getMaskedPhoneNumber(member)
         );
+    }
+
+    private String getMaskedPhoneNumber(Member member) {
+        byte[] ciphertext =
+                member.getPhoneNumberCiphertext();
+
+        if (ciphertext == null) {
+            return null;
+        }
+
+        String phoneNumber =
+                phoneNumberProtector.decrypt(ciphertext);
+
+        return maskPhoneNumber(phoneNumber);
+    }
+
+    private String maskPhoneNumber(String phoneNumber) {
+        if (
+                phoneNumber == null
+                        || phoneNumber.length() != 11
+        ) {
+            return null;
+        }
+
+        return phoneNumber.substring(0, 3)
+                + "-****-"
+                + phoneNumber.substring(7);
     }
 }
