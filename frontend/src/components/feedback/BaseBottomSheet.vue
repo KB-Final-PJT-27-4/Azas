@@ -112,7 +112,7 @@ onBeforeUnmount(() => {
         >
           <section
             v-if="open"
-            class="w-full max-w-[var(--app-max-width)] rounded-t-[var(--radius-lg)] bg-[var(--color-surface)] px-[var(--space-5)] pt-3 pb-[calc(var(--space-5)+env(safe-area-inset-bottom))] text-[var(--color-text-secondary)] shadow-[0_-12px_36px_rgb(30_52_66_/_12%)]"
+            class="w-full max-w-[var(--app-max-width)] rounded-t-[28px] bg-[var(--color-surface)] px-[var(--space-5)] pt-3 pb-[calc(var(--space-5)+env(safe-area-inset-bottom))] text-[var(--color-text-secondary)] shadow-[0_-12px_36px_rgb(30_52_66_/_12%)]"
             :class="isDragging ? 'transition-none' : 'transition-transform duration-200 ease-out'"
             :style="panelStyle"
             role="dialog"
