@@ -11,7 +11,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Root',
-    redirect: '/login',
+    component: () => import('@/views/common/SplashView.vue'),
+    meta: { requiresAuth: false, hideNavigation: true },
   },
 
   // 인증
@@ -504,6 +505,19 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/menu/AllMenuView.vue'),
     meta: {
       requiresAuth: true,
+    },
+  },
+
+  // 용돈 미션 관리
+  {
+    path: '/missions',
+    name: 'ParentMissions',
+    component: () => import('@/views/missions/ParentMissionsView.vue'),
+    meta: {
+      requiresAuth: true,
+      headerTitle: '용돈 미션',
+      showHeaderBack: true,
+      showHeaderNotification: false,
     },
   },
 

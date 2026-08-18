@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+
 import splashCoinUrl from '@/assets/images/splash/splash-coin.png'
 import splashHeartUrl from '@/assets/images/splash/splash-heart.png'
 import splashPigUrl from '@/assets/images/splash/splash-pig.png'
 import splashPopUrl from '@/assets/images/splash/splash-pop.png'
-import { onBeforeUnmount, onMounted } from 'vue'
 
+const emit = defineEmits<{ finished: [] }>()
+const entered = ref(false)
+let finishTimer: ReturnType<typeof setTimeout> | undefined
+let enterTimer: ReturnType<typeof setTimeout> | undefined
 let previousHtmlOverflow = ''
 let previousBodyOverflow = ''
 
@@ -13,307 +18,102 @@ onMounted(() => {
   previousBodyOverflow = document.body.style.overflow
   document.documentElement.style.overflow = 'hidden'
   document.body.style.overflow = 'hidden'
+
+  enterTimer = setTimeout(() => (entered.value = true), 30)
+  finishTimer = setTimeout(() => emit('finished'), 2100)
 })
 
 onBeforeUnmount(() => {
+  if (enterTimer) clearTimeout(enterTimer)
+  if (finishTimer) clearTimeout(finishTimer)
   document.documentElement.style.overflow = previousHtmlOverflow
   document.body.style.overflow = previousBodyOverflow
 })
 </script>
 
 <template>
-  <div class="splash-screen" role="status" aria-label="깨비 서비스를 불러오는 중입니다">
-    <div class="splash-screen__glow" aria-hidden="true"></div>
+  <main
+    class="fixed inset-0 z-[1000] grid h-dvh min-w-80 place-items-center overflow-hidden bg-[linear-gradient(180deg,#eaf8ff_0%,#dff4ff_50%,#eefaff_100%)] text-[var(--color-text-primary)]"
+    role="status"
+    aria-label="우리 아이 자산관리 서비스를 불러오는 중입니다"
+  >
+    <div
+      class="absolute top-[8%] left-1/2 aspect-square w-[min(78vw,340px)] -translate-x-1/2 rounded-full bg-white/60 blur-[18px]"
+      aria-hidden="true"
+    ></div>
 
-    <div class="splash-screen__content">
-      <div class="splash-screen__visual" aria-hidden="true">
+    <div
+      class="relative grid w-[min(100%,var(--app-max-width))] justify-items-center px-[30px] pt-6 pb-[max(48px,env(safe-area-inset-bottom))] text-center"
+    >
+      <div
+        class="relative aspect-[1/0.93] w-[min(88vw,378px)] [@media(max-height:700px)]:w-[min(62vh,310px)]"
+        aria-hidden="true"
+      >
         <img
-          class="splash-screen__ornament splash-screen__ornament--coin"
+          class="absolute top-[8%] right-[1%] z-[3] w-[16%] object-contain drop-shadow-[0_8px_12px_rgb(216_169_24_/_18%)] transition-all delay-200 duration-500 ease-out motion-safe:animate-bounce motion-safe:[animation-duration:2.8s]"
+          :class="
+            entered ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-50 opacity-0'
+          "
           :src="splashCoinUrl"
           alt=""
         />
         <img
-          class="splash-screen__ornament splash-screen__ornament--heart"
+          class="absolute right-[2%] bottom-[5%] z-[3] w-[13%] object-contain drop-shadow-[0_8px_12px_rgb(216_169_24_/_18%)] transition-all delay-300 duration-500 ease-out motion-safe:animate-bounce motion-safe:[animation-duration:3.1s]"
+          :class="
+            entered ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-50 opacity-0'
+          "
           :src="splashHeartUrl"
           alt=""
         />
         <img
-          class="splash-screen__ornament splash-screen__ornament--pop"
+          class="absolute top-[40%] left-[1%] z-[3] w-[16%] object-contain drop-shadow-[0_8px_12px_rgb(216_169_24_/_18%)] transition-all delay-[400ms] duration-500 ease-out motion-safe:animate-bounce motion-safe:[animation-duration:2.6s]"
+          :class="
+            entered ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-50 opacity-0'
+          "
           :src="splashPopUrl"
           alt=""
         />
-        <img class="splash-screen__pig" :src="splashPigUrl" alt="" />
+        <img
+          class="absolute bottom-0 left-1/2 z-[2] w-[68%] -translate-x-1/2 object-contain drop-shadow-[0_18px_24px_rgb(235_123_155_/_18%)] transition-all duration-700 ease-out"
+          :class="
+            entered ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-7 scale-[.82] opacity-0'
+          "
+          :src="splashPigUrl"
+          alt=""
+        />
       </div>
 
-      <div class="splash-screen__copy">
-        <h1 aria-label="우리 아이 자산관리 서비스">
-          우리 <strong>아</strong>이 <strong>자</strong>산관리 서비<strong>스</strong>
+      <div
+        class="mt-[30px] w-[min(100%,340px)] transition-all delay-500 duration-500 [@media(max-height:700px)]:mt-4"
+        :class="entered ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'"
+      >
+        <h1 class="m-0 text-[28px] leading-[1.4] font-extrabold tracking-[-0.04em]">
+          우리
+          <strong
+            class="inline-block text-[35px] leading-none font-black text-[var(--color-brand-primary-pressed)] drop-shadow-[0_5px_16px_rgb(85_192_244_/_24%)] motion-safe:animate-bounce motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            >아</strong
+          >이
+          <strong
+            class="inline-block text-[35px] leading-none font-black text-[var(--color-brand-primary-pressed)] drop-shadow-[0_5px_16px_rgb(85_192_244_/_24%)] motion-safe:animate-bounce motion-safe:[animation-delay:130ms] motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            >자</strong
+          >산관리 서비<strong
+            class="inline-block text-[35px] leading-none font-black text-[var(--color-brand-primary-pressed)] drop-shadow-[0_5px_16px_rgb(85_192_244_/_24%)] motion-safe:animate-bounce motion-safe:[animation-delay:260ms] motion-safe:[animation-duration:1.1s] motion-safe:[animation-iteration-count:1]"
+            >스</strong
+          >
         </h1>
-        <span>아이의 오늘을 기록하고 내일의 자산을 키워요</span>
+        <p class="mt-2.5 mb-0 text-sm font-medium text-[var(--color-text-secondary)]">
+          아이의 오늘을 기록하고 내일의 자산을 키워요
+        </p>
+        <div
+          class="mx-auto mt-6 h-[5px] w-[min(54%,172px)] overflow-hidden rounded-full bg-white/85 shadow-[inset_0_0_0_1px_rgb(85_192_244_/_9%)]"
+          aria-hidden="true"
+        >
+          <span
+            class="block h-full origin-left rounded-[inherit] bg-[var(--color-brand-primary)] transition-transform delay-300 duration-[1650ms] ease-out motion-reduce:scale-x-100"
+            :class="entered ? 'scale-x-100' : 'scale-x-0'"
+          ></span>
+        </div>
       </div>
     </div>
-  </div>
+  </main>
 </template>
-
-<style scoped>
-.splash-screen {
-  position: fixed;
-  z-index: 1000;
-  inset: 0;
-  display: grid;
-  min-width: 320px;
-  width: 100%;
-  height: 100dvh;
-  place-items: center;
-  overflow: hidden;
-  background: linear-gradient(180deg, #eaf8ff 0%, #dff4ff 50%, #eefaff 100%);
-  color: var(--color-text-primary);
-}
-
-.splash-screen__glow {
-  position: absolute;
-  top: 8%;
-  left: 50%;
-  width: min(78vw, 340px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 62%);
-  filter: blur(18px);
-  transform: translateX(-50%);
-}
-
-.splash-screen__content {
-  position: relative;
-  display: grid;
-  width: min(100%, var(--app-max-width));
-  justify-items: center;
-  padding: 24px 30px max(48px, env(safe-area-inset-bottom));
-  text-align: center;
-}
-
-.splash-screen__visual {
-  position: relative;
-  width: min(88vw, 378px);
-  aspect-ratio: 1 / 0.93;
-}
-
-.splash-screen__pig {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  bottom: 0;
-  width: 68%;
-  height: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 18px 24px rgb(235 123 155 / 18%));
-  animation: splash-pig-in 720ms cubic-bezier(0.2, 0.85, 0.32, 1.15) both;
-}
-
-.splash-screen__ornament {
-  position: absolute;
-  z-index: 3;
-  display: block;
-  height: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 8px 12px rgb(216 169 24 / 18%));
-}
-
-.splash-screen__ornament--coin {
-  top: 8%;
-  right: 1%;
-  width: 16%;
-  animation:
-    splash-float-in 620ms 260ms ease-out both,
-    splash-float 2.8s 900ms ease-in-out infinite;
-}
-
-.splash-screen__ornament--heart {
-  right: 2%;
-  bottom: 5%;
-  width: 13%;
-  animation:
-    splash-float-in 620ms 400ms ease-out both,
-    splash-float 3.1s 1s ease-in-out infinite reverse;
-}
-
-.splash-screen__ornament--pop {
-  top: 40%;
-  left: 1%;
-  width: 16%;
-  animation:
-    splash-float-in 620ms 520ms ease-out both,
-    splash-float 2.6s 1.15s ease-in-out infinite;
-}
-
-.splash-screen__copy {
-  position: relative;
-  z-index: 4;
-  width: min(100%, 340px);
-  margin-top: 30px;
-  animation: splash-copy-in 520ms 520ms ease-out both;
-}
-
-.splash-screen__copy h1 {
-  margin: 0;
-  color: var(--color-text-primary);
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.4;
-  letter-spacing: -0.04em;
-}
-
-.splash-screen__copy h1 strong {
-  display: inline-block;
-  color: var(--color-brand-primary-pressed);
-  font-size: 35px;
-  font-weight: 900;
-  line-height: 1;
-  text-shadow: 0 5px 16px rgb(85 192 244 / 24%);
-  animation: splash-letter-pop 480ms cubic-bezier(0.2, 0.9, 0.35, 1.3) both;
-}
-
-.splash-screen__copy h1 strong:nth-of-type(1) {
-  animation-delay: 650ms;
-}
-
-.splash-screen__copy h1 strong:nth-of-type(2) {
-  animation-delay: 780ms;
-}
-
-.splash-screen__copy h1 strong:nth-of-type(3) {
-  animation-delay: 910ms;
-}
-
-.splash-screen__copy span {
-  display: block;
-  margin-top: 10px;
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.splash-screen__loading {
-  width: min(54%, 172px);
-  height: 5px;
-  margin: 24px auto 0;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 86%);
-  box-shadow: inset 0 0 0 1px rgb(85 192 244 / 9%);
-}
-
-.splash-screen__loading span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  border-radius: inherit;
-  background: var(--color-brand-primary);
-  transform: scaleX(0);
-  transform-origin: left center;
-  animation: splash-loading 1.65s 320ms cubic-bezier(0.22, 0.7, 0.28, 1) both;
-}
-
-@keyframes splash-pig-in {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(28px) scale(0.82) rotate(-3deg);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1) rotate(0);
-  }
-}
-
-@keyframes splash-float-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.55) rotate(-12deg);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(0);
-  }
-}
-
-@keyframes splash-float {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-2deg);
-  }
-
-  50% {
-    transform: translateY(-8px) rotate(3deg);
-  }
-}
-
-@keyframes splash-copy-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes splash-letter-pop {
-  0% {
-    color: var(--color-text-primary);
-    opacity: 0;
-    transform: translateY(8px) scale(0.55) rotate(-8deg);
-  }
-
-  70% {
-    transform: translateY(-3px) scale(1.14) rotate(3deg);
-  }
-
-  100% {
-    color: var(--color-brand-primary-pressed);
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(0);
-  }
-}
-
-@keyframes splash-loading {
-  0% {
-    transform: scaleX(0);
-  }
-
-  72% {
-    transform: scaleX(0.78);
-  }
-
-  100% {
-    transform: scaleX(1);
-  }
-}
-
-@media (max-height: 700px) {
-  .splash-screen__visual {
-    width: min(62vh, 310px);
-  }
-
-  .splash-screen__copy {
-    margin-top: 16px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .splash-screen__pig,
-  .splash-screen__ornament,
-  .splash-screen__copy,
-  .splash-screen__copy h1 strong,
-  .splash-screen__loading span {
-    animation: none;
-  }
-
-  .splash-screen__loading span {
-    transform: scaleX(1);
-  }
-}
-</style>
