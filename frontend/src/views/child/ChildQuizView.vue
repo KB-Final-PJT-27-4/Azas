@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import confetti from 'canvas-confetti'
 import { Check, X } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
+import completeStarUrl from '@/assets/images/accounts/complete-star.png'
 import childQuizCorrectPigUrl from '@/assets/images/child/child-quiz-correct-pig.png'
 import childQuizThinkingPigUrl from '@/assets/images/child/child-quiz-thinking-pig.png'
 import childQuizWrongPigUrl from '@/assets/images/child/child-quiz-wrong-pig.png'
-import checklistTrophyUrl from '@/assets/images/checklists/trophy.png'
+import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-pig.png'
 import { childQuizQuestions } from '@/mocks/childFinanceFlow'
 
 const quizIndex = ref(0)
@@ -83,17 +83,6 @@ const getStepClass = (stepIndex: number) => {
   return 'quiz-step--pending'
 }
 
-const runCompleteConfetti = () => {
-  confetti({ particleCount: 90, spread: 72, origin: { y: 0.54 } })
-  confetti({ particleCount: 45, angle: 60, spread: 58, origin: { x: 0.16, y: 0.68 } })
-  confetti({ particleCount: 45, angle: 120, spread: 58, origin: { x: 0.84, y: 0.68 } })
-}
-
-watch(isQuizComplete, (complete) => {
-  if (complete) {
-    runCompleteConfetti()
-  }
-})
 </script>
 
 <template>
@@ -103,12 +92,23 @@ watch(isQuizComplete, (complete) => {
       class="grid min-h-[calc(100dvh-var(--app-header-height)-104px)] content-center justify-items-center text-center"
       aria-label="오늘의 퀴즈 완료"
     >
-      <img
-        class="mb-8 w-[240px] max-w-[72vw] select-none object-contain"
-        :src="checklistTrophyUrl"
-        alt=""
-        aria-hidden="true"
-      />
+      <div class="quiz-complete-scene mb-8" aria-hidden="true">
+        <img
+          class="quiz-complete-star quiz-complete-star--left"
+          :src="completeStarUrl"
+          alt=""
+        />
+        <img
+          class="quiz-complete-star quiz-complete-star--right"
+          :src="completeStarUrl"
+          alt=""
+        />
+        <img
+          class="quiz-complete-pig select-none object-contain"
+          :src="childQuizCompletePigUrl"
+          alt=""
+        />
+      </div>
       <h1 class="m-0 text-[26px] font-bold text-[var(--color-text-primary)]">
         오늘의 퀴즈 완료!
       </h1>
@@ -229,6 +229,71 @@ watch(isQuizComplete, (complete) => {
 </template>
 
 <style scoped>
+.quiz-complete-scene {
+  position: relative;
+  width: 240px;
+  max-width: 72vw;
+  aspect-ratio: 1 / 1;
+}
+
+.quiz-complete-pig {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.quiz-complete-star {
+  position: absolute;
+  z-index: 2;
+  width: 38px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.quiz-complete-star--left {
+  top: auto;
+  bottom: 18%;
+  left: 1%;
+  rotate: -10deg;
+}
+
+.quiz-complete-star--right {
+  top: 14%;
+  right: -3%;
+  bottom: auto;
+  width: 31px;
+  rotate: 12deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .quiz-complete-pig {
+    animation: quiz-complete-arrive 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .quiz-complete-star {
+    animation: quiz-complete-star-twinkle 2.2s ease-in-out 520ms infinite;
+  }
+
+  .quiz-complete-star--right {
+    animation-delay: 1.05s;
+    animation-duration: 2.55s;
+  }
+}
+
+@keyframes quiz-complete-arrive {
+  0% { opacity: 0; transform: translateY(12px) scale(0.82); }
+  68% { opacity: 1; transform: translateY(-2px) scale(1.04); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes quiz-complete-star-twinkle {
+  0%,
+  100% { opacity: 0.58; transform: translateY(2px) scale(0.88); }
+  50% { opacity: 1; transform: translateY(-4px) scale(1.08); }
+}
+
 .quiz-step {
   position: relative;
   display: grid;
