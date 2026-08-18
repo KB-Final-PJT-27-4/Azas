@@ -2,6 +2,8 @@ package com.azas.domain.finance.goal.mapper;
 
 import com.azas.domain.finance.goal.dto.FinancialGoalAccountTargetRow;
 import com.azas.domain.finance.goal.dto.FinancialGoalCheckpointInsertCommand;
+import com.azas.domain.finance.goal.dto.FinancialGoalCheckpointRow;
+import com.azas.domain.finance.goal.dto.FinancialGoalDetailRow;
 import com.azas.domain.finance.goal.dto.FinancialGoalInsertCommand;
 import com.azas.domain.finance.goal.dto.FinancialGoalListRow;
 import org.apache.ibatis.annotations.Mapper;
@@ -13,6 +15,15 @@ import java.util.List;
 
 @Mapper
 public interface FinancialGoalMapper {
+
+    List<FinancialGoalDetailRow> findAccessibleGoalDetailWithAccounts(
+            @Param("financialGoalId") long financialGoalId,
+            @Param("memberId") long memberId
+    );
+
+    List<FinancialGoalCheckpointRow> findGoalCheckpoints(
+            @Param("financialGoalId") long financialGoalId
+    );
 
     List<FinancialGoalListRow> findActiveAndAchievedGoalsWithAccounts(
             @Param("childId") long childId
