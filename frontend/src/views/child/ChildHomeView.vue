@@ -64,7 +64,7 @@ const remainingLimit = computed(() =>
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#FAFAF8] px-[18px] pt-3 pb-[112px]">
+  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-[18px] pt-3 pb-[112px]">
     <section
       class="relative overflow-hidden rounded-[26px] border border-[#dceef6] bg-[#eaf8ff] px-5 pt-5 pb-5 shadow-[0_10px_30px_rgba(54,112,139,0.08)]"
       aria-label="아이 자산 요약"
@@ -74,18 +74,24 @@ const remainingLimit = computed(() =>
           {{ childAccountSummary.childName }}의 사용 가능 금액
         </p>
         <div class="mt-2 flex items-end gap-1">
-          <strong class="text-[32px] leading-none font-extrabold tracking-[-0.035em] text-[var(--color-text-primary)]">
+          <strong
+            class="text-[32px] leading-none font-extrabold tracking-[-0.035em] text-[var(--color-text-primary)]"
+          >
             {{ formatNumber(childAccountSummary.balance) }}
           </strong>
-          <span class="pb-0.5 text-[18px] leading-none font-bold text-[var(--color-text-primary)]">원</span>
+          <span class="pb-0.5 text-[18px] leading-none font-bold text-[var(--color-text-primary)]"
+            >원</span
+          >
         </div>
-        <span class="mt-3 inline-flex rounded-full bg-white/85 px-3 py-1.5 text-[12px] font-bold text-[var(--color-selected-text)]">
+        <span
+          class="mt-3 inline-flex rounded-full bg-white/85 px-3 py-1.5 text-[12px] font-bold text-[var(--color-selected-text)]"
+        >
           {{ childAccountSummary.accountName }}
         </span>
       </div>
 
       <img
-        class="pointer-events-none absolute top-2 right-0 w-[152px] translate-x-4 select-none object-contain"
+        class="pointer-events-none absolute top-[47px] right-6 z-[2] w-[165px] select-none object-contain drop-shadow-[0_10px_18px_rgba(255,154,181,0.18)]"
         :src="childHomePigUrl"
         alt=""
         aria-hidden="true"
@@ -97,7 +103,9 @@ const remainingLimit = computed(() =>
             <p class="m-0 text-[12px] text-[var(--color-text-secondary)]">이번 달 사용</p>
             <strong class="mt-0.5 block text-[15px] text-[var(--color-text-primary)]">
               {{ formatCurrency(childAccountSummary.monthlySpent) }}
-              <span class="font-medium text-[var(--color-text-secondary)]">/ {{ formatCurrency(childAccountSummary.monthlyLimit) }}</span>
+              <span class="font-medium text-[var(--color-text-secondary)]"
+                >/ {{ formatCurrency(childAccountSummary.monthlyLimit) }}</span
+              >
             </strong>
           </div>
           <span class="shrink-0 text-[12px] font-bold text-[var(--color-selected-text)]">
@@ -132,8 +140,14 @@ const remainingLimit = computed(() =>
             <component :is="action.icon" :size="22" :stroke-width="2.4" />
           </div>
           <div class="min-w-0">
-            <strong class="block truncate text-[15px] leading-snug font-bold text-[var(--color-text-primary)]">{{ action.title }}</strong>
-            <span class="mt-1 block truncate text-[13px] leading-snug text-[var(--color-text-secondary)]">{{ action.description }}</span>
+            <strong
+              class="block truncate text-[15px] leading-snug font-bold text-[var(--color-text-primary)]"
+              >{{ action.title }}</strong
+            >
+            <span
+              class="mt-1 block truncate text-[13px] leading-snug text-[var(--color-text-secondary)]"
+              >{{ action.description }}</span
+            >
           </div>
           <ChevronRight :size="19" :stroke-width="2.4" class="text-[#9caab4]" aria-hidden="true" />
         </RouterLink>
@@ -162,25 +176,39 @@ const remainingLimit = computed(() =>
           v-for="mission in visibleMissions"
           :key="mission.id"
           class="home-mission-ticket"
-          :class="mission.status === 'completed' ? 'home-mission-ticket--completed' : 'home-mission-ticket--active'"
+          :class="
+            mission.status === 'completed'
+              ? 'home-mission-ticket--completed'
+              : 'home-mission-ticket--active'
+          "
         >
           <div class="home-mission-ticket__content">
             <div
               class="grid size-10 place-items-center rounded-[12px]"
-              :class="mission.status === 'completed' ? 'bg-[#e4e8ec] text-[#8b98a4]' : mission.iconClass"
+              :class="
+                mission.status === 'completed' ? 'bg-[#e4e8ec] text-[#8b98a4]' : mission.iconClass
+              "
             >
               <component :is="mission.icon" :size="20" :stroke-width="2.4" aria-hidden="true" />
             </div>
             <div class="min-w-0">
               <strong
                 class="block truncate text-[16px] font-bold"
-                :class="mission.status === 'completed' ? 'text-[#7d8790]' : 'text-[var(--color-text-primary)]'"
+                :class="
+                  mission.status === 'completed'
+                    ? 'text-[#7d8790]'
+                    : 'text-[var(--color-text-primary)]'
+                "
               >
                 {{ mission.title }}
               </strong>
               <span
-                class="mt-1 block truncate text-[14px]"
-                :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-text-secondary)]'"
+                class="mt-1 block truncate text-[13px]"
+                :class="
+                  mission.status === 'completed'
+                    ? 'text-[#9aa4ad]'
+                    : 'text-[var(--color-text-secondary)]'
+                "
               >
                 {{ mission.description }}
               </span>
@@ -190,7 +218,11 @@ const remainingLimit = computed(() =>
           <div class="home-mission-ticket__reward">
             <strong
               class="text-[17px] leading-tight font-extrabold"
-              :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-brand-primary)]'"
+              :class="
+                mission.status === 'completed'
+                  ? 'text-[#9aa4ad]'
+                  : 'text-[var(--color-brand-primary)]'
+              "
             >
               {{ formatCurrency(mission.reward) }}
             </strong>
@@ -214,9 +246,7 @@ const remainingLimit = computed(() =>
       aria-label="오늘의 금융 퀴즈"
     >
       <div>
-        <h2 class="m-0 text-[18px] font-bold text-[var(--color-text-primary)]">
-          오늘의 퀴즈
-        </h2>
+        <h2 class="m-0 text-[18px] font-bold text-[var(--color-text-primary)]">오늘의 퀴즈</h2>
         <p class="mt-1 mb-0 text-[15px] text-[var(--color-text-secondary)]">
           돈을 불리려면 무엇이 필요할까요?
         </p>
@@ -266,18 +296,23 @@ const remainingLimit = computed(() =>
 
 .home-mission-ticket__reward::before {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 12px;
+  bottom: 12px;
   left: 0;
-  width: 2px;
+  width: 1px;
   content: '';
-  background-image: repeating-linear-gradient(
-    to bottom,
-    #8f9dab 0,
-    #8f9dab 10px,
-    transparent 10px,
-    transparent 18px
-  );
+  border-left: 1px dashed #cfd9df;
+}
+
+.home-mission-ticket__reward::after {
+  position: absolute;
+  top: 8px;
+  left: -5px;
+  color: #bdc8cf;
+  font-size: 9px;
+  line-height: 1;
+  transform: rotate(90deg);
+  content: '✂';
 }
 
 .home-mission-ticket--completed {

@@ -17,6 +17,8 @@ const navItems = [
 
 const currentPath = computed(() => route.path)
 const showQuickAction = computed(() => currentPath.value !== '/child/quiz')
+const isActiveNavItem = (matchPaths: string[]) =>
+  matchPaths.some((path) => route.path === path || route.path.startsWith(`${path}/`))
 
 watch(showQuickAction, (show) => {
   if (!show) {
@@ -33,8 +35,8 @@ watch(showQuickAction, (show) => {
     <RouterLink
       v-for="item in navItems"
       :key="item.label"
-      class="grid min-w-0 place-items-center gap-[3px] text-[11px] leading-none font-medium whitespace-nowrap !text-[var(--color-unselected-text)] no-underline"
-      :class="item.match.includes(currentPath) ? 'font-semibold !text-[var(--color-selected-text)]' : ''"
+      class="grid min-w-0 place-items-center gap-[3px] text-[11px] leading-none font-medium whitespace-nowrap !text-[var(--color-unselected-text)] no-underline [&.bottom-nav-item--active]:font-semibold [&.bottom-nav-item--active]:!text-[var(--color-selected-text)] [&.router-link-active]:font-semibold [&.router-link-active]:!text-[var(--color-selected-text)]"
+      :class="{ 'bottom-nav-item--active': isActiveNavItem(item.match) }"
       :to="item.to"
     >
       <component :is="item.icon" class="block" :size="22" :stroke-width="2.5" />
