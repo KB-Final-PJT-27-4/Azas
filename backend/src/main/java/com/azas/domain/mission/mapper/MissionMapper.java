@@ -1,11 +1,8 @@
 package com.azas.domain.mission.mapper;
 
-import com.azas.domain.mission.dto.MissionInsertCommand;
-import com.azas.domain.mission.dto.MissionListRow;
+import com.azas.domain.mission.dto.*;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import com.azas.domain.mission.dto.MissionListQuery;
-import com.azas.domain.mission.dto.MissionSummaryRow;
 
 import java.util.List;
 import java.math.BigDecimal;
@@ -45,6 +42,9 @@ public interface MissionMapper {
 
     MissionSummaryRow findMissionSummary(
             @Param("childId") Long childId
+    );
+    MissionDetailRow findMissionDetail(
+            @Param("missionId") Long missionId
     );
 
 }

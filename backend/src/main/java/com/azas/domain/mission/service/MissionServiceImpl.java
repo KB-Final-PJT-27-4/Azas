@@ -280,4 +280,39 @@ public class MissionServiceImpl implements MissionService {
 
         return value;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MissionDetailResponse getMissionDetail(
+            Long memberId,
+            Long missionId
+    ) {
+        if (missionId == null || missionId <= 0) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_QUERY_PARAMETER
+            );
+        }
+
+        MissionDetailRow row =
+                missionMapper.findMissionDetail(
+                        missionId
+                );
+
+        if (row == null) {
+            throw new BusinessException(
+                    ErrorCode.MISSION_NOT_FOUND
+            );
+        }
+
+        if (missionMapper.countMissionAccess(
+                memberId,
+                row.getChildId()
+        ) <= 0) {
+            throw new BusinessException(
+                    ErrorCode.MISSION_ACCESS_DENIED
+            );
+        }
+
+        return MissionDetailResponse.from(row);
+    }
 }

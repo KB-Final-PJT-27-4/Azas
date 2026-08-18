@@ -3,6 +3,8 @@ package com.azas.domain.mission.controller;
 import com.azas.domain.mission.dto.MissionCreateResponse;
 import com.azas.domain.mission.entity.MissionStatus;
 import com.azas.domain.mission.service.MissionService;
+
+import com.azas.domain.mission.dto.MissionDetailResponse;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import com.azas.global.exception.GlobalExceptionHandler;
@@ -29,6 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 class MissionControllerTest {
 
@@ -259,4 +262,109 @@ class MissionControllerTest {
                 .andExpect(jsonPath("$.error.code")
                         .value("PARENT_ACCESS_REQUIRED"));
     }
+
+    // 상세 조회 성공 테스트
+    @Test
+    void 부모가_미션_상세를_조회한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        given(missionService.getMissionDetail(
+                7L,
+                13L
+        )).willReturn(
+                new MissionDetailResponse(
+                        13L,
+                        6L,
+                        "소비 계획 지키기",
+                        "이번 주 계획한 소비 지키기",
+                        new BigDecimal("2000"),
+                        MissionStatus.SUBMITTED,
+                        Instant.parse(
+                                "2026-08-18T01:00:00Z"
+                        ),
+                        Instant.parse(
+                                "2026-08-18T02:00:00Z"
+                        )
+                )
+        );
+
+        mockMvc.perform(
+                        get(
+                                "/api/v1/missions/{mission_id}",
+                                13L
+                        )
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.mission_id"
+                ).value(13))
+                .andExpect(jsonPath(
+                        "$.child_id"
+                ).value(6))
+                .andExpect(jsonPath(
+                        "$.title"
+                ).value("소비 계획 지키기"))
+                .andExpect(jsonPath(
+                        "$.description"
+                ).value("이번 주 계획한 소비 지키기"))
+                .andExpect(jsonPath(
+                        "$.reward_amount"
+                ).value(2000))
+                .andExpect(jsonPath(
+                        "$.status"
+                ).value("SUBMITTED"))
+                .andExpect(jsonPath(
+                        "$.created_at"
+                ).value("2026-08-18T01:00:00Z"))
+                .andExpect(jsonPath(
+                        "$.updated_at"
+                ).value("2026-08-18T02:00:00Z"));
+
+        verify(missionService).getMissionDetail(
+                7L,
+                13L
+        );
+    }
+
+    // 미션 없음 테스트
+    @Test
+    void 존재하지_않는_미션은_404를_반환한다()
+            throws Exception {
+        given(memberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        given(missionService.getMissionDetail(
+                7L,
+                999L
+        )).willThrow(
+                new BusinessException(
+                        ErrorCode.MISSION_NOT_FOUND
+                )
+        );
+
+        mockMvc.perform(
+                        get(
+                                "/api/v1/missions/{mission_id}",
+                                999L
+                        )
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        "Bearer access-token"
+                                )
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath(
+                        "$.error.code"
+                ).value("MISSION_NOT_FOUND"));
+    }
+
+
 }

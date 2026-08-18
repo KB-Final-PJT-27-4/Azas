@@ -480,4 +480,120 @@ class MissionServiceImplTest {
         );
     }
 
+
+    // 미션 상세 조회 성공테스트
+    @Test
+    void 연결된_부모가_미션_상세를_조회한다() {
+        MissionDetailRow row =
+                missionDetailRow();
+
+        when(missionMapper.findMissionDetail(13L))
+                .thenReturn(row);
+
+        when(missionMapper.countMissionAccess(
+                7L,
+                6L
+        )).thenReturn(1);
+
+        var response =
+                missionService.getMissionDetail(
+                        7L,
+                        13L
+                );
+
+        assertEquals(
+                13L,
+                response.getMissionId()
+        );
+        assertEquals(
+                6L,
+                response.getChildId()
+        );
+        assertEquals(
+                "소비 계획 지키기",
+                response.getTitle()
+        );
+        assertEquals(
+                "이번 주 계획한 소비 지키기",
+                response.getDescription()
+        );
+        assertEquals(
+                new BigDecimal("2000"),
+                response.getRewardAmount()
+        );
+        assertEquals(
+                MissionStatus.SUBMITTED,
+                response.getStatus()
+        );
+        assertEquals(
+                Instant.parse(
+                        "2026-08-18T01:00:00Z"
+                ),
+                response.getCreatedAt()
+        );
+        assertEquals(
+                Instant.parse(
+                        "2026-08-18T02:00:00Z"
+                ),
+                response.getUpdatedAt()
+        );
+    }
+
+    // 미션 상세 조회 미션 없음 테스트
+    @Test
+    void 존재하지_않는_미션_상세는_조회할_수_없다() {
+        when(missionMapper.findMissionDetail(999L))
+                .thenReturn(null);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> missionService
+                                .getMissionDetail(
+                                        7L,
+                                        999L
+                                )
+                );
+
+        assertEquals(
+                ErrorCode.MISSION_NOT_FOUND,
+                exception.getErrorCode()
+        );
+
+        verify(missionMapper, never())
+                .countMissionAccess(
+                        anyLong(),
+                        anyLong()
+                );
+    }
+
+    private MissionDetailRow missionDetailRow() {
+        MissionDetailRow row =
+                new MissionDetailRow();
+
+        row.setMissionId(13L);
+        row.setChildId(6L);
+        row.setTitle("소비 계획 지키기");
+        row.setDescription(
+                "이번 주 계획한 소비 지키기"
+        );
+        row.setRewardAmount(
+                new BigDecimal("2000")
+        );
+        row.setStatus(
+                MissionStatus.SUBMITTED
+        );
+        row.setCreatedAt(
+                LocalDateTime.of(
+                        2026, 8, 18, 1, 0
+                )
+        );
+        row.setUpdatedAt(
+                LocalDateTime.of(
+                        2026, 8, 18, 2, 0
+                )
+        );
+
+        return row;
+    }
 }

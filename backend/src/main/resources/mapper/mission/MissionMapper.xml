@@ -237,5 +237,48 @@
         FROM mission
         WHERE child_id = #{childId}
     </select>
+    <resultMap id="missionDetailRowMap"
+               type="com.azas.domain.mission.dto.MissionDetailRow">
+
+        <id property="missionId"
+            column="mission_id"/>
+
+        <result property="childId"
+                column="child_id"/>
+
+        <result property="title"
+                column="title"/>
+
+        <result property="description"
+                column="description"/>
+
+        <result property="rewardAmount"
+                column="reward_amount"/>
+
+        <result property="status"
+                column="status"
+                javaType="com.azas.domain.mission.entity.MissionStatus"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+
+        <result property="updatedAt"
+                column="updated_at"/>
+    </resultMap>
+
+    <select id="findMissionDetail"
+            resultMap="missionDetailRowMap">
+        SELECT
+            mission_id,
+            child_id,
+            title,
+            description,
+            reward_amount,
+            status,
+            created_at,
+            updated_at
+        FROM mission
+        WHERE mission_id = #{missionId}
+    </select>
 
 </mapper>

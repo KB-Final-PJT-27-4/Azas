@@ -2,6 +2,7 @@ package com.azas.domain.mission.controller;
 
 import com.azas.domain.mission.dto.CreateMissionRequest;
 import com.azas.domain.mission.dto.MissionCreateResponse;
+import com.azas.domain.mission.dto.MissionDetailResponse;
 import com.azas.domain.mission.service.MissionService;
 import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.domain.mission.dto.MissionListResponse;
@@ -107,6 +108,43 @@ public class MissionController {
                         filter,
                         cursor,
                         size
+                )
+        );
+    }
+
+    @ApiOperation(
+            value = "미션 상세 조회",
+            notes = "연결된 부모 또는 해당 자녀 본인이 미션 상세 정보를 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    code = 200,
+                    message = "미션 상세 조회 성공",
+                    response = MissionDetailResponse.class
+            ),
+            @ApiResponse(code = 400, message = "미션 ID 오류"),
+            @ApiResponse(code = 401, message = "인증 오류"),
+            @ApiResponse(code = 403, message = "미션 접근 권한 없음"),
+            @ApiResponse(code = 404, message = "미션 없음")
+    })
+    @GetMapping("/missions/{mission_id}")
+    public ResponseEntity<MissionDetailResponse>
+    getMissionDetail(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorization,
+            @PathVariable("mission_id") Long missionId
+    ) {
+        Long memberId =
+                memberResolver.resolveMemberId(
+                        authorization
+                );
+
+        return ResponseEntity.ok(
+                missionService.getMissionDetail(
+                        memberId,
+                        missionId
                 )
         );
     }
