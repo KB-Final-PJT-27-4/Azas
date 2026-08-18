@@ -102,5 +102,140 @@
                       1
               ) = 1
     </insert>
+    <resultMap id="missionListRowMap"
+               type="com.azas.domain.mission.dto.MissionListRow">
+        <id property="missionId"
+            column="mission_id"/>
+
+        <result property="childId"
+                column="child_id"/>
+
+        <result property="title"
+                column="title"/>
+
+        <result property="description"
+                column="description"/>
+
+        <result property="rewardAmount"
+                column="reward_amount"/>
+
+        <result property="status"
+                column="status"
+                javaType="com.azas.domain.mission.entity.MissionStatus"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+    </resultMap>
+
+    <select id="countMissionAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN member requester
+                            ON requester.member_id = #{memberId}
+                                AND requester.status = 'ACTIVE'
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND (
+            (
+                requester.member_type = 'CHILD'
+                    AND c.member_id = requester.member_id
+                )
+                OR
+            (
+                requester.member_type = 'PARENT'
+                    AND EXISTS (
+                    SELECT 1
+                    FROM child_parent cp
+                    WHERE cp.child_id = c.child_id
+                      AND cp.member_id = requester.member_id
+                )
+                )
+            )
+    </select>
+
+    <select id="findMissions"
+            parameterType=
+                    "com.azas.domain.mission.dto.MissionListQuery"
+            resultMap="missionListRowMap">
+        SELECT
+        m.mission_id,
+        m.child_id,
+        m.title,
+        m.description,
+        m.reward_amount,
+        m.status,
+        m.created_at
+        FROM mission m
+        WHERE m.child_id = #{childId}
+
+        <choose>
+            <when test="filter.name() == 'ALL'">
+                AND m.status != 'CANCELED'
+            </when>
+
+            <when test="filter.name() == 'IN_PROGRESS'">
+                AND m.status IN ('ASSIGNED', 'REJECTED')
+            </when>
+
+            <when test="filter.name() == 'NEEDS_REVIEW'">
+                AND m.status = 'SUBMITTED'
+            </when>
+
+            <when test="filter.name() == 'COMPLETED'">
+                AND m.status = 'APPROVED'
+            </when>
+
+            <when test="filter.name() == 'CANCELED'">
+                AND m.status = 'CANCELED'
+            </when>
+        </choose>
+
+        <if test="cursorId != null">
+            AND m.mission_id <![CDATA[<]]> #{cursorId}
+        </if>
+
+        ORDER BY m.mission_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findMissionSummary"
+            resultType=
+                    "com.azas.domain.mission.dto.MissionSummaryRow">
+        SELECT
+            SUM(
+                    CASE
+                        WHEN status != 'CANCELED'
+                THEN 1
+                        ELSE 0
+                        END
+            ) AS total_count,
+
+            SUM(
+                    CASE
+                        WHEN status IN ('ASSIGNED', 'REJECTED')
+                            THEN 1
+                        ELSE 0
+                        END
+            ) AS in_progress_count,
+
+            SUM(
+                    CASE
+                        WHEN status = 'SUBMITTED'
+                            THEN 1
+                        ELSE 0
+                        END
+            ) AS needs_review_count,
+
+            SUM(
+                    CASE
+                        WHEN status = 'APPROVED'
+                            THEN 1
+                        ELSE 0
+                        END
+            ) AS completed_count
+        FROM mission
+        WHERE child_id = #{childId}
+    </select>
 
 </mapper>

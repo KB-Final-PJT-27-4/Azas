@@ -10,6 +10,12 @@ import com.azas.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.azas.domain.mission.dto.*;
+import com.azas.domain.mission.entity.MissionListFilter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -20,6 +26,8 @@ public class MissionServiceImpl implements MissionService {
 
     private final MissionMapper missionMapper;
     private final Clock clock;
+    private static final int DEFAULT_LIST_SIZE = 20;
+    private static final int MAX_LIST_SIZE = 100;
 
     @Autowired
     public MissionServiceImpl(
@@ -126,5 +134,150 @@ public class MissionServiceImpl implements MissionService {
                     ErrorCode.INVALID_MISSION
             );
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MissionListResponse getMissions(
+            Long memberId,
+            Long childId,
+            String filterValue,
+            String cursorValue,
+            Integer sizeValue
+    ) {
+        if (childId == null || childId <= 0) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_QUERY_PARAMETER
+            );
+        }
+
+        if (missionMapper.findActiveChildId(childId) == null) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_NOT_FOUND
+            );
+        }
+
+        if (missionMapper.countMissionAccess(
+                memberId,
+                childId
+        ) <= 0) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_ACCESS_DENIED
+            );
+        }
+
+        MissionListFilter filter =
+                parseMissionFilter(filterValue);
+
+        Long cursorId =
+                parseMissionCursor(cursorValue);
+
+        int pageSize =
+                normalizeMissionListSize(sizeValue);
+
+        MissionListQuery query =
+                new MissionListQuery(
+                        childId,
+                        filter,
+                        cursorId,
+                        pageSize + 1
+                );
+
+        List<MissionListRow> rows =
+                missionMapper.findMissions(query);
+
+        if (rows == null) {
+            rows = new ArrayList<>();
+        }
+
+        boolean hasNext =
+                rows.size() > pageSize;
+
+        List<MissionListRow> pageRows =
+                hasNext
+                        ? new ArrayList<>(
+                        rows.subList(0, pageSize)
+                )
+                        : new ArrayList<>(rows);
+
+        List<MissionListItemResponse> items =
+                pageRows.stream()
+                        .map(MissionListItemResponse::from)
+                        .toList();
+
+        Long nextCursor =
+                hasNext && !pageRows.isEmpty()
+                        ? pageRows.get(
+                        pageRows.size() - 1
+                ).getMissionId()
+                        : null;
+
+        MissionSummaryRow summaryRow =
+                missionMapper.findMissionSummary(childId);
+
+        return new MissionListResponse(
+                MissionListSummaryResponse.from(
+                        summaryRow
+                ),
+                items,
+                nextCursor,
+                hasNext
+        );
+    }
+
+    private MissionListFilter parseMissionFilter(
+            String value
+    ) {
+        if (value == null || value.isBlank()) {
+            return MissionListFilter.ALL;
+        }
+
+        try {
+            return MissionListFilter.valueOf(
+                    value.toUpperCase(Locale.ROOT)
+            );
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_QUERY_PARAMETER
+            );
+        }
+    }
+
+    private Long parseMissionCursor(
+            String value
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            long cursor = Long.parseLong(value);
+
+            if (cursor <= 0) {
+                throw new NumberFormatException();
+            }
+
+            return cursor;
+        } catch (NumberFormatException exception) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_QUERY_PARAMETER
+            );
+        }
+    }
+
+    private int normalizeMissionListSize(
+            Integer value
+    ) {
+        if (value == null) {
+            return DEFAULT_LIST_SIZE;
+        }
+
+        if (value < 1 || value > MAX_LIST_SIZE) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_QUERY_PARAMETER
+            );
+        }
+
+        return value;
     }
 }

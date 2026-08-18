@@ -18,6 +18,11 @@ import java.time.ZoneOffset;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import com.azas.domain.mission.dto.*;
+import com.azas.domain.mission.entity.MissionListFilter;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 class MissionServiceImplTest {
 
@@ -306,4 +311,173 @@ class MissionServiceImplTest {
 
         return request;
     }
+
+    // 조회 성공 테스트
+    @Test
+    void 부모가_자녀_미션_목록을_조회한다() {
+        when(missionMapper.findActiveChildId(6L))
+                .thenReturn(6L);
+
+        when(missionMapper.countMissionAccess(
+                7L,
+                6L
+        )).thenReturn(1);
+
+        MissionListRow first =
+                missionRow(
+                        13L,
+                        MissionStatus.SUBMITTED
+                );
+
+        MissionListRow second =
+                missionRow(
+                        12L,
+                        MissionStatus.ASSIGNED
+                );
+
+        MissionListRow extra =
+                missionRow(
+                        11L,
+                        MissionStatus.APPROVED
+                );
+
+        when(missionMapper.findMissions(any()))
+                .thenReturn(
+                        List.of(first, second, extra)
+                );
+
+        MissionSummaryRow summary =
+                new MissionSummaryRow();
+
+        summary.setTotalCount(3);
+        summary.setInProgressCount(1);
+        summary.setNeedsReviewCount(1);
+        summary.setCompletedCount(1);
+
+        when(missionMapper.findMissionSummary(6L))
+                .thenReturn(summary);
+
+        MissionListResponse response =
+                missionService.getMissions(
+                        7L,
+                        6L,
+                        "ALL",
+                        null,
+                        2
+                );
+
+        assertEquals(2, response.getItems().size());
+        assertTrue(response.isHasNext());
+        assertEquals(12L, response.getNextCursor());
+
+        assertEquals(
+                3,
+                response.getSummary().getTotalCount()
+        );
+
+        assertEquals(
+                MissionStatus.SUBMITTED,
+                response.getItems().get(0).getStatus()
+        );
+
+        verify(missionMapper).findMissions(
+                argThat(query ->
+                        query.getChildId().equals(6L)
+                                && query.getFilter()
+                                == MissionListFilter.ALL
+                                && query.getCursorId() == null
+                                && query.getLimit() == 3
+                )
+        );
+    }
+
+    private MissionListRow missionRow(
+            Long missionId,
+            MissionStatus status
+    ) {
+        MissionListRow row =
+                new MissionListRow();
+
+        row.setMissionId(missionId);
+        row.setChildId(6L);
+        row.setTitle("미션 " + missionId);
+        row.setDescription("미션 내용");
+        row.setRewardAmount(
+                new BigDecimal("2000")
+        );
+        row.setStatus(status);
+        row.setCreatedAt(
+                LocalDateTime.of(
+                        2026,
+                        8,
+                        18,
+                        1,
+                        0
+                )
+        );
+
+        return row;
+    }
+
+    // 조회 접근 거부 테스트
+    @Test
+    void 연결되지_않은_회원은_미션_목록을_조회할_수_없다() {
+        when(missionMapper.findActiveChildId(6L))
+                .thenReturn(6L);
+
+        when(missionMapper.countMissionAccess(
+                99L,
+                6L
+        )).thenReturn(0);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> missionService.getMissions(
+                                99L,
+                                6L,
+                                null,
+                                null,
+                                null
+                        )
+                );
+
+        assertEquals(
+                ErrorCode.CHILD_ACCESS_DENIED,
+                exception.getErrorCode()
+        );
+
+        verify(missionMapper, never())
+                .findMissions(any());
+    }
+
+    // 잘못된 필터 테스트
+    @Test
+    void 올바르지_않은_미션_필터는_거부한다() {
+        when(missionMapper.findActiveChildId(6L))
+                .thenReturn(6L);
+
+        when(missionMapper.countMissionAccess(
+                7L,
+                6L
+        )).thenReturn(1);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> missionService.getMissions(
+                                7L,
+                                6L,
+                                "UNKNOWN",
+                                null,
+                                20
+                        )
+                );
+
+        assertEquals(
+                ErrorCode.INVALID_QUERY_PARAMETER,
+                exception.getErrorCode()
+        );
+    }
+
 }
