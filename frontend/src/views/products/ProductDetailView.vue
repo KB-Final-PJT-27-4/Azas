@@ -2,13 +2,23 @@
 import { computed, ref } from 'vue'
 import { CheckCircle2, ChevronDown, Gift, Heart, ShieldCheck, Sparkles } from 'lucide-vue-next'
 
+import { recommendedProducts } from '@/data/productDummyData'
+
+const props = defineProps<{
+  productId: string
+}>()
+
 const isFavorite = ref(false)
 const isBasicInfoOpen = ref(true)
-const isRateInfoOpen = ref(false)
-const isBenefitsOpen = ref(false)
-const isMaturityOpen = ref(false)
-const isNoticeOpen = ref(false)
+const isRateInfoOpen = ref(true)
+const isBenefitsOpen = ref(true)
+const isMaturityOpen = ref(true)
+const isNoticeOpen = ref(true)
 const monthlySavingAmount = ref(300000)
+
+const productType = computed(
+  () => recommendedProducts.find((product) => product.id === props.productId)?.type ?? '적금',
+)
 
 const basicInformation = [
   { label: '가입 대상', value: '만 19세 미만 실명의 개인, 1인 1계좌' },
@@ -96,8 +106,13 @@ const updateMonthlyAmount = (event: Event) => {
           >어린이·청소년 전용</span
         >
         <span
-          class="rounded-full bg-[var(--color-surface)] px-3 py-1 text-[10px] font-semibold text-[var(--color-text-secondary)]"
-          >자유적립식</span
+          class="rounded-full px-3 py-1 text-[10px] font-semibold"
+          :class="
+            productType === '입출금계좌'
+              ? 'bg-[#fff4cf] text-[#a67d18]'
+              : 'bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+          "
+          >{{ productType }}</span
         >
       </div>
 
@@ -149,12 +164,7 @@ const updateMonthlyAmount = (event: Event) => {
         :aria-pressed="isFavorite"
         @click="isFavorite = !isFavorite"
       >
-        <Heart
-          :size="15"
-          :class="
-            isFavorite ? 'fill-[var(--color-brand-primary)] text-[var(--color-brand-primary)]' : ''
-          "
-        />
+        <Heart :size="15" :class="isFavorite ? 'fill-[#ff001b] text-[#ff001b]' : ''" />
         {{ isFavorite ? '관심상품 저장됨' : '관심상품 저장' }}
       </button>
     </section>

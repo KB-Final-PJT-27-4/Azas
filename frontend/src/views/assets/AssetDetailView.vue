@@ -1,144 +1,339 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
-import { Pencil } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { ChevronRight, EllipsisVertical, Landmark, Trash2, X } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
-import { getAssetTransaction } from '@/data/assetDummyData'
+import AssetTransferResultSheet from '@/components/assets/AssetTransferResultSheet.vue'
+import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
+import { useToast } from '@/composables/useToast'
+import {
+  getLinkedAssetAccount,
+  getLinkedAssetTransfers,
+  removeLinkedAssetAccount,
+} from '@/data/assetDummyData'
 
 const route = useRoute()
 const router = useRouter()
-const transaction = computed(() => getAssetTransaction(String(route.params.assetId ?? '1')))
+const { showToast } = useToast()
+const account = computed(() => getLinkedAssetAccount(String(route.params.assetId ?? '')))
+const isParentAccount = computed(() => account.value.id.startsWith('parent-'))
+const recentTransfers = computed(() => getLinkedAssetTransfers(account.value.id))
+const isTransferSheetOpen = ref(false)
+const transferResult = ref<'success' | 'failure' | null>(null)
+const isDeleteDialogOpen = ref(false)
+const isAccountMenuOpen = ref(false)
+const isAnySheetOpen = computed(
+  () => isTransferSheetOpen.value || isDeleteDialogOpen.value || transferResult.value !== null,
+)
 
-const memo = ref(transaction.value.memo)
-const memoDraft = ref(memo.value)
-const isEditingMemo = ref(false)
-const memoInput = ref<HTMLTextAreaElement | null>(null)
+let previousBodyOverflow = ''
 
-const startMemoEdit = async () => {
-  memoDraft.value = memo.value
-  isEditingMemo.value = true
-  await nextTick()
-  memoInput.value?.focus()
-  memoInput.value?.select()
+watch(
+  isAnySheetOpen,
+  (isOpen) => {
+    if (isOpen) {
+      previousBodyOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return
+    }
+
+    document.body.style.overflow = previousBodyOverflow
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = previousBodyOverflow
+})
+
+const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+
+const completeTransfer = ({ success }: { success: boolean }) => {
+  isTransferSheetOpen.value = false
+  transferResult.value = success ? 'success' : 'failure'
 }
 
-const saveMemo = () => {
-  memo.value = memoDraft.value.trim()
-  isEditingMemo.value = false
+const retryTransfer = () => {
+  transferResult.value = null
+  isTransferSheetOpen.value = true
 }
 
-const cancelMemoEdit = () => {
-  memoDraft.value = memo.value
-  isEditingMemo.value = false
+const openDeleteDialog = () => {
+  isAccountMenuOpen.value = false
+  isDeleteDialogOpen.value = true
 }
 
-const goToAssets = () => router.push({ name: 'Assets' })
-const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
+const closeAccountMenuOnFocusOut = (event: FocusEvent) => {
+  const currentTarget = event.currentTarget as HTMLElement
+  const nextTarget = event.relatedTarget as Node | null
+  if (!nextTarget || !currentTarget.contains(nextTarget)) isAccountMenuOpen.value = false
+}
+
+const deleteAccount = async () => {
+  removeLinkedAssetAccount(account.value.id)
+  isDeleteDialogOpen.value = false
+  await router.replace({ name: route.query.from === 'goals' ? 'MypageGoals' : 'Assets' })
+  showToast('계좌를 삭제했어요.', 'success')
+}
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white">
-    <article class="px-5 pt-7 pb-10 text-[var(--color-text-primary)]">
-      <h1 class="m-0 text-[24px] leading-tight font-bold tracking-[-0.02em]">
-        {{ transaction.accountLabel }}
-      </h1>
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white px-[18px] pt-5 pb-9 text-[var(--color-text-primary)]"
+  >
+    <section
+      class="overflow-hidden rounded-[17px] border border-[#e2e9ed] shadow-[0_5px_18px_rgba(43,83,105,0.05)]"
+      :class="
+        isParentAccount
+          ? 'border-b-[6px] border-b-[var(--color-brand-primary)] bg-[#f7fcff]'
+          : 'border-b-[6px] border-b-[#ffb400] bg-[#fffdf5]'
+      "
+      aria-labelledby="account-detail-title"
+    >
+      <div class="px-4 pt-4 pb-5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-2">
+            <span
+              class="grid size-6 shrink-0 place-items-center rounded-full"
+              :class="
+                isParentAccount
+                  ? 'bg-[#e5f6ff] text-[var(--color-selected-text)]'
+                  : 'bg-[#fff4cd] text-[#c78e0c]'
+              "
+              aria-hidden="true"
+            >
+              <Landmark :size="14" :stroke-width="2.1" />
+            </span>
+            <span class="truncate text-[10px] font-bold text-[var(--color-text-secondary)]">
+              {{ account.bankName }}
+            </span>
+          </div>
+          <div class="relative shrink-0" @focusout="closeAccountMenuOnFocusOut">
+            <button
+              class="grid size-8 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-black/5"
+              type="button"
+              aria-label="계좌 관리 메뉴"
+              :aria-expanded="isAccountMenuOpen"
+              aria-haspopup="menu"
+              @click="isAccountMenuOpen = !isAccountMenuOpen"
+            >
+              <EllipsisVertical :size="20" :stroke-width="2.3" aria-hidden="true" />
+            </button>
 
-      <form
-        v-if="isEditingMemo"
-        class="mt-3"
-        aria-label="메모 수정"
-        @submit.prevent="saveMemo"
-      >
-        <div class="relative">
-          <textarea
-            ref="memoInput"
-            v-model="memoDraft"
-            class="block h-24 w-full resize-none rounded-lg border border-[var(--color-brand-primary)] px-3 pt-2.5 pb-7 text-[15px] leading-6 text-[var(--color-text-secondary)] outline-none focus:ring-2 focus:ring-[var(--color-selected-background)]"
-            aria-label="메모"
-            maxlength="50"
-            @keydown.esc="cancelMemoEdit"
-          ></textarea>
-          <span
-            class="pointer-events-none absolute right-3 bottom-2 text-[12px] tabular-nums text-[var(--color-text-secondary)]"
-          >
-            {{ memoDraft.length }}/50
-          </span>
+            <Transition
+              enter-active-class="transition duration-150 ease-out"
+              enter-from-class="-translate-y-1 opacity-0"
+              leave-active-class="transition duration-100 ease-in"
+              leave-to-class="-translate-y-1 opacity-0"
+            >
+              <div
+                v-if="isAccountMenuOpen"
+                class="absolute top-[calc(100%+4px)] right-0 z-20 w-[120px] overflow-hidden rounded-[12px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+                role="menu"
+              >
+                <button
+                  class="flex h-9 w-full items-center gap-2 rounded-[8px] px-2.5 text-left text-[11px] font-bold text-[#ef4f5f] active:bg-[#fff1f3]"
+                  type="button"
+                  role="menuitem"
+                  @click="openDeleteDialog"
+                >
+                  <Trash2 :size="14" :stroke-width="2.1" aria-hidden="true" />
+                  계좌 삭제
+                </button>
+              </div>
+            </Transition>
+          </div>
         </div>
-        <div class="mt-1.5 flex justify-end">
-          <button
-            class="h-9 shrink-0 rounded-lg bg-[var(--color-brand-primary)] px-4 text-[14px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
-            type="submit"
-            aria-label="메모 저장"
+
+        <h1
+          id="account-detail-title"
+          class="mt-3 mb-0 truncate text-[20px] leading-tight font-extrabold tracking-[-0.02em]"
+        >
+          {{ account.name }}
+        </h1>
+        <div class="mt-1.5 flex min-w-0 items-center justify-between gap-3">
+          <p
+            class="m-0 min-w-0 truncate text-[11px] font-medium text-[var(--color-text-secondary)]"
           >
-            완료
+            {{ account.accountNumber }}
+          </p>
+          <button
+            class="h-8 w-[64px] -translate-y-[9px] shrink-0 rounded-full text-[11px] font-bold text-white shadow-[0_4px_10px_rgba(255,177,0,0.15)] active:opacity-80"
+            :class="isParentAccount ? 'bg-[var(--color-brand-primary)]' : 'bg-[#ffb000]'"
+            type="button"
+            @click="isTransferSheetOpen = true"
+          >
+            이체
           </button>
         </div>
-      </form>
 
-      <div v-else-if="memo" class="mt-3 flex min-w-0 items-start gap-1.5">
-        <p class="m-0 min-w-0 text-[15px] leading-7 text-[var(--color-text-secondary)]">
-          {{ memo }}
-        </p>
-        <button
-          class="grid size-8 shrink-0 place-items-center rounded-full text-[#8b97a7] active:bg-[var(--color-unselected-background)]"
-          type="button"
-          aria-label="메모 수정"
-          @click="startMemoEdit"
-        >
-          <Pencil :size="19" :stroke-width="2.8" />
-        </button>
-      </div>
-
-      <button
-        v-else
-        class="mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 text-[14px] font-semibold text-[var(--color-text-secondary)] active:bg-[var(--color-unselected-background)]"
-        type="button"
-        @click="startMemoEdit"
-      >
-        메모 추가
-        <Pencil :size="16" :stroke-width="2.5" />
-      </button>
-
-      <div class="mt-5 border-t border-[var(--color-border)] pt-6">
-        <dl class="m-0 grid grid-cols-[minmax(92px,1fr)_minmax(0,2fr)] gap-x-5 gap-y-6">
-          <dt class="text-[16px] font-semibold text-[var(--color-text-secondary)]">거래 금액</dt>
-          <dd class="m-0 text-right text-[20px] font-semibold text-[#22a8e8]">
-            +{{ formatWon(transaction.amount) }}
-          </dd>
-
-          <dt class="text-[16px] font-semibold text-[var(--color-text-secondary)]">입금처</dt>
-          <dd class="m-0 text-right text-[16px] leading-7">
-            <strong class="block font-semibold">{{ transaction.depositName }}</strong>
-            <span class="block text-[var(--color-text-secondary)]">
-              {{ transaction.depositAccountNumber }}
-            </span>
-          </dd>
-
-          <dt class="text-[16px] font-semibold text-[var(--color-text-secondary)]">출금처</dt>
-          <dd class="m-0 text-right text-[16px] leading-7">
-            <strong class="block font-semibold">{{ transaction.withdrawalName }}</strong>
-            <span class="block text-[var(--color-text-secondary)]">
-              {{ transaction.withdrawalAccountNumber }}
-            </span>
-          </dd>
-
-          <dt class="text-[16px] font-semibold text-[var(--color-text-secondary)]">거래시각</dt>
-          <dd class="m-0 text-right text-[16px] font-medium">{{ transaction.transactedAt }}</dd>
-
-          <dt class="text-[16px] font-semibold text-[var(--color-text-secondary)]">거래 후 잔액</dt>
-          <dd class="m-0 text-right text-[16px] font-medium">
-            {{ formatWon(transaction.balanceAfterTransaction) }}
-          </dd>
+        <dl class="mt-5 mb-0 grid gap-3 border-t border-[#dfe8ed] pt-4">
+          <div class="flex items-center justify-between gap-4">
+            <dt class="text-[11px] font-medium text-[var(--color-text-secondary)]">예금주명</dt>
+            <dd class="m-0 text-[12px] font-bold">{{ account.ownerName }}</dd>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <dt class="text-[11px] font-medium text-[var(--color-text-secondary)]">계좌 유형</dt>
+            <dd class="m-0 text-[12px] font-bold">{{ account.type }}</dd>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <dt class="text-[11px] font-medium text-[var(--color-text-secondary)]">잔액</dt>
+            <dd class="m-0 text-[15px] font-extrabold">{{ formatWon(account.balance) }}</dd>
+          </div>
         </dl>
       </div>
+    </section>
 
-      <button
-        class="mt-16 h-14 w-full rounded-[14px] bg-[var(--color-brand-primary)] text-[17px] font-extrabold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]"
-        type="button"
-        @click="goToAssets"
-      >
-        확인
-      </button>
-    </article>
+    <section class="mt-8" aria-labelledby="recent-transfers-title">
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="recent-transfers-title" class="m-0 text-[16px] font-extrabold">최근 이체 내역</h2>
+        <span class="text-[10px] font-semibold text-[var(--color-text-secondary)]">
+          최근 {{ recentTransfers.length }}건
+        </span>
+      </div>
+
+      <ul class="mt-3 mb-0 grid list-none gap-2.5 p-0">
+        <li v-for="transfer in recentTransfers" :key="transfer.id">
+          <RouterLink
+            class="flex min-h-[54px] items-center gap-3 rounded-[13px] border border-[#e2e9ed] bg-white px-4 py-2.5 !text-[var(--color-text-primary)] shadow-[0_2px_8px_rgba(54,112,139,0.025)] transition-colors active:bg-[#f7fbfd]"
+            :to="{
+              name: 'AssetTransactionDetail',
+              params: { assetId: account.id, transactionId: transfer.transactionId },
+            }"
+            :aria-label="`${transfer.counterparty} ${formatWon(transfer.amount)} 거래 상세 보기`"
+          >
+            <div class="min-w-0 flex-1">
+              <time
+                class="block text-[9px] font-medium text-[var(--color-text-secondary)]"
+                :datetime="transfer.transactedAt"
+              >
+                {{ transfer.transactedAt }}
+              </time>
+              <strong class="mt-1 block truncate text-[11px] font-extrabold">
+                {{ transfer.counterparty }}
+              </strong>
+            </div>
+            <strong
+              class="shrink-0 text-[13px] font-extrabold"
+              :class="
+                transfer.direction === '입금'
+                  ? 'text-[var(--color-selected-text)]'
+                  : 'text-[#ef5968]'
+              "
+            >
+              {{ transfer.direction === '입금' ? '+' : '-' }}{{ formatWon(transfer.amount) }}
+            </strong>
+            <ChevronRight
+              class="shrink-0 text-[#91a1ad]"
+              :size="17"
+              :stroke-width="2.3"
+              aria-hidden="true"
+            />
+          </RouterLink>
+        </li>
+      </ul>
+    </section>
+
+    <Teleport to="body">
+      <Transition name="account-delete-sheet">
+        <div
+          v-if="isDeleteDialogOpen"
+          class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40"
+          @click.self="isDeleteDialogOpen = false"
+        >
+          <section
+            class="account-delete-sheet__panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="account-delete-title"
+            aria-describedby="account-delete-description"
+          >
+            <span class="mx-auto block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
+
+            <div class="mt-5 flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h2 id="account-delete-title" class="m-0 text-[19px] font-bold">
+                  계좌를 삭제할까요?
+                </h2>
+                <p
+                  id="account-delete-description"
+                  class="mt-1.5 mb-0 text-xs leading-relaxed text-[var(--color-text-secondary)]"
+                >
+                  삭제하면 연결된 계좌 목록과 이체 내역에서 더 이상 확인할 수 없어요.
+                </p>
+              </div>
+              <button
+                class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f7]"
+                type="button"
+                aria-label="계좌 삭제 확인창 닫기"
+                @click="isDeleteDialogOpen = false"
+              >
+                <X :size="20" :stroke-width="2.3" />
+              </button>
+            </div>
+
+            <div class="mt-5 rounded-2xl bg-[#f7f9fa] px-4 py-3.5">
+              <strong class="block truncate text-sm">{{ account.name }}</strong>
+              <span class="mt-1 block text-[11px] text-[var(--color-text-secondary)]">
+                {{ account.bankName }} · {{ account.accountNumber }}
+              </span>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-3">
+              <button
+                class="h-[52px] rounded-xl border border-[var(--color-border)] bg-white text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]"
+                type="button"
+                @click="isDeleteDialogOpen = false"
+              >
+                취소
+              </button>
+              <button
+                class="flex h-[52px] items-center justify-center gap-1.5 rounded-xl bg-[#e85b61] text-sm font-bold text-white active:bg-[#cf484e]"
+                type="button"
+                @click="deleteAccount"
+              >
+                삭제하기
+              </button>
+            </div>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <AssetTransferSheet
+      :open="isTransferSheetOpen"
+      :target-account-name="account.name"
+      :target-account-number="account.accountNumber"
+      @close="isTransferSheetOpen = false"
+      @transfer="completeTransfer"
+    />
+    <AssetTransferResultSheet
+      :open="transferResult !== null"
+      :status="transferResult ?? 'success'"
+      @close="transferResult = null"
+      @retry="retryTransfer"
+    />
   </main>
 </template>
+
+<style scoped>
+.account-delete-sheet-enter-active,
+.account-delete-sheet-leave-active {
+  transition: background-color 180ms ease;
+}
+
+.account-delete-sheet-enter-active .account-delete-sheet__panel,
+.account-delete-sheet-leave-active .account-delete-sheet__panel {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.account-delete-sheet-enter-from,
+.account-delete-sheet-leave-to {
+  background-color: transparent;
+}
+
+.account-delete-sheet-enter-from .account-delete-sheet__panel,
+.account-delete-sheet-leave-to .account-delete-sheet__panel {
+  transform: translateY(100%);
+}
+</style>

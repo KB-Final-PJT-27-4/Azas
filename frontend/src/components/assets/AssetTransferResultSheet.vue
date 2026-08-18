@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import failPigImage from '@/assets/images/assets/fail-pig.png'
-import successPigImage from '@/assets/images/assets/success-pig.png'
+import successPigImage from '@/assets/images/assets/transfer-capsule-pig.png'
 import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
 
 defineProps<{
@@ -17,6 +18,45 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const sheetOffset = ref(0)
+const isSheetDragging = ref(false)
+let dragStartY = 0
+let dragStartTime = 0
+
+const closeSheet = () => {
+  sheetOffset.value = 0
+  isSheetDragging.value = false
+  emit('close')
+}
+
+const startSheetDrag = (event: PointerEvent) => {
+  if (event.button !== 0) return
+  dragStartY = event.clientY
+  dragStartTime = performance.now()
+  isSheetDragging.value = true
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+
+const moveSheetDrag = (event: PointerEvent) => {
+  if (!isSheetDragging.value) return
+  sheetOffset.value = Math.max(0, event.clientY - dragStartY)
+}
+
+const endSheetDrag = (event: PointerEvent) => {
+  if (!isSheetDragging.value) return
+  const elapsed = Math.max(performance.now() - dragStartTime, 1)
+  const velocity = sheetOffset.value / elapsed
+  isSheetDragging.value = false
+
+  if (sheetOffset.value >= 72 || velocity >= 0.45) {
+    closeSheet()
+    return
+  }
+
+  sheetOffset.value = 0
+  const target = event.currentTarget as HTMLElement
+  if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
+}
 
 const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
 </script>
@@ -28,21 +68,35 @@ const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
         v-if="open"
         class="asset-result-sheet-overlay fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
         role="presentation"
-        @click.self="emit('close')"
+        @click.self="closeSheet"
       >
       <section
-        class="relative flex h-[min(655px,calc(100dvh-120px))] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[20px] bg-white px-6 pt-5 pb-[calc(var(--app-bottom-nav-height)+18px)] text-[var(--color-text-primary)]"
+        class="relative flex h-[min(655px,calc(100dvh-120px))] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[20px] bg-white px-6 pt-2 pb-[calc(var(--app-bottom-nav-height)+18px)] text-[var(--color-text-primary)]"
+        :class="isSheetDragging ? 'asset-result-sheet-panel--dragging' : ''"
+        :style="sheetOffset ? { transform: `translateY(${sheetOffset}px)` } : undefined"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="
           status === 'success' ? 'transfer-success-title' : 'transfer-failure-title'
         "
       >
+        <div
+          class="-mx-6 flex h-9 shrink-0 touch-none cursor-grab items-center justify-center active:cursor-grabbing"
+          role="button"
+          tabindex="0"
+          aria-label="아래로 밀어 결과 창 닫기"
+          @pointerdown="startSheetDrag"
+          @pointermove="moveSheetDrag"
+          @pointerup="endSheetDrag"
+          @pointercancel="endSheetDrag"
+        >
+          <span class="block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
+        </div>
         <button
           class="ml-auto grid size-8 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[var(--color-unselected-background)]"
           type="button"
           aria-label="결과 창 닫기"
-          @click="emit('close')"
+          @click="closeSheet"
         >
           <X :size="19" :stroke-width="2.5" />
         </button>
@@ -71,7 +125,7 @@ const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
               <button
                 class="h-11 rounded-[13px] bg-[#f0f0f0] text-[14px] font-semibold text-[#737373] active:bg-[#e5e5e5]"
                 type="button"
-                @click="emit('close')"
+                @click="closeSheet"
               >
                 나중에 하기
               </button>
@@ -106,7 +160,7 @@ const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
               <button
                 class="h-11 rounded-[13px] bg-[#f0f0f0] text-[14px] font-semibold text-[#737373] active:bg-[#e5e5e5]"
                 type="button"
-                @click="emit('close')"
+                @click="closeSheet"
               >
                 닫기
               </button>
@@ -128,6 +182,10 @@ const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
 
 .asset-result-sheet-overlay > section {
   transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.asset-result-sheet-overlay > .asset-result-sheet-panel--dragging {
+  transition: none;
 }
 
 .asset-result-sheet-enter-from,

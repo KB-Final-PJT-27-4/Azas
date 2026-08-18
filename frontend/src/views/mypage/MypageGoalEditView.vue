@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { Info } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import goalCloudBackground from '@/assets/images/home/home-hero-bg.png'
 import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
-import { BaseDatePicker } from '@/components/common'
+import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
+import { useToast } from '@/composables/useToast'
 
 const props = defineProps<{
   goalsId: string
 }>()
 
 const router = useRouter()
+const { showToast } = useToast()
 const isRecommendationOpen = ref(false)
+const selectedRecommendationAmount = ref<number>()
+let previousHtmlBackground = ''
+let previousBodyBackground = ''
 
 const goalPresets: Record<string, { name: string; amount: number; targetDate: string }> = {
   '1': { name: '대학자금', amount: 30_000_000, targetDate: '2045-03' },
@@ -25,118 +30,98 @@ const initialGoal = goalPresets[props.goalsId] ?? {
 }
 
 const form = reactive({ ...initialGoal })
-const savingsMonths = 240
-const monthlySavingAmount = computed(() => Math.ceil(form.amount / savingsMonths))
 const isSubmitDisabled = computed(() => !form.name.trim() || form.amount <= 0 || !form.targetDate)
-
-const updateAmount = (event: Event) => {
-  form.amount = Number((event.target as HTMLInputElement).value.replace(/[^0-9]/g, ''))
-}
 
 const selectRecommendation = (amount: number) => {
   form.amount = amount
-  isRecommendationOpen.value = false
+  selectedRecommendationAmount.value = amount
 }
 
 const saveGoal = () => {
   if (isSubmitDisabled.value) return
 
   // TODO: 목표 수정 API 연결
-  router.push({ name: 'MypageGoals' })
+  showToast('목표를 수정했어요.', 'success')
+  router.replace({ name: 'MypageGoals' })
 }
 
 const cancelEdit = () => {
-  router.push({ name: 'MypageGoals' })
+  router.replace({ name: 'MypageGoals' })
 }
+
+onMounted(() => {
+  previousHtmlBackground = document.documentElement.style.backgroundColor
+  previousBodyBackground = document.body.style.backgroundColor
+  document.documentElement.style.backgroundColor = '#eef9fe'
+  document.body.style.backgroundColor = '#eef9fe'
+})
+
+onBeforeUnmount(() => {
+  document.documentElement.style.backgroundColor = previousHtmlBackground
+  document.body.style.backgroundColor = previousBodyBackground
+})
 </script>
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-surface)] px-6 pt-8 pb-10 text-[var(--color-text-primary)]"
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col bg-[#eef9fe] bg-cover bg-top bg-no-repeat px-[18px] pt-5 pb-6 text-[var(--color-text-primary)]"
+    :style="{
+      backgroundImage: `linear-gradient(rgba(247, 250, 252, 0.28), rgba(247, 250, 252, 0.42)), url(${goalCloudBackground})`,
+    }"
   >
-    <section aria-labelledby="goal-edit-title">
-      <h1 id="goal-edit-title" class="text-[25px] leading-tight font-bold tracking-[-0.04em]">
-        목표 수정하기
-      </h1>
-      <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
-        목표 금액과 달성 시기를 수정할 수 있어요.
-      </p>
-    </section>
-
-    <form class="mt-8 grid gap-6" @submit.prevent="saveGoal">
-      <label class="grid gap-2">
-        <span class="text-sm font-bold">목표명</span>
-        <input
-          v-model="form.name"
-          class="h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-base outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-brand-primary-pressed)] focus:ring-2 focus:ring-[var(--color-selected-background)]"
-          type="text"
-          placeholder="목표명을 입력해주세요"
-        />
-      </label>
-
-      <label class="grid gap-2">
-        <span class="flex items-center justify-between text-sm font-bold">
-          목표 금액
-          <button
-            class="flex h-8 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-xs font-semibold transition-colors hover:bg-[var(--color-surface-muted)]"
-            type="button"
-            @click="isRecommendationOpen = true"
-          >
-            AI 추천
-            <Info :size="14" class="text-[var(--color-text-secondary)]" />
-          </button>
-        </span>
-        <div
-          class="flex h-16 items-center rounded-2xl bg-[var(--color-brand-secondary)] px-5 text-[27px] font-bold"
-        >
-          <input
-            class="min-w-0 flex-1 bg-transparent outline-none"
-            inputmode="numeric"
-            :value="form.amount.toLocaleString('ko-KR')"
-            aria-label="목표 금액"
-            @input="updateAmount"
-          />
-          <span>원</span>
+    <form class="flex flex-1 flex-col gap-4" @submit.prevent="saveGoal">
+      <section
+        class="rounded-[22px] border border-[var(--color-border)] bg-white p-5 shadow-[0_5px_18px_rgba(45,76,92,0.04)]"
+        aria-labelledby="goal-info-title"
+      >
+        <div class="mb-5 flex items-center gap-2">
+          <h2 id="goal-info-title" class="m-0 text-[16px] font-extrabold">목표 정보</h2>
         </div>
-      </label>
 
-      <BaseDatePicker
-        v-model="form.targetDate"
-        label="목표 달성 시기"
-        selection-mode="month"
-        :min-year="new Date().getFullYear()"
-        :max-year="new Date().getFullYear() + 100"
-      />
+        <label class="grid gap-2">
+          <span class="text-sm font-bold">목표명</span>
+          <input
+            v-model="form.name"
+            class="h-14 rounded-2xl border border-[#d9edf7] bg-white px-4 text-base font-semibold outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-brand-primary)] focus:ring-2 focus:ring-[#dff5ff]"
+            type="text"
+            placeholder="목표명을 입력해주세요"
+          />
+        </label>
 
-      <div class="rounded-2xl bg-[var(--color-selected-background)] p-5">
-        <strong class="text-xl font-bold text-[var(--color-selected-text)]">
-          매월 약 {{ monthlySavingAmount.toLocaleString('ko-KR') }}원
-        </strong>
-        <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
-          현재부터 {{ savingsMonths }}개월 동안 균등 저축 기준
-        </p>
-      </div>
+        <GoalAmountStep
+          class="mt-6"
+          :goal-name="form.name"
+          :amount="form.amount"
+          :target-date="form.targetDate"
+          :show-intro="false"
+          appearance="management"
+          @update:amount="form.amount = $event"
+          @update:target-date="form.targetDate = $event"
+          @open-recommendation="isRecommendationOpen = true"
+        />
+      </section>
 
-      <div class="mt-2 grid grid-cols-2 gap-3">
+      <div class="mt-auto grid grid-cols-2 gap-3 pt-6">
         <button
-          class="h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-base font-bold text-[var(--color-text-secondary)] transition-colors active:bg-[var(--color-surface-muted)]"
+          class="h-14 rounded-2xl border border-[var(--color-border)] bg-white text-[15px] font-semibold text-[var(--color-text-secondary)] transition-colors active:bg-[var(--color-surface-muted)]"
           type="button"
           @click="cancelEdit"
         >
-          취소하기
+          취소
         </button>
         <button
-          class="h-14 rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
+          class="h-14 rounded-2xl bg-[var(--color-brand-primary)] text-[15px] font-bold text-[var(--color-text-inverse)] shadow-[0_6px_16px_rgb(52_176_230_/_18%)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)] disabled:shadow-none"
           type="submit"
           :disabled="isSubmitDisabled"
         >
-          수정하기
+          변경 내용 저장
         </button>
       </div>
     </form>
 
     <AiRecommendationModal
       v-if="isRecommendationOpen"
+      :selected-amount="selectedRecommendationAmount"
       @close="isRecommendationOpen = false"
       @select="selectRecommendation"
     />

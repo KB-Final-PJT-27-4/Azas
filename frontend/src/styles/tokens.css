@@ -2,6 +2,11 @@
   --color-brand-primary: #55c0f4;
   --color-brand-primary-pressed: #2babe8;
   --color-brand-secondary: #fff5d2;
+  --color-accent-yellow: #ffe36e;
+  --color-accent-yellow-pressed: #f7d751;
+  --color-accent-yellow-surface: #fff9d9;
+  --color-accent-yellow-border: #f6e58d;
+  --color-accent-yellow-text: #756417;
   --color-app-background: #f6f8fa;
   --color-surface: #ffffff;
   --color-surface-muted: #f6f8fa;
@@ -39,7 +44,7 @@
 
   --app-max-width: 430px;
   --app-header-height: 56px;
-  --app-bottom-nav-height: 56px;
+  --app-bottom-nav-height: 60px;
   --z-index-header: 50;
   --z-index-bottom-nav: 50;
   --z-index-overlay: 100;
