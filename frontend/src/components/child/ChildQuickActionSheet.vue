@@ -3,8 +3,8 @@ import { computed, ref, watch, type CSSProperties } from 'vue'
 import { Send, Wallet, X } from 'lucide-vue-next'
 
 import AssetAccountSelect from '@/components/assets/AssetAccountSelect.vue'
-import allowanceCompletePigUrl from '@/assets/images/child/child-allowance-complete-pig.png'
-import transferCompletePigUrl from '@/assets/images/child/child-transfer-complete-pig.png'
+import allowanceCompletePigUrl from '@/assets/images/child/child-allowance-complete-pig-v2.png'
+import transferCompletePigUrl from '@/assets/images/child/child-transfer-complete-pig-v2.png'
 import { childAccountSummary, recordChildTransfer, transferDefaults } from '@/mocks/childHome'
 
 type SheetMode = 'menu' | 'transfer' | 'allowance' | 'transferDone' | 'allowanceDone'
@@ -485,9 +485,7 @@ watch(
                 key="allowanceDone"
                 class="quick-done-panel"
               >
-                <div class="quick-done-panel__sky">
-                  <div class="quick-done-panel__cloud quick-done-panel__cloud--left" />
-                  <div class="quick-done-panel__cloud quick-done-panel__cloud--right" />
+                <div class="quick-done-panel__sky quick-done-panel__sky--allowance">
                   <h3 class="m-0 text-center text-[24px] leading-[1.35] font-extrabold text-[var(--color-text-primary)]">
                     용돈 요청이<br />
                     전송되었어요!
@@ -502,6 +500,14 @@ watch(
                     alt=""
                     aria-hidden="true"
                   />
+                  <span
+                    class="quick-done-panel__check quick-done-panel__check--allowance"
+                    aria-hidden="true"
+                  >
+                    <svg width="29" height="29" viewBox="0 0 24 24" fill="none">
+                      <path pathLength="1" d="M4 12.5L9.2 17.5L20 6.5" />
+                    </svg>
+                  </span>
                 </div>
                 <button
                   class="mt-5 h-14 w-full rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[16px] font-bold text-white transition active:bg-[var(--color-brand-primary-pressed)]"
@@ -513,9 +519,7 @@ watch(
               </section>
 
               <section v-else key="transferDone" class="quick-done-panel">
-                <div class="quick-done-panel__sky">
-                  <div class="quick-done-panel__cloud quick-done-panel__cloud--left" />
-                  <div class="quick-done-panel__cloud quick-done-panel__cloud--right" />
+                <div class="quick-done-panel__sky quick-done-panel__sky--transfer">
                   <h3 class="m-0 text-center text-[24px] leading-[1.35] font-extrabold text-[var(--color-text-primary)]">
                     이체를<br />
                     완료했어요!
@@ -530,6 +534,14 @@ watch(
                     alt=""
                     aria-hidden="true"
                   />
+                  <span
+                    class="quick-done-panel__check quick-done-panel__check--transfer"
+                    aria-hidden="true"
+                  >
+                    <svg width="29" height="29" viewBox="0 0 24 24" fill="none">
+                      <path pathLength="1" d="M4 12.5L9.2 17.5L20 6.5" />
+                    </svg>
+                  </span>
                 </div>
                 <button
                   class="mt-5 h-14 w-full rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[16px] font-bold text-white transition active:bg-[var(--color-brand-primary-pressed)]"
@@ -595,15 +607,20 @@ watch(
 
 .quick-done-panel__sky {
   position: relative;
-  min-height: 488px;
+  min-height: 382px;
   overflow: hidden;
-  padding: 44px 18px 28px;
+  padding: 26px 18px 20px;
   border-radius: 18px;
   background:
     radial-gradient(circle at 12% 20%, rgb(255 255 255 / 95%) 0 32px, transparent 33px),
     radial-gradient(circle at 21% 28%, rgb(255 255 255 / 82%) 0 24px, transparent 25px),
     radial-gradient(circle at 92% 29%, rgb(255 255 255 / 92%) 0 34px, transparent 35px),
     linear-gradient(180deg, #eaf7ff 0%, #f5fbff 100%);
+}
+
+.quick-done-panel__sky--allowance,
+.quick-done-panel__sky--transfer {
+  background: transparent;
 }
 
 .quick-done-panel__cloud {
@@ -655,13 +672,44 @@ watch(
 }
 
 .quick-done-panel__image--allowance {
-  bottom: 82px;
-  width: 258px;
+  bottom: 44px;
+  width: 145px;
+}
+
+.quick-done-panel__check {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  color: white;
+  background: linear-gradient(155deg, #61c8f5 2%, #2d8dec 82%);
+  border-radius: 50%;
+  box-shadow: 0 6px 14px rgb(45 141 236 / 22%);
+  place-items: center;
+}
+
+.quick-done-panel__check--allowance {
+  right: calc(50% - 100px);
+  bottom: 146px;
+}
+
+.quick-done-panel__check--transfer {
+  right: calc(50% - 100px);
+  bottom: 154px;
+}
+
+.quick-done-panel__check path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .quick-done-panel__image--transfer {
-  bottom: 96px;
-  width: 220px;
+  bottom: 44px;
+  width: 132px;
 }
 
 @keyframes quick-done-pop {
@@ -672,6 +720,47 @@ watch(
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .quick-done-panel__check {
+    animation: quick-check-arrive 620ms cubic-bezier(0.16, 1, 0.3, 1) 260ms both;
+  }
+
+  .quick-done-panel__check path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: quick-check-draw 300ms ease 560ms forwards;
+  }
+}
+
+@keyframes quick-check-arrive {
+  0% {
+    opacity: 0;
+    transform: scale(0.35) rotate(-12deg);
+  }
+  68% {
+    opacity: 1;
+    transform: scale(1.1) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes quick-check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-done-panel__image,
+  .quick-done-panel__check,
+  .quick-done-panel__check path {
+    animation: none;
   }
 }
 </style>
