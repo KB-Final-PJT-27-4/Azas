@@ -66,9 +66,6 @@ public class AccountOpenService {
         FinancialProduct product = findProduct(request.getFinancialProductId());
         validateTargetOwner(ownerType, product.getTargetOwnerType());
         String accountProductType = mapProductType(product.getProductType());
-        AccountOpenGoalRequest goal = validateGoal(
-                ownerType, accountProductType, request.getGoal()
-        );
         BigDecimal deposit = validateDeposit(request.getInitialDepositAmount());
 
         boolean hasParentDemand = accountMapper
@@ -76,11 +73,6 @@ public class AccountOpenService {
         if (!hasParentDemand && !(ownerType == FinancialAccountOwnerType.PARENT
                 && "DEMAND_DEPOSIT".equals(accountProductType))) {
             throw new BusinessException(ErrorCode.PARENT_DEMAND_DEPOSIT_REQUIRED);
-        }
-        if (goal != null && goal.getFinancialGoalTemplateId() != null
-                && accountMapper.countActiveFinancialGoalTemplate(
-                goal.getFinancialGoalTemplateId()) < 1) {
-            throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
         }
 
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
@@ -97,41 +89,38 @@ public class AccountOpenService {
         boolean primary = ownerType == FinancialAccountOwnerType.PARENT
                 && "DEMAND_DEPOSIT".equals(accountProductType)
                 && !hasParentDemand;
+
         AccountOpenRecord account = new AccountOpenRecord(
-                ownerType.name(), ownerMemberId, request.getChildId(),
-                product.getFinancialProductId(), goal == null ? null : goal.getFinancialGoalTemplateId(),
-                product.getBankName(), protector.encrypt(accountNumber), hash(accountNumber),
-                accountName, accountProductType, deposit,
-                goal == null ? null : goal.getTitle(),
-                goal == null ? null : goal.getTargetAmount(),
-                goal == null ? null : goal.getTargetDate(),
-                primary, now, maturityDate
+                ownerType.name(),
+                ownerMemberId,
+                request.getChildId(),
+                product.getFinancialProductId(),
+                product.getBankName(),
+                protector.encrypt(accountNumber),
+                hash(accountNumber),
+                accountName,
+                accountProductType,
+                deposit,
+                primary,
+                now,
+                maturityDate
         );
+
         if (accountMapper.insertOpenedAccount(account) != 1 || account.getAccountId() == null)
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
 
-        OpenedFinancialGoalResult goalResult = null;
-        if (goal != null) {
-            FinancialGoalOpenRecord record = new FinancialGoalOpenRecord(
-                    request.getChildId(), account.getAccountId(),
-                    goal.getFinancialGoalTemplateId(), goal.getTitle().trim(),
-                    goal.getTargetAmount(), goal.getTargetDate(),
-                    goal.getMonthlySavingAmount(), now
-            );
-            if (accountMapper.insertFinancialGoal(record) != 1
-                    || record.getFinancialGoalId() == null
-                    || accountMapper.insertFinancialGoalCheckpoints(
-                    record.getFinancialGoalId(), goal.getTargetAmount()) != 5)
-                throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
-            goalResult = new OpenedFinancialGoalResult(
-                    record.getFinancialGoalId(), record.getTitle(),
-                    record.getTargetAmount(), record.getTargetDate(), "ACTIVE"
-            );
-        }
         return new AccountOpenResult(
-                account.getAccountId(), ownerType.name(), request.getChildId(),
-                product.getFinancialProductId(), product.getBankName(), accountName,
-                accountNumber, accountProductType, deposit, primary, goalResult, now
+                account.getAccountId(),
+                ownerType.name(),
+                request.getChildId(),
+                product.getFinancialProductId(),
+                product.getBankName(),
+                accountName,
+                accountNumber,
+                accountProductType,
+                deposit,
+                primary,
+                now
         );
     }
 
@@ -198,23 +187,6 @@ public class AccountOpenService {
         BigDecimal result = value == null ? BigDecimal.ZERO : value;
         if (result.signum() < 0) throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
         return result;
-    }
-
-    private AccountOpenGoalRequest validateGoal(FinancialAccountOwnerType owner,
-                                                 String productType,
-                                                 AccountOpenGoalRequest goal) {
-        boolean required = owner == FinancialAccountOwnerType.CHILD
-                && "SAVINGS".equals(productType);
-        if (required && goal == null) throw new BusinessException(ErrorCode.SAVINGS_GOAL_REQUIRED);
-        if (!required && goal != null) throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
-        if (goal == null) return null;
-        if (goal.getTitle() == null || goal.getTitle().isBlank()
-                || goal.getTargetAmount() == null || goal.getTargetAmount().signum() <= 0
-                || goal.getMonthlySavingAmount() == null || goal.getMonthlySavingAmount().signum() <= 0
-                || goal.getTargetDate() == null
-                || !goal.getTargetDate().isAfter(LocalDate.now(clock)))
-            throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
-        return goal;
     }
 
     private String uniqueAccountNumber() {

@@ -17,6 +17,7 @@ TRUNCATE TABLE financial_transfer;
 TRUNCATE TABLE account_transaction;
 TRUNCATE TABLE account_balance_snapshot;
 TRUNCATE TABLE financial_goal_checkpoint;
+TRUNCATE TABLE financial_goal_account;
 TRUNCATE TABLE financial_goal;
 TRUNCATE TABLE financial_account;
 TRUNCATE TABLE financial_product_bookmark;
@@ -469,7 +470,6 @@ INSERT INTO financial_account (
 INSERT INTO financial_goal (
   financial_goal_id,
   child_id,
-  financial_account_id,
   financial_goal_template_id,
   title,
   target_amount,
@@ -477,7 +477,17 @@ INSERT INTO financial_goal (
   monthly_saving_amount,
   status
 ) VALUES
-  (1, 1, 3, 1, '대학자금 마련', 30000000, '2038-01-12', 100000, 'ACTIVE');
+  (1, 1, 1, '대학자금 마련', 30000000, '2038-01-12', 100000, 'ACTIVE');
+
+INSERT INTO financial_goal_account (
+    financial_goal_account_id,
+    financial_goal_id,
+    financial_account_id
+) VALUES (
+             1,
+             1,
+             3
+         );
 
 INSERT INTO financial_goal_checkpoint (
   financial_goal_checkpoint_id,

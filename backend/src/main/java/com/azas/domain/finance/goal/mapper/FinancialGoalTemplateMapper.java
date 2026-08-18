@@ -9,4 +9,9 @@ import java.util.List;
 public interface FinancialGoalTemplateMapper {
 
     List<FinancialGoalTemplate> findActiveDefaultTemplates();
+
+    FinancialGoalTemplate findActiveDefaultTemplateById(
+            @org.apache.ibatis.annotations.Param("financialGoalTemplateId")
+            long financialGoalTemplateId
+    );
 }
