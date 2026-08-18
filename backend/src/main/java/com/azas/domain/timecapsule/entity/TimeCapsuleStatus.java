@@ -10,7 +10,6 @@ public enum TimeCapsuleStatus {
     RELEASED,
     ARCHIVED;
 
-    // [JMG] CAPSULE-2 목록 조회 상태 파라미터를 ERD 상태값으로 변환한다.
     public static TimeCapsuleStatus from(String value) {
         try {
             return TimeCapsuleStatus.valueOf(

@@ -2,6 +2,10 @@ package com.azas.domain.timecapsule.service;
 
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
+import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
+import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
@@ -11,6 +15,7 @@ import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryStatus;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMedia;
+import com.azas.domain.timecapsule.entity.TimeCapsuleMediaStatus;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMediaType;
 import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
@@ -29,6 +34,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,6 +60,224 @@ class TimeCapsuleEntryServiceTest {
     private TimeCapsuleObjectStorage timeCapsuleObjectStorage;
     @InjectMocks
     private TimeCapsuleEntryService timeCapsuleEntryService;
+
+    @Test
+    void createMediaUploadUrlReturnsSingleRepresentativeImageUrl() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        CreateTimeCapsuleMediaUploadUrlRequest request =
+                createMediaUploadUrlRequest(" image/jpeg ", 1048576L);
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleMediaMapper.countByEntryIdAndSlotNo(1000L, 1))
+                .willReturn(0);
+        given(timeCapsuleEntryMapper.updateDraftMediaModeIfNone(
+                1000L, TimeCapsuleEntryMediaMode.IMAGE
+        )).willReturn(1);
+        given(timeCapsuleMediaMapper.insert(any(TimeCapsuleMedia.class)))
+                .willAnswer(invocation -> {
+                    TimeCapsuleMedia media = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(
+                            media, "timeCapsuleMediaId", 2000L
+                    );
+                    return 1;
+                });
+        given(timeCapsuleObjectStorage.createUploadUrl(
+                any(String.class),
+                org.mockito.ArgumentMatchers.eq("image/jpeg"),
+                org.mockito.ArgumentMatchers.eq(Duration.ofMinutes(15))
+        )).willReturn(new TimeCapsuleObjectStorage.PresignedUrl(
+                "https://storage.example/presigned-put"
+        ));
+
+        CreateTimeCapsuleMediaUploadUrlResponse response =
+                timeCapsuleEntryService.createMediaUploadUrl(
+                        7L, 1000L, request
+                );
+
+        assertEquals(1000L, response.getTimeCapsuleEntryId());
+        assertEquals(2000L, response.getTimeCapsuleMediaId());
+        assertEquals("https://storage.example/presigned-put",
+                response.getUploadUrl());
+        assertEquals("image/jpeg",
+                response.getRequiredHeaders().get("Content-Type"));
+
+        ArgumentCaptor<TimeCapsuleMedia> mediaCaptor =
+                ArgumentCaptor.forClass(TimeCapsuleMedia.class);
+        verify(timeCapsuleMediaMapper).insert(mediaCaptor.capture());
+        TimeCapsuleMedia media = mediaCaptor.getValue();
+        assertEquals(TimeCapsuleMediaType.IMAGE, media.getMediaType());
+        assertEquals("image/jpeg", media.getMimeType());
+        assertEquals(1048576L, media.getFileSize());
+        assertEquals(1, media.getSlotNo());
+        assertTrue(media.getObjectKey().startsWith(
+                "time-capsules/100/entries/1000/"
+        ));
+        assertTrue(media.getObjectKey().endsWith("/slot-1.jpg"));
+    }
+
+    @Test
+    void createMediaUploadUrlRejectsSecondRepresentativeImage() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        CreateTimeCapsuleMediaUploadUrlRequest request =
+                createMediaUploadUrlRequest("image/png", 2048L);
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleMediaMapper.countByEntryIdAndSlotNo(1000L, 1))
+                .willReturn(1);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.createMediaUploadUrl(
+                        7L, 1000L, request
+                )
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED,
+                exception.getErrorCode());
+        verify(timeCapsuleMediaMapper, never())
+                .insert(any(TimeCapsuleMedia.class));
+        verify(timeCapsuleObjectStorage, never())
+                .createUploadUrl(any(), any(), any());
+    }
+
+    @Test
+    void createMediaUploadUrlRejectsVideoMimeType() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        CreateTimeCapsuleMediaUploadUrlRequest request =
+                createMediaUploadUrlRequest("video/mp4", 2048L);
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.createMediaUploadUrl(
+                        7L, 1000L, request
+                )
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+        verify(timeCapsuleMediaMapper, never())
+                .insert(any(TimeCapsuleMedia.class));
+    }
+
+    @Test
+    void completeMediaUploadActivatesSingleUploadedImage() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsuleMedia media = createMedia(
+                2000L, 1000L, TimeCapsuleMediaStatus.PENDING_UPLOAD
+        );
+        CompleteTimeCapsuleMediaUploadRequest request =
+                createMediaUploadCompleteRequest(2000L);
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleMediaMapper.findByEntryIdAndIdForUpdate(
+                1000L, 2000L
+        )).willReturn(media);
+        given(timeCapsuleObjectStorage.getObjectMetadata(
+                media.getObjectKey()
+        )).willReturn(new TimeCapsuleObjectStorage.StoredObjectMetadata(
+                "image/jpeg", 1048576L
+        ));
+        given(timeCapsuleMediaMapper.activatePendingMedia(2000L))
+                .willReturn(1);
+
+        CompleteTimeCapsuleMediaUploadResponse response =
+                timeCapsuleEntryService.completeMediaUpload(
+                        7L, 1000L, request
+                );
+
+        assertEquals(1000L, response.getTimeCapsuleEntryId());
+        assertEquals(2000L, response.getTimeCapsuleMediaId());
+        assertEquals("ACTIVE", response.getMediaStatus());
+        verify(timeCapsuleMediaMapper).setThumbnailIfAbsent(
+                1000L, media.getObjectKey()
+        );
+    }
+
+    @Test
+    void completeMediaUploadIsIdempotentForActiveImage() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsuleMedia media = createMedia(
+                2000L, 1000L, TimeCapsuleMediaStatus.ACTIVE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleMediaMapper.findByEntryIdAndIdForUpdate(
+                1000L, 2000L
+        )).willReturn(media);
+
+        CompleteTimeCapsuleMediaUploadResponse response =
+                timeCapsuleEntryService.completeMediaUpload(
+                        7L,
+                        1000L,
+                        createMediaUploadCompleteRequest(2000L)
+                );
+
+        assertEquals("ACTIVE", response.getMediaStatus());
+        verify(timeCapsuleObjectStorage, never())
+                .getObjectMetadata(any(String.class));
+        verify(timeCapsuleMediaMapper, never()).activatePendingMedia(2000L);
+        verify(timeCapsuleMediaMapper, never())
+                .setThumbnailIfAbsent(
+                        org.mockito.ArgumentMatchers.anyLong(),
+                        any(String.class)
+                );
+    }
+
+    @Test
+    void completeMediaUploadRejectsMismatchedStoredObject() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsuleMedia media = createMedia(
+                2000L, 1000L, TimeCapsuleMediaStatus.PENDING_UPLOAD
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleMediaMapper.findByEntryIdAndIdForUpdate(
+                1000L, 2000L
+        )).willReturn(media);
+        given(timeCapsuleObjectStorage.getObjectMetadata(
+                media.getObjectKey()
+        )).willReturn(new TimeCapsuleObjectStorage.StoredObjectMetadata(
+                "image/png", 1048576L
+        ));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.completeMediaUpload(
+                        7L,
+                        1000L,
+                        createMediaUploadCompleteRequest(2000L)
+                )
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_MEDIA_OBJECT_INVALID,
+                exception.getErrorCode());
+        verify(timeCapsuleMediaMapper, never()).activatePendingMedia(2000L);
+    }
 
     @Test
     void getTimeCapsuleEntriesReturnsOnlySealedEntries() {
@@ -270,9 +494,18 @@ class TimeCapsuleEntryServiceTest {
     @Test
     void sealTimeCapsuleEntryRequiresOneActiveImageAndUpdatesAggregates() {
         TimeCapsuleEntry draft = createEntry(
-                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
-                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
                 TimeCapsuleEntryMediaMode.IMAGE
+        );
+        ReflectionTestUtils.setField(
+                draft,
+                "thumbnailObjectKey",
+                "time-capsules/100/entries/1000/media/slot-1.jpg"
         );
         TimeCapsuleEntry sealed = createEntry(
                 1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
@@ -431,5 +664,106 @@ class TimeCapsuleEntryServiceTest {
         ReflectionTestUtils.setField(request, "title", title);
         ReflectionTestUtils.setField(request, "message", message);
         return request;
+    }
+
+    private CreateTimeCapsuleMediaUploadUrlRequest
+    createMediaUploadUrlRequest(String mimeType, long fileSize) {
+        CreateTimeCapsuleMediaUploadUrlRequest request =
+                new CreateTimeCapsuleMediaUploadUrlRequest();
+        ReflectionTestUtils.setField(request, "mimeType", mimeType);
+        ReflectionTestUtils.setField(request, "fileSize", fileSize);
+        return request;
+    }
+
+    private CompleteTimeCapsuleMediaUploadRequest
+    createMediaUploadCompleteRequest(long timeCapsuleMediaId) {
+        CompleteTimeCapsuleMediaUploadRequest request =
+                new CompleteTimeCapsuleMediaUploadRequest();
+        ReflectionTestUtils.setField(
+                request, "timeCapsuleMediaId", timeCapsuleMediaId
+        );
+        return request;
+    }
+
+    private TimeCapsuleMedia createMedia(
+            long timeCapsuleMediaId,
+            long timeCapsuleEntryId,
+            TimeCapsuleMediaStatus status
+    ) {
+        TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
+                timeCapsuleEntryId,
+                TimeCapsuleMediaType.IMAGE,
+                "time-capsules/100/entries/1000/media/slot-1.jpg",
+                "image/jpeg",
+                1048576L,
+                1
+        );
+        ReflectionTestUtils.setField(
+                media, "timeCapsuleMediaId", timeCapsuleMediaId
+        );
+        ReflectionTestUtils.setField(media, "status", status);
+        return media;
+    }
+
+    @Test
+    void sealTimeCapsuleEntryRejectsInvalidEntryId() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.sealTimeCapsuleEntry(
+                        7L,
+                        0L
+                )
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+
+        verify(timeCapsuleEntryMapper, never())
+                .findOwnedByIdForUpdate(
+                        org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.anyLong()
+                );
+    }
+
+    @Test
+    void sealTimeCapsuleEntryRejectsMissingRepresentativeImageReference() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleEntryMapper.countPendingMediaByEntryId(1000L))
+                .willReturn(0);
+        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
+                1000L,
+                TimeCapsuleMediaType.IMAGE
+        )).willReturn(1);
+        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
+                1000L,
+                TimeCapsuleMediaType.VIDEO
+        )).willReturn(0);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.sealTimeCapsuleEntry(
+                        7L,
+                        1000L
+                )
+        );
+
+        assertEquals(
+                ErrorCode.TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET,
+                exception.getErrorCode()
+        );
+
+        verify(timeCapsuleEntryMapper, never()).sealDraftEntry(1000L);
+        verify(timeCapsuleEntryMapper, never())
+                .increaseEntryAggregates(any());
     }
 }

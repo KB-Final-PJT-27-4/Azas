@@ -4,8 +4,8 @@ import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
-import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsRequest;
-import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlsResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlRequest;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
@@ -74,7 +74,6 @@ public class TimeCapsuleController {
             notes = "부모가 접근 가능한 자녀의 타임캡슐 보관함을 공개 날짜 순서로 조회합니다. 카드 화면에 필요한 공개일·D-day·총 저축 금액을 반환합니다."
     )
     @GetMapping("/children/{child_id}/time-capsules")
-    // [JMG] CAPSULE-2 부모에게 연결된 자녀의 타임캡슐 보관함 목록을 조회한다.
     public ResponseEntity<TimeCapsuleListResponse> getTimeCapsules(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
@@ -97,7 +96,6 @@ public class TimeCapsuleController {
             notes = "접근 가능한 부모 또는 보호자가 보관함과 내부 엔트리·미디어 및 원본 저장 객체를 복구할 수 없도록 영구 삭제합니다. 자녀·계좌·거래·목표 데이터는 유지됩니다."
     )
     @DeleteMapping("/time-capsules/{time_capsule_id}")
-    // [JMG] CAPSULE-6 부모·보호자 권한을 확인한 뒤 타임캡슐 보관함을 영구 삭제한다.
     public ResponseEntity<Void> deleteTimeCapsule(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
@@ -145,7 +143,6 @@ public class TimeCapsuleController {
             notes = "부모가 보관함 요약과 봉인된 엔트리 목록을 리스트·캘린더 공용 응답으로 조회합니다."
     )
     @GetMapping("/time-capsules/{time_capsule_id}/entries")
-    // [JMG] CAPSULE-4 부모 권한을 확인한 뒤 타임캡슐 내부 엔트리 목록을 조회한다.
     public ResponseEntity<TimeCapsuleEntryListResponse>
     getTimeCapsuleEntries(
             @RequestHeader(value = "Authorization", required = false)
@@ -171,7 +168,6 @@ public class TimeCapsuleController {
             notes = "부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다."
     )
     @GetMapping("/time-capsule-entries/{entry_id}")
-    // [JMG] CAPSULE-14 부모·보호자 권한을 확인한 뒤 타임캡슐 엔트리 상세를 조회한다.
     public ResponseEntity<TimeCapsuleEntryDetailResponse>
     getTimeCapsuleEntry(
             @RequestHeader(value = "Authorization", required = false)
@@ -197,7 +193,6 @@ public class TimeCapsuleController {
             notes = "작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다."
     )
     @DeleteMapping("/time-capsule-entries/{entry_id}")
-    // [JMG] CAPSULE-13 작성자 본인의 DRAFT 타임캡슐 엔트리 삭제 요청을 처리한다.
     public ResponseEntity<Void> deleteTimeCapsuleEntry(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
@@ -217,16 +212,21 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-15 타임캡슐 엔트리 봉인",
-            notes = "작성자 본인이 미디어 조건을 충족한 DRAFT 엔트리를 봉인합니다."
+            value = "TIMECAPSULE-15 타임캡슐 엔트리 봉인",
+            notes = "작성자 본인의 DRAFT 엔트리에 단일 활성 이미지가 "
+                    + "등록된 경우 엔트리를 최종 봉인합니다. "
+                    + "봉인된 엔트리는 보관함 목록·캘린더에 노출되며 "
+                    + "이후 내용과 미디어를 수정할 수 없습니다."
     )
     @PatchMapping("/time-capsule-entries/{entry_id}/seal")
-    // [JMG] CAPSULE-15 미디어 조건을 충족한 작성자 본인의 DRAFT 엔트리를 봉인한다.
     public ResponseEntity<TimeCapsuleEntrySealResponse>
     sealTimeCapsuleEntry(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
-            @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
+            @ApiParam(
+                    value = "타임캡슐 엔트리 ID",
+                    required = true
+            )
             @PathVariable("entry_id")
             long timeCapsuleEntryId
     ) {
@@ -243,26 +243,25 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-7 타임캡슐 엔트리 미디어 업로드 URL 발급",
-            notes = "DRAFT 엔트리에 서버가 생성한 S3 Presigned PUT URL을 발급합니다."
+            value = "TIMECAPSULE-7 타임캡슐 대표 이미지 업로드 URL 발급",
+            notes = "작성자 본인의 DRAFT 엔트리에 JPEG·PNG·WebP 대표 이미지 한 장을 업로드할 수 있는 15분 유효 S3 Presigned PUT URL을 발급합니다. 별도 썸네일 파일은 생성하지 않습니다."
     )
-    @PostMapping("/time-capsule-entries/{entry_id}/media/upload-urls")
-    // [JMG] CAPSULE-7 작성자 본인의 DRAFT 엔트리에 첨부할 미디어 업로드 URL 발급 요청을 처리한다.
-    public ResponseEntity<CreateTimeCapsuleMediaUploadUrlsResponse>
-    createMediaUploadUrls(
+    @PostMapping("/time-capsule-entries/{entry_id}/media/upload-url")
+    public ResponseEntity<CreateTimeCapsuleMediaUploadUrlResponse>
+    createMediaUploadUrl(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
             @ApiParam(value = "타임캡슐 엔트리 ID", required = true)
             @PathVariable("entry_id")
             long timeCapsuleEntryId,
-            @Valid @RequestBody CreateTimeCapsuleMediaUploadUrlsRequest request
+            @Valid @RequestBody CreateTimeCapsuleMediaUploadUrlRequest request
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
                 authorizationHeader
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                timeCapsuleEntryService.createMediaUploadUrls(
+                timeCapsuleEntryService.createMediaUploadUrl(
                         memberId,
                         timeCapsuleEntryId,
                         request
@@ -271,11 +270,10 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-8 타임캡슐 엔트리 미디어 업로드 완료",
-            notes = "S3 객체 메타데이터를 검증한 뒤 업로드 대기 미디어를 활성화합니다."
+            value = "TIMECAPSULE-8 타임캡슐 단일 이미지 업로드 완료",
+            notes = "작성자 본인의 DRAFT 엔트리에 속한 단일 이미지의 S3 객체 존재 여부, MIME 타입, 파일 크기를 검증한 뒤 활성화합니다. 이미 활성화된 동일 이미지 요청은 멱등 성공으로 처리하며 엔트리 봉인은 별도 API에서 수행합니다."
     )
     @PostMapping("/time-capsule-entries/{entry_id}/media/complete")
-    // [JMG] CAPSULE-8 S3 업로드가 끝난 작성자 본인의 미디어 완료 처리 요청을 검증한다.
     public ResponseEntity<CompleteTimeCapsuleMediaUploadResponse>
     completeMediaUpload(
             @RequestHeader(value = "Authorization", required = false)
