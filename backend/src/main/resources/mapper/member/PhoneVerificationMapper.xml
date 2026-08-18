@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.member.mapper.PhoneVerificationMapper">
+
+    <resultMap id="phoneVerificationResultMap"
+               type="com.azas.domain.member.entity.PhoneVerification">
+        <id property="phoneVerificationId"
+            column="phone_verification_id"/>
+        <result property="memberId"
+                column="member_id"/>
+        <result property="phoneNumberCiphertext"
+                column="phone_number_ciphertext"/>
+        <result property="phoneNumberHash"
+                column="phone_number_hash"/>
+        <result property="verificationCodeHash"
+                column="verification_code_hash"/>
+        <result property="attemptCount"
+                column="attempt_count"/>
+        <result property="expiresAt"
+                column="expires_at"/>
+        <result property="verifiedAt"
+                column="verified_at"/>
+        <result property="verificationTokenHash"
+                column="verification_token_hash"/>
+        <result property="tokenExpiresAt"
+                column="token_expires_at"/>
+        <result property="tokenConsumedAt"
+                column="token_consumed_at"/>
+        <result property="createdAt"
+                column="created_at"/>
+    </resultMap>
+
+    <sql id="phoneVerificationColumns">
+        phone_verification_id,
+        member_id,
+        phone_number_ciphertext,
+        phone_number_hash,
+        verification_code_hash,
+        attempt_count,
+        expires_at,
+        verified_at,
+        verification_token_hash,
+        token_expires_at,
+        token_consumed_at,
+        created_at
+    </sql>
+
+    <insert id="insert"
+            parameterType="com.azas.domain.member.entity.PhoneVerification"
+            useGeneratedKeys="true"
+            keyProperty="phoneVerificationId"
+            keyColumn="phone_verification_id">
+        INSERT INTO phone_verification (
+            member_id,
+            phone_number_ciphertext,
+            phone_number_hash,
+            verification_code_hash,
+            attempt_count,
+            expires_at,
+            created_at
+        ) VALUES (
+                     #{memberId},
+                     #{phoneNumberCiphertext},
+                     #{phoneNumberHash},
+                     #{verificationCodeHash},
+                     #{attemptCount},
+                     #{expiresAt},
+                     #{createdAt}
+                 )
+    </insert>
+
+    <select id="findByIdAndMemberId"
+            resultMap="phoneVerificationResultMap">
+        SELECT
+        <include refid="phoneVerificationColumns"/>
+        FROM phone_verification
+        WHERE phone_verification_id =
+        #{phoneVerificationId}
+        AND member_id = #{memberId}
+    </select>
+
+    <select id="findLatestByMemberId"
+            resultMap="phoneVerificationResultMap">
+        SELECT
+        <include refid="phoneVerificationColumns"/>
+        FROM phone_verification
+        WHERE member_id = #{memberId}
+        ORDER BY created_at DESC,
+        phone_verification_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findLatestByPhoneNumberHash"
+            resultMap="phoneVerificationResultMap">
+        SELECT
+        <include refid="phoneVerificationColumns"/>
+        FROM phone_verification
+        WHERE phone_number_hash = #{phoneNumberHash}
+        ORDER BY created_at DESC,
+        phone_verification_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findByVerificationTokenHash"
+            resultMap="phoneVerificationResultMap">
+        SELECT
+        <include refid="phoneVerificationColumns"/>
+        FROM phone_verification
+        WHERE verification_token_hash =
+        #{verificationTokenHash}
+    </select>
+
+    <update id="expireUnverifiedByMemberId">
+        UPDATE phone_verification
+        SET expires_at = #{expiredAt}
+        WHERE member_id = #{memberId}
+          AND verified_at IS NULL
+          AND expires_at > #{expiredAt}
+    </update>
+
+    <update id="increaseAttemptCountIfPending">
+        UPDATE phone_verification
+        SET attempt_count = attempt_count + 1
+        WHERE phone_verification_id =
+              #{phoneVerificationId}
+          AND member_id = #{memberId}
+          AND verified_at IS NULL
+          AND expires_at > #{attemptedAt}
+          AND attempt_count &lt; #{maxAttempts}
+    </update>
+
+    <update id="markVerifiedIfPending">
+        UPDATE phone_verification
+        SET verified_at = #{verifiedAt},
+            verification_token_hash =
+                #{verificationTokenHash},
+            token_expires_at = #{tokenExpiresAt}
+        WHERE phone_verification_id =
+              #{phoneVerificationId}
+          AND member_id = #{memberId}
+          AND verified_at IS NULL
+          AND expires_at > #{verifiedAt}
+          AND attempt_count &lt; #{maxAttempts}
+    </update>
+
+    <update id="consumeVerificationTokenIfUsable">
+        UPDATE phone_verification
+        SET token_consumed_at = #{consumedAt}
+        WHERE phone_verification_id =
+              #{phoneVerificationId}
+          AND member_id = #{memberId}
+          AND verification_token_hash =
+              #{verificationTokenHash}
+          AND verified_at IS NOT NULL
+          AND token_expires_at > #{consumedAt}
+          AND token_consumed_at IS NULL
+    </update>
+
+</mapper>

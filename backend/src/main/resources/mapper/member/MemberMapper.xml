@@ -71,4 +71,36 @@
                  )
     </insert>
 
+    <update id="updateProfile"
+            parameterType="com.azas.domain.member.entity.Member">
+        UPDATE member
+        SET birth_date = #{birthDate},
+            profile_image_url = #{profileImageUrl},
+            phone_number_ciphertext =
+                #{phoneNumberCiphertext},
+            phone_number_hash = #{phoneNumberHash},
+            phone_verified_at = #{phoneVerifiedAt}
+        WHERE member_id = #{memberId}
+          AND status = 'ACTIVE'
+    </update>
+
+    <update id="anonymizeAndWithdrawIfActive">
+        UPDATE member
+        SET email = CONCAT(
+                'withdrawn-',
+                member_id,
+                '@azas.invalid'
+                    ),
+            name = '탈퇴회원',
+            profile_image_url = NULL,
+            birth_date = NULL,
+            phone_number_ciphertext = NULL,
+            phone_number_hash = NULL,
+            phone_verified_at = NULL,
+            status = 'WITHDRAWN',
+            updated_at = #{withdrawnAt}
+        WHERE member_id = #{memberId}
+          AND status = 'ACTIVE'
+    </update>
+
 </mapper>

@@ -18,9 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -34,13 +32,17 @@ class MemberProfileServiceTest {
     @Mock
     private SocialAccountMapper socialAccountMapper;
 
+    @Mock
+    private PhoneNumberProtector phoneNumberProtector;
+
     private MemberProfileService memberProfileService;
 
     @BeforeEach
     void setUp() {
         memberProfileService = new MemberProfileService(
                 memberMapper,
-                socialAccountMapper
+                socialAccountMapper,
+                phoneNumberProtector
         );
     }
 
@@ -81,6 +83,7 @@ class MemberProfileServiceTest {
                 socialAccounts,
                 result.getSocialAccounts()
         );
+        assertNull(result.getMaskedPhoneNumber());
 
         verify(memberMapper).findById(1L);
         verify(socialAccountMapper)
@@ -143,5 +146,51 @@ class MemberProfileServiceTest {
         );
 
         return member;
+    }
+
+    @Test
+    void returnsMaskedVerifiedPhoneNumber() {
+        Member member = activeMember();
+
+        byte[] ciphertext = new byte[]{1, 2, 3};
+
+        member.applyVerifiedPhoneNumber(
+                ciphertext,
+                "phone-number-hash",
+                java.time.LocalDateTime.of(
+                        2026,
+                        8,
+                        7,
+                        1,
+                        0
+                )
+        );
+
+        when(memberMapper.findById(1L))
+                .thenReturn(member);
+        when(socialAccountMapper.findAllByMemberId(1L))
+                .thenReturn(List.of());
+        when(
+                phoneNumberProtector.decrypt(
+                        org.mockito.ArgumentMatchers.any(
+                                byte[].class
+                        )
+                )
+        ).thenReturn("01012345678");
+
+        MemberProfileResult result =
+                memberProfileService.getMyProfile(1L);
+
+        assertEquals(
+                "010-****-5678",
+                result.getMaskedPhoneNumber()
+        );
+
+        verify(phoneNumberProtector)
+                .decrypt(
+                        org.mockito.ArgumentMatchers.any(
+                                byte[].class
+                        )
+                );
     }
 }

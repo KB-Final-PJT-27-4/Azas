@@ -9,7 +9,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE notification;
 TRUNCATE TABLE notification_preference;
 TRUNCATE TABLE asset_report;
-TRUNCATE TABLE time_capsule_export;
 TRUNCATE TABLE time_capsule_media;
 TRUNCATE TABLE time_capsule_entry;
 TRUNCATE TABLE time_capsule;
@@ -17,13 +16,15 @@ TRUNCATE TABLE auto_transfer_schedule;
 TRUNCATE TABLE financial_transfer;
 TRUNCATE TABLE account_transaction;
 TRUNCATE TABLE account_balance_snapshot;
-TRUNCATE TABLE financial_sync_job;
+TRUNCATE TABLE financial_goal_checkpoint;
+TRUNCATE TABLE financial_goal_account;
+TRUNCATE TABLE financial_goal;
 TRUNCATE TABLE financial_account;
-TRUNCATE TABLE financial_connection;
 TRUNCATE TABLE financial_product_bookmark;
 TRUNCATE TABLE financial_product;
 TRUNCATE TABLE child_checklist_item;
 TRUNCATE TABLE checklist_item_template;
+TRUNCATE TABLE allowance_request;
 TRUNCATE TABLE family_invitation;
 TRUNCATE TABLE child_parent;
 TRUNCATE TABLE child;
@@ -68,9 +69,10 @@ INSERT INTO financial_goal_template (
   is_active,
   created_by_member_id
 ) VALUES
-  (1, '대학자금 마련', '아이의 대학 입학 시점에 필요한 자금을 준비해요.', 'graduation_cap', 1, 1, 1, NULL),
-  (2, '독립자금 마련', '성인이 되었을 때 첫 독립을 위한 종잣돈을 준비해요.', 'home', 2, 1, 1, NULL),
-  (3, '첫 종잣돈 마련', '아이에게 경제적 출발선을 만들어주는 목표예요.', 'seed_money', 3, 1, 1, NULL);
+  (1, '대학자금', '대학 등록금과 교육비', 'graduation_cap', 1, 1, 1, NULL),
+  (2, '주거자금', '내 집 마련을 위한 자금', 'house', 2, 1, 1, NULL),
+  (4, '결혼자금', '미래 자녀의 결혼을 위한 자금', 'hearts', 3, 1, 1, NULL),
+  (3, '목돈 마련', '아이의 미래를 위한 든든한 목돈', 'coins', 4, 1, 1, NULL);
 
 INSERT INTO child (
   child_id,
@@ -134,19 +136,28 @@ INSERT INTO financial_product (
   bank_name,
   external_product_id,
   product_type,
+  target_owner_type,
   product_subtype,
   name,
   summary,
+  highlight_label,
+  display_badges_json,
+  curation_reason,
   detail_url,
   product_image_key,
   base_interest_rate,
   max_interest_rate,
+  interest_rate_reference,
   min_age,
   max_age,
   min_monthly_amount,
   max_monthly_amount,
   contract_period_months,
+  min_contract_period_months,
+  max_contract_period_months,
+  renewal_description,
   interest_payment_method,
+  join_termination_method,
   eligibility_conditions_json,
   deposit_conditions_json,
   preferential_conditions_json,
@@ -160,19 +171,28 @@ INSERT INTO financial_product (
     'KB국민은행',
     'kb-young-youth-saving',
     'SAVING',
+    'CHILD',
     '자유적립식 예금',
     'KB Young Youth 적금',
     '어린이·청소년을 위한 장기 저축 적금 상품입니다.',
+    '자녀 추천',
+    JSON_ARRAY('#만19세미만', '#자유적립', '#무료보험'),
+    '자녀가 성년이 될 때까지 장기 거래가 가능하고 어린이·청소년을 위한 우대조건과 부가혜택을 제공하는 상품이에요.',
     'https://www.kbstar.com/',
     'pig_coin',
     2.1000,
-    3.4000,
+    3.6500,
+    '12개월 기준 · 세금공제 전',
     0,
     19,
     10000,
     3000000,
     12,
-    '만기일시지급식',
+    12,
+    12,
+    '재예치 가능 여부는 상품 약관을 확인하세요.',
+    'MATURITY_LUMP_SUM',
+    '영업점 또는 KB스타뱅킹에서 가입·해지할 수 있습니다.',
     JSON_ARRAY(JSON_OBJECT('label', '가입 대상', 'content', '만 19세 미만 실명의 개인')),
     JSON_ARRAY(JSON_OBJECT('label', '저축 금액', 'content', '월 1만원 이상 300만원 이하')),
     JSON_ARRAY(JSON_OBJECT('label', '가족사랑 우대', 'rate', 0.2), JSON_OBJECT('label', '자동이체 우대', 'rate', 0.1)),
@@ -180,6 +200,146 @@ INSERT INTO financial_product (
     JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', '상품 가입 전 약관과 상품설명서를 확인하세요.')),
     1,
     '2026-07-01'
+  ),
+  (
+    2,
+    'KB국민은행',
+    'kb-mock-demand-deposit',
+    'ACCOUNT',
+    'BOTH',
+    '입출금통장',
+    'KB국민 입출금통장',
+    'Mock 금융 온보딩과 용돈 관리를 위한 입출금계좌입니다.',
+    '첫 계좌',
+    JSON_ARRAY('#입출금', '#용돈관리'),
+    '부모와 자녀의 일상적인 입출금과 용돈 관리를 시작하기 위한 Mock 계좌 상품이에요.',
+    'https://www.kbstar.com/',
+    'wallet',
+    0.1000,
+    0.1000,
+    '수시입출금 · 세금공제 전',
+    0,
+    NULL,
+    0,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    'Azas의 Mock 계좌 개설 화면에서 가입·해지할 수 있습니다.',
+    JSON_ARRAY(JSON_OBJECT('label', '가입 대상', 'content', 'Azas Mock 금융 사용자')),
+    JSON_ARRAY(JSON_OBJECT('label', '초기 금액', 'content', '0원 이상')),
+    JSON_ARRAY(),
+    JSON_ARRAY(),
+    JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', '실제 금융기관 계좌가 아닌 Mock 계좌입니다.')),
+    1,
+    '2026-08-13'
+  ),
+  (
+    3,
+    'KB국민은행',
+    'DP01001614',
+    'SAVING',
+    'PARENT',
+    '자유적립식 예금',
+    'KB스타적금Ⅲ',
+    '부모의 자산 형성을 위한 KB국민은행 적금 기반 Mock 상품입니다.',
+    '부모 추천',
+    JSON_ARRAY('#자유적립', '#월30만원'),
+    '부모가 자녀의 미래를 위해 매월 자유롭게 저축 계획을 실천할 수 있는 Mock 적금 상품이에요.',
+    'https://obank.kbstar.com/quics?cc=b061761%3Ab061770&isNew=N&page=C020702&prcode=DP01001614',
+    'pig_coin',
+    NULL,
+    NULL,
+    '12개월 기준 · 세금공제 전',
+    19,
+    NULL,
+    10000,
+    300000,
+    12,
+    12,
+    12,
+    NULL,
+    'MATURITY_LUMP_SUM',
+    'Azas의 Mock 적금 개설 화면에서 가입·해지할 수 있습니다.',
+    JSON_ARRAY(JSON_OBJECT('label', '가입 대상', 'content', '만 19세 이상 부모 회원')),
+    JSON_ARRAY(JSON_OBJECT('label', '저축 금액', 'content', '월 1만원 이상 30만원 이하')),
+    JSON_ARRAY(),
+    JSON_ARRAY(),
+    JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', '실제 금융기관 계좌가 아닌 Mock 계좌입니다.')),
+    1,
+    '2026-08-14'
+  ),
+  (
+    4,
+    'KB국민은행',
+    'kb-child-love-saving',
+    'SAVING',
+    'CHILD',
+    '자유적립식 예금',
+    'KB아이사랑적금',
+    '아이 키우는 가정의 목돈 마련을 응원하는 가족 맞춤형 적금이에요.',
+    '최고 금리',
+    JSON_ARRAY('#아이사랑', '#육아응원', '#월30만원'),
+    '아이를 키우는 가족이 우대금리와 함께 꾸준히 자녀 자산을 준비할 수 있는 Mock 적금 상품이에요.',
+    'https://www.kbstar.com/',
+    'pig_coin',
+    2.0000,
+    10.0000,
+    '12개월 기준 · 세금공제 전',
+    0,
+    19,
+    10000,
+    300000,
+    12,
+    12,
+    12,
+    '만기 후 재가입 여부는 상품 약관을 확인하세요.',
+    'MATURITY_LUMP_SUM',
+    '영업점 또는 KB스타뱅킹에서 가입·해지할 수 있습니다.',
+    JSON_ARRAY(JSON_OBJECT('label', '가입 대상', 'content', '자녀를 양육하는 가족 고객')),
+    JSON_ARRAY(JSON_OBJECT('label', '저축 금액', 'content', '월 1만원 이상 30만원 이하')),
+    JSON_ARRAY(JSON_OBJECT('label', '가족 우대', 'rate', 8.0)),
+    JSON_ARRAY(JSON_OBJECT('label', '육아 응원', 'content', '가족 고객 우대 조건 제공')),
+    JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', 'Mock 상품의 금리와 조건은 시연용 데이터입니다.')),
+    1,
+    '2026-08-15'
+  ),
+  (
+    5,
+    'KB국민은행',
+    'kb-280-day-saving',
+    'SAVING',
+    'PARENT',
+    '자유적립식 예금',
+    '내 아이를 위한 280일 적금',
+    '아이를 기다리는 기간 동안 즐겁게 저축하는 출산 준비 통장이에요.',
+    '출산 준비',
+    JSON_ARRAY('#예비부모', '#출산준비'),
+    '출산을 준비하는 기간 동안 아이의 첫 자산을 차근차근 마련할 수 있는 Mock 적금 상품이에요.',
+    'https://www.kbstar.com/',
+    'pig_coin',
+    2.5000,
+    3.5500,
+    '6~12개월 기준 · 세금공제 전',
+    19,
+    NULL,
+    10000,
+    1000000,
+    12,
+    6,
+    12,
+    '가입 기간은 6개월부터 12개월까지 선택할 수 있습니다.',
+    'MATURITY_LUMP_SUM',
+    'Azas의 Mock 적금 개설 화면에서 가입·해지할 수 있습니다.',
+    JSON_ARRAY(JSON_OBJECT('label', '가입 대상', 'content', '출산을 준비하는 부모 회원')),
+    JSON_ARRAY(JSON_OBJECT('label', '저축 금액', 'content', '월 1만원 이상 100만원 이하')),
+    JSON_ARRAY(),
+    JSON_ARRAY(JSON_OBJECT('label', '출산 준비', 'content', '예비 부모의 저축 계획을 지원합니다.')),
+    JSON_ARRAY(JSON_OBJECT('label', '유의사항', 'content', 'Mock 상품의 금리와 조건은 시연용 데이터입니다.')),
+    1,
+    '2026-08-15'
   );
 
 INSERT INTO financial_product_bookmark (
@@ -190,26 +350,12 @@ INSERT INTO financial_product_bookmark (
 ) VALUES
   (1, 1, 1, 1);
 
-INSERT INTO financial_connection (
-  financial_connection_id,
-  connected_by_member_id,
-  child_id,
-  owner_type,
-  provider,
-  external_connection_ciphertext,
-  external_connection_hash,
-  consent_status,
-  consented_at,
-  consent_expires_at,
-  last_synced_at
-) VALUES
-  (1, 1, NULL, 'PARENT', 'CODEF', UNHEX(SHA2('parent-connected-id', 256)), SHA2('parent-connected-id', 256), 'ACTIVE', NOW(6), DATE_ADD(NOW(6), INTERVAL 1 YEAR), NOW(6)),
-  (2, 1, 1, 'CHILD', 'CODEF', UNHEX(SHA2('child-connected-id', 256)), SHA2('child-connected-id', 256), 'ACTIVE', NOW(6), DATE_ADD(NOW(6), INTERVAL 1 YEAR), NOW(6));
-
 INSERT INTO financial_account (
   financial_account_id,
-  financial_connection_id,
+  owner_type,
+  owner_member_id,
   child_id,
+  financial_product_id,
   financial_goal_template_id,
   organization_code,
   bank_name,
@@ -235,13 +381,15 @@ INSERT INTO financial_account (
 ) VALUES
   (
     1,
+    'PARENT',
     1,
+    NULL,
     NULL,
     NULL,
     '004',
     'KB국민은행',
-    UNHEX(SHA2('parent-account-5678', 256)),
-    SHA2('parent-account-5678', 256),
+    FROM_BASE64('AS+1XqOuK/oansezNOWbzLlkSFQzXa+pjB2IqT+tWq9Ibya/JE7ldK82'),
+    SHA2('987-6543-5678', 256),
     'KB국민 5678',
     'DEMAND_DEPOSIT',
     2000000,
@@ -262,13 +410,15 @@ INSERT INTO financial_account (
   ),
   (
     2,
+    'CHILD',
     2,
     1,
     NULL,
+    NULL,
     '004',
     'KB국민은행',
-    UNHEX(SHA2('child-demand-account-1001', 256)),
-    SHA2('child-demand-account-1001', 256),
+    FROM_BASE64('AY+uroBtCF2CkEZpvz0aq8HxWzX+axeE89gB8rgwKmUP8B6J7Wi9vlH2'),
+    SHA2('123-4567-1001', 256),
     'KB Young Youth 입출금통장',
     'DEMAND_DEPOSIT',
     120000,
@@ -289,13 +439,15 @@ INSERT INTO financial_account (
   ),
   (
     3,
+    'CHILD',
     2,
+    1,
     1,
     1,
     '004',
     'KB국민은행',
-    UNHEX(SHA2('child-saving-account-2001', 256)),
-    SHA2('child-saving-account-2001', 256),
+    FROM_BASE64('AXczMbSjhE4uyFH2/NWa3d6+hbzPPTu3gwsbAaH6qGinioBVM5ppBpKz'),
+    SHA2('123-4567-2001', 256),
     'KB Young Youth 적금',
     'SAVINGS',
     14600000,
@@ -314,6 +466,40 @@ INSERT INTO financial_account (
     'ACTIVE',
     NOW(6)
   );
+
+INSERT INTO financial_goal (
+  financial_goal_id,
+  child_id,
+  financial_goal_template_id,
+  title,
+  target_amount,
+  target_date,
+  monthly_saving_amount,
+  status
+) VALUES
+  (1, 1, 1, '대학자금 마련', 30000000, '2038-01-12', 100000, 'ACTIVE');
+
+INSERT INTO financial_goal_account (
+    financial_goal_account_id,
+    financial_goal_id,
+    financial_account_id
+) VALUES (
+             1,
+             1,
+             3
+         );
+
+INSERT INTO financial_goal_checkpoint (
+  financial_goal_checkpoint_id,
+  financial_goal_id,
+  percentage,
+  target_amount
+) VALUES
+  (1, 1, 10, 3000000),
+  (2, 1, 25, 7500000),
+  (3, 1, 50, 15000000),
+  (4, 1, 75, 22500000),
+  (5, 1, 100, 30000000);
 
 INSERT INTO account_balance_snapshot (
   account_balance_snapshot_id,
@@ -362,21 +548,40 @@ INSERT INTO financial_transfer (
   (1, 1, 1, 1, 3, 100000, '7월 저축', 'MANUAL', 'SUCCEEDED', '00000000-0000-0000-0000-000000000001', 'mock-transfer-1', 1, '2026-07-20 08:59:00.000000', '2026-07-20 09:00:00.000000');
 
 INSERT INTO auto_transfer_schedule (
-  auto_transfer_schedule_id,
-  child_id,
-  member_id,
-  source_account_id,
-  destination_account_id,
-  amount,
-  frequency,
-  transfer_day,
-  start_date,
-  end_date,
-  next_transfer_at,
-  provider_schedule_id,
-  status
-) VALUES
-  (1, 1, 1, 1, 3, 100000, 'MONTHLY', 25, '2026-08-25', NULL, '2026-08-25 09:00:00.000000', NULL, 'ACTIVE');
+    auto_transfer_schedule_id,
+    child_id,
+    member_id,
+    request_idempotency_key,
+    financial_goal_id,
+    source_account_id,
+    destination_account_id,
+    amount,
+    frequency,
+    transfer_day,
+    start_date,
+    end_date,
+    next_transfer_at,
+    last_transfer_status,
+    last_transferred_at,
+    status
+) VALUES (
+             1,
+             1,
+             1,
+             '00000000-0000-0000-0000-000000000101',
+             1,
+             1,
+             3,
+             100000,
+             'MONTHLY',
+             25,
+             '2026-08-25',
+             NULL,
+             '2026-08-25 00:00:00.000000',
+             NULL,
+             NULL,
+             'ACTIVE'
+         );
 
 INSERT INTO time_capsule (
   time_capsule_id,
@@ -453,28 +658,69 @@ INSERT INTO asset_report (
   );
 
 INSERT INTO notification_preference (
-  notification_preference_id,
-  member_id,
-  notification_type,
-  in_app_enabled,
-  push_enabled
+    notification_preference_id,
+    member_id,
+    notification_category,
+    enabled
 ) VALUES
-  (1, 1, 'TRANSFER', 1, 1),
-  (2, 1, 'CAPSULE_RELEASE', 1, 1),
-  (3, 2, 'CAPSULE_RELEASE', 1, 1);
+      (1, 1, 'SAVINGS', 1),
+      (2, 1, 'TIME_CAPSULE', 1),
+      (3, 1, 'ALLOWANCE', 1),
+      (4, 1, 'PREGNANCY', 1),
+      (5, 1, 'USAGE_LIMIT', 1),
+      (6, 1, 'MISSION', 1);
+
+INSERT INTO notification_preference (
+    notification_preference_id,
+    member_id,
+    notification_category,
+    enabled
+) VALUES
+      (7, 2, 'SAVINGS', 1),
+      (8, 2, 'ALLOWANCE', 1),
+      (9, 2, 'USAGE_LIMIT', 1),
+      (10, 2, 'MISSION', 1);
 
 INSERT INTO notification (
-  notification_id,
-  member_id,
-  child_id,
-  notification_type,
-  title,
-  content,
-  reference_type,
-  reference_id,
-  is_read,
-  sent_at
+    notification_id,
+    member_id,
+    child_id,
+    notification_category,
+    notification_type,
+    title,
+    content,
+    reference_type,
+    reference_id,
+    metadata_json,
+    deduplication_key,
+    is_read
 ) VALUES
-  (1, 1, 1, 'TRANSFER', '저축 이체가 완료됐어요', '깨비의 적금 계좌로 100,000원이 입금됐어요.', 'TRANSFER', 1, 0, NOW(6)),
-  (2, 2, 1, 'CAPSULE_OPEN', '타임캡슐이 쌓이고 있어요', '아직 열 수는 없지만 소중한 기록이 보관되고 있어요.', 'TIME_CAPSULE', 1, 0, NOW(6));
+      (
+          1,
+          1,
+          1,
+          'SAVINGS',
+          'AUTO_TRANSFER_SUCCEEDED',
+          '저축 이체가 완료됐어요',
+          '깨비의 적금 계좌로 100,000원이 입금됐어요.',
+          'TRANSFER',
+          1,
+          JSON_OBJECT('amount', 100000),
+          'AUTO_TRANSFER_SUCCEEDED:1',
+          0
+      ),
+      (
+          2,
+          2,
+          1,
+          'TIME_CAPSULE',
+          'TIME_CAPSULE_RELEASE_SOON',
+          '타임캡슐 공개일이 다가오고 있어요',
+          '소중한 추억을 만나는 날까지 이제 3일 남았어요.',
+          'TIME_CAPSULE',
+          1,
+          JSON_OBJECT('remaining_days', 3),
+          'TIME_CAPSULE_RELEASE_SOON:1:3',
+          0
+      );
 

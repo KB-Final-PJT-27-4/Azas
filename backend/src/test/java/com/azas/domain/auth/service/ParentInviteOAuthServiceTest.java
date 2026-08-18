@@ -26,13 +26,13 @@ class ParentInviteOAuthServiceTest {
         OAuthClient oauthClient =
                 mock(OAuthClient.class);
 
-        ParentInviteAcceptanceService acceptanceService =
-                mock(ParentInviteAcceptanceService.class);
+        ParentInviteLoginService loginService =
+                mock(ParentInviteLoginService.class);
 
         ParentInviteOAuthService service =
                 new ParentInviteOAuthService(
                         oauthClientRegistry,
-                        acceptanceService
+                        loginService
                 );
 
         OAuthProfile profile = new OAuthProfile(
@@ -60,7 +60,6 @@ class ParentInviteOAuthServiceTest {
                         true,
                         10L,
                         "김자녀",
-                        RelationType.GUARDIAN,
                         30L,
                         LocalDateTime.of(
                                 2026,
@@ -85,9 +84,8 @@ class ParentInviteOAuthServiceTest {
         ).thenReturn(profile);
 
         when(
-                acceptanceService.accept(
+                loginService.login(
                         "raw-parent-invite-token",
-                        RelationType.GUARDIAN,
                         profile
                 )
         ).thenReturn(expected);
@@ -97,16 +95,15 @@ class ParentInviteOAuthServiceTest {
                         "google",
                         "authorization-code",
                         "http://localhost:5173/auth/google/parent-invite/callback",
-                        "raw-parent-invite-token",
-                        RelationType.GUARDIAN
+                        "raw-parent-invite-token"
                 );
 
         assertSame(expected, actual);
 
-        InOrder callOrder = inOrder(
+        var callOrder = inOrder(
                 oauthClientRegistry,
                 oauthClient,
-                acceptanceService
+                loginService
         );
 
         callOrder.verify(oauthClientRegistry)
@@ -118,10 +115,9 @@ class ParentInviteOAuthServiceTest {
                         "http://localhost:5173/auth/google/parent-invite/callback"
                 );
 
-        callOrder.verify(acceptanceService)
-                .accept(
+        callOrder.verify(loginService)
+                .login(
                         "raw-parent-invite-token",
-                        RelationType.GUARDIAN,
                         profile
                 );
     }

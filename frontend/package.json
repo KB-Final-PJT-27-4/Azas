@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
+    "generate:api": "openapi-generator-cli generate -i ./openapi/openapi.json -g typescript-axios -o ./src/api/generated --additional-properties=withSeparateModelsAndApi=true,apiPackage=apis,modelPackage=models",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
@@ -25,6 +26,7 @@
     "vue-router": "^5.2.0"
   },
   "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.35.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^24.13.3",

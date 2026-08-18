@@ -1,7 +1,10 @@
 package com.azas.domain.timecapsule.controller;
 
-import com.azas.domain.timecapsule.dto.TimeCapsuleResponse;
+import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
+import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
 import com.azas.global.exception.BusinessException;
@@ -23,12 +26,17 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -78,28 +86,21 @@ class TimeCapsuleControllerTest {
     @Test
     // [JMG] CAPSULE-1 보관함 생성 API는 정상 요청에 201과 ERD 응답을 반환한다.
     void createTimeCapsuleReturnsCreatedResponse() throws Exception {
-        TimeCapsuleResponse response =
-                TimeCapsuleResponse.from(
-                        createTimeCapsule(
-                                100L,
-                                10L,
-                                "깨비의 첫 대학자금 저축"
-                        )
-                );
+        CreateTimeCapsuleResponse response = createResponse();
 
         given(accessTokenMemberResolver.resolveMemberId(
                 "Bearer access-token"
         )).willReturn(7L);
         given(timeCapsuleService.createTimeCapsule(
                 eq(7L),
-                eq(1L),
+                eq(10L),
                 any()
         )).willReturn(response);
 
         mockMvc.perform(
                         post(
-                                "/api/v1/accounts/{accountId}/time-capsule",
-                                1L
+                                "/api/v1/children/{childId}/time-capsules",
+                                10L
                         )
                                 .header(
                                         "Authorization",
@@ -110,7 +111,8 @@ class TimeCapsuleControllerTest {
                                 )
                                 .content("""
                                         {
-                                          "title": "깨비의 첫 대학자금 저축"
+                                          "financial_account_id": 1,
+                                          "release_date": "2030-07-23"
                                         }
                                         """)
                 )
@@ -119,14 +121,20 @@ class TimeCapsuleControllerTest {
                         jsonPath("$.time_capsule_id").value(100)
                 )
                 .andExpect(
-                        jsonPath("$.financial_account_id").value(1)
+                        jsonPath("$.account.account_id").value(1)
                 )
                 .andExpect(
                         jsonPath("$.title")
-                                .value("깨비의 첫 대학자금 저축")
+                                .value("아이사랑적금")
                 )
                 .andExpect(
                         jsonPath("$.status").value("COLLECTING")
+                )
+                .andExpect(
+                        jsonPath("$.release_date").value("2030-07-23")
+                )
+                .andExpect(
+                        jsonPath("$.total_saved_amount").value(0)
                 );
     }
 
@@ -143,15 +151,15 @@ class TimeCapsuleControllerTest {
 
         mockMvc.perform(
                         post(
-                                "/api/v1/accounts/{accountId}/time-capsule",
-                                1L
+                                "/api/v1/children/{childId}/time-capsules",
+                                10L
                         )
                                 .contentType(
                                         MediaType.APPLICATION_JSON
                                 )
                                 .content("""
                                         {
-                                          "title": "대학자금"
+                                          "financial_account_id": 1
                                         }
                                         """)
                 )
@@ -159,6 +167,27 @@ class TimeCapsuleControllerTest {
                 .andExpect(
                         jsonPath("$.error.code")
                                 .value("ACCESS_TOKEN_REQUIRED")
+                );
+    }
+
+    @Test
+    void createTimeCapsuleReturnsBadRequestWithoutAccountId()
+            throws Exception {
+        mockMvc.perform(
+                        post(
+                                "/api/v1/children/{childId}/time-capsules",
+                                10L
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}")
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.error.code").value("BADREQUEST")
                 );
     }
 
@@ -171,7 +200,7 @@ class TimeCapsuleControllerTest {
         )).willReturn(7L);
         given(timeCapsuleService.createTimeCapsule(
                 eq(7L),
-                eq(1L),
+                eq(10L),
                 any()
         )).willThrow(
                 new BusinessException(
@@ -181,8 +210,8 @@ class TimeCapsuleControllerTest {
 
         mockMvc.perform(
                         post(
-                                "/api/v1/accounts/{accountId}/time-capsule",
-                                1L
+                                "/api/v1/children/{childId}/time-capsules",
+                                10L
                         )
                                 .header(
                                         "Authorization",
@@ -193,7 +222,7 @@ class TimeCapsuleControllerTest {
                                 )
                                 .content("""
                                         {
-                                          "title": "대학자금"
+                                          "financial_account_id": 1
                                         }
                                         """)
                 )
@@ -204,28 +233,108 @@ class TimeCapsuleControllerTest {
                 );
     }
 
-    // [JMG] CAPSULE-1 테스트용 ERD 타임캡슐 응답 엔티티를 구성한다.
-    private TimeCapsule createTimeCapsule(
-            long timeCapsuleId,
-            long childId,
-            String title
-    ) {
+    @Test
+    void getTimeCapsulesReturnsMinimalScreenResponse() throws Exception {
         TimeCapsule timeCapsule = TimeCapsule.create(
-                childId,
+                10L,
+                31L,
+                "KB Young Youth 적금",
+                LocalDate.now().plusDays(23)
+        );
+        ReflectionTestUtils.setField(timeCapsule, "timeCapsuleId", 100L);
+        ReflectionTestUtils.setField(
+                timeCapsule,
+                "totalContributionAmount",
+                new BigDecimal("200000.00")
+        );
+        TimeCapsuleListResponse response = new TimeCapsuleListResponse(
+                List.of(TimeCapsuleSummaryResponse.from(
+                        timeCapsule,
+                        LocalDate.now()
+                ))
+        );
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+        given(timeCapsuleService.getTimeCapsules(7L, 10L))
+                .willReturn(response);
+
+        mockMvc.perform(
+                        get(
+                                "/api/v1/children/{childId}/time-capsules",
+                                10L
+                        ).header(
+                                "Authorization",
+                                "Bearer access-token"
+                        )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total_count").value(1))
+                .andExpect(jsonPath("$.time_capsules[0].time_capsule_id")
+                        .value(100))
+                .andExpect(jsonPath("$.time_capsules[0].account_id")
+                        .value(31))
+                .andExpect(jsonPath("$.time_capsules[0].title")
+                        .value("KB Young Youth 적금"))
+                .andExpect(jsonPath("$.time_capsules[0].status")
+                        .value("COLLECTING"))
+                .andExpect(jsonPath("$.time_capsules[0].d_day")
+                        .value(23))
+                .andExpect(jsonPath("$.time_capsules[0].dday")
+                        .doesNotExist())
+                .andExpect(jsonPath(
+                        "$.time_capsules[0].total_saved_amount"
+                ).value(200000.00))
+                .andExpect(jsonPath("$.time_capsules[0].entry_count")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.time_capsules[0].latest_entry_at")
+                        .doesNotExist());
+    }
+
+    @Test
+    void deleteTimeCapsuleReturnsNoContent() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        mockMvc.perform(
+                        delete(
+                                "/api/v1/time-capsules/{timeCapsuleId}",
+                                100L
+                        ).header(
+                                "Authorization",
+                                "Bearer access-token"
+                        )
+                )
+                .andExpect(status().isNoContent());
+
+        verify(timeCapsuleService).deleteTimeCapsule(7L, 100L);
+    }
+
+    // [JMG] CAPSULE-1 테스트용 ERD 타임캡슐 응답 엔티티를 구성한다.
+    private CreateTimeCapsuleResponse createResponse() {
+        TimeCapsule timeCapsule = TimeCapsule.create(
+                10L,
                 1L,
-                title,
+                "아이사랑적금",
                 LocalDate.of(2030, 7, 23)
         );
         ReflectionTestUtils.setField(
                 timeCapsule,
                 "timeCapsuleId",
-                timeCapsuleId
+                100L
         );
         ReflectionTestUtils.setField(
                 timeCapsule,
                 "createdAt",
                 LocalDateTime.of(2026, 8, 4, 10, 0)
         );
-        return timeCapsule;
+        TimeCapsuleAccount account = new TimeCapsuleAccount();
+        ReflectionTestUtils.setField(account, "financialAccountId", 1L);
+        ReflectionTestUtils.setField(account, "ownerType", "CHILD");
+        ReflectionTestUtils.setField(account, "childId", 10L);
+        ReflectionTestUtils.setField(account, "accountName", "아이사랑적금");
+        ReflectionTestUtils.setField(account, "accountProductType", "SAVINGS");
+        return CreateTimeCapsuleResponse.from(timeCapsule, account);
     }
 }
