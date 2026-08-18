@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import { BaseToast } from '@/components/feedback'
 import { useToast } from '@/composables/useToast'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 const hideNavigation = computed(() => route.meta.hideNavigation === true)
 const hideBottomNavigation = computed(
   () => hideNavigation.value || route.meta.hideBottomNavigation === true,
@@ -15,23 +18,36 @@ const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
 const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
 const showHeaderNotification = computed(() => route.meta.showHeaderNotification !== false)
 const notificationCount = computed(() => Number(route.meta.notificationCount ?? 0))
-const { toastMessage, toastVariant } = useToast()
+const isHome = computed(() => route.name === 'Home')
+const pageBackgroundColor = computed(() => String(route.meta.pageBackgroundColor ?? ''))
+const pageBackgroundStyle = computed(() =>
+  pageBackgroundColor.value ? { backgroundColor: pageBackgroundColor.value } : undefined,
+)
+const { toastMessage, toastVariant, toastPlacement } = useToast()
 </script>
 
 <template>
   <div class="default-layout">
-    <div class="default-layout__shell">
+    <div class="default-layout__shell" :style="pageBackgroundStyle">
+      <AppSubHeader
+        v-if="!hideNavigation && showHeaderBack"
+        :title="headerTitle"
+        @back="router.back()"
+      />
       <AppHeader
-        v-if="!hideNavigation"
+        v-else-if="!hideNavigation"
         title="깨비"
         profile-name="깨비"
-        :center-title="headerTitle"
-        :show-back="showHeaderBack"
         :show-notification="showHeaderNotification"
         :notification-count="notificationCount"
+        :background-color="pageBackgroundColor || undefined"
+        :profile-background-color="isHome ? '#ffffff' : undefined"
+        :hide-divider="isHome"
+        :change-on-scroll="isHome"
       />
       <div
         class="default-layout__content"
+        :style="pageBackgroundStyle"
         :class="{
           'default-layout__content--without-navigation': hideNavigation,
           'default-layout__content--without-bottom-navigation': hideBottomNavigation,
@@ -45,6 +61,8 @@ const { toastMessage, toastVariant } = useToast()
           v-if="toastMessage"
           :message="toastMessage"
           :variant="toastVariant"
+          :with-bottom-navigation="!hideBottomNavigation"
+          :above-actions="toastPlacement === 'above-actions'"
         />
       </Transition>
     </div>
@@ -88,7 +106,9 @@ const { toastMessage, toastVariant } = useToast()
 
 .global-toast-enter-active,
 .global-toast-leave-active {
-  transition: transform 180ms ease, opacity 180ms ease;
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
 }
 
 .global-toast-enter-from,

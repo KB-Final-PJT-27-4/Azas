@@ -8,7 +8,7 @@ export type RecommendedProduct = {
   id: string
   name: string
   bankName: string
-  type: string
+  type: '적금' | '입출금계좌'
   rate: string
   period: string
   monthlyLimit: string
@@ -63,5 +63,25 @@ export const recommendedProducts: RecommendedProduct[] = [
     period: '12개월',
     monthlyLimit: '30만원',
     mascot: productMascot4,
+  },
+  {
+    id: 'kb-young-youth-account',
+    name: 'KB Young Youth 어린이통장',
+    bankName: 'KB국민은행',
+    type: '입출금계좌',
+    rate: '0.10%',
+    period: '제한없음',
+    monthlyLimit: '제한없음',
+    mascot: productMascot1,
+  },
+  {
+    id: 'kb-child-dream-account',
+    name: 'KB 꿈나무통장',
+    bankName: 'KB국민은행',
+    type: '입출금계좌',
+    rate: '0.10%',
+    period: '제한없음',
+    monthlyLimit: '제한없음',
+    mascot: productMascot2,
   },
 ]

@@ -17,6 +17,7 @@ export type TimeCapsuleRecord = {
   photos: TimeCapsulePhoto[]
   transferName: string
   remainingEdits: number
+  openDate?: string
 }
 
 export type TimeCapsuleAccount = {
@@ -94,6 +95,14 @@ export const timeCapsuleAccounts: Record<string, TimeCapsuleAccount> = {
       createRecord(206, '겨울 가족 여행', '2025-12-14', 110000, '하얀 눈을 밟으며 온 가족이 함께 웃었던 겨울 여행이야.\n따뜻한 추억을 오래오래 간직하자.', photosA),
       createRecord(207, '새해 가족 저축', '2027-01-10', 150000, '새해에도 우리 가족의 꿈을 위해 함께 저축을 시작했어.\n모두 건강하고 행복한 한 해가 되길 바라.', photosB),
     ],
+  },
+  '3': {
+    id: 3,
+    name: '깨비 자유통장',
+    bankName: 'KB국민은행',
+    accountNumber: '987-654-321',
+    description: '특별한 날을 자유롭게 골라 추억을 담는 캡슐이에요.',
+    records: [],
   },
 }
 

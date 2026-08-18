@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Baby, CalendarDays, ShieldCheck, UserRound } from 'lucide-vue-next'
 import { BaseDatePicker } from '@/components/common'
+import logoPigUrl from '@/assets/images/login/logo-pig.png'
 import {
   loadRegistrationDraft,
   saveRegistrationDraft,
@@ -45,28 +47,35 @@ const submitRegistration = () => {
   saveRegistrationDraft({ ...form, invited: isGuardianInvitation.value })
 
   // TODO: 회원가입 또는 공동 보호자 초대 수락 API 연결
-  router.push({ name: 'Onboarding' })
+  router.push({ name: isGuardianInvitation.value ? 'Login' : 'Onboarding' })
 }
+
+const declineInvitation = () => router.push({ name: 'Login' })
 </script>
 
 <template>
-  <main class="flex min-h-dvh flex-col bg-[var(--color-surface)] text-[var(--color-text-primary)]">
-    <header class="border-b border-[var(--color-border)] px-6 py-6">
-      <p class="text-lg font-bold">우리 아이 자산관리 서비스</p>
+  <main class="flex min-h-dvh flex-col text-[var(--color-text-primary)]">
+    <header class="flex h-16 shrink-0 items-center gap-1 border-b border-[var(--color-border)] bg-white px-2">
+      <img
+        class="size-12 shrink-0 object-contain"
+        :src="logoPigUrl"
+        alt=""
+        aria-hidden="true"
+      />
+      <strong class="text-[16px] tracking-[-0.02em] text-[var(--color-text-primary)]">
+        우리 <span class="text-[#f28faa]">아</span>이
+        <span class="text-[#f28faa]">자</span>산관리 서비<span class="text-[#f28faa]">스</span>
+      </strong>
     </header>
 
-    <form class="flex flex-1 flex-col px-6 pt-10 pb-10" @submit.prevent="submitRegistration">
+    <form class="flex flex-1 flex-col px-5 pt-1 pb-[max(24px,env(safe-area-inset-bottom))]" @submit.prevent="submitRegistration">
       <section aria-labelledby="register-title">
         <template v-if="isGuardianInvitation">
-          <h1 id="register-title" class="text-[30px] leading-[1.35] font-bold tracking-[-0.04em]">
-            <span class="text-[var(--color-selected-text)]">{{ inviterName }}님</span>
-            이
-            <span class="text-[var(--color-selected-text)]">깨비</span>
-            의 공동 보호자로<br />
-            초대했습니다.
+          <h1 id="register-title" class="mt-5 break-keep text-[27px] leading-[1.35] font-extrabold tracking-[-0.04em]">
+            <span class="text-[var(--color-selected-text)]">{{ inviterName }}</span>님이<br />공동 보호자로 초대했어요
           </h1>
-          <p class="mt-3 text-base text-[var(--color-text-secondary)]">
-            아이의 정보를 확인해주세요.
+          <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
+            가족 정보를 확인하고 깨비와 함께할 관계를 선택해주세요.
           </p>
         </template>
 
@@ -80,7 +89,104 @@ const submitRegistration = () => {
         </template>
       </section>
 
-      <div class="mt-10 grid gap-8">
+      <template v-if="isGuardianInvitation">
+        <section class="mt-6" aria-labelledby="inviter-info-title">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 id="inviter-info-title" class="text-base font-bold">초대한 보호자</h2>
+          </div>
+          <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
+            <div class="flex items-center gap-4">
+              <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
+                <UserRound :size="27" :stroke-width="2.1" aria-hidden="true" />
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <strong class="text-lg">{{ inviterName }}</strong>
+                  <span class="rounded-full bg-[#eaf8ff] px-2 py-1 text-[10px] font-bold text-[var(--color-selected-text)]">대표 보호자</span>
+                </div>
+                <dl class="mt-2 grid gap-1.5 text-xs">
+                  <div class="grid grid-cols-[56px_1fr] items-center">
+                    <dt class="text-[var(--color-text-secondary)]">관계</dt>
+                    <dd class=" text-[var(--color-text-secondary)]">부</dd>
+                  </div>
+                  <div class="grid grid-cols-[56px_1fr] items-center">
+                    <dt class="text-[var(--color-text-secondary)]">연락처</dt>
+                    <dd class="text-[var(--color-text-secondary)]">010-1234-5678</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="mt-5" aria-labelledby="invited-child-title">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 id="invited-child-title" class="text-base font-bold">함께 관리할 아이</h2>
+          </div>
+          <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
+            <div class="flex items-center gap-4">
+              <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
+                <Baby :size="28" :stroke-width="2.1" aria-hidden="true" />
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <strong class="text-lg">{{ form.childName }}</strong>
+                </div>
+                <dl class="mt-2 grid gap-1.5 text-xs text-[var(--color-text-secondary)]">
+                  <div class="grid grid-cols-[56px_1fr] items-center">
+                    <dt>생년월일</dt>
+                    <dd>{{ form.birthDate.replaceAll('-', '.') }}</dd>
+                  </div>
+                  <div class="grid grid-cols-[56px_1fr] items-center">
+                    <dt>성별</dt>
+                    <dd>{{ genderOptions.find(({ value }) => value === form.gender)?.label }}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <fieldset class="mt-5">
+          <legend class="mb-3 text-base font-bold">본인 정보</legend>
+          <p class="-mt-2 mb-3 text-xs text-[var(--color-text-secondary)]">아이와의 관계를 선택해주세요.</p>
+          <div class="grid grid-cols-3 gap-3">
+            <button
+              v-for="role in guardianRoles"
+              :key="role.value"
+              class="h-12 rounded-xl border text-sm font-bold transition-colors"
+              :class="
+                form.guardianRole === role.value
+                  ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+                  : 'border-[var(--color-border)] bg-white text-[var(--color-text-secondary)]'
+              "
+              type="button"
+              :aria-pressed="form.guardianRole === role.value"
+              @click="form.guardianRole = role.value"
+            >
+              {{ role.label }}
+            </button>
+          </div>
+        </fieldset>
+
+        <div class="mt-auto grid grid-cols-2 gap-3 pt-7">
+          <button
+            class="h-14 rounded-2xl border border-[var(--color-border)] bg-white text-base font-bold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
+            type="button"
+            @click="declineInvitation"
+          >
+            거절하기
+          </button>
+          <button
+            class="h-14 rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
+            type="submit"
+          >
+            수락하기
+          </button>
+        </div>
+      </template>
+
+      <div v-else class="mt-10 grid gap-8">
         <fieldset>
           <legend class="mb-3 text-base font-bold">본인 정보</legend>
           <div class="grid grid-cols-3 gap-3">
@@ -147,11 +253,12 @@ const submitRegistration = () => {
       </div>
 
       <button
+        v-if="!isGuardianInvitation"
         class="mt-auto h-14 rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
         type="submit"
         :disabled="isSubmitDisabled"
       >
-        {{ isGuardianInvitation ? '수락' : '다음' }}
+        다음
       </button>
     </form>
   </main>

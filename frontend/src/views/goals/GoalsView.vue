@@ -1,202 +1,221 @@
 <script setup lang="ts">
-import { ChevronLeft } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
 import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
-import GoalPlanStep from '@/components/goals/GoalPlanStep.vue'
 import GoalSelectionStep from '@/components/goals/GoalSelectionStep.vue'
-import goalFooterImage from '@/assets/images/login/bg-default.png'
+import GoalSavingsLinkStep from '@/components/goals/GoalSavingsLinkStep.vue'
+import GoalSetupSummaryStep from '@/components/goals/GoalSetupSummaryStep.vue'
 
 type GoalSetting = { amount: number; targetDate: string }
 
 const router = useRouter()
-const currentStep = ref(1)
-const currentGoalIndex = ref(0)
+const currentStep = ref<'setup' | 'summary'>('setup')
 const selectedGoals = ref<string[]>([])
 const customGoal = ref('')
+const setting = reactive<GoalSetting>({ amount: 0, targetDate: '' })
+const linkedSavings = reactive<Record<string, string[]>>({})
 const isRecommendationOpen = ref(false)
-const goalSettings = reactive<Record<string, GoalSetting>>({})
+const slideDirection = ref<'forward' | 'backward'>('forward')
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
-  independence: '독립자금',
+  'lump-sum': '목돈 마련',
   housing: '주거자금',
   marriage: '결혼자금',
-  investment: '투자자금',
 }
 
-const getGoalName = (goalId: string) =>
-  goalId === 'custom' ? customGoal.value.trim() || '직접 설정' : (goalNames[goalId] ?? '목표')
-
-const currentGoalId = computed(() => selectedGoals.value[currentGoalIndex.value] ?? '')
-const currentGoalName = computed(() => getGoalName(currentGoalId.value))
-const currentSetting = computed(() =>
-  currentGoalId.value ? goalSettings[currentGoalId.value] : undefined,
+const currentGoalId = computed(() => selectedGoals.value[0] ?? '')
+const currentGoalName = computed(() =>
+  currentGoalId.value === 'custom'
+    ? customGoal.value.trim() || '직접 설정'
+    : (goalNames[currentGoalId.value] ?? '목표'),
 )
-const canContinue = computed(
+const hasGoalName = computed(
   () =>
-    selectedGoals.value.length > 0 &&
-    (!selectedGoals.value.includes('custom') || customGoal.value.trim().length > 0),
+    Boolean(currentGoalId.value) &&
+    (currentGoalId.value !== 'custom' || Boolean(customGoal.value.trim())),
 )
-const progressStep = computed(() =>
-  currentStep.value === 1
-    ? 1
-    : currentStep.value === 2
-      ? currentGoalIndex.value + 2
-      : selectedGoals.value.length + 2,
+const canComplete = computed(
+  () => hasGoalName.value && setting.amount > 0 && Boolean(setting.targetDate),
 )
-const progressTotal = computed(() => selectedGoals.value.length + 2)
-const plans = computed(() =>
-  selectedGoals.value.map((id) => ({
-    id,
-    name: getGoalName(id),
-    amount: goalSettings[id]?.amount ?? 30_000_000,
-    targetDate: goalSettings[id]?.targetDate ?? '2045-03',
-  })),
+const currentPlan = computed(() =>
+  currentGoalId.value
+    ? {
+        id: currentGoalId.value,
+        name: currentGoalName.value,
+        amount: setting.amount,
+        targetDate: setting.targetDate,
+      }
+    : undefined,
 )
+const plans = computed(() => (currentPlan.value ? [currentPlan.value] : []))
 
-const ensureSetting = (goalId: string) => {
-  if (!goalSettings[goalId]) {
-    goalSettings[goalId] = { amount: 30_000_000, targetDate: '2045-03' }
-  }
-}
-
-const toggleGoal = (goalId: string) => {
-  const index = selectedGoals.value.indexOf(goalId)
-  if (index >= 0) {
-    selectedGoals.value.splice(index, 1)
-    return
-  }
-  selectedGoals.value.push(goalId)
-  ensureSetting(goalId)
-}
-
-const goBack = () => {
-  if (currentStep.value === 3) {
-    currentStep.value = 2
-    currentGoalIndex.value = selectedGoals.value.length - 1
-  } else if (currentStep.value === 2 && currentGoalIndex.value > 0) {
-    currentGoalIndex.value -= 1
-  } else if (currentStep.value === 2) {
-    currentStep.value = 1
+const selectGoal = (goalId: string) => {
+  if (currentGoalId.value === goalId) {
+    selectedGoals.value = []
+    customGoal.value = ''
   } else {
-    router.back()
+    selectedGoals.value = [goalId]
+    if (goalId !== 'custom') customGoal.value = ''
   }
-}
 
-const goNext = () => {
-  if (!canContinue.value) return
-  if (currentStep.value === 1) {
-    selectedGoals.value.forEach(ensureSetting)
-    currentGoalIndex.value = 0
-    currentStep.value = 2
-  } else if (currentGoalIndex.value < selectedGoals.value.length - 1) {
-    currentGoalIndex.value += 1
-  } else {
-    currentStep.value = 3
-  }
+  setting.amount = 0
+  setting.targetDate = ''
+  Object.keys(linkedSavings).forEach((key) => delete linkedSavings[key])
 }
 
 const updateAmount = (value: number) => {
-  if (currentSetting.value) currentSetting.value.amount = value
+  setting.amount = value
+  if (value <= 0) setting.targetDate = ''
 }
 const updateTargetDate = (value: string) => {
-  if (currentSetting.value) currentSetting.value.targetDate = value
+  setting.targetDate = value
 }
-const selectRecommendation = (value: number) => {
-  updateAmount(value)
-  isRecommendationOpen.value = false
+
+const toggleLinkedSaving = (savingsId: string) => {
+  if (!currentGoalId.value) return
+  const selected = linkedSavings[currentGoalId.value] ?? (linkedSavings[currentGoalId.value] = [])
+  const index = selected.indexOf(savingsId)
+  if (index >= 0) selected.splice(index, 1)
+  else selected.push(savingsId)
+}
+
+const goBack = () => {
+  if (currentStep.value === 'summary') {
+    slideDirection.value = 'backward'
+    currentStep.value = 'setup'
+    return
+  }
+  router.back()
+}
+
+const goNext = () => {
+  if (currentStep.value === 'summary') {
+    router.push({ name: 'MypageGoals' })
+    return
+  }
+  if (!canComplete.value) return
+  slideDirection.value = 'forward'
+  currentStep.value = 'summary'
 }
 </script>
 
 <template>
-  <main class="flex min-h-dvh flex-col bg-[var(--color-surface)] text-[var(--color-text-primary)]">
-    <header
-      class="relative flex h-16 items-center justify-center border-b border-[var(--color-border)]"
-    >
-      <button
-        class="absolute left-4 grid size-10 place-items-center text-[var(--color-text-secondary)]"
-        type="button"
-        aria-label="이전"
-        @click="goBack"
-      >
-        <ChevronLeft :size="28" />
-      </button>
-      <strong>목표</strong>
-    </header>
+  <main class="flex h-dvh flex-col overflow-hidden bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+    <AppSubHeader title="목표" :fixed="false" back-label="이전" @back="goBack" />
 
-    <div v-if="currentStep < 3" class="flex gap-2 px-6 pt-7" aria-hidden="true">
-      <span
-        v-for="step in progressTotal"
-        :key="step"
-        class="h-1 flex-1 rounded-full"
-        :class="
-          step === progressStep ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'
-        "
-      ></span>
+    <div class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-6 pt-5 pb-8">
+      <Transition :name="`goal-slide-${slideDirection}`" mode="out-in">
+        <div
+          :key="currentStep"
+          class="mx-auto w-full max-w-[520px]"
+          :class="currentStep === 'summary' ? 'flex min-h-full items-center' : ''"
+        >
+          <template v-if="currentStep === 'setup'">
+            <GoalSelectionStep
+              :selected-goals="selectedGoals"
+              :custom-goal="customGoal"
+              single-selection
+              @toggle="selectGoal"
+              @update:custom-goal="customGoal = $event"
+            />
+
+            <Transition name="progressive-section">
+              <section v-if="hasGoalName" class="mt-4">
+                <h2 class="text-xl font-extrabold tracking-[-0.025em]">얼마를 언제까지 모을까요?</h2>
+                <GoalAmountStep
+                  class="mt-4 rounded-[24px] border border-[#e9eef1] bg-[#fafbfc] p-5"
+                  :goal-name="currentGoalName"
+                  :amount="setting.amount"
+                  :target-date="setting.targetDate"
+                  :show-intro="false"
+                  appearance="unified"
+                  progressive
+                  @update:amount="updateAmount"
+                  @update:target-date="updateTargetDate"
+                  @open-recommendation="isRecommendationOpen = true"
+                />
+              </section>
+            </Transition>
+
+            <Transition name="progressive-section">
+              <section
+                v-if="currentPlan && setting.targetDate"
+                class="mt-5 rounded-[24px] border border-[#e9eef1] bg-[#fafbfc] p-5"
+              >
+                <GoalSavingsLinkStep
+                  :plan="currentPlan"
+                  :goal-number="1"
+                  :goal-count="1"
+                  :selected-savings-ids="linkedSavings[currentGoalId] ?? []"
+                  :unavailable-savings-ids="[]"
+                  embedded
+                  @toggle="toggleLinkedSaving"
+                />
+              </section>
+            </Transition>
+          </template>
+
+          <GoalSetupSummaryStep v-else :plans="plans" :linked-savings="linkedSavings" />
+        </div>
+      </Transition>
     </div>
 
-    <div class="flex-1 px-6 pt-7 pb-6">
-      <GoalSelectionStep
-        v-if="currentStep === 1"
-        :selected-goals="selectedGoals"
-        :custom-goal="customGoal"
-        @toggle="toggleGoal"
-        @update:custom-goal="customGoal = $event"
-      />
-
-      <GoalAmountStep
-        v-else-if="currentStep === 2 && currentSetting"
-        :goal-name="currentGoalName"
-        :amount="currentSetting.amount"
-        :target-date="currentSetting.targetDate"
-        @update:amount="updateAmount"
-        @update:target-date="updateTargetDate"
-        @open-recommendation="isRecommendationOpen = true"
-      />
-
-      <GoalPlanStep v-else :plans="plans" />
-    </div>
-
-    <footer
-      class="bg-[var(--color-surface)] px-6 pt-3"
-      :class="[
-        currentStep === 1 ? 'grid grid-cols-1 pb-8' : 'grid grid-cols-2 gap-4',
-        currentStep === 3 ? 'relative min-h-[220px] overflow-hidden pb-[140px]' : 'pb-8',
-      ]"
-    >
-      <img
-        v-if="currentStep === 3"
-        class="pointer-events-none absolute bottom-0 left-3/4 h-70 w-[150%] max-w-none -translate-x-1/2 object-cover object-top"
-        :src="goalFooterImage"
-        alt=""
-      />
-
+    <footer class="shrink-0 bg-[var(--color-surface)]/98 px-6 pt-3 pb-[max(24px,env(safe-area-inset-bottom))] backdrop-blur">
       <button
-        v-if="currentStep > 1"
-        class="relative z-1 h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] font-bold text-[var(--color-selected-text)]"
+        class="flex h-14 w-full items-center justify-center rounded-2xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] transition-[transform,background-color] active:scale-[0.985] active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
         type="button"
-        @click="goBack"
+        :disabled="currentStep === 'setup' && !canComplete"
+        @click="goNext"
       >
-        이전
-      </button>
-
-      <button
-        class="relative z-1 h-14 rounded-xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
-        type="button"
-        :disabled="!canContinue"
-        @click="currentStep === 3 ? router.push({ name: 'Home' }) : goNext()"
-      >
-        {{ currentStep === 3 ? '시작하기' : '다음' }}
+        {{ currentStep === 'setup' ? '목표 설정 완료' : '목표 관리로 이동' }}
       </button>
     </footer>
 
     <AiRecommendationModal
       v-if="isRecommendationOpen"
+      :selected-amount="setting.amount"
       @close="isRecommendationOpen = false"
-      @select="selectRecommendation"
+      @select="updateAmount"
     />
   </main>
 </template>
+
+<style scoped>
+.progressive-section-enter-active,
+.progressive-section-leave-active {
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 260ms ease,
+    clip-path 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.progressive-section-enter-from {
+  transform: translateY(16px);
+  opacity: 0;
+  clip-path: inset(0 0 100% 0 round 24px);
+}
+.progressive-section-leave-to { transform: translateY(-4px); opacity: 0; }
+
+.goal-slide-forward-enter-active,
+.goal-slide-forward-leave-active,
+.goal-slide-backward-enter-active,
+.goal-slide-backward-leave-active {
+  transition: transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity 120ms ease-out;
+}
+.goal-slide-forward-enter-from,
+.goal-slide-backward-leave-to { transform: translateX(18px); opacity: 0; }
+.goal-slide-forward-leave-to,
+.goal-slide-backward-enter-from { transform: translateX(-18px); opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .progressive-section-enter-active,
+  .progressive-section-leave-active,
+  .goal-slide-forward-enter-active,
+  .goal-slide-forward-leave-active,
+  .goal-slide-backward-enter-active,
+  .goal-slide-backward-leave-active { transition-duration: 1ms; }
+}
+</style>

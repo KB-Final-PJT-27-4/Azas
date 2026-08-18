@@ -1,105 +1,66 @@
-<script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+﻿<script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import allowancePageBgUrl from '@/assets/images/child/child-allowance-page-bg.png'
 import allowanceRequestPigUrl from '@/assets/images/child/child-allowance-request-pig.png'
-import { BaseToast } from '@/components/feedback'
-import { allowanceOptions } from '@/mocks/childHome'
 
 const router = useRouter()
-const selectedAmount = ref(10_000)
-const customAmount = ref('')
+const allowanceAmount = ref('')
 const reason = ref('')
-const toastMessage = ref('')
-const toastVariant = ref<'success' | 'error'>('error')
-let toastTimer: ReturnType<typeof window.setTimeout> | null = null
+const maxMoneyDigits = 8
+const maxReasonLength = 200
 
-const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
-const customAmountValue = computed(() => Number(customAmount.value.replace(/\D/g, '')) || 0)
-const formattedCustomAmount = computed(() =>
-  customAmountValue.value > 0 ? customAmountValue.value.toLocaleString('ko-KR') : '',
-)
-const requestAmount = computed(() => customAmountValue.value || selectedAmount.value)
-const allowanceValidationMessage = computed(() => {
-  if (requestAmount.value <= 0) {
-    return '필요한 금액을 입력해주세요.'
-  }
+const allowanceAmountValue = computed(() => Number(allowanceAmount.value.replace(/\D/g, '')) || 0)
+const canSubmit = computed(() => allowanceAmountValue.value > 0 && reason.value.trim().length > 0)
 
-  if (!reason.value.trim()) {
-    return '용돈이 필요한 이유를 입력해주세요.'
-  }
-
-  return ''
-})
-const canSubmitAllowanceRequest = computed(() => allowanceValidationMessage.value === '')
-
-const showToast = (message: string, variant: 'success' | 'error') => {
-  if (toastTimer) {
-    window.clearTimeout(toastTimer)
-  }
-
-  toastMessage.value = message
-  toastVariant.value = variant
-  toastTimer = window.setTimeout(() => {
-    toastMessage.value = ''
-    toastTimer = null
-  }, 1800)
-}
-
-const selectAmount = (amount: number) => {
-  selectedAmount.value = amount
-  customAmount.value = ''
-}
-
-const updateCustomAmount = (event: Event) => {
+const updateAllowanceAmount = (event: Event) => {
   const input = event.target as HTMLInputElement
-  customAmount.value = input.value.replace(/\D/g, '')
+  const digits = input.value.replace(/\D/g, '').slice(0, maxMoneyDigits)
+  allowanceAmount.value = digits ? Number(digits).toLocaleString('ko-KR') : ''
+  if (input.value !== allowanceAmount.value) input.value = allowanceAmount.value
+}
+
+const startAllowanceAmountEdit = (event: FocusEvent) => {
+  allowanceAmount.value = allowanceAmountValue.value > 0 ? String(allowanceAmountValue.value) : ''
+  const input = event.target as HTMLInputElement
+  requestAnimationFrame(() => input.select())
+}
+
+const finishAllowanceAmountEdit = () => {
+  allowanceAmount.value =
+    allowanceAmountValue.value > 0 ? allowanceAmountValue.value.toLocaleString('ko-KR') : ''
 }
 
 const updateReason = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  reason.value = input.value
+  const textarea = event.target as HTMLTextAreaElement
+  reason.value = textarea.value.slice(0, maxReasonLength)
+  if (textarea.value !== reason.value) textarea.value = reason.value
 }
 
-const submitAllowanceRequest = () => {
-  if (!canSubmitAllowanceRequest.value) {
-    showToast(allowanceValidationMessage.value, 'error')
-    return
-  }
-
-  showToast('용돈 요청을 보냈어요.', 'success')
-  window.setTimeout(() => {
-    router.push('/child/allowance-done')
-  }, 450)
+const submitRequest = () => {
+  if (!canSubmit.value) return
+  router.push('/child/allowance-done')
 }
-
-onBeforeUnmount(() => {
-  if (toastTimer) {
-    window.clearTimeout(toastTimer)
-  }
-})
 </script>
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef8ff] bg-cover bg-top bg-no-repeat px-5 pt-8 pb-8"
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef8ff] bg-cover bg-top bg-no-repeat px-5 pt-7 pb-8"
     :style="{ backgroundImage: `url(${allowancePageBgUrl})` }"
   >
     <section class="text-center">
       <img
-        class="mx-auto w-[196px] select-none object-contain"
+        class="mx-auto w-[168px] select-none object-contain"
         :src="allowanceRequestPigUrl"
         alt=""
         aria-hidden="true"
       />
-      <h1 class="mt-4 mb-3 text-[24px] leading-[1.35] font-black text-[var(--color-text-primary)]">
+      <h1 class="mt-4 mb-3 text-[24px] leading-[1.35] font-bold text-[var(--color-text-primary)]">
         부모님께<br />
         용돈을 요청해볼까요?
       </h1>
-      <p
-        class="m-0 text-[length:var(--font-size-sm)] leading-[1.5] text-[var(--color-text-secondary)]"
-      >
+      <p class="m-0 text-[length:var(--font-size-sm)] leading-[1.5] text-[var(--color-text-secondary)]">
         하고 싶은 게 있다면<br />
         부모님께 용돈을 요청해보세요!
       </p>
@@ -108,70 +69,79 @@ onBeforeUnmount(() => {
     <section
       class="mt-6 rounded-[22px] bg-white px-5 py-5 shadow-[0_14px_32px_rgb(110_122_138_/_10%)]"
     >
-      <fieldset class="m-0 border-0 p-0">
-        <legend
-          class="mb-3 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
-        >
-          얼마나 필요한가요?
-        </legend>
-        <div class="grid grid-cols-3 gap-2">
-          <button
-            v-for="amount in allowanceOptions"
-            :key="amount"
-            class="h-11 rounded-full border text-[length:var(--font-size-sm)] font-extrabold"
-            :class="
-              selectedAmount === amount && !customAmount
-                ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-white'
-                : 'border-[var(--color-border)] bg-white text-[var(--color-text-secondary)]'
-            "
-            type="button"
-            @click="selectAmount(amount)"
+      <div class="mb-5">
+        <div>
+          <p class="m-0 text-[length:var(--font-size-md)] font-bold">얼마가 필요한가요?</p>
+          <div
+            class="mt-3 rounded-[14px] border border-[#dce8ee] bg-white px-4 py-3 transition focus-within:border-[var(--color-brand-primary)]"
           >
-            {{ formatCurrency(amount) }}
-          </button>
+            <div class="flex min-w-0 items-baseline gap-1">
+              <input
+                :value="allowanceAmount"
+                class="allowance-amount-input min-w-0 flex-1 border-0 bg-transparent p-0 text-[clamp(30px,7vw,40px)] leading-tight font-extrabold text-[var(--color-text-primary)] outline-none placeholder:text-[#9da5ad]"
+                inputmode="numeric"
+                placeholder="0"
+                type="text"
+                @focus="startAllowanceAmountEdit"
+                @input="updateAllowanceAmount"
+                @blur="finishAllowanceAmountEdit"
+              />
+              <span class="shrink-0 text-[20px] leading-none font-extrabold">원</span>
+            </div>
+          </div>
         </div>
-        <div class="relative mt-3">
-          <input
-            :value="formattedCustomAmount"
-            class="h-11 w-full rounded-[14px] border border-[var(--color-border)] px-4 pr-10 text-center text-[length:var(--font-size-sm)] outline-none focus:border-[var(--color-brand-primary)]"
-            inputmode="numeric"
-            placeholder="직접 입력하기"
-            type="text"
-            @input="updateCustomAmount"
-          />
-          <span
-            v-if="customAmountValue > 0"
-            class="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[length:var(--font-size-sm)] font-bold text-[var(--color-text-secondary)]"
-          >
-            원
-          </span>
-        </div>
-      </fieldset>
+      </div>
 
       <div class="my-5 h-px bg-[var(--color-border)]" />
 
-      <label
-        class="grid gap-3 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
-      >
-        어떤 이유인가요?
-        <input
-          :value="reason"
-          class="h-11 rounded-[14px] border border-[var(--color-border)] px-4 text-center text-[length:var(--font-size-sm)] font-normal outline-none focus:border-[var(--color-brand-primary)]"
-          placeholder="직접 입력하기"
-          @input="updateReason"
-        />
+      <label class="block text-[length:var(--font-size-md)] font-bold">
+        부모님께 하고 싶은 말
+        <div class="relative mt-3">
+          <textarea
+            :value="reason"
+            class="block min-h-[132px] w-full resize-none rounded-[12px] border border-[var(--color-border)] px-4 py-4 pb-8 text-[length:var(--font-size-sm)] font-normal outline-none focus:border-[var(--color-brand-primary)]"
+            :maxlength="maxReasonLength"
+            placeholder="용돈이 왜 필요한지 적어보세요 :)"
+            @input="updateReason"
+            @compositionend="updateReason"
+          />
+          <span
+            class="pointer-events-none absolute right-4 bottom-3 text-[11px] font-normal tabular-nums text-[var(--color-text-secondary)]"
+          >
+            {{ reason.length }}/{{ maxReasonLength }}
+          </span>
+        </div>
       </label>
+
+      <div class="mt-3 rounded-[12px] bg-[#f0fbff] px-4 py-4 text-[length:var(--font-size-xs)] leading-[1.65] text-[var(--color-text-secondary)]">
+        <strong class="mb-2 block text-[var(--color-text-primary)]">
+          이렇게 쓰면 용돈 받을 확률이 올라가요 ✨
+        </strong>
+        누가? 언제? 어디서? 무엇을? 왜? 얼마만큼?<br />
+        예) 친구 생일 선물을 사려고 해요.<br />
+        이번 주 토요일에 친구 집 근처 문구점에서 10,000원 정도 선물을 살 예정이에요.
+      </div>
     </section>
 
     <button
-      class="mt-5 h-14 w-full rounded-[14px] border-0 text-[length:var(--font-size-md)] font-extrabold text-white"
-      :class="canSubmitAllowanceRequest ? 'bg-[var(--color-brand-primary)]' : 'bg-[#c8d2da]'"
+      class="mt-5 h-14 w-full rounded-[14px] border-0 text-[length:var(--font-size-md)] font-bold text-white"
+      :class="canSubmit ? 'bg-[var(--color-brand-primary)]' : 'bg-[#cbd8df]'"
       type="button"
-      @click="submitAllowanceRequest"
+      :disabled="!canSubmit"
+      @click="submitRequest"
     >
-      요청 보내기
+      부모님께 요청하기
     </button>
-
-    <BaseToast v-if="toastMessage" :message="toastMessage" :variant="toastVariant" />
   </main>
 </template>
+
+<style scoped>
+.allowance-amount-input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+</style>

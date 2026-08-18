@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, ChevronRight } from 'lucide-vue-next'
-import capsulePigImage from '@/assets/images/timeCapsules/archive/capsule-pig.png'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
+import { ChevronDown } from 'lucide-vue-next'
+import capsulePigImage from '@/assets/images/timeCapsules/archive/list-capsule-pig.png'
 import { getTimeCapsuleAccount } from '@/data/timeCapsuleDummyData'
 
 const route = useRoute()
 const router = useRouter()
 const activeTab = ref<'list' | 'calendar'>('list')
+const isOpeningRecord = ref(false)
 const today = new Date()
 const currentYear = today.getFullYear()
 const currentMonth = today.getMonth() + 1
@@ -50,8 +51,29 @@ const isToday = (year: number, month: number, day: number | null) =>
   year === currentYear && month === currentMonth && day === today.getDate()
 
 const formatDate = (date: string) => date.replaceAll('-', '.')
+const navigateForward = async (to: RouteLocationRaw) => {
+  if (isOpeningRecord.value) return
+  isOpeningRecord.value = true
+
+  try {
+    await new Promise((resolve) => window.setTimeout(resolve, 150))
+    await router.push(to)
+  } catch {
+    isOpeningRecord.value = false
+  }
+}
+
 const openRecord = (recordId: number) =>
-  router.push(`/time-capsules/${accountId.value}/${recordId}`)
+  navigateForward(`/time-capsules/${accountId.value}/${recordId}`)
+
+const createFirstRecord = () =>
+  navigateForward({
+    name: 'TimeCapsuleCreate',
+    query: {
+      account: accountId.value,
+      ...(typeof route.query.openDate === 'string' ? { openDate: route.query.openDate } : {}),
+    },
+  })
 
 const scrollToMonth = async (month: number) => {
   await nextTick()
@@ -74,7 +96,10 @@ const changeYear = () => {
 </script>
 
 <template>
-  <main class="flex h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col overflow-hidden bg-white">
+  <main
+    class="flex h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] flex-col overflow-hidden bg-white"
+    :class="isOpeningRecord ? 'time-capsule-list--leaving pointer-events-none' : ''"
+  >
     <section class="shrink-0 px-5">
       <div class="flex items-center">
         <div class="min-w-0 flex-1">
@@ -82,7 +107,7 @@ const changeYear = () => {
           <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ account.description }}</p>
         </div>
         <img
-          class="h-28 w-32 translate-y-4 shrink-0 origin-right scale-[1.3] object-contain"
+          class="h-24 w-28 translate-x-3 translate-y-3 shrink-0 origin-right scale-110 object-contain"
           :src="capsulePigImage"
           alt="타임캡슐 저금통"
         />
@@ -169,6 +194,23 @@ const changeYear = () => {
           {{ record.amount.toLocaleString('ko-KR') }}원
         </strong>
       </button>
+
+      <div
+        v-if="listRecords.length === 0"
+        class="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#cfe5ef] bg-[#f7fbfd] px-6 text-center"
+      >
+        <strong class="mt-4 text-base">아직 담긴 추억이 없어요</strong>
+        <p class="mt-1.5 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+          타임 캡슐에 첫 번째 금융 기록과<br />소중한 순간을 남겨보세요.
+        </p>
+        <button
+          class="mt-5 min-h-11 rounded-xl bg-[var(--color-brand-primary)] px-5 text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+          type="button"
+          @click="createFirstRecord"
+        >
+          첫 기록 만들기
+        </button>
+      </div>
     </section>
 
     <section
@@ -196,27 +238,37 @@ const changeYear = () => {
             >
               <button
                 v-if="day && getRecord(month.year, month.month, day)"
-                class="relative grid size-10 place-items-center overflow-hidden rounded-full text-sm font-black text-white shadow-sm"
+                class="relative grid size-10 place-items-center overflow-hidden rounded-full text-sm font-semibold text-white shadow-sm"
+                :class="
+                  getRecord(month.year, month.month, day)!.photos.length ? '' : 'bg-[#79ccef]'
+                "
                 type="button"
                 :aria-label="`${day}일 ${getRecord(month.year, month.month, day)!.title}`"
                 @click="openRecord(getRecord(month.year, month.month, day)!.id)"
               >
                 <img
+                  v-if="getRecord(month.year, month.month, day)!.photos.length"
                   class="absolute inset-0 size-full object-cover"
                   :src="getRecord(month.year, month.month, day)!.thumbnail"
                   alt=""
                   aria-hidden="true"
                 />
-                <span class="absolute inset-0 grid place-items-center bg-black/15 text-xs">{{
-                  day
-                }}</span>
+                <span
+                  class="absolute inset-0 grid place-items-center text-xs"
+                  :class="
+                    getRecord(month.year, month.month, day)!.photos.length
+                      ? 'bg-black/15'
+                      : 'bg-transparent'
+                  "
+                  >{{ day }}</span
+                >
               </button>
               <span
                 v-else-if="day"
                 class="grid size-9 place-items-center rounded-full text-sm font-semibold"
                 :class="
                   isToday(month.year, month.month, day)
-                    ? 'bg-[var(--color-brand-primary)] text-white'
+                    ? 'bg-[#e85b61] text-white'
                     : 'text-[#87919e]'
                 "
               >
@@ -229,3 +281,19 @@ const changeYear = () => {
     </section>
   </main>
 </template>
+
+<style scoped>
+.time-capsule-list--leaving {
+  transform: translateX(-18px);
+  opacity: 0;
+  transition:
+    transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .time-capsule-list--leaving {
+    transition-duration: 1ms;
+  }
+}
+</style>

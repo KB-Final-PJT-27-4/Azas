@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { Bell, Check, ChevronLeft, ChevronRight, Plus, UserRound, X } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Bell, Check, ChevronLeft, ChevronRight, Plus, UserRound } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import defaultProfileImageUrl from '@/assets/images/home/home-profile-baby.png'
@@ -12,23 +12,31 @@ const { showToast } = useToast()
 const props = withDefaults(
   defineProps<{
     title?: string
-    centerTitle?: string
     profileName?: string
     profileImage?: string
     profileEmoji?: string
     showBack?: boolean
     showNotification?: boolean
     notificationCount?: number
+    backgroundColor?: string
+    profileBackgroundColor?: string
+    hideDivider?: boolean
+    changeOnScroll?: boolean
+    scrollThreshold?: number
   }>(),
   {
     title: '깨비',
-    centerTitle: undefined,
     profileName: '깨비',
     profileImage: defaultProfileImageUrl,
     profileEmoji: '👶',
     showBack: false,
     showNotification: true,
     notificationCount: 0,
+    backgroundColor: '',
+    profileBackgroundColor: '',
+    hideDivider: false,
+    changeOnScroll: false,
+    scrollThreshold: 12,
   },
 )
 
@@ -39,6 +47,15 @@ const profiles = computed(() => [
 ])
 const selectedProfileId = ref(1)
 const isProfileSheetOpen = ref(false)
+const isScrolled = ref(false)
+const useTopAppearance = computed(() => !props.changeOnScroll || !isScrolled.value)
+const appliedHeaderBackgroundColor = computed(() =>
+  useTopAppearance.value ? props.backgroundColor : '',
+)
+const appliedProfileBackgroundColor = computed(() =>
+  useTopAppearance.value ? props.profileBackgroundColor : '',
+)
+const hideAppliedDivider = computed(() => props.hideDivider && useTopAppearance.value)
 const activeProfile = computed(
   () => profiles.value.find(({ id }) => id === selectedProfileId.value) ?? profiles.value[0]!,
 )
@@ -90,19 +107,35 @@ const goBack = () => {
   router.back()
 }
 
-onBeforeUnmount(clearProfilePress)
+const updateScrollState = () => {
+  isScrolled.value = window.scrollY > props.scrollThreshold
+}
+
+onMounted(() => {
+  updateScrollState()
+  window.addEventListener('scroll', updateScrollState, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  clearProfilePress()
+  window.removeEventListener('scroll', updateScrollState)
+})
 </script>
 
 <template>
   <header
-    class="fixed top-0 left-1/2 z-[var(--z-index-header)] h-[calc(var(--app-header-height)+env(safe-area-inset-top))] w-full max-w-[var(--app-max-width)] -translate-x-1/2 border-b border-[var(--color-border)] bg-[var(--color-surface)]"
+    class="fixed top-0 left-1/2 z-[var(--z-index-header)] h-[calc(var(--app-header-height)+env(safe-area-inset-top))] w-full max-w-[var(--app-max-width)] -translate-x-1/2 border-b bg-[var(--color-surface)] transition-[background-color,border-color] duration-300 ease-out"
+    :class="hideAppliedDivider ? 'border-transparent' : 'border-[var(--color-border)]'"
+    :style="
+      appliedHeaderBackgroundColor ? { backgroundColor: appliedHeaderBackgroundColor } : undefined
+    "
   >
     <div
       class="relative flex h-[var(--app-header-height)] items-center justify-between px-[var(--space-5)] pt-[env(safe-area-inset-top)]"
     >
       <button
         v-if="showBack"
-        class="grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
+        class="-ml-3 grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
         type="button"
         aria-label="뒤로가기"
         @click="goBack"
@@ -124,7 +157,12 @@ onBeforeUnmount(clearProfilePress)
         @keydown.space.prevent="openProfileSheet"
       >
         <span
-          class="grid size-[42px] flex-[0_0_42px] place-items-center overflow-hidden rounded-full bg-[var(--color-selected-background)] text-2xl"
+          class="grid size-[38px] flex-[0_0_38px] place-items-center overflow-hidden rounded-full bg-[var(--color-selected-background)] text-xl transition-colors duration-300 ease-out"
+          :style="
+            appliedProfileBackgroundColor
+              ? { backgroundColor: appliedProfileBackgroundColor }
+              : undefined
+          "
           aria-hidden="true"
         >
           <img
@@ -140,13 +178,6 @@ onBeforeUnmount(clearProfilePress)
         }}</strong>
       </button>
 
-      <strong
-        v-if="centerTitle"
-        class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-[length:var(--font-size-md)] font-extrabold text-[var(--color-text-primary)]"
-      >
-        {{ centerTitle }}
-      </strong>
-
       <button
         v-if="showNotification"
         class="relative grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
@@ -154,7 +185,7 @@ onBeforeUnmount(clearProfilePress)
         aria-label="알림 보기"
         @click="goToAlarm"
       >
-        <Bell :size="28" :stroke-width="2.5" />
+        <Bell :size="25" :stroke-width="2.4" />
         <span
           v-if="notificationCount > 0"
           class="absolute top-1 right-0 grid size-[18px] place-items-center rounded-full bg-[#f04c5d] text-[10px] font-bold text-white"
@@ -162,7 +193,7 @@ onBeforeUnmount(clearProfilePress)
           {{ notificationCount > 9 ? '9+' : notificationCount }}
         </span>
       </button>
-      <div v-else class="size-11 flex-[0_0_44px]" aria-hidden="true" />
+      <div v-else id="app-header-action" class="size-11 flex-[0_0_44px]" />
     </div>
   </header>
 
@@ -186,7 +217,6 @@ onBeforeUnmount(clearProfilePress)
           aria-labelledby="profile-sheet-title"
         >
           <div class="mx-auto h-1.5 w-10 rounded-full bg-[#d8e0e5]" aria-hidden="true"></div>
-
 
           <ul class="mt-5 m-0 list-none space-y-2 p-0">
             <li v-for="profile in profiles" :key="profile.id">
