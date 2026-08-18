@@ -11,6 +11,7 @@ import com.azas.domain.finance.goal.dto.FinancialGoalListResult;
 import com.azas.domain.finance.goal.service.FinancialGoalCreateService;
 import com.azas.domain.finance.goal.service.FinancialGoalDetailService;
 import com.azas.domain.finance.goal.service.FinancialGoalListService;
+import com.azas.domain.finance.goal.service.FinancialGoalUpdateService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import com.azas.global.exception.GlobalExceptionHandler;
@@ -43,6 +44,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -61,6 +63,9 @@ class FinancialGoalControllerTest {
     @Mock
     private FinancialGoalListService financialGoalListService;
 
+    @Mock
+    private FinancialGoalUpdateService financialGoalUpdateService;
+
     @InjectMocks
     private FinancialGoalController financialGoalController;
 
@@ -78,6 +83,44 @@ class FinancialGoalControllerTest {
                         new MappingJackson2HttpMessageConverter(objectMapper)
                 )
                 .build();
+    }
+
+    @Test
+    void updatesFinancialGoalAndReturnsDetail() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(8L);
+        given(financialGoalUpdateService.update(
+                org.mockito.ArgumentMatchers.eq(8L),
+                org.mockito.ArgumentMatchers.eq(31L),
+                any()
+        )).willReturn(detailResult());
+
+        mockMvc.perform(patch("/api/v1/financial-goals/31")
+                        .header("Authorization", "Bearer access-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "target_amount": 40000000,
+                                  "target_date": "2046-03-31",
+                                  "account_ids": [11, 12]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.financial_goal_id").value(31))
+                .andExpect(jsonPath("$.child_id").value(6))
+                .andExpect(jsonPath("$.linked_account_count").value(1))
+                .andExpect(jsonPath("$.checkpoints[0].percentage").value(10));
+
+        org.mockito.ArgumentCaptor<com.azas.domain.finance.goal.dto.FinancialGoalUpdateRequest>
+                captor = org.mockito.ArgumentCaptor.forClass(
+                com.azas.domain.finance.goal.dto.FinancialGoalUpdateRequest.class);
+        verify(financialGoalUpdateService).update(
+                org.mockito.ArgumentMatchers.eq(8L),
+                org.mockito.ArgumentMatchers.eq(31L), captor.capture());
+        assertEquals(new BigDecimal("40000000"), captor.getValue().getTargetAmount());
+        assertEquals(LocalDate.of(2046, 3, 31), captor.getValue().getTargetDate());
+        assertEquals(List.of(11L, 12L), captor.getValue().getAccountIds());
     }
 
     @Test
