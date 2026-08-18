@@ -1,10 +1,10 @@
 ﻿<script setup lang="ts">
-import confetti from 'canvas-confetti'
-import { computed, nextTick, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Check, ChevronRight, FileText } from 'lucide-vue-next'
 
-import checklistTrophyUrl from '@/assets/images/checklists/trophy.png'
+import completeStarUrl from '@/assets/images/accounts/complete-star.png'
+import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-pig.png'
 import {
   checklistItems,
   currentChildLifecycle,
@@ -30,11 +30,6 @@ const sheetDragOffsetY = ref(0)
 const currentStage = computed(
   () => lifecycleStages.find((stage) => stage.id === selectedStageId.value) ?? lifecycleStages[0]!,
 )
-
-const currentStageIndex = computed(() =>
-  lifecycleStages.findIndex((stage) => stage.id === currentStage.value.id),
-)
-const nextStage = computed(() => lifecycleStages[currentStageIndex.value + 1])
 
 const currentStageItems = computed(() =>
   checklistItems.filter((item) => item.stageId === currentStage.value.id),
@@ -134,14 +129,7 @@ const openInfoFullView = () => {
 
 const openCompleteSheet = () => {
   isCompleteSheetOpen.value = true
-  nextTick(() => {
-    confetti({
-      particleCount: 90,
-      spread: 72,
-      origin: { y: 0.72 },
-      colors: ['#55C0F4', '#FFF5D2', '#FFD86B', '#9CD7F6'],
-    })
-  })
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const closeCompleteSheet = () => {
@@ -194,6 +182,59 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
 
 <template>
   <main class="min-h-[100dvh] bg-white">
+    <Transition name="checklist-page" mode="out-in">
+      <section
+        v-if="isCompleteSheetOpen"
+        key="complete"
+        class="grid min-h-[calc(100dvh-var(--app-header-height))] content-center justify-items-center px-5 py-8 text-center"
+        aria-labelledby="stage-complete-title"
+      >
+        <div class="checklist-complete-scene" aria-hidden="true">
+          <img
+            class="checklist-complete-star checklist-complete-star--left"
+            :src="completeStarUrl"
+            alt=""
+          />
+          <img
+            class="checklist-complete-star checklist-complete-star--right"
+            :src="completeStarUrl"
+            alt=""
+          />
+          <img
+            class="checklist-complete-pig"
+            :src="childQuizCompletePigUrl"
+            alt=""
+          />
+        </div>
+
+        <h1
+          id="stage-complete-title"
+          class="mt-7 mb-0 text-[28px] leading-tight font-extrabold tracking-[-0.04em] text-[var(--color-text-primary)]"
+        >
+          체크리스트를 모두 완료했어요!
+        </h1>
+        <p class="mt-4 mb-0 text-[16px] leading-[1.65] text-[var(--color-text-secondary)]">
+          {{ currentStage.ageRange }} 단계에서 필요한 준비를<br />
+          하나씩 든든하게 마쳤어요.
+        </p>
+
+        <button
+          class="mt-10 h-14 w-full rounded-[14px] border-0 bg-[#55C0F4] text-[17px] font-bold text-white"
+          type="button"
+          @click="router.push('/home')"
+        >
+          홈으로 이동
+        </button>
+        <button
+          class="mt-3 h-12 border-0 bg-transparent px-5 text-[14px] font-bold text-[var(--color-text-secondary)]"
+          type="button"
+          @click="closeCompleteSheet"
+        >
+          체크리스트 다시 보기
+        </button>
+      </section>
+
+      <div v-else key="checklist">
     <section class="px-5 pt-6 pb-6" aria-label="생애주기 로드맵">
       <div
         class="flex gap-2 overflow-x-auto rounded-[22px] border border-[#dce8f0] bg-[#f4f9fc] p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -465,94 +506,95 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
         </div>
       </Transition>
 
-      <Transition name="checklist-sheet">
-        <div
-          v-if="isCompleteSheetOpen"
-          class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40"
-          role="presentation"
-          @click.self="closeCompleteSheet"
-        >
-          <section
-            class="checklist-sheet-panel w-full max-w-[var(--app-max-width)] rounded-t-[28px] bg-white px-5 pt-5 pb-[calc(16px+env(safe-area-inset-bottom))] text-center"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="stage-complete-title"
-            :style="sheetDragStyle"
-          >
-            <button
-              class="mx-auto block h-7 w-20 touch-none border-0 bg-transparent p-0"
-              type="button"
-              aria-label="완료 안내 닫기"
-              @pointerdown="startSheetDrag($event, 'complete')"
-            >
-              <span class="mx-auto block h-1.5 w-12 rounded-full bg-[#ccd6df]"></span>
-            </button>
-            <div class="mt-10 grid place-items-center" aria-hidden="true">
-              <img
-                class="w-[min(230px,68vw)] select-none object-contain drop-shadow-[0_18px_28px_rgb(255_216_107_/_26%)]"
-                :src="checklistTrophyUrl"
-                alt=""
-              />
-            </div>
-            <h2
-              id="stage-complete-title"
-              class="mt-8 mb-0 text-[28px] font-bold text-[var(--color-text-primary)]"
-            >
-              축하해요!
-            </h2>
-            <p class="mt-4 mb-0 text-[19px] leading-[1.45] font-bold text-[var(--color-text-primary)]">
-              {{ currentStage.ageRange }} 단계 체크리스트를<br />
-              모두 완료했어요
-            </p>
-            <p class="mt-5 mb-0 text-[14px] leading-[1.55] text-[var(--color-text-secondary)]">
-              우리 아이의 든든한 미래를 위해<br />
-              필요한 준비를 하나씩 잘 마쳤어요.
-            </p>
-
-            <article
-              v-if="nextStage"
-              class="mt-8 grid grid-cols-[1fr_auto] items-center gap-3 rounded-[18px] border border-[var(--color-border)] bg-white px-5 py-4 text-left"
-            >
-              <div>
-                <span class="text-[13px] font-bold text-[var(--color-text-secondary)]">
-                  다음 단계 미리보기
-                </span>
-                <strong
-                  class="mt-1 block text-[19px] leading-[1.35] font-bold text-[#55C0F4]"
-                >
-                  {{ nextStage.ageRange }} · {{ nextStage.title }}
-                </strong>
-                <span class="mt-1 block text-[13px] leading-[1.4] text-[var(--color-text-secondary)]">
-                  {{ nextStage.description }}
-                </span>
-              </div>
-              <ChevronRight :size="22" class="text-[#9cadba]" />
-            </article>
-
-            <div class="mt-6 grid grid-cols-1 gap-3">
-              <button
-                class="h-[52px] rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-bold text-white"
-                type="button"
-                @click="closeCompleteSheet"
-              >
-                다음 단계 미리보기
-              </button>
-              <button
-                class="h-12 rounded-[14px] border border-[var(--color-border)] bg-white text-[15px] font-bold text-[var(--color-text-secondary)]"
-                type="button"
-                @click="router.push('/home')"
-              >
-                홈으로 이동
-              </button>
-            </div>
-          </section>
-        </div>
-      </Transition>
     </Teleport>
+      </div>
+    </Transition>
   </main>
 </template>
 
 <style scoped>
+.checklist-complete-scene {
+  position: relative;
+  width: 240px;
+  max-width: 72vw;
+  aspect-ratio: 1 / 1;
+}
+
+.checklist-complete-pig {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.checklist-complete-star {
+  position: absolute;
+  z-index: 2;
+  width: 38px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.checklist-complete-star--left {
+  bottom: 18%;
+  left: 1%;
+  rotate: -10deg;
+}
+
+.checklist-complete-star--right {
+  top: 14%;
+  right: -3%;
+  width: 31px;
+  rotate: 12deg;
+}
+
+.checklist-page-enter-active,
+.checklist-page-leave-active {
+  transition:
+    opacity 200ms ease,
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.checklist-page-enter-from {
+  opacity: 0;
+  transform: translateX(18px);
+}
+
+.checklist-page-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .checklist-complete-pig {
+    animation: checklist-complete-arrive 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .checklist-complete-star {
+    animation: checklist-complete-star-twinkle 2.2s ease-in-out 520ms infinite;
+  }
+
+  .checklist-complete-star--right {
+    animation-delay: 1.05s;
+    animation-duration: 2.55s;
+  }
+}
+
+@keyframes checklist-complete-arrive {
+  0% { opacity: 0; transform: translateY(12px) scale(0.82); }
+  68% { opacity: 1; transform: translateY(-2px) scale(1.04); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes checklist-complete-star-twinkle {
+  0%,
+  100% { opacity: 0.58; transform: translateY(2px) scale(0.88); }
+  50% { opacity: 1; transform: translateY(-4px) scale(1.08); }
+}
+
 .checklist-sheet-enter-active,
 .checklist-sheet-leave-active {
   transition: opacity 220ms ease;
