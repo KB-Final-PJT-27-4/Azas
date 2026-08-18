@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 
 type CalendarView = 'days' | 'months' | 'years'
 type SelectionMode = 'date' | 'month'
+type PanelPlacement = 'top' | 'bottom' | 'inline-top'
 
 const props = withDefaults(
   defineProps<{
@@ -17,6 +18,7 @@ const props = withDefaults(
     minDate?: string
     maxDate?: string
     selectionMode?: SelectionMode
+    panelPlacement?: PanelPlacement
   }>(),
   {
     label: undefined,
@@ -28,6 +30,7 @@ const props = withDefaults(
     minDate: undefined,
     maxDate: undefined,
     selectionMode: 'date',
+    panelPlacement: 'bottom',
   },
 )
 
@@ -37,6 +40,7 @@ const emit = defineEmits<{
 
 const pickerId = `date-picker-${useId()}`
 const pickerRoot = ref<HTMLElement | null>(null)
+const calendarPanel = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
 const calendarView = ref<CalendarView>('days')
 const visibleMonth = ref(new Date())
@@ -95,6 +99,12 @@ const openPicker = () => {
   yearPageStart.value = visibleMonth.value.getFullYear() - 5
   calendarView.value = props.selectionMode === 'month' ? 'months' : 'days'
   isOpen.value = !isOpen.value
+
+  if (isOpen.value && props.panelPlacement === 'inline-top') {
+    nextTick(() => {
+      calendarPanel.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
 }
 
 const moveMonth = (offset: number) => {
@@ -167,9 +177,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside
 
 <template>
   <div ref="pickerRoot" class="relative grid gap-3">
-    <span v-if="label" :id="`${pickerId}-label`" class="text-base font-bold">{{ label }}</span>
+    <span v-if="label" :id="`${pickerId}-label`" class="order-1 text-base font-bold">{{ label }}</span>
     <button
-      class="flex h-14 items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-left text-lg outline-none transition-colors focus:border-[var(--color-brand-primary-pressed)] focus:ring-2 focus:ring-[var(--color-selected-background)] disabled:cursor-not-allowed disabled:border-[var(--color-disabled-border)] disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
+      class="order-2 flex h-14 items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-left text-lg outline-none transition-colors focus:border-[var(--color-brand-primary-pressed)] focus:ring-2 focus:ring-[var(--color-selected-background)] disabled:cursor-not-allowed disabled:border-[var(--color-disabled-border)] disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
+      :class="panelPlacement === 'inline-top' && isOpen ? 'order-3' : 'order-2'"
       type="button"
       :disabled="disabled"
       :aria-labelledby="label ? `${pickerId}-label` : undefined"
@@ -185,8 +196,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside
 
     <div
       v-if="isOpen"
-      class="right-0 left-0 z-20 mt-2 min-h-[360px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[0_16px_40px_rgb(29_68_89_/_16%)]"
-      :class="inlinePanel ? 'relative' : 'absolute top-full'"
+      ref="calendarPanel"
+      class="right-0 left-0 z-20 min-h-[360px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[0_16px_40px_rgb(29_68_89_/_16%)]"
+      :class="
+        inlinePanel
+          ? 'relative'
+          : panelPlacement === 'inline-top'
+            ? 'relative order-2 mb-1'
+          : panelPlacement === 'top'
+            ? 'absolute bottom-full mb-2'
+            : 'absolute top-full mt-2'
+      "
       role="dialog"
       aria-label="날짜 선택"
     >
