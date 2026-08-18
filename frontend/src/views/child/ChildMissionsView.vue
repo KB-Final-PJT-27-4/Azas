@@ -7,8 +7,11 @@ import { childMissions } from '@/mocks/childFinanceFlow'
 
 const missions = computed(() =>
   [...childMissions].sort((current, next) => {
-    if (current.status === next.status) return 0
-    return current.status === 'completed' ? 1 : -1
+    const order = { review: 0, progress: 1, completed: 2 }
+    return (
+      (order[current.status as keyof typeof order] ?? 1) -
+      (order[next.status as keyof typeof order] ?? 1)
+    )
   }),
 )
 
@@ -32,20 +35,24 @@ const missionVisuals: Record<string, { icon: Component; iconClass: string }> = {
   },
 }
 const getMissionVisual = (missionId: string) => missionVisuals[missionId] ?? defaultMissionVisual
-const getStatusLabel = (status: string) => (status === 'completed' ? '완료됨' : '진행 중')
+const getStatusLabel = (status: string) => {
+  if (status === 'completed') return '완료됨'
+  if (status === 'review') return '확인 대기'
+  return '진행 중'
+}
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-5 pb-[104px] text-[var(--color-text-primary)]">
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-5 pb-[104px] text-[var(--color-text-primary)]"
+  >
     <section class="grid gap-4">
       <article
         v-for="mission in missions"
         :key="mission.id"
         class="mission-ticket"
         :class="
-          mission.status === 'completed'
-            ? 'mission-ticket--completed'
-            : 'mission-ticket--active'
+          mission.status === 'completed' ? 'mission-ticket--completed' : 'mission-ticket--active'
         "
       >
         <div class="mission-ticket__content">
@@ -67,13 +74,21 @@ const getStatusLabel = (status: string) => (status === 'completed' ? '완료됨'
           <div class="min-w-0">
             <strong
               class="block truncate text-[17px] leading-snug font-bold"
-              :class="mission.status === 'completed' ? 'text-[#7d8790]' : 'text-[var(--color-text-primary)]'"
+              :class="
+                mission.status === 'completed'
+                  ? 'text-[#7d8790]'
+                  : 'text-[var(--color-text-primary)]'
+              "
             >
               {{ mission.title }}
             </strong>
             <span
               class="mt-1 block truncate text-[14px] leading-snug"
-              :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-text-secondary)]'"
+              :class="
+                mission.status === 'completed'
+                  ? 'text-[#9aa4ad]'
+                  : 'text-[var(--color-text-secondary)]'
+              "
             >
               {{ mission.description }}
             </span>
@@ -83,7 +98,11 @@ const getStatusLabel = (status: string) => (status === 'completed' ? '완료됨'
         <div class="mission-ticket__reward">
           <strong
             class="text-[18px] leading-tight font-extrabold"
-            :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-brand-primary)]'"
+            :class="
+              mission.status === 'completed'
+                ? 'text-[#9aa4ad]'
+                : 'text-[var(--color-brand-primary)]'
+            "
           >
             {{ formatCurrency(mission.reward) }}
           </strong>
