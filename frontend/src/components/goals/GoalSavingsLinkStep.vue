@@ -23,13 +23,17 @@ type SavingsAccount = {
   maturity: string
 }
 
-defineProps<{
-  plan: GoalPlan
-  selectedSavingsIds: string[]
-  unavailableSavingsIds: string[]
-  goalNumber: number
-  goalCount: number
-}>()
+withDefaults(
+  defineProps<{
+    plan: GoalPlan
+    selectedSavingsIds: string[]
+    unavailableSavingsIds: string[]
+    goalNumber: number
+    goalCount: number
+    embedded?: boolean
+  }>(),
+  { embedded: false },
+)
 
 const emit = defineEmits<{
   toggle: [savingsId: string]
@@ -80,8 +84,8 @@ const savingsAccounts: SavingsAccount[] = [
 </script>
 
 <template>
-  <section class="pb-2">
-    <div class="flex items-end justify-between gap-4">
+  <section :class="embedded ? '' : 'pb-2'">
+    <div v-if="!embedded" class="flex items-end justify-between gap-4">
       <div>
         <p class="text-xs font-semibold text-[var(--color-selected-text)]">
           목표 {{ goalNumber }} / {{ goalCount }}
@@ -91,11 +95,12 @@ const savingsAccounts: SavingsAccount[] = [
         </h1>
       </div>
     </div>
-    <p class="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
+    <p v-if="!embedded" class="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
       연결할 적금을 선택해보세요. 지금 연결하지 않고 넘어가도 괜찮아요.
     </p>
 
     <article
+      v-if="!embedded"
       class="mt-6 flex items-center gap-4 rounded-[20px] border p-4 transition-colors"
       :class="goalCardStyles[plan.id] ?? 'border-[#dce8ee] bg-[#f8fcfe]'"
       aria-label="현재 연결할 목표"
@@ -111,25 +116,28 @@ const savingsAccounts: SavingsAccount[] = [
       </span>
     </article>
 
-    <div class="mt-7 flex items-center justify-between">
-      <h2 class="text-base font-bold">연결 가능한 적금</h2>
+    <div :class="embedded ? 'flex items-center justify-between' : 'mt-7 flex items-center justify-between'">
+      <h2 :class="embedded ? 'text-lg font-extrabold tracking-[-0.02em]' : 'text-base font-bold'">
+        연결할 적금
+      </h2>
       <span class="text-xs text-[var(--color-text-secondary)]">
         {{ selectedSavingsIds.length > 0 ? `${selectedSavingsIds.length}개 선택` : '선택 안 함' }}
       </span>
     </div>
 
-    <div class="mt-3 grid gap-3">
+    <div :class="embedded ? 'mt-4 grid gap-2.5' : 'mt-3 grid gap-3'">
       <button
         v-for="saving in savingsAccounts"
         :key="saving.id"
-        class="relative w-full rounded-[20px] border p-4 pr-14 text-left transition-[border-color,background-color,transform] active:scale-[0.99]"
-        :class="
+        class="relative w-full border pr-14 text-left transition-[border-color,background-color,transform,box-shadow] active:scale-[0.99]"
+        :class="[
+          embedded ? 'rounded-2xl px-4 py-3.5' : 'rounded-[20px] p-4',
           selectedSavingsIds.includes(saving.id)
-            ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)]'
+            ? 'border-[var(--color-brand-primary)] bg-[#eaf8ff] shadow-[0_0_0_1px_rgb(82_188_235_/_8%)]'
             : unavailableSavingsIds.includes(saving.id)
               ? 'cursor-not-allowed border-[#d9e0e6] bg-[#f5f6f7] opacity-55'
-            : 'border-[#cbd5df] bg-white'
-        "
+              : 'border-[#d7e0e5] bg-white',
+        ]"
         type="button"
         :disabled="unavailableSavingsIds.includes(saving.id)"
         :aria-pressed="selectedSavingsIds.includes(saving.id)"
@@ -144,7 +152,7 @@ const savingsAccounts: SavingsAccount[] = [
         <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">
           {{ saving.number }}
         </span>
-        <span class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+        <span :class="embedded ? 'mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs' : 'mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs'">
           <strong class="text-[var(--color-selected-text)]">
             {{ saving.balance.toLocaleString('ko-KR') }}원
           </strong>
