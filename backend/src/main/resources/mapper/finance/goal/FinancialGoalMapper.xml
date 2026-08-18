@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.finance.goal.mapper.FinancialGoalMapper">
+
+    <select id="findAccountTargetsForUpdate"
+            resultType="com.azas.domain.finance.goal.dto.FinancialGoalAccountTargetRow">
+        SELECT
+            fa.financial_account_id AS accountId,
+            fa.owner_type AS ownerType,
+            fa.child_id AS childId,
+            fa.bank_name AS bankName,
+            fa.account_name AS accountName,
+            fa.account_product_type AS accountProductType,
+            fa.balance,
+            fa.account_status AS accountStatus,
+            fa.link_status AS linkStatus,
+            fga.financial_goal_id AS financialGoalId
+        FROM financial_account fa
+        LEFT JOIN financial_goal_account fga
+            ON fga.financial_account_id = fa.financial_account_id
+        WHERE fa.financial_account_id IN
+        <foreach collection="accountIds" item="accountId" open="(" separator="," close=")">
+            #{accountId}
+        </foreach>
+        FOR UPDATE
+    </select>
+
+    <insert id="insertFinancialGoal"
+            useGeneratedKeys="true"
+            keyProperty="financialGoalId"
+            keyColumn="financial_goal_id">
+        INSERT INTO financial_goal (
+            child_id,
+            financial_goal_template_id,
+            title,
+            target_amount,
+            target_date,
+            monthly_saving_amount,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{childId},
+            #{financialGoalTemplateId},
+            #{title},
+            #{targetAmount},
+            #{targetDate},
+            #{monthlySavingAmount},
+            'ACTIVE',
+            #{createdAt},
+            #{createdAt}
+        )
+    </insert>
+
+    <insert id="insertFinancialGoalAccount">
+        INSERT INTO financial_goal_account (
+            financial_goal_id,
+            financial_account_id,
+            linked_at
+        ) VALUES (
+            #{financialGoalId},
+            #{financialAccountId},
+            UTC_TIMESTAMP(6)
+        )
+    </insert>
+
+    <insert id="insertFinancialGoalCheckpoint">
+        INSERT INTO financial_goal_checkpoint (
+            financial_goal_id,
+            percentage,
+            target_amount,
+            reached_at,
+            created_at
+        ) VALUES (
+            #{financialGoalId},
+            #{percentage},
+            #{targetAmount},
+            #{reachedAt},
+            #{createdAt}
+        )
+    </insert>
+
+    <update id="updateAccountGoalSnapshot">
+        UPDATE financial_account
+        SET financial_goal_template_id = #{financialGoalTemplateId},
+            goal_name_snapshot = #{title},
+            goal_target_amount = #{targetAmount},
+            goal_target_date = #{targetDate},
+            updated_at = UTC_TIMESTAMP(6)
+        WHERE financial_account_id = #{financialAccountId}
+    </update>
+
+</mapper>
