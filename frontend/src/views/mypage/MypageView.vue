@@ -13,6 +13,7 @@ const accountAction = ref<'logout' | 'withdrawal' | null>(null)
 const familyMembers = [
   { id: 1, name: '김둘', relation: '부', initials: '김', color: 'bg-[#eaf7ff] text-[#419ac5]' },
   { id: 2, name: '김다섯', relation: '보호자', initials: '김', color: 'bg-[#fff6dc] text-[#b88a20]' },
+  { id: 3, name: '김여섯', relation: '모', initials: '김', color: 'bg-[#f4edff] text-[#8b68bd]' },
 ]
 
 const serviceMenus = [
@@ -66,7 +67,7 @@ const withdraw = () => {
           <strong class="mt-0.5 block text-[16px]">깨비</strong>
         </span>
         <span class="text-right">
-          <span class="block text-xs font-semibold text-[var(--color-text-secondary)]">12세 · 초등학생</span>
+          <span class="block text-xs font-semibold text-[var(--color-text-secondary)]">12세</span>
           <span class="mt-1 inline-flex items-center text-[11px] font-bold text-[var(--color-selected-text)]">
             정보 수정 <ChevronRight :size="13" />
           </span>
@@ -86,11 +87,11 @@ const withdraw = () => {
         </RouterLink>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="family-scroll" aria-label="우리 가족 목록">
         <div
           v-for="member in familyMembers"
           :key="member.id"
-          class="flex min-w-0 items-center gap-3 rounded-[18px] border border-[#d9e2e7] bg-white p-3.5"
+          class="family-card flex shrink-0 snap-start items-center gap-3 rounded-[16px] border border-[#d9e2e7] bg-white p-3"
         >
           <span class="grid size-10 shrink-0 place-items-center rounded-full text-sm font-extrabold" :class="member.color">
             {{ member.initials }}
@@ -227,5 +228,24 @@ const withdraw = () => {
 .mypage-sheet-enter-from > section,
 .mypage-sheet-leave-to > section {
   transform: translateY(100%);
+}
+
+.family-scroll {
+  display: flex;
+  gap: 12px;
+  margin-right: -20px;
+  padding-right: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.family-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.family-card {
+  width: calc((100% - 12px) / 2);
+  min-height: 76px;
 }
 </style>
