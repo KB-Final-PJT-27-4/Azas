@@ -16,9 +16,6 @@ const selectedYear = ref(currentYear)
 
 const accountId = computed(() => String(route.params.capsuleListId ?? '1'))
 const account = computed(() => getTimeCapsuleAccount(accountId.value))
-const totalAmount = computed(() =>
-  account.value.records.reduce((sum, record) => sum + record.amount, 0),
-)
 const listRecords = computed(() =>
   [...account.value.records].sort((a, b) => b.date.localeCompare(a.date)),
 )
@@ -174,7 +171,7 @@ const changeYear = () => {
       >
         <span class="text-sm text-[var(--color-text-secondary)]">총 저축 금액</span>
         <strong class="ml-4 shrink-0 text-base text-[var(--color-selected-text)]">
-          {{ totalAmount.toLocaleString('ko-KR') }}원
+          {{ account.totalSavedAmount.toLocaleString('ko-KR') }}원
         </strong>
       </button>
       <button
@@ -234,14 +231,14 @@ const changeYear = () => {
             <div
               v-for="(day, index) in getMonthCells(month.year, month.month)"
               :key="`${month.month}-${index}`"
-              class="grid aspect-square place-items-center"
+              class="relative flex aspect-square items-center justify-center"
             >
               <button
                 v-if="day && getRecord(month.year, month.month, day)"
                 class="relative grid size-10 place-items-center overflow-hidden rounded-full text-sm font-semibold text-white shadow-sm"
-                :class="
-                  getRecord(month.year, month.month, day)!.photos.length ? '' : 'bg-[#79ccef]'
-                "
+                :class="[
+                  getRecord(month.year, month.month, day)!.photos.length ? '' : 'bg-[#79ccef]',
+                ]"
                 type="button"
                 :aria-label="`${day}일 ${getRecord(month.year, month.month, day)!.title}`"
                 @click="openRecord(getRecord(month.year, month.month, day)!.id)"
@@ -266,13 +263,20 @@ const changeYear = () => {
               <span
                 v-else-if="day"
                 class="grid size-9 place-items-center rounded-full text-sm font-semibold"
-                :class="
+                :class="[
                   isToday(month.year, month.month, day)
                     ? 'bg-[#e85b61] text-white'
-                    : 'text-[#87919e]'
-                "
+                    : 'text-[#87919e]',
+                ]"
               >
                 {{ day }}
+              </span>
+              <span
+                v-if="day && isToday(month.year, month.month, day)"
+                class="pointer-events-none absolute top-[calc(50%+23px)] text-[9px] leading-none font-bold text-[#e85b61]"
+                aria-hidden="true"
+              >
+                오늘
               </span>
             </div>
           </div>
