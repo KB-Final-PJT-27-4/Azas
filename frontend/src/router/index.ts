@@ -7,6 +7,12 @@ const timeCapsuleHeaderMeta = {
   showHeaderNotification: false,
 }
 
+const childHeaderMeta = {
+  headerBackgroundColor: '#eef9ff',
+  hideHeaderDivider: true,
+  changeHeaderOnScroll: true,
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -325,10 +331,12 @@ const routes: RouteRecordRaw[] = [
     name: 'ChildHome',
     component: () => import('@/views/child/ChildHomeView.vue'),
     meta: {
+      ...childHeaderMeta,
       requiresAuth: true,
       roles: ['CHILD'],
       hideBottomNavigation: true,
       headerTitle: '홈',
+      pageBackgroundColor: '#eef9ff',
     },
   },
   {
@@ -336,10 +344,23 @@ const routes: RouteRecordRaw[] = [
     name: 'ChildAssets',
     component: () => import('@/views/child/ChildAssetsView.vue'),
     meta: {
+      ...childHeaderMeta,
       requiresAuth: true,
       roles: ['CHILD'],
       hideBottomNavigation: true,
       headerTitle: '내 자산',
+      showHeaderBack: true,
+    },
+  },
+  {
+    path: '/child/assets/transactions/:transactionId',
+    name: 'ChildAssetTransactionDetail',
+    component: () => import('@/views/child/ChildAssetTransactionDetailView.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['CHILD'],
+      hideBottomNavigation: true,
+      headerTitle: '이체 상세',
       showHeaderBack: true,
     },
   },
@@ -388,18 +409,6 @@ const routes: RouteRecordRaw[] = [
       roles: ['CHILD'],
       hideBottomNavigation: true,
       headerTitle: '미션',
-      showHeaderBack: true,
-    },
-  },
-  {
-    path: '/child/checklists',
-    name: 'ChildChecklists',
-    component: () => import('@/views/child/ChildChecklistView.vue'),
-    meta: {
-      requiresAuth: true,
-      roles: ['CHILD'],
-      hideBottomNavigation: true,
-      headerTitle: '아이 체크리스트',
       showHeaderBack: true,
     },
   },

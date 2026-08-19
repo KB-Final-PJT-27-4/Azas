@@ -157,7 +157,6 @@ const createMission = () => {
     description,
     reward,
     status: 'progress',
-    icon: '☑️',
   })
   closeCreateSheet()
   selectedFilter.value = 'all'

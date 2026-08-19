@@ -353,16 +353,16 @@ const getStepClass = (stepIndex: number) => {
 }
 
 .quiz-step--correct {
-  border-color: #22c55e;
-  background: #22c55e;
-  color: white;
+  border-color: #bfe9d8;
+  background: #e8f8ef;
+  color: #189f63;
   animation: quiz-step-pop 260ms cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
 .quiz-step--wrong {
-  border-color: #ef4444;
-  background: #ef4444;
-  color: white;
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #ef4444;
   animation: quiz-step-shake 300ms ease;
 }
 
