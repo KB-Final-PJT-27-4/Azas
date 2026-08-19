@@ -23,6 +23,7 @@ TRUNCATE TABLE financial_account;
 TRUNCATE TABLE financial_product_bookmark;
 TRUNCATE TABLE financial_product;
 TRUNCATE TABLE child_checklist_item;
+TRUNCATE TABLE checklist_item_detail;
 TRUNCATE TABLE checklist_item_template;
 TRUNCATE TABLE allowance_request;
 TRUNCATE TABLE family_invitation;
@@ -108,28 +109,79 @@ INSERT INTO family_invitation (
   (1, 1, 1, 'CHILD', NULL, SHA2('accepted-child-invite-token', 256), 'ACCEPTED', DATE_ADD(NOW(6), INTERVAL 7 DAY), 2, NOW(6)),
   (2, 1, 1, 'PARENT', 'FATHER', SHA2('pending-parent-invite-token', 256), 'PENDING', DATE_ADD(NOW(6), INTERVAL 7 DAY), NULL, NULL);
 
-INSERT INTO checklist_item_template (
-  checklist_item_template_id,
-  title,
-  description,
-  item_order,
-  is_active
-) VALUES
-  (1, '아이 입출금 계좌 연결하기', '아이 명의 입출금 계좌를 서비스에 연결해요.', 1, 1),
-  (2, '아이 적금 계좌 연결하기', '아이 명의 적금 계좌를 연결하고 목표를 설정해요.', 2, 1),
-  (3, '첫 자동이체 설정하기', '매월 정해진 금액을 자동으로 저축하도록 설정해요.', 3, 1);
+INSERT INTO checklist_item_template
+(
+    checklist_item_template_id,
+    lifecycle_stage,
+    title,
+    description,
+    detail_content,
+    item_order,
+    is_active
+)
+VALUES
+    (
+        1,
+        'AGE_5_TO_7',
+        '아이 입출금 계좌 연결하기',
+        '아이 명의 입출금 계좌를 서비스에 연결해요.',
+        '아이 명의 계좌를 연결하기 전에 계좌 명의와 보호자 관계를 확인해 주세요.',
+        1,
+        1
+    ),
+    (
+        2,
+        'AGE_5_TO_7',
+        '아이 적금 계좌 연결하기',
+        '아이 명의 적금 계좌를 연결하고 목표를 설정해요.',
+        '아이와 함께 저축 목적과 목표 금액을 정한 뒤 적금 계좌를 연결해 보세요.',
+        2,
+        1
+    ),
+    (
+        3,
+        'AGE_5_TO_7',
+        '첫 자동이체 설정하기',
+        '매월 정해진 금액을 자동으로 저축하도록 설정해요.',
+        '가계 상황을 고려하여 매월 지속할 수 있는 이체 금액과 날짜를 정해 보세요.',
+        3,
+        1
+    );
 
-INSERT INTO child_checklist_item (
-  child_checklist_item_id,
-  child_id,
-  checklist_item_template_id,
-  status,
-  completed_by_member_id,
-  completed_at
-) VALUES
-  (1, 1, 1, 'COMPLETED', 1, NOW(6)),
-  (2, 1, 2, 'COMPLETED', 1, NOW(6)),
-  (3, 1, 3, 'PENDING', NULL, NULL);
+INSERT INTO child_checklist_item
+(
+    child_checklist_item_id,
+    child_id,
+    checklist_item_template_id,
+    status,
+    completed_by_member_id,
+    completed_at
+)
+VALUES
+    (
+        1,
+        1,
+        1,
+        'COMPLETED',
+        1,
+        NOW(6)
+    ),
+    (
+        2,
+        1,
+        2,
+        'COMPLETED',
+        1,
+        NOW(6)
+    ),
+    (
+        3,
+        1,
+        3,
+        'PENDING',
+        NULL,
+        NULL
+    );
 
 INSERT INTO financial_product (
   financial_product_id,
@@ -356,7 +408,6 @@ INSERT INTO financial_account (
   owner_member_id,
   child_id,
   financial_product_id,
-  financial_goal_template_id,
   organization_code,
   bank_name,
   account_number_ciphertext,
@@ -370,9 +421,6 @@ INSERT INTO financial_account (
   child_available_amount,
   access_updated_by_member_id,
   access_updated_at,
-  goal_name_snapshot,
-  goal_target_amount,
-  goal_target_date,
   is_primary,
   opened_at,
   maturity_date,
@@ -385,7 +433,6 @@ INSERT INTO financial_account (
     1,
     NULL,
     NULL,
-    NULL,
     '004',
     'KB국민은행',
     FROM_BASE64('AS+1XqOuK/oansezNOWbzLlkSFQzXa+pjB2IqT+tWq9Ibya/JE7ldK82'),
@@ -395,9 +442,6 @@ INSERT INTO financial_account (
     2000000,
     NOW(6),
     'ACTIVE',
-    NULL,
-    NULL,
-    NULL,
     NULL,
     NULL,
     NULL,
@@ -414,7 +458,6 @@ INSERT INTO financial_account (
     2,
     1,
     NULL,
-    NULL,
     '004',
     'KB국민은행',
     FROM_BASE64('AY+uroBtCF2CkEZpvz0aq8HxWzX+axeE89gB8rgwKmUP8B6J7Wi9vlH2'),
@@ -428,9 +471,6 @@ INSERT INTO financial_account (
     50000,
     1,
     NOW(6),
-    NULL,
-    NULL,
-    NULL,
     1,
     '2024-01-12 09:00:00.000000',
     NULL,
@@ -441,7 +481,6 @@ INSERT INTO financial_account (
     3,
     'CHILD',
     2,
-    1,
     1,
     1,
     '004',
@@ -457,9 +496,6 @@ INSERT INTO financial_account (
     NULL,
     NULL,
     NULL,
-    '대학자금 마련',
-    30000000,
-    '2038-01-12',
     0,
     '2024-01-12 09:00:00.000000',
     '2038-01-12',
@@ -524,10 +560,10 @@ INSERT INTO account_transaction (
   counterparty_name,
   transaction_type,
   source_type,
-  synced_at
+  recorded_at
 ) VALUES
   (1, 3, 1, SHA2('saving-2026-07-20-100000', 256), '2026-07-20 09:00:00.000000', 'CREDIT', 100000, 14600000, '7월 저축', '김하나', '이체', 'TRANSFER', NOW(6)),
-  (2, 2, 1, SHA2('demand-2026-07-25-15000', 256), '2026-07-25 12:00:00.000000', 'DEBIT', 15000, 105000, '편의점', 'CU', '카드출금', 'IMPORTED', NOW(6));
+  (2, 2, 1, SHA2('demand-2026-07-25-15000', 256), '2026-07-25 12:00:00.000000', 'DEBIT', 15000, 105000, '편의점', 'CU', '카드출금', 'MOCK', NOW(6));
 
 INSERT INTO financial_transfer (
   financial_transfer_id,
@@ -593,7 +629,7 @@ INSERT INTO time_capsule (
   entry_count,
   latest_entry_at
 ) VALUES
-  (1, 1, 3, '깨비의 KB Young Youth 적금 타임캡슐', 'COLLECTING', '2038-01-12 00:00:00.000000', 1, '2026-07-20 09:00:00.000000');
+  (1, 1, 3, '깨비의 KB Young Youth 적금 타임캡슐', 'COLLECTING', '2038-01-12 00:00:00.000000', 0, NULL);
 
 INSERT INTO time_capsule_entry (
   time_capsule_entry_id,
@@ -608,7 +644,7 @@ INSERT INTO time_capsule_entry (
   status,
   sealed_at
 ) VALUES
-  (1, 1, 1, 1, '7월 저축 기록', '이번 달에도 깨비를 위해 10만 원을 넣었어.', 100000, '2026-07-20 09:00:00.000000', 'NONE', 'SEALED', '2026-07-20 09:05:00.000000');
+  (1, 1, 1, 1, '7월 저축 기록', '이번 달에도 깨비를 위해 10만 원을 넣었어.', 100000, '2026-07-20 09:00:00.000000', 'NONE', 'DRAFT', NULL);
 
 INSERT INTO asset_report (
   asset_report_id,

@@ -61,11 +61,6 @@ public class MemberWithdrawalService {
                 withdrawnAt
         );
 
-        memberWithdrawalMapper.revokeActiveFinancialConnections(
-                memberId,
-                withdrawnAt
-        );
-
         memberWithdrawalMapper.unlinkChildMember(memberId);
         memberWithdrawalMapper.deleteChildParentRelations(memberId);
         memberWithdrawalMapper.deletePhoneVerifications(memberId);

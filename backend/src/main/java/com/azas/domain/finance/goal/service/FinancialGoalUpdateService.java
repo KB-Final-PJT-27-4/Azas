@@ -122,13 +122,6 @@ public class FinancialGoalUpdateService {
                 monthlySavingAmount, "ACTIVE") != 1) {
             throw internalError();
         }
-        for (Long accountId : finalIds) {
-            if (goalMapper.updateAccountGoalSnapshot(accountId,
-                    goal.getFinancialGoalTemplateId(), goal.getTitle(),
-                    targetAmount, targetDate) != 1) {
-                throw internalError();
-            }
-        }
         recalculateCheckpoints(financialGoalId, targetAmount, currentAmount, now);
 
         return detailService.getGoal(requesterMemberId, financialGoalId);
@@ -216,8 +209,7 @@ public class FinancialGoalUpdateService {
         for (Long accountId : existing) {
             if (!target.contains(accountId)) {
                 if (goalMapper.deleteFinancialGoalAccount(
-                        financialGoalId, accountId) != 1
-                        || goalMapper.clearAccountGoalSnapshot(accountId) != 1) {
+                        financialGoalId, accountId) != 1) {
                     throw internalError();
                 }
             }

@@ -97,17 +97,18 @@ public class TimeCapsuleEntryService {
         );
         LocalDateTime expiresAt = LocalDateTime.now()
                 .plus(DOWNLOAD_URL_VALIDITY);
-        List<TimeCapsuleEntryDetailResponse.MediaResponse> media =
+        TimeCapsuleEntryDetailResponse.MediaResponse media =
                 timeCapsuleMediaMapper
                         .findActiveByEntryId(timeCapsuleEntryId)
                         .stream()
+                        .findFirst()
                         .map(currentMedia ->
                                 toEntryDetailMediaResponse(
                                         currentMedia,
                                         expiresAt
                                 )
                         )
-                        .collect(Collectors.toList());
+                        .orElse(null);
 
         return new TimeCapsuleEntryDetailResponse(entry, media);
     }
@@ -316,8 +317,7 @@ public class TimeCapsuleEntryService {
             throw new BusinessException(ErrorCode.TIME_CAPSULE_MEDIA_NOT_FOUND);
         }
 
-        if (entry.getMediaMode() != TimeCapsuleEntryMediaMode.IMAGE
-                || media.getMediaType() != TimeCapsuleMediaType.IMAGE) {
+        if (entry.getMediaMode() != TimeCapsuleEntryMediaMode.IMAGE) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
             );
@@ -521,12 +521,6 @@ public class TimeCapsuleEntryService {
                         entry.getTimeCapsuleEntryId(),
                         TimeCapsuleMediaType.IMAGE
                 );
-        int activeVideoCount =
-                timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
-                        entry.getTimeCapsuleEntryId(),
-                        TimeCapsuleMediaType.VIDEO
-                );
-
         boolean hasRepresentativeImage =
                 entry.getThumbnailObjectKey() != null
                         && !entry.getThumbnailObjectKey().isBlank();
@@ -534,7 +528,6 @@ public class TimeCapsuleEntryService {
         boolean isValid =
                 entry.getMediaMode() == TimeCapsuleEntryMediaMode.IMAGE
                         && activeImageCount == 1
-                        && activeVideoCount == 0
                         && hasRepresentativeImage;
 
         if (!isValid) {

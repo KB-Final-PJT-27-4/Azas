@@ -522,9 +522,6 @@ class TimeCapsuleEntryServiceTest {
         given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
                 1000L, TimeCapsuleMediaType.IMAGE
         )).willReturn(1);
-        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
-                1000L, TimeCapsuleMediaType.VIDEO
-        )).willReturn(0);
         given(timeCapsuleEntryMapper.sealDraftEntry(1000L)).willReturn(1);
         given(timeCapsuleEntryMapper.increaseEntryAggregates(draft))
                 .willReturn(1);
@@ -744,11 +741,6 @@ class TimeCapsuleEntryServiceTest {
                 1000L,
                 TimeCapsuleMediaType.IMAGE
         )).willReturn(1);
-        given(timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
-                1000L,
-                TimeCapsuleMediaType.VIDEO
-        )).willReturn(0);
-
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> timeCapsuleEntryService.sealTimeCapsuleEntry(

@@ -49,16 +49,12 @@ class FinancialGoalDeleteServiceTest {
                         mock(FinancialGoalAccountTargetRow.class)));
         when(goalMapper.deleteFinancialGoalAccount(31L, 11L)).thenReturn(1);
         when(goalMapper.deleteFinancialGoalAccount(31L, 12L)).thenReturn(1);
-        when(goalMapper.clearAccountGoalSnapshot(11L)).thenReturn(1);
-        when(goalMapper.clearAccountGoalSnapshot(12L)).thenReturn(1);
         when(goalMapper.archiveFinancialGoal(31L)).thenReturn(1);
 
         service.delete(8L, 31L);
 
         verify(goalMapper).deleteFinancialGoalAccount(31L, 11L);
         verify(goalMapper).deleteFinancialGoalAccount(31L, 12L);
-        verify(goalMapper).clearAccountGoalSnapshot(11L);
-        verify(goalMapper).clearAccountGoalSnapshot(12L);
         verify(goalMapper).archiveFinancialGoal(31L);
     }
 

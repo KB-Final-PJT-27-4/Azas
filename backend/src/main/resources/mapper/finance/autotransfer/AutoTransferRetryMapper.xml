@@ -130,7 +130,7 @@
             description,
             counterparty_name,
             source_type,
-            synced_at
+            recorded_at
         ) VALUES (
                      #{financialAccountId},
                      #{counterpartyAccountId},
