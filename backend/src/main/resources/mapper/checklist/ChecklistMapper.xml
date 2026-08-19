@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.checklist.mapper.ChecklistMapper">
+
+    <select id="findActiveChildLifecycle"
+            resultType="com.azas.domain.checklist.dto.ChecklistChildLifecycleRow">
+        SELECT
+        c.child_id AS childId,
+        c.birth_status AS birthStatus,
+        c.expected_birth_date AS expectedBirthDate,
+        c.birth_date AS birthDate
+        FROM child c
+        WHERE c.child_id = #{childId}
+        AND c.status = 'ACTIVE'
+        LIMIT 1
+    </select>
+
+    <select id="countActiveParentAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+        JOIN child c
+        ON c.child_id = cp.child_id
+        AND c.status = 'ACTIVE'
+        JOIN member m
+        ON m.member_id = cp.member_id
+        AND m.member_type = 'PARENT'
+        AND m.status = 'ACTIVE'
+        WHERE cp.member_id = #{memberId}
+        AND cp.child_id = #{childId}
+    </select>
+
+    <!--
+      신규 자녀처럼 진행 상태 행이 없는 경우,
+      선택한 단계의 활성 템플릿을 PENDING 상태로 생성한다.
+      UNIQUE(child_id, template_id)와 INSERT IGNORE로 중복을 방지한다.
+    -->
+    <insert id="insertMissingItems">
+        INSERT IGNORE INTO child_checklist_item (
+        child_id,
+        checklist_item_template_id,
+        status,
+        completed_by_member_id,
+        completed_at,
+        created_at,
+        updated_at
+        )
+        SELECT
+        #{childId},
+        template.checklist_item_template_id,
+        'PENDING',
+        NULL,
+        NULL,
+        UTC_TIMESTAMP(6),
+        UTC_TIMESTAMP(6)
+        FROM checklist_item_template template
+        WHERE template.lifecycle_stage = #{lifecycleStage}
+        AND template.is_active = 1
+    </insert>
+
+    <select id="findItems"
+            resultType="com.azas.domain.checklist.dto.ChecklistItemRow">
+        SELECT
+        progress.child_checklist_item_id AS checklistItemId,
+        template.checklist_item_template_id AS checklistItemTemplateId,
+        template.title AS title,
+        template.description AS description,
+        progress.status AS status,
+        progress.completed_at AS completedAt,
+        template.item_order AS itemOrder
+        FROM child_checklist_item progress
+        JOIN checklist_item_template template
+        ON template.checklist_item_template_id =
+        progress.checklist_item_template_id
+        WHERE progress.child_id = #{childId}
+        AND template.lifecycle_stage = #{lifecycleStage}
+        AND template.is_active = 1
+        ORDER BY
+        CASE
+        WHEN progress.status = 'COMPLETED' THEN 1
+        ELSE 0
+        END ASC,
+        template.item_order ASC,
+        template.checklist_item_template_id ASC
+    </select>
+
+    <select id="findCompletionTargetForUpdate"
+            resultType="com.azas.domain.checklist.dto.ChecklistItemCompletionTargetRow">
+        SELECT
+        cci.child_checklist_item_id AS checklist_item_id,
+        cci.child_id,
+        cci.status,
+        cci.completed_at
+        FROM child_checklist_item cci
+        INNER JOIN child c
+        ON c.child_id = cci.child_id
+        AND c.status = 'ACTIVE'
+        INNER JOIN checklist_item_template cit
+        ON cit.checklist_item_template_id =
+        cci.checklist_item_template_id
+        AND cit.is_active = 1
+        WHERE cci.child_checklist_item_id = #{checklistItemId}
+        FOR UPDATE
+    </select>
+
+    <select id="findCompletionTargetById"
+            resultType="com.azas.domain.checklist.dto.ChecklistItemCompletionTargetRow">
+        SELECT
+        cci.child_checklist_item_id AS checklist_item_id,
+        cci.child_id,
+        cci.status,
+        cci.completed_at
+        FROM child_checklist_item cci
+        INNER JOIN child c
+        ON c.child_id = cci.child_id
+        AND c.status = 'ACTIVE'
+        INNER JOIN checklist_item_template cit
+        ON cit.checklist_item_template_id =
+        cci.checklist_item_template_id
+        AND cit.is_active = 1
+        WHERE cci.child_checklist_item_id = #{checklistItemId}
+    </select>
+
+    <update id="updateCompletion">
+        UPDATE child_checklist_item
+        SET
+        status = #{status},
+        completed_by_member_id =
+        CASE
+        WHEN #{status} = 'COMPLETED'
+        THEN #{completedByMemberId}
+        ELSE NULL
+        END,
+        completed_at =
+        CASE
+        WHEN #{status} = 'COMPLETED'
+        THEN UTC_TIMESTAMP(6)
+        ELSE NULL
+        END,
+        updated_at = UTC_TIMESTAMP(6)
+        WHERE child_checklist_item_id = #{checklistItemId}
+    </update>
+
+</mapper>
