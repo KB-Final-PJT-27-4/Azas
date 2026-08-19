@@ -1,7 +1,7 @@
 package com.azas.domain.checklist.controller;
 
-import com.azas.domain.checklist.dto.ChecklistItemListResponse;
-import com.azas.domain.checklist.dto.ChecklistItemListResult;
+import com.azas.domain.checklist.dto.*;
+import com.azas.domain.checklist.service.ChecklistItemCompletionService;
 import com.azas.domain.checklist.service.ChecklistItemListService;
 import com.azas.global.security.AccessTokenMemberResolver;
 import io.swagger.annotations.Api;
@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+
 @Api(tags = "체크리스트")
 @RestController
 @RequiredArgsConstructor
@@ -19,6 +21,8 @@ public class ChecklistController {
 
     private final AccessTokenMemberResolver memberResolver;
     private final ChecklistItemListService checklistItemListService;
+    private final ChecklistItemCompletionService
+            checklistItemCompletionService;
 
     @ApiOperation(
             value = "생애주기 체크리스트 조회",
@@ -55,6 +59,26 @@ public class ChecklistController {
 
         return ResponseEntity.ok(
                 ChecklistItemListResponse.from(result)
+        );
+    }
+    @PatchMapping("/checklist-items/{checklist_item_id}/completion")
+    public ResponseEntity<ChecklistItemCompletionResponse>
+    updateChecklistItemCompletion(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable("checklist_item_id") Long checklistItemId,
+            @Valid @RequestBody ChecklistItemCompletionRequest request
+    ) {
+        Long memberId = memberResolver.resolveMemberId(authorization);
+
+        ChecklistItemCompletionResult result =
+                checklistItemCompletionService.updateCompletion(
+                        memberId,
+                        checklistItemId,
+                        request.getCompleted()
+                );
+
+        return ResponseEntity.ok(
+                ChecklistItemCompletionResponse.from(result)
         );
     }
 }

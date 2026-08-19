@@ -423,6 +423,15 @@ public enum ErrorCode {
     CHECKLIST_STAGE_NOT_SUPPORTED(
             HttpStatus.UNPROCESSABLE_ENTITY,
             "지원하는 체크리스트 생애주기 단계를 계산할 수 없습니다."
+    ),
+    CHECKLIST_ITEM_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "체크리스트 항목을 찾을 수 없습니다."
+    ),
+
+    CHECKLIST_ITEM_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 체크리스트 항목에 접근할 권한이 없습니다."
     );
 
     private final HttpStatus httpStatus;

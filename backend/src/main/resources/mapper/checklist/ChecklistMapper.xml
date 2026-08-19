@@ -86,4 +86,61 @@
         template.checklist_item_template_id ASC
     </select>
 
+    <select id="findCompletionTargetForUpdate"
+            resultType="com.azas.domain.checklist.dto.ChecklistItemCompletionTargetRow">
+        SELECT
+        cci.child_checklist_item_id AS checklist_item_id,
+        cci.child_id,
+        cci.status,
+        cci.completed_at
+        FROM child_checklist_item cci
+        INNER JOIN child c
+        ON c.child_id = cci.child_id
+        AND c.status = 'ACTIVE'
+        INNER JOIN checklist_item_template cit
+        ON cit.checklist_item_template_id =
+        cci.checklist_item_template_id
+        AND cit.is_active = 1
+        WHERE cci.child_checklist_item_id = #{checklistItemId}
+        FOR UPDATE
+    </select>
+
+    <select id="findCompletionTargetById"
+            resultType="com.azas.domain.checklist.dto.ChecklistItemCompletionTargetRow">
+        SELECT
+        cci.child_checklist_item_id AS checklist_item_id,
+        cci.child_id,
+        cci.status,
+        cci.completed_at
+        FROM child_checklist_item cci
+        INNER JOIN child c
+        ON c.child_id = cci.child_id
+        AND c.status = 'ACTIVE'
+        INNER JOIN checklist_item_template cit
+        ON cit.checklist_item_template_id =
+        cci.checklist_item_template_id
+        AND cit.is_active = 1
+        WHERE cci.child_checklist_item_id = #{checklistItemId}
+    </select>
+
+    <update id="updateCompletion">
+        UPDATE child_checklist_item
+        SET
+        status = #{status},
+        completed_by_member_id =
+        CASE
+        WHEN #{status} = 'COMPLETED'
+        THEN #{completedByMemberId}
+        ELSE NULL
+        END,
+        completed_at =
+        CASE
+        WHEN #{status} = 'COMPLETED'
+        THEN UTC_TIMESTAMP(6)
+        ELSE NULL
+        END,
+        updated_at = UTC_TIMESTAMP(6)
+        WHERE child_checklist_item_id = #{checklistItemId}
+    </update>
+
 </mapper>

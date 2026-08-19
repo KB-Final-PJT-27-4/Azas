@@ -1,297 +1,272 @@
 package com.azas.domain.checklist.service;
 
-import com.azas.domain.checklist.dto.ChecklistChildLifecycleRow;
-import com.azas.domain.checklist.dto.ChecklistItemListResult;
-import com.azas.domain.checklist.dto.ChecklistItemRow;
-import com.azas.domain.checklist.entity.ChecklistLifecycleStage;
+import com.azas.domain.checklist.dto.ChecklistItemCompletionResult;
+import com.azas.domain.checklist.dto.ChecklistItemCompletionTargetRow;
+import com.azas.domain.checklist.entity.ChecklistItemStatus;
 import com.azas.domain.checklist.mapper.ChecklistMapper;
 import com.azas.domain.member.entity.Member;
+import com.azas.domain.member.entity.MemberStatus;
+import com.azas.domain.member.entity.MemberType;
 import com.azas.domain.member.mapper.MemberMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.lang.reflect.Field;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.List;
+
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-class ChecklistItemListServiceTest {
-
-    private static final Long MEMBER_ID = 7L;
-    private static final Long CHILD_ID = 6L;
+class ChecklistItemCompletionServiceTest {
 
     private MemberMapper memberMapper;
     private ChecklistMapper checklistMapper;
-    private ChecklistItemListService service;
+    private ChecklistItemCompletionService service;
 
     @BeforeEach
     void setUp() {
         memberMapper = mock(MemberMapper.class);
         checklistMapper = mock(ChecklistMapper.class);
 
-        Clock clock = Clock.fixed(
-                Instant.parse("2026-08-19T00:00:00Z"),
-                ZoneId.of("Asia/Seoul")
-        );
-
-        service = new ChecklistItemListService(
+        service = new ChecklistItemCompletionService(
                 memberMapper,
-                checklistMapper,
-                clock
+                checklistMapper
         );
     }
 
     @Test
-    void 연결된_부모가_선택한_단계의_체크리스트를_조회한다()
-            throws Exception {
-        Member parent = Member.createParent(
-                "parent@example.com",
-                "부모",
-                null
-        );
+    void 연결된_보호자가_항목을_완료한다() {
+        Member parent = activeParent();
 
-        ChecklistChildLifecycleRow child =
-                childRow(
-                        "BORN",
-                        null,
-                        LocalDate.of(2020, 5, 1)
-                );
-
-        List<ChecklistItemRow> rows = List.of(
-                itemRow(1L, 101L, "항목 1", "설명 1", "PENDING"),
-                itemRow(2L, 102L, "항목 2", "설명 2", "PENDING"),
-                itemRow(3L, 103L, "항목 3", "설명 3", "PENDING"),
-                itemRow(4L, 104L, "항목 4", "설명 4", "PENDING"),
-                itemRow(5L, 105L, "항목 5", "설명 5", "PENDING"),
-                itemRow(6L, 106L, "항목 6", "설명 6", "COMPLETED"),
-                itemRow(7L, 107L, "항목 7", "설명 7", "COMPLETED")
-        );
-
-        when(memberMapper.findById(MEMBER_ID))
-                .thenReturn(parent);
-        when(checklistMapper.findActiveChildLifecycle(CHILD_ID))
-                .thenReturn(child);
-        when(checklistMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(1);
-        when(checklistMapper.findItems(
-                CHILD_ID,
-                "AGE_5_TO_7"
-        )).thenReturn(rows);
-
-        ChecklistItemListResult result =
-                service.getChecklistItems(
-                        MEMBER_ID,
-                        CHILD_ID,
-                        "AGE_5_TO_7"
-                );
-
-        assertEquals(
-                ChecklistLifecycleStage.AGE_5_TO_7,
-                result.getLifecycleStage()
-        );
-        assertEquals(7, result.getTotalCount());
-        assertEquals(2, result.getCompletedCount());
-        assertEquals(29, result.getProgressPercent());
-        assertFalse(result.isStageCompleted());
-
-        verify(checklistMapper).insertMissingItems(
-                CHILD_ID,
-                "AGE_5_TO_7"
-        );
-    }
-
-    @Test
-    void stage를_생략하면_자녀_나이로_현재_단계를_계산한다()
-            throws Exception {
-        Member parent = Member.createParent(
-                "parent@example.com",
-                "부모",
-                null
-        );
-
-        ChecklistChildLifecycleRow child =
-                childRow(
-                        "BORN",
-                        null,
-                        LocalDate.of(2020, 8, 18)
-                );
-
-        when(memberMapper.findById(MEMBER_ID))
-                .thenReturn(parent);
-        when(checklistMapper.findActiveChildLifecycle(CHILD_ID))
-                .thenReturn(child);
-        when(checklistMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(1);
-        when(checklistMapper.findItems(
-                CHILD_ID,
-                "AGE_5_TO_7"
-        )).thenReturn(List.of());
-
-        ChecklistItemListResult result =
-                service.getChecklistItems(
-                        MEMBER_ID,
-                        CHILD_ID,
+        ChecklistItemCompletionTargetRow pending =
+                new ChecklistItemCompletionTargetRow(
+                        31L,
+                        6L,
+                        ChecklistItemStatus.PENDING,
                         null
                 );
 
-        assertEquals(
-                ChecklistLifecycleStage.AGE_5_TO_7,
-                result.getLifecycleStage()
-        );
+        LocalDateTime completedAt =
+                LocalDateTime.of(2026, 8, 19, 10, 30);
 
-        verify(checklistMapper).insertMissingItems(
-                CHILD_ID,
-                "AGE_5_TO_7"
-        );
-    }
-
-    @Test
-    void 연결되지_않은_부모는_조회할_수_없다()
-            throws Exception {
-        Member parent = Member.createParent(
-                "parent@example.com",
-                "부모",
-                null
-        );
-
-        ChecklistChildLifecycleRow child =
-                childRow(
-                        "BORN",
-                        null,
-                        LocalDate.of(2020, 5, 1)
+        ChecklistItemCompletionTargetRow completed =
+                new ChecklistItemCompletionTargetRow(
+                        31L,
+                        6L,
+                        ChecklistItemStatus.COMPLETED,
+                        completedAt
                 );
 
-        when(memberMapper.findById(MEMBER_ID))
+        when(memberMapper.findById(7L))
                 .thenReturn(parent);
-        when(checklistMapper.findActiveChildLifecycle(CHILD_ID))
-                .thenReturn(child);
-        when(checklistMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
-        )).thenReturn(0);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> service.getChecklistItems(
-                        MEMBER_ID,
-                        CHILD_ID,
-                        "AGE_5_TO_7"
-                )
-        );
-
-        assertEquals(
-                ErrorCode.CHILD_ACCESS_DENIED,
-                exception.getErrorCode()
-        );
-    }
-
-    @Test
-    void 올바르지_않은_단계는_거부한다()
-            throws Exception {
-        Member parent = Member.createParent(
-                "parent@example.com",
-                "부모",
-                null
-        );
-
-        ChecklistChildLifecycleRow child =
-                childRow(
-                        "BORN",
-                        null,
-                        LocalDate.of(2020, 5, 1)
-                );
-
-        when(memberMapper.findById(MEMBER_ID))
-                .thenReturn(parent);
-        when(checklistMapper.findActiveChildLifecycle(CHILD_ID))
-                .thenReturn(child);
-        when(checklistMapper.countActiveParentAccess(
-                MEMBER_ID,
-                CHILD_ID
+        when(checklistMapper
+                .findCompletionTargetForUpdate(31L))
+                .thenReturn(pending);
+        when(checklistMapper
+                .countActiveParentAccess(7L, 6L))
+                .thenReturn(1);
+        when(checklistMapper.updateCompletion(
+                31L,
+                "COMPLETED",
+                7L
         )).thenReturn(1);
+        when(checklistMapper.findCompletionTargetById(31L))
+                .thenReturn(completed);
+
+        ChecklistItemCompletionResult result =
+                service.updateCompletion(7L, 31L, true);
+
+        assertEquals(31L, result.getChecklistItemId());
+        assertEquals(
+                ChecklistItemStatus.COMPLETED,
+                result.getStatus()
+        );
+        assertTrue(result.isCompleted());
+        assertEquals(completedAt, result.getCompletedAt());
+
+        verify(checklistMapper).updateCompletion(
+                31L,
+                "COMPLETED",
+                7L
+        );
+    }
+
+    @Test
+    void 완료된_항목을_완료_취소한다() {
+        Member parent = activeParent();
+
+        ChecklistItemCompletionTargetRow completed =
+                new ChecklistItemCompletionTargetRow(
+                        31L,
+                        6L,
+                        ChecklistItemStatus.COMPLETED,
+                        LocalDateTime.of(
+                                2026, 8, 19, 10, 30
+                        )
+                );
+
+        ChecklistItemCompletionTargetRow pending =
+                new ChecklistItemCompletionTargetRow(
+                        31L,
+                        6L,
+                        ChecklistItemStatus.PENDING,
+                        null
+                );
+
+        when(memberMapper.findById(7L))
+                .thenReturn(parent);
+        when(checklistMapper
+                .findCompletionTargetForUpdate(31L))
+                .thenReturn(completed);
+        when(checklistMapper
+                .countActiveParentAccess(7L, 6L))
+                .thenReturn(1);
+        when(checklistMapper.updateCompletion(
+                31L,
+                "PENDING",
+                null
+        )).thenReturn(1);
+        when(checklistMapper.findCompletionTargetById(31L))
+                .thenReturn(pending);
+
+        ChecklistItemCompletionResult result =
+                service.updateCompletion(7L, 31L, false);
+
+        assertEquals(
+                ChecklistItemStatus.PENDING,
+                result.getStatus()
+        );
+        assertFalse(result.isCompleted());
+        assertEquals(null, result.getCompletedAt());
+
+        verify(checklistMapper).updateCompletion(
+                31L,
+                "PENDING",
+                null
+        );
+    }
+
+    @Test
+    void 동일한_완료_상태_요청은_완료시각을_변경하지_않는다() {
+        Member parent = activeParent();
+
+        LocalDateTime completedAt =
+                LocalDateTime.of(2026, 8, 19, 10, 30);
+
+        ChecklistItemCompletionTargetRow completed =
+                new ChecklistItemCompletionTargetRow(
+                        31L,
+                        6L,
+                        ChecklistItemStatus.COMPLETED,
+                        completedAt
+                );
+
+        when(memberMapper.findById(7L))
+                .thenReturn(parent);
+        when(checklistMapper
+                .findCompletionTargetForUpdate(31L))
+                .thenReturn(completed);
+        when(checklistMapper
+                .countActiveParentAccess(7L, 6L))
+                .thenReturn(1);
+        when(checklistMapper.findCompletionTargetById(31L))
+                .thenReturn(completed);
+
+        ChecklistItemCompletionResult result =
+                service.updateCompletion(7L, 31L, true);
+
+        assertTrue(result.isCompleted());
+        assertEquals(completedAt, result.getCompletedAt());
+
+        verify(checklistMapper, never()).updateCompletion(
+                31L,
+                "COMPLETED",
+                7L
+        );
+    }
+
+    @Test
+    void 연결되지_않은_보호자는_변경할_수_없다() {
+        Member parent = activeParent();
+
+        ChecklistItemCompletionTargetRow target =
+                new ChecklistItemCompletionTargetRow(
+                        31L,
+                        6L,
+                        ChecklistItemStatus.PENDING,
+                        null
+                );
+
+        when(memberMapper.findById(7L))
+                .thenReturn(parent);
+        when(checklistMapper
+                .findCompletionTargetForUpdate(31L))
+                .thenReturn(target);
+        when(checklistMapper
+                .countActiveParentAccess(7L, 6L))
+                .thenReturn(0);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> service.getChecklistItems(
-                        MEMBER_ID,
-                        CHILD_ID,
-                        "UNKNOWN"
+                () -> service.updateCompletion(
+                        7L,
+                        31L,
+                        true
                 )
         );
 
         assertEquals(
-                ErrorCode.INVALID_CHECKLIST_STAGE,
+                ErrorCode.CHECKLIST_ITEM_ACCESS_DENIED,
+                exception.getErrorCode()
+        );
+
+        verify(checklistMapper, never()).updateCompletion(
+                31L,
+                "COMPLETED",
+                7L
+        );
+    }
+
+    @Test
+    void 존재하지_않는_항목이면_404_오류가_발생한다() {
+        Member parent = activeParent();
+
+        when(memberMapper.findById(7L))
+                .thenReturn(parent);
+        when(checklistMapper
+                .findCompletionTargetForUpdate(999L))
+                .thenReturn(null);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.updateCompletion(
+                        7L,
+                        999L,
+                        true
+                )
+        );
+
+        assertEquals(
+                ErrorCode.CHECKLIST_ITEM_NOT_FOUND,
                 exception.getErrorCode()
         );
     }
 
-    private ChecklistChildLifecycleRow childRow(
-            String birthStatus,
-            LocalDate expectedBirthDate,
-            LocalDate birthDate
-    ) throws Exception {
-        ChecklistChildLifecycleRow row =
-                new ChecklistChildLifecycleRow();
+    private Member activeParent() {
+        Member parent = mock(Member.class);
 
-        setField(
-                row,
-                "birthStatus",
-                Enum.valueOf(
-                        com.azas.domain.child.entity.BirthStatus.class,
-                        birthStatus
-                )
-        );
-        setField(row, "expectedBirthDate", expectedBirthDate);
-        setField(row, "birthDate", birthDate);
+        when(parent.getStatus())
+                .thenReturn(MemberStatus.ACTIVE);
+        when(parent.getMemberType())
+                .thenReturn(MemberType.PARENT);
 
-        return row;
-    }
-
-    private ChecklistItemRow itemRow(
-            Long itemId,
-            Long templateId,
-            String title,
-            String description,
-            String status
-    ) throws Exception {
-        ChecklistItemRow row = new ChecklistItemRow();
-
-        setField(row, "checklistItemId", itemId);
-        setField(row, "checklistItemTemplateId", templateId);
-        setField(row, "title", title);
-        setField(row, "description", description);
-        setField(
-                row,
-                "status",
-                Enum.valueOf(
-                        com.azas.domain.checklist.entity.ChecklistItemStatus.class,
-                        status
-                )
-        );
-
-        return row;
-    }
-
-    private void setField(
-            Object target,
-            String fieldName,
-            Object value
-    ) throws Exception {
-        Field field =
-                target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
+        return parent;
     }
 }
