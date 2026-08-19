@@ -237,6 +237,24 @@ SET ft.financial_goal_id = @migrated_snapshot_goal_id
 WHERE ft.financial_goal_id IS NULL;
 
 -- 5. Bring the saved automatic-transfer structure to the current Mock model.
+-- The 2026-08-19 backup does not have financial_goal_id. Check first so this
+-- script also explains the state clearly if it is inspected after a failed run.
+SET @auto_transfer_has_goal_id = (
+    SELECT COUNT(*)
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = 'auto_transfer_schedule'
+      AND column_name = 'financial_goal_id'
+);
+SET @add_auto_transfer_goal_id_sql = IF(
+    @auto_transfer_has_goal_id = 0,
+    'ALTER TABLE auto_transfer_schedule ADD COLUMN financial_goal_id BIGINT UNSIGNED NULL AFTER member_id',
+    'SELECT 1'
+);
+PREPARE add_auto_transfer_goal_id_statement FROM @add_auto_transfer_goal_id_sql;
+EXECUTE add_auto_transfer_goal_id_statement;
+DEALLOCATE PREPARE add_auto_transfer_goal_id_statement;
+
 ALTER TABLE auto_transfer_schedule
     ADD COLUMN request_idempotency_key CHAR(36) NULL AFTER member_id,
     ADD COLUMN last_transfer_status VARCHAR(20) NULL AFTER next_transfer_at,
