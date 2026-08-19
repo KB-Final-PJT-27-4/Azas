@@ -23,6 +23,7 @@ TRUNCATE TABLE financial_account;
 TRUNCATE TABLE financial_product_bookmark;
 TRUNCATE TABLE financial_product;
 TRUNCATE TABLE child_checklist_item;
+TRUNCATE TABLE checklist_item_detail;
 TRUNCATE TABLE checklist_item_template;
 TRUNCATE TABLE allowance_request;
 TRUNCATE TABLE family_invitation;
@@ -108,28 +109,79 @@ INSERT INTO family_invitation (
   (1, 1, 1, 'CHILD', NULL, SHA2('accepted-child-invite-token', 256), 'ACCEPTED', DATE_ADD(NOW(6), INTERVAL 7 DAY), 2, NOW(6)),
   (2, 1, 1, 'PARENT', 'FATHER', SHA2('pending-parent-invite-token', 256), 'PENDING', DATE_ADD(NOW(6), INTERVAL 7 DAY), NULL, NULL);
 
-INSERT INTO checklist_item_template (
-  checklist_item_template_id,
-  title,
-  description,
-  item_order,
-  is_active
-) VALUES
-  (1, '아이 입출금 계좌 연결하기', '아이 명의 입출금 계좌를 서비스에 연결해요.', 1, 1),
-  (2, '아이 적금 계좌 연결하기', '아이 명의 적금 계좌를 연결하고 목표를 설정해요.', 2, 1),
-  (3, '첫 자동이체 설정하기', '매월 정해진 금액을 자동으로 저축하도록 설정해요.', 3, 1);
+INSERT INTO checklist_item_template
+(
+    checklist_item_template_id,
+    lifecycle_stage,
+    title,
+    description,
+    detail_content,
+    item_order,
+    is_active
+)
+VALUES
+    (
+        1,
+        'AGE_5_TO_7',
+        '아이 입출금 계좌 연결하기',
+        '아이 명의 입출금 계좌를 서비스에 연결해요.',
+        '아이 명의 계좌를 연결하기 전에 계좌 명의와 보호자 관계를 확인해 주세요.',
+        1,
+        1
+    ),
+    (
+        2,
+        'AGE_5_TO_7',
+        '아이 적금 계좌 연결하기',
+        '아이 명의 적금 계좌를 연결하고 목표를 설정해요.',
+        '아이와 함께 저축 목적과 목표 금액을 정한 뒤 적금 계좌를 연결해 보세요.',
+        2,
+        1
+    ),
+    (
+        3,
+        'AGE_5_TO_7',
+        '첫 자동이체 설정하기',
+        '매월 정해진 금액을 자동으로 저축하도록 설정해요.',
+        '가계 상황을 고려하여 매월 지속할 수 있는 이체 금액과 날짜를 정해 보세요.',
+        3,
+        1
+    );
 
-INSERT INTO child_checklist_item (
-  child_checklist_item_id,
-  child_id,
-  checklist_item_template_id,
-  status,
-  completed_by_member_id,
-  completed_at
-) VALUES
-  (1, 1, 1, 'COMPLETED', 1, NOW(6)),
-  (2, 1, 2, 'COMPLETED', 1, NOW(6)),
-  (3, 1, 3, 'PENDING', NULL, NULL);
+INSERT INTO child_checklist_item
+(
+    child_checklist_item_id,
+    child_id,
+    checklist_item_template_id,
+    status,
+    completed_by_member_id,
+    completed_at
+)
+VALUES
+    (
+        1,
+        1,
+        1,
+        'COMPLETED',
+        1,
+        NOW(6)
+    ),
+    (
+        2,
+        1,
+        2,
+        'COMPLETED',
+        1,
+        NOW(6)
+    ),
+    (
+        3,
+        1,
+        3,
+        'PENDING',
+        NULL,
+        NULL
+    );
 
 INSERT INTO financial_product (
   financial_product_id,
