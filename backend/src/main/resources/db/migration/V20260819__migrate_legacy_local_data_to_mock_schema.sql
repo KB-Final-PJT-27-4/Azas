@@ -267,6 +267,9 @@ SET ats.request_idempotency_key = COALESCE(ats.request_idempotency_key, UUID()),
     ats.financial_goal_id = COALESCE(ats.financial_goal_id, @migrated_snapshot_goal_id);
 
 ALTER TABLE auto_transfer_schedule
+    DROP FOREIGN KEY fk_auto_transfer_child;
+
+ALTER TABLE auto_transfer_schedule
     MODIFY COLUMN child_id BIGINT UNSIGNED NOT NULL,
     MODIFY COLUMN request_idempotency_key CHAR(36) NOT NULL,
     MODIFY COLUMN financial_goal_id BIGINT UNSIGNED NOT NULL,
@@ -277,7 +280,9 @@ ALTER TABLE auto_transfer_schedule
     DROP CHECK ck_auto_transfer_frequency,
     ADD CONSTRAINT ck_auto_transfer_frequency CHECK (frequency = 'MONTHLY'),
     ADD CONSTRAINT ck_auto_transfer_last_status
-        CHECK (last_transfer_status IS NULL OR last_transfer_status IN ('SUCCEEDED', 'FAILED'));
+        CHECK (last_transfer_status IS NULL OR last_transfer_status IN ('SUCCEEDED', 'FAILED')),
+    ADD CONSTRAINT fk_auto_transfer_child
+        FOREIGN KEY (child_id) REFERENCES child (child_id);
 
 ALTER TABLE auto_transfer_schedule
     DROP COLUMN provider_schedule_id;
