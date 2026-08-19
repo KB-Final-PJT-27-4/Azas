@@ -33,8 +33,9 @@ DELIMITER ;
 -- MySQL DDL statements commit implicitly. This is why the script must run on
 -- the disposable copied database rather than the original local database.
 
--- 1. Preserve the sole legacy savings-goal snapshot that has no normalized
---    financial_goal_account row. In the supplied backup this is account 3.
+-- 1. Preserve the legacy savings-goal snapshot for account 3.  The supplied
+--    backup already has the other snapshot goals normalized; account 3 is the
+--    sole snapshot that may need a financial_goal/financial_goal_account row.
 DROP TEMPORARY TABLE IF EXISTS legacy_snapshot_goal_account;
 CREATE TEMPORARY TABLE legacy_snapshot_goal_account AS
 SELECT
@@ -61,30 +62,45 @@ SELECT
         )
     ) AS monthly_saving_amount
 FROM financial_account fa
-LEFT JOIN financial_goal_account fga
-    ON fga.financial_account_id = fa.financial_account_id
-WHERE fa.account_product_type = 'SAVINGS'
-  AND fa.child_id IS NOT NULL
-  AND fa.goal_name_snapshot IS NOT NULL
-  AND fa.goal_target_amount IS NOT NULL
-  AND fa.goal_target_date IS NOT NULL
-  AND fga.financial_account_id IS NULL;
+WHERE fa.financial_account_id = 3
+  AND fa.child_id = 1
+  AND fa.account_product_type = 'SAVINGS'
+  AND fa.goal_name_snapshot = '대학자금 마련'
+  AND fa.goal_target_amount = 30000000.00
+  AND fa.goal_target_date = '2038-01-12';
 
--- The baseline backup must contain exactly one such legacy snapshot. Stop
--- rather than guessing if a different backup is used.
+DROP TEMPORARY TABLE IF EXISTS missing_legacy_snapshot_goal_account;
+CREATE TEMPORARY TABLE missing_legacy_snapshot_goal_account AS
+SELECT lsg.*
+FROM legacy_snapshot_goal_account lsg
+LEFT JOIN financial_goal_account fga
+    ON fga.financial_account_id = lsg.financial_account_id
+WHERE fga.financial_account_id IS NULL;
+
+-- A fresh copy has one missing link. A partially executed copy may already
+-- have it. Both states are safe; anything else is not this known backup.
 DELIMITER //
-DROP PROCEDURE IF EXISTS assert_snapshot_goal_count //
-CREATE PROCEDURE assert_snapshot_goal_count()
+DROP PROCEDURE IF EXISTS assert_snapshot_goal_state //
+CREATE PROCEDURE assert_snapshot_goal_state()
 BEGIN
-    DECLARE snapshot_count INT;
-    SELECT COUNT(*) INTO snapshot_count FROM legacy_snapshot_goal_account;
-    IF snapshot_count <> 1 THEN
+    DECLARE reference_count INT;
+    DECLARE missing_count INT;
+    DECLARE linked_count INT;
+
+    SELECT COUNT(*) INTO reference_count FROM legacy_snapshot_goal_account;
+    SELECT COUNT(*) INTO missing_count FROM missing_legacy_snapshot_goal_account;
+    SELECT COUNT(*) INTO linked_count
+    FROM financial_goal_account fga
+    JOIN legacy_snapshot_goal_account lsg
+        ON lsg.financial_account_id = fga.financial_account_id;
+
+    IF reference_count <> 1 OR missing_count > 1 OR linked_count > 1 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Expected exactly one unlinked legacy savings goal snapshot. Review the copied DB before migration.';
+            SET MESSAGE_TEXT = 'Unexpected legacy account-3 goal state. Restore the copied DB and review the migration baseline.';
     END IF;
 END //
-CALL assert_snapshot_goal_count() //
-DROP PROCEDURE assert_snapshot_goal_count //
+CALL assert_snapshot_goal_state() //
+DROP PROCEDURE assert_snapshot_goal_state //
 DELIMITER ;
 
 INSERT INTO financial_goal (
@@ -108,7 +124,7 @@ SELECT
     'ACTIVE',
     UTC_TIMESTAMP(6),
     UTC_TIMESTAMP(6)
-FROM legacy_snapshot_goal_account;
+FROM missing_legacy_snapshot_goal_account;
 
 SET @migrated_snapshot_goal_id = LAST_INSERT_ID();
 
@@ -121,24 +137,32 @@ SELECT
     @migrated_snapshot_goal_id,
     financial_account_id,
     UTC_TIMESTAMP(6)
-FROM legacy_snapshot_goal_account;
+FROM missing_legacy_snapshot_goal_account;
 
-INSERT INTO financial_goal_checkpoint (
+SELECT fga.financial_goal_id INTO @migrated_snapshot_goal_id
+FROM financial_goal_account fga
+JOIN legacy_snapshot_goal_account lsg
+    ON lsg.financial_account_id = fga.financial_account_id;
+
+INSERT IGNORE INTO financial_goal_checkpoint (
     financial_goal_id,
-    checkpoint_percent,
-    is_reached
+    percentage,
+    target_amount,
+    reached_at
 )
 SELECT
     @migrated_snapshot_goal_id,
     checkpoint_percent,
-    0
+    ROUND(lsg.goal_target_amount * checkpoint_percent / 100, 2),
+    NULL
 FROM (
     SELECT 10 AS checkpoint_percent
     UNION ALL SELECT 25
     UNION ALL SELECT 50
     UNION ALL SELECT 75
     UNION ALL SELECT 100
-) checkpoints;
+) checkpoints
+CROSS JOIN legacy_snapshot_goal_account lsg;
 
 -- 2. Convert the old transaction source/time fields before their constraints
 --    are replaced.
@@ -215,7 +239,6 @@ WHERE ft.financial_goal_id IS NULL;
 -- 5. Bring the saved automatic-transfer structure to the current Mock model.
 ALTER TABLE auto_transfer_schedule
     ADD COLUMN request_idempotency_key CHAR(36) NULL AFTER member_id,
-    ADD COLUMN financial_goal_id BIGINT UNSIGNED NULL AFTER request_idempotency_key,
     ADD COLUMN last_transfer_status VARCHAR(20) NULL AFTER next_transfer_at,
     ADD COLUMN last_transferred_at DATETIME(6) NULL AFTER last_transfer_status;
 
