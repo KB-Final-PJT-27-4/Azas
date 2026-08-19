@@ -182,7 +182,7 @@ const endSheetDrag = () => {
           :class="index > 0 ? 'border-t border-[#edf1f3]' : ''"
         >
           <button
-            class="flex min-h-[62px] w-full items-center justify-between gap-4 bg-white px-4 py-3 text-left transition-colors active:bg-[#f7fbfd]"
+            class="flex min-h-[62px] w-full items-center justify-between gap-4 bg-white px-4 py-3 text-left"
             type="button"
             :aria-expanded="openQuestionId === item.id"
             :aria-controls="`answer-${item.id}`"
