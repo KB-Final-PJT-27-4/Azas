@@ -234,13 +234,6 @@ const menuGroups: MenuGroup[] = [
         to: { name: 'ChildMissions' },
       },
       {
-        label: '아이 체크리스트',
-        description: '오늘 해야 할 체크리스트를 확인해요.',
-        keywords: ['아이 할 일', '체크'],
-        icon: ClipboardCheck,
-        to: { name: 'ChildChecklists' },
-      },
-      {
         label: '금융 퀴즈',
         description: '재미있는 퀴즈로 금융 지식을 익혀요.',
         keywords: ['아이 퀴즈', '금융 교육'],

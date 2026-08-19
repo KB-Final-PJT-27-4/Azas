@@ -69,7 +69,6 @@ const sheetTitle = computed(() => {
   if (mode.value === 'allowanceDone') return '요청 완료'
   return '무엇을 할까요?'
 })
-const canGoBack = computed(() => mode.value === 'transfer' || mode.value === 'allowance')
 const isDoneMode = computed(() => mode.value === 'transferDone' || mode.value === 'allowanceDone')
 const panelDragStyle = computed<CSSProperties | undefined>(() => {
   if (dragOffset.value <= 0) return undefined
@@ -86,10 +85,6 @@ const closeSheet = () => {
   dragOffset.value = 0
   isDragging.value = false
   emit('close')
-}
-
-const showMenu = () => {
-  mode.value = 'menu'
 }
 
 const showTransfer = () => {
@@ -182,17 +177,23 @@ const updateReason = (event: Event) => {
 }
 
 const startHandleDrag = (event: PointerEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
   isDragging.value = true
   dragStartY.value = event.clientY - dragOffset.value
   ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
 }
 
 const moveHandleDrag = (event: PointerEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
   if (!isDragging.value) return
   dragOffset.value = Math.max(event.clientY - dragStartY.value, 0)
 }
 
 const endHandleDrag = (event: PointerEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
   if (!isDragging.value) return
 
   const handle = event.currentTarget as HTMLElement
@@ -241,7 +242,7 @@ watch(
           :aria-label="sheetTitle"
         >
           <button
-            class="mx-auto mt-3 mb-4 grid h-5 w-20 place-items-start border-0 bg-transparent p-0"
+            class="quick-sheet-handle mx-auto mt-3 mb-4 grid h-5 w-20 place-items-start border-0 bg-transparent p-0"
             type="button"
             aria-label="바텀시트 아래로 내려 닫기"
             @pointerdown="startHandleDrag"
@@ -255,26 +256,13 @@ watch(
           <div
             class="max-h-[calc(100dvh-88px)] overflow-y-auto overflow-x-hidden px-5 pb-[calc(20px+env(safe-area-inset-bottom))]"
           >
-            <header
-              v-if="!isDoneMode"
-              class="mb-5 grid grid-cols-[44px_1fr_44px] items-center"
-            >
-              <button
-                v-if="canGoBack"
-                class="justify-self-start border-0 bg-transparent p-0 text-[14px] font-bold text-[var(--color-text-secondary)]"
-                type="button"
-                @click="showMenu"
-              >
-                이전
-              </button>
-              <span v-else />
+            <header v-if="!isDoneMode" class="mb-5">
               <h2 class="m-0 text-center text-[20px] font-bold text-[var(--color-text-primary)]">
                 {{ sheetTitle }}
               </h2>
-              <span />
             </header>
 
-            <Transition name="quick-action-slide" mode="out-in">
+            <div>
               <div v-if="mode === 'menu'" key="menu" class="grid gap-3">
                 <button
                   class="grid min-h-[76px] grid-cols-[44px_1fr] items-center gap-3 rounded-[16px] border border-[var(--color-border)] bg-white px-4 text-left transition active:scale-[0.99] active:bg-[#f7fbfd]"
@@ -440,14 +428,16 @@ watch(
                   </div>
                 </div>
 
-                <label class="block text-[16px] font-bold">
+                <label class="block text-[12px] font-semibold">
                   부모님께 하고 싶은 말
                   <div class="relative mt-3">
                     <textarea
                       :value="reason"
                       class="block min-h-[132px] w-full resize-none rounded-[12px] border border-[var(--color-border)] px-4 py-4 pb-8 text-[14px] font-normal outline-none transition focus:border-[var(--color-brand-primary)]"
                       :maxlength="maxReasonLength"
-                      placeholder="용돈이 왜 필요한지 적어보세요 :)"
+                      placeholder="용돈이 왜 필요한지 적어보세요 :)
+누가? 언제? 어디서? 무엇을? 왜? 얼마만큼?
+예) 친구 생일 선물을 사려고 해요."
                       @input="updateReason"
                       @compositionend="updateReason"
                     />
@@ -458,16 +448,6 @@ watch(
                     </span>
                   </div>
                 </label>
-
-                <div
-                  class="rounded-[12px] bg-[#f0fbff] px-4 py-4 text-[12px] leading-[1.65] text-[var(--color-text-secondary)]"
-                >
-                  <strong class="mb-2 block text-[var(--color-text-primary)]">
-                    이렇게 쓰면 용돈 받을 확률이 올라가요
-                  </strong>
-                  누가? 언제? 어디서? 무엇을? 왜? 얼마만큼?<br />
-                  예) 친구 생일 선물을 사려고 해요.
-                </div>
 
                 <button
                   class="h-14 w-full rounded-[14px] border-0 text-[16px] font-bold text-white transition active:scale-[0.99] disabled:bg-[#cbd8df]"
@@ -551,7 +531,7 @@ watch(
                   확인
                 </button>
               </section>
-            </Transition>
+            </div>
           </div>
         </section>
       </div>
@@ -583,21 +563,9 @@ watch(
   transform: translateY(100%);
 }
 
-.quick-action-slide-enter-active,
-.quick-action-slide-leave-active {
-  transition:
-    opacity 180ms ease,
-    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.quick-action-slide-enter-from {
-  opacity: 0;
-  transform: translateY(12px);
-}
-
-.quick-action-slide-leave-to {
-  opacity: 0;
-  transform: translateY(8px);
+.quick-sheet-handle {
+  touch-action: none;
+  user-select: none;
 }
 
 .quick-done-panel {

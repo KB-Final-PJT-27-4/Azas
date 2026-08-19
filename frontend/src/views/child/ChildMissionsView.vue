@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
-import { computed, type Component } from 'vue'
-import { CheckSquare, Coins, Droplet, Sparkles } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { CheckSquare } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import { childMissions } from '@/mocks/childFinanceFlow'
@@ -16,28 +16,18 @@ const missions = computed(() =>
 )
 
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
-const defaultMissionVisual: { icon: Component; iconClass: string } = {
-  icon: CheckSquare,
-  iconClass: 'bg-[#eef8ff] text-[var(--color-brand-primary)]',
+const getStatusLabel = (status: string) => {
+  if (status === 'completed') return '완료됨'
+  if (status === 'review') return '확인 필요'
+  return '진행 중'
 }
-const missionVisuals: Record<string, { icon: Component; iconClass: string }> = {
-  'mission-1': {
-    icon: CheckSquare,
-    iconClass: 'bg-[#eef8ff] text-[var(--color-brand-primary)]',
-  },
-  'mission-2': {
-    icon: Coins,
-    iconClass: 'bg-[#fff7d7] text-[#c99a13]',
-  },
-  'mission-3': {
-    icon: Droplet,
-    iconClass: 'bg-[#eef8ff] text-[var(--color-brand-primary)]',
-  },
+const getStatusBadgeClass = (status: string) => {
+  if (status === 'completed') return 'bg-[#eaf8ef] text-[#2f9b62]'
+  if (status === 'review') return 'bg-[#fff7dd] text-[#c8951d]'
+  return 'bg-[#eaf8ff] text-[var(--color-selected-text)]'
 }
-const getMissionVisual = (missionId: string) => missionVisuals[missionId] ?? defaultMissionVisual
-const getStatusLabel = (status: string) => (status === 'completed' ? '완료됨' : '진행 중')
-const activeMissionCount = computed(
-  () => missions.value.filter((mission) => mission.status !== 'completed').length,
+const progressMissionCount = computed(
+  () => missions.value.filter((mission) => mission.status === 'progress').length,
 )
 const completedMissionCount = computed(
   () => missions.value.filter((mission) => mission.status === 'completed').length,
@@ -50,33 +40,61 @@ const activeRewardTotal = computed(() =>
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-5 pb-[112px] text-[var(--color-text-primary)]">
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-5 pb-[112px] text-[var(--color-text-primary)]"
+  >
     <section
       class="relative overflow-hidden rounded-[26px] border border-[#dceef6] bg-[#eaf8ff] px-5 pt-5 pb-5 shadow-[0_12px_30px_rgba(54,112,139,0.08)]"
       aria-label="미션 요약"
     >
-      <div class="relative z-[1] max-w-[58%]">
-        <span class="inline-flex items-center gap-1 rounded-full bg-white/85 px-3 py-1.5 text-[12px] font-bold text-[var(--color-selected-text)]">
-          <Sparkles :size="14" :stroke-width="2.5" />
-          오늘 할 일
-        </span>
-        <h1 class="mt-4 mb-0 text-[23px] leading-[1.25] font-extrabold tracking-[-0.025em] text-[var(--color-text-primary)]">
-          미션을 완료하고<br />
-          용돈을 모아봐요
-        </h1>
-        <p class="mt-2 mb-0 text-[13px] leading-[1.45] text-[#628096]">
-          진행 중 {{ activeMissionCount }}개 · 완료 {{ completedMissionCount }}개
+      <div class="relative z-[1]">
+        <div class="mb-7 flex items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-3">
+            <span
+              class="grid size-10 shrink-0 place-items-center rounded-[13px] bg-white text-[var(--color-brand-primary)]"
+            >
+              <CheckSquare :size="22" :stroke-width="2.4" aria-hidden="true" />
+            </span>
+            <strong class="truncate text-[16px] font-extrabold">깨비</strong>
+          </div>
+          <span
+            class="rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--color-selected-text)]"
+          >
+            총 {{ missions.length }}개
+          </span>
+        </div>
+
+        <p class="m-0 text-[13px] font-medium leading-[1.5] text-[#628096]">
+          작은 실천이 좋은 금융 습관이 되도록
         </p>
+        <h1
+          class="mt-2 mb-0 text-[24px] leading-[1.35] font-extrabold tracking-[-0.025em] text-[var(--color-text-primary)]"
+        >
+          깨비의 용돈 미션을<br />
+          확인해요
+        </h1>
       </div>
 
-      <div class="relative z-[2] mt-5 rounded-[18px] bg-white/92 px-4 py-3.5 backdrop-blur-sm">
-        <div class="flex items-center justify-between gap-3">
-          <span class="text-[12px] font-bold text-[var(--color-text-secondary)]">
-            받을 수 있는 보상
-          </span>
-          <strong class="text-[17px] font-extrabold text-[var(--color-brand-primary)]">
+      <div
+        class="relative z-[2] mt-5 grid grid-cols-3 overflow-hidden rounded-[18px] bg-white px-3 py-3.5 shadow-[0_8px_20px_rgba(54,112,139,0.06)]"
+      >
+        <div class="grid place-items-center gap-1 border-r border-[#e5edf1]">
+          <strong class="text-[22px] leading-none font-extrabold text-[var(--color-brand-primary)]">
+            {{ progressMissionCount }}
+          </strong>
+          <span class="text-[11px] font-medium text-[var(--color-text-secondary)]">진행 중</span>
+        </div>
+        <div class="grid place-items-center gap-1 border-r border-[#e5edf1]">
+          <strong class="text-[22px] leading-none font-extrabold text-[var(--color-brand-primary)]">
+            {{ completedMissionCount }}
+          </strong>
+          <span class="text-[11px] font-medium text-[var(--color-text-secondary)]">완료</span>
+        </div>
+        <div class="grid place-items-center gap-1">
+          <strong class="text-[17px] leading-none font-extrabold text-[var(--color-brand-primary)]">
             {{ formatCurrency(activeRewardTotal) }}
           </strong>
+          <span class="text-[11px] font-medium text-[var(--color-text-secondary)]">예상 보상</span>
         </div>
       </div>
     </section>
@@ -90,73 +108,61 @@ const activeRewardTotal = computed(() =>
       </h2>
 
       <div class="grid gap-3">
-      <article
-        v-for="mission in missions"
-        :key="mission.id"
-        class="mission-ticket"
-        :class="
-          mission.status === 'completed' ? 'mission-ticket--completed' : 'mission-ticket--active'
-        "
-      >
-        <div class="mission-ticket__content">
-          <div
-            class="grid size-11 place-items-center rounded-[14px]"
-            :class="
-              mission.status === 'completed'
-                ? 'bg-[#e4e8ec] text-[#8b98a4]'
-                : getMissionVisual(mission.id).iconClass
-            "
-          >
-            <component
-              :is="getMissionVisual(mission.id).icon"
-              :size="21"
-              :stroke-width="2.4"
-              aria-hidden="true"
-            />
+        <article
+          v-for="mission in missions"
+          :key="mission.id"
+          class="mission-ticket"
+          :class="
+            mission.status === 'completed' ? 'mission-ticket--completed' : 'mission-ticket--active'
+          "
+        >
+          <div class="mission-ticket__content">
+            <div class="min-w-0">
+              <div class="flex min-w-0 items-center gap-2">
+                <strong
+                  class="min-w-0 truncate text-[16px] leading-snug font-bold"
+                  :class="
+                    mission.status === 'completed'
+                      ? 'text-[#7d8790]'
+                      : 'text-[var(--color-text-primary)]'
+                  "
+                >
+                  {{ mission.title }}
+                </strong>
+                <span
+                  class="shrink-0 rounded-full px-2.5 py-1 text-[11px] leading-none font-bold"
+                  :class="getStatusBadgeClass(mission.status)"
+                >
+                  {{ getStatusLabel(mission.status) }}
+                </span>
+              </div>
+              <span
+                class="mt-1 block truncate text-[13px] leading-snug"
+                :class="
+                  mission.status === 'completed'
+                    ? 'text-[#9aa4ad]'
+                    : 'text-[var(--color-text-secondary)]'
+                "
+              >
+                {{ mission.description }}
+              </span>
+            </div>
           </div>
-          <div class="min-w-0">
+
+          <div class="mission-ticket__reward">
             <strong
-              class="block truncate text-[16px] leading-snug font-bold"
-              :class="mission.status === 'completed' ? 'text-[#7d8790]' : 'text-[var(--color-text-primary)]'"
+              class="text-[18px] leading-tight font-extrabold"
+              :class="
+                mission.status === 'completed'
+                  ? 'text-[#9aa4ad]'
+                  : 'text-[var(--color-brand-primary)]'
+              "
             >
-              {{ mission.title }}
+              {{ formatCurrency(mission.reward) }}
             </strong>
-            <span
-              class="mt-1 block truncate text-[13px] leading-snug"
-              :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-text-secondary)]'"
-            >
-              {{ mission.description }}
-            </span>
           </div>
-        </div>
-
-        <div class="mission-ticket__reward">
-          <strong
-            class="text-[17px] leading-tight font-extrabold"
-            :class="mission.status === 'completed' ? 'text-[#9aa4ad]' : 'text-[var(--color-brand-primary)]'"
-          >
-            {{ formatCurrency(mission.reward) }}
-          </strong>
-          <span
-            class="text-[12px] leading-none font-bold"
-            :class="
-              mission.status === 'completed'
-                ? 'text-[#77828c]'
-                : 'text-[var(--color-text-secondary)]'
-            "
-          >
-            {{ getStatusLabel(mission.status) }}
-          </span>
-        </div>
-      </article>
+        </article>
       </div>
-    </section>
-
-    <section class="mt-6 rounded-[18px] bg-[#fff9df] px-5 py-5 text-center shadow-[0_8px_22px_rgba(242,213,117,0.12)]">
-      <p class="m-0 text-[15px] leading-[1.7] text-[var(--color-text-primary)]">
-        미션을 완료하면 부모님이 확인하고<br />
-        보상 용돈을 보내주세요!
-      </p>
     </section>
 
     <ChildBottomNavigation />
@@ -182,11 +188,10 @@ const activeRewardTotal = computed(() =>
 
 .mission-ticket__content {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
   min-width: 0;
-  padding: 18px 16px;
+  padding: 18px 18px;
 }
 
 .mission-ticket__reward {
@@ -197,28 +202,17 @@ const activeRewardTotal = computed(() =>
   gap: 9px;
   min-width: 0;
   padding: 16px 12px;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0%) 0%, rgb(234 248 255 / 44%) 100%);
+  background: transparent;
 }
 
 .mission-ticket__reward::before {
   position: absolute;
-  top: 12px;
-  bottom: 12px;
+  top: 0;
+  bottom: 0;
   left: 0;
   width: 1px;
   content: '';
   border-left: 1px dashed #cfd9df;
-}
-
-.mission-ticket__reward::after {
-  position: absolute;
-  top: 8px;
-  left: -5px;
-  color: #bdc8cf;
-  font-size: 9px;
-  line-height: 1;
-  transform: rotate(90deg);
-  content: '✂';
 }
 
 .mission-ticket--active {
