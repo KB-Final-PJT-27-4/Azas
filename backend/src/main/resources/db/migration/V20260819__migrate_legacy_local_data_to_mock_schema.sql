@@ -466,9 +466,42 @@ ALTER TABLE financial_account
     ADD CONSTRAINT ck_financial_account_primary
         CHECK (is_primary = 0 OR account_product_type = 'DEMAND_DEPOSIT');
 
-ALTER TABLE child
-    DROP COLUMN last_allowance_requested_at,
-    DROP COLUMN last_allowance_requested_month;
+-- Legacy schemas used two slightly different column names for the allowance
+-- request month. Drop only the columns that are actually present so a copied
+-- local database can be migrated without assuming one exact intermediate schema.
+SET @child_has_last_allowance_requested_at = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'child'
+      AND COLUMN_NAME = 'last_allowance_requested_at'
+);
+SET @drop_child_last_allowance_requested_at_sql = IF(
+    @child_has_last_allowance_requested_at = 1,
+    'ALTER TABLE child DROP COLUMN last_allowance_requested_at',
+    'SELECT 1'
+);
+PREPARE drop_child_last_allowance_requested_at_statement
+    FROM @drop_child_last_allowance_requested_at_sql;
+EXECUTE drop_child_last_allowance_requested_at_statement;
+DEALLOCATE PREPARE drop_child_last_allowance_requested_at_statement;
+
+SET @child_has_last_allowance_request_month = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'child'
+      AND COLUMN_NAME = 'last_allowance_request_month'
+);
+SET @drop_child_last_allowance_request_month_sql = IF(
+    @child_has_last_allowance_request_month = 1,
+    'ALTER TABLE child DROP COLUMN last_allowance_request_month',
+    'SELECT 1'
+);
+PREPARE drop_child_last_allowance_request_month_statement
+    FROM @drop_child_last_allowance_request_month_sql;
+EXECUTE drop_child_last_allowance_request_month_statement;
+DEALLOCATE PREPARE drop_child_last_allowance_request_month_statement;
 
 DROP TABLE IF EXISTS financial_sync_job;
 DROP TABLE IF EXISTS financial_connection;
