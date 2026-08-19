@@ -25,6 +25,9 @@ const children: ChildProfile[] = [
 ]
 const selectedChildId = ref(1)
 const isChildSheetOpen = ref(false)
+const sheetTouchStartY = ref<number | null>(null)
+const sheetDragOffset = ref(0)
+const isSheetDragging = ref(false)
 const selectedChild = computed(() =>
   children.find(({ id }) => id === selectedChildId.value) ?? children[0]!,
 )
@@ -67,6 +70,25 @@ const changeChild = () => {
   isChildSheetOpen.value = true
 }
 
+const startSheetDrag = (event: TouchEvent) => {
+  sheetTouchStartY.value = event.touches[0]?.clientY ?? null
+  sheetDragOffset.value = 0
+  isSheetDragging.value = true
+}
+
+const moveSheetDrag = (event: TouchEvent) => {
+  if (sheetTouchStartY.value === null) return
+  const currentY = event.touches[0]?.clientY ?? sheetTouchStartY.value
+  sheetDragOffset.value = Math.max(0, currentY - sheetTouchStartY.value)
+}
+
+const endSheetDrag = () => {
+  if (sheetDragOffset.value > 80) isChildSheetOpen.value = false
+  sheetTouchStartY.value = null
+  sheetDragOffset.value = 0
+  isSheetDragging.value = false
+}
+
 const selectChild = (child: ChildProfile) => {
   selectedChildId.value = child.id
   isChildSheetOpen.value = false
@@ -96,7 +118,7 @@ const disconnectChild = () => {
           {{ selectedChild.name }}
         </strong>
         <span class="mt-0.5 block text-[11px] text-[var(--color-text-secondary)]">
-          {{ selectedChild.age }}세 · {{ selectedChild.schoolLevel }}
+          {{ selectedChild.age }}세
         </span>
       </div>
       <button
@@ -234,12 +256,18 @@ const disconnectChild = () => {
         ></button>
 
         <section
-          class="child-sheet__panel absolute right-0 bottom-0 left-0 rounded-t-[28px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgba(31,52,62,0.14)]"
+          class="child-sheet__panel absolute right-0 bottom-0 left-0 rounded-t-[28px] bg-white px-5 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgba(31,52,62,0.14)]"
+          :class="{ 'is-dragging': isSheetDragging }"
+          :style="isSheetDragging ? { transform: `translateY(${sheetDragOffset}px)` } : undefined"
+          @touchstart="startSheetDrag"
+          @touchmove.prevent="moveSheetDrag"
+          @touchend="endSheetDrag"
+          @touchcancel="endSheetDrag"
           role="dialog"
           aria-modal="true"
           aria-labelledby="child-sheet-title"
         >
-          <div class="mx-auto h-1.5 w-10 rounded-full bg-[#d8e0e5]" aria-hidden="true"></div>
+          <div class="mx-auto h-1.5 w-16 rounded-full bg-[#d8e0e5]" aria-hidden="true"></div>
           <div class="mt-5 flex items-center justify-between">
             <div>
               <h2 id="child-sheet-title" class="text-[20px] font-extrabold text-[var(--color-text-primary)]">
@@ -280,7 +308,7 @@ const disconnectChild = () => {
                 <span class="min-w-0 flex-1">
                   <strong class="block truncate text-[14px] font-bold">{{ child.name }}</strong>
                   <span class="mt-1 block text-[11px] text-[var(--color-text-secondary)]">
-                    {{ child.age }}세 · {{ child.schoolLevel }}
+                    {{ child.age }}세
                   </span>
                 </span>
                 <span
@@ -318,5 +346,9 @@ const disconnectChild = () => {
 .child-sheet-enter-from .child-sheet__panel,
 .child-sheet-leave-to .child-sheet__panel {
   transform: translateY(100%);
+}
+
+.child-sheet__panel.is-dragging {
+  transition: none;
 }
 </style>
