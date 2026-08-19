@@ -356,7 +356,6 @@ INSERT INTO financial_account (
   owner_member_id,
   child_id,
   financial_product_id,
-  financial_goal_template_id,
   organization_code,
   bank_name,
   account_number_ciphertext,
@@ -370,9 +369,6 @@ INSERT INTO financial_account (
   child_available_amount,
   access_updated_by_member_id,
   access_updated_at,
-  goal_name_snapshot,
-  goal_target_amount,
-  goal_target_date,
   is_primary,
   opened_at,
   maturity_date,
@@ -385,7 +381,6 @@ INSERT INTO financial_account (
     1,
     NULL,
     NULL,
-    NULL,
     '004',
     'KB국민은행',
     FROM_BASE64('AS+1XqOuK/oansezNOWbzLlkSFQzXa+pjB2IqT+tWq9Ibya/JE7ldK82'),
@@ -395,9 +390,6 @@ INSERT INTO financial_account (
     2000000,
     NOW(6),
     'ACTIVE',
-    NULL,
-    NULL,
-    NULL,
     NULL,
     NULL,
     NULL,
@@ -414,7 +406,6 @@ INSERT INTO financial_account (
     2,
     1,
     NULL,
-    NULL,
     '004',
     'KB국민은행',
     FROM_BASE64('AY+uroBtCF2CkEZpvz0aq8HxWzX+axeE89gB8rgwKmUP8B6J7Wi9vlH2'),
@@ -428,9 +419,6 @@ INSERT INTO financial_account (
     50000,
     1,
     NOW(6),
-    NULL,
-    NULL,
-    NULL,
     1,
     '2024-01-12 09:00:00.000000',
     NULL,
@@ -441,7 +429,6 @@ INSERT INTO financial_account (
     3,
     'CHILD',
     2,
-    1,
     1,
     1,
     '004',
@@ -457,9 +444,6 @@ INSERT INTO financial_account (
     NULL,
     NULL,
     NULL,
-    '대학자금 마련',
-    30000000,
-    '2038-01-12',
     0,
     '2024-01-12 09:00:00.000000',
     '2038-01-12',
@@ -524,10 +508,10 @@ INSERT INTO account_transaction (
   counterparty_name,
   transaction_type,
   source_type,
-  synced_at
+  recorded_at
 ) VALUES
   (1, 3, 1, SHA2('saving-2026-07-20-100000', 256), '2026-07-20 09:00:00.000000', 'CREDIT', 100000, 14600000, '7월 저축', '김하나', '이체', 'TRANSFER', NOW(6)),
-  (2, 2, 1, SHA2('demand-2026-07-25-15000', 256), '2026-07-25 12:00:00.000000', 'DEBIT', 15000, 105000, '편의점', 'CU', '카드출금', 'IMPORTED', NOW(6));
+  (2, 2, 1, SHA2('demand-2026-07-25-15000', 256), '2026-07-25 12:00:00.000000', 'DEBIT', 15000, 105000, '편의점', 'CU', '카드출금', 'MOCK', NOW(6));
 
 INSERT INTO financial_transfer (
   financial_transfer_id,
@@ -593,7 +577,7 @@ INSERT INTO time_capsule (
   entry_count,
   latest_entry_at
 ) VALUES
-  (1, 1, 3, '깨비의 KB Young Youth 적금 타임캡슐', 'COLLECTING', '2038-01-12 00:00:00.000000', 1, '2026-07-20 09:00:00.000000');
+  (1, 1, 3, '깨비의 KB Young Youth 적금 타임캡슐', 'COLLECTING', '2038-01-12 00:00:00.000000', 0, NULL);
 
 INSERT INTO time_capsule_entry (
   time_capsule_entry_id,
@@ -608,7 +592,7 @@ INSERT INTO time_capsule_entry (
   status,
   sealed_at
 ) VALUES
-  (1, 1, 1, 1, '7월 저축 기록', '이번 달에도 깨비를 위해 10만 원을 넣었어.', 100000, '2026-07-20 09:00:00.000000', 'NONE', 'SEALED', '2026-07-20 09:05:00.000000');
+  (1, 1, 1, 1, '7월 저축 기록', '이번 달에도 깨비를 위해 10만 원을 넣었어.', 100000, '2026-07-20 09:00:00.000000', 'NONE', 'DRAFT', NULL);
 
 INSERT INTO asset_report (
   asset_report_id,

@@ -54,14 +54,6 @@ public interface FinancialGoalMapper {
             FinancialGoalCheckpointInsertCommand command
     );
 
-    int updateAccountGoalSnapshot(
-            @Param("financialAccountId") long financialAccountId,
-            @Param("financialGoalTemplateId") Long financialGoalTemplateId,
-            @Param("title") String title,
-            @Param("targetAmount") BigDecimal targetAmount,
-            @Param("targetDate") LocalDate targetDate
-    );
-
     int updateFinancialGoal(
             @Param("financialGoalId") long financialGoalId,
             @Param("targetAmount") BigDecimal targetAmount,
@@ -72,10 +64,6 @@ public interface FinancialGoalMapper {
 
     int deleteFinancialGoalAccount(
             @Param("financialGoalId") long financialGoalId,
-            @Param("financialAccountId") long financialAccountId
-    );
-
-    int clearAccountGoalSnapshot(
             @Param("financialAccountId") long financialAccountId
     );
 

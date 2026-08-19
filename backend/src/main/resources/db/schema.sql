@@ -157,8 +157,6 @@ CREATE TABLE child
     birth_date                   DATE            NULL COMMENT '실제 생년월일',
     gender                       VARCHAR(20)     NULL COMMENT 'MALE, FEMALE, UNKNOWN',
     profile_image_url            VARCHAR(1000)   NULL COMMENT '자녀 프로필 이미지',
-    last_allowance_request_month DATE            NULL COMMENT '마지막 용돈 요청 기준 월 1일',
-    last_allowance_requested_at  DATETIME(6)     NULL COMMENT '최근 용돈 요청 시각',
     created_at                   DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
     updated_at                   DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     status                       VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, DELETED',
@@ -379,7 +377,6 @@ CREATE TABLE financial_account
     owner_member_id             BIGINT UNSIGNED NULL COMMENT '계좌 소유 회원 ID. 자녀 가입 전 자녀 계좌는 NULL 가능',
     child_id                    BIGINT UNSIGNED NULL COMMENT '자녀 계좌 소유 범위 및 조회용 자녀 ID',
     financial_product_id        BIGINT UNSIGNED NULL COMMENT 'Mock 개설에 사용한 KB 금융상품 ID',
-    financial_goal_template_id  BIGINT UNSIGNED NULL COMMENT '선택 목표 템플릿 ID',
     organization_code           VARCHAR(20)     NOT NULL COMMENT '금융기관 코드',
     bank_name                   VARCHAR(50)     NOT NULL COMMENT '은행명',
     account_number_ciphertext   VARBINARY(1000) NOT NULL COMMENT '계좌번호 암호문',
@@ -393,9 +390,6 @@ CREATE TABLE financial_account
     child_available_amount      DECIMAL(19, 2)  NULL COMMENT '월간 사용 관리 기준 금액. 실제 금융기관 제한 금액이 아님',
     access_updated_by_member_id BIGINT UNSIGNED NULL COMMENT '자녀 사용 관리 정책 변경 회원 ID',
     access_updated_at           DATETIME(6)     NULL COMMENT '자녀 사용 관리 정책 변경 시각',
-    goal_name_snapshot          VARCHAR(100)    NULL COMMENT '목표명 스냅샷',
-    goal_target_amount          DECIMAL(19, 2)  NULL COMMENT '목표 금액',
-    goal_target_date            DATE            NULL COMMENT '목표 달성 예정일',
     is_primary                  TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '대표 계좌 여부',
     opened_at                   DATETIME(6)     NULL COMMENT '계좌 개설 시각',
     maturity_date               DATE            NULL COMMENT '적금 만기일',
@@ -411,7 +405,6 @@ CREATE TABLE financial_account
     KEY idx_financial_account_child_type (child_id, account_product_type),
     KEY idx_financial_account_product_id (financial_product_id),
     KEY idx_financial_account_access_updated_by (access_updated_by_member_id),
-    KEY idx_financial_account_goal_template_id (financial_goal_template_id),
     CONSTRAINT fk_financial_account_owner_member
         FOREIGN KEY (owner_member_id) REFERENCES member (member_id),
     CONSTRAINT fk_financial_account_child
@@ -420,8 +413,6 @@ CREATE TABLE financial_account
         FOREIGN KEY (financial_product_id) REFERENCES financial_product (financial_product_id),
     CONSTRAINT fk_financial_account_access_updated_by
         FOREIGN KEY (access_updated_by_member_id) REFERENCES member (member_id),
-    CONSTRAINT fk_financial_account_goal_template
-        FOREIGN KEY (financial_goal_template_id) REFERENCES financial_goal_template (financial_goal_template_id),
     CONSTRAINT ck_financial_account_product_type
         CHECK (account_product_type IN ('DEMAND_DEPOSIT', 'SAVINGS', 'SUBSCRIPTION')),
     CONSTRAINT ck_financial_account_owner
@@ -607,8 +598,8 @@ CREATE TABLE account_transaction
     description             VARCHAR(500)    NULL COMMENT '거래 설명',
     counterparty_name       VARCHAR(150)    NULL COMMENT '상대방명',
     transaction_type        VARCHAR(50)     NULL COMMENT '거래 유형',
-    source_type             VARCHAR(30)     NOT NULL DEFAULT 'IMPORTED' COMMENT 'IMPORTED, TRANSFER, AUTO_TRANSFER',
-    synced_at               DATETIME(6)     NOT NULL COMMENT '동기화 시각',
+    source_type             VARCHAR(30)     NOT NULL DEFAULT 'MOCK' COMMENT 'MOCK, TRANSFER, AUTO_TRANSFER',
+    recorded_at             DATETIME(6)     NOT NULL COMMENT '서비스 내부 거래 기록 시각',
     created_at              DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '최초 저장일',
     updated_at              DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     PRIMARY KEY (account_transaction_id),
@@ -622,7 +613,8 @@ CREATE TABLE account_transaction
         FOREIGN KEY (counterparty_account_id) REFERENCES financial_account (financial_account_id),
     CONSTRAINT fk_account_transaction_child
         FOREIGN KEY (child_id) REFERENCES child (child_id),
-    CONSTRAINT ck_account_transaction_direction CHECK (direction IN ('CREDIT', 'DEBIT'))
+    CONSTRAINT ck_account_transaction_direction CHECK (direction IN ('CREDIT', 'DEBIT')),
+    CONSTRAINT ck_account_transaction_source_type CHECK (source_type IN ('MOCK', 'TRANSFER', 'AUTO_TRANSFER'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='계좌 거래내역';
@@ -856,8 +848,8 @@ CREATE TABLE time_capsule_entry
     message                TEXT            NULL COMMENT '부모 메시지',
     contribution_amount    DECIMAL(19, 2)  NOT NULL COMMENT '기록 금액 스냅샷',
     contributed_at         DATETIME(6)     NOT NULL COMMENT '기록 발생 시각 스냅샷',
-    media_mode             VARCHAR(20)     NOT NULL DEFAULT 'NONE' COMMENT 'NONE, IMAGE, VIDEO',
-    thumbnail_object_key   VARCHAR(1000)   NULL COMMENT '대표 썸네일 객체 키',
+    media_mode             VARCHAR(20)     NOT NULL DEFAULT 'NONE' COMMENT 'NONE, IMAGE',
+    thumbnail_object_key   VARCHAR(1000)   NULL COMMENT '목록·캘린더용 대표 이미지 원본 객체 키(별도 썸네일 없음)',
     status                 VARCHAR(20)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT, SEALED, DELETED',
     sealed_at              DATETIME(6)     NULL COMMENT '봉인 시각',
     created_at             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
@@ -872,7 +864,7 @@ CREATE TABLE time_capsule_entry
         FOREIGN KEY (author_member_id) REFERENCES member (member_id),
     CONSTRAINT fk_capsule_entry_transaction
         FOREIGN KEY (account_transaction_id) REFERENCES account_transaction (account_transaction_id),
-    CONSTRAINT ck_capsule_entry_media_mode CHECK (media_mode IN ('NONE', 'IMAGE', 'VIDEO')),
+    CONSTRAINT ck_capsule_entry_media_mode CHECK (media_mode IN ('NONE', 'IMAGE')),
     CONSTRAINT ck_capsule_entry_status CHECK (status IN ('DRAFT', 'SEALED', 'DELETED'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -882,11 +874,11 @@ CREATE TABLE time_capsule_media
 (
     time_capsule_media_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '타임캡슐 미디어 ID',
     time_capsule_entry_id BIGINT UNSIGNED NOT NULL COMMENT '타임캡슐 기록 ID',
-    media_type            VARCHAR(20)     NOT NULL COMMENT 'IMAGE, VIDEO',
+    media_type            VARCHAR(20)     NOT NULL COMMENT 'IMAGE',
     object_key            VARCHAR(1000)   NOT NULL COMMENT 'S3 객체 키',
     mime_type             VARCHAR(100)    NOT NULL COMMENT 'MIME 타입',
     file_size             BIGINT UNSIGNED NOT NULL COMMENT '파일 크기',
-    slot_no               TINYINT         NOT NULL COMMENT '사진 1~3, 영상 1',
+    slot_no               TINYINT         NOT NULL DEFAULT 1 COMMENT '대표 이미지 슬롯(항상 1)',
     status                VARCHAR(20)     NOT NULL DEFAULT 'PENDING_UPLOAD' COMMENT 'PENDING_UPLOAD, ACTIVE, DELETED',
     created_at            DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '업로드일',
     updated_at            DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
@@ -894,7 +886,8 @@ CREATE TABLE time_capsule_media
     UNIQUE KEY uk_capsule_media_entry_slot (time_capsule_entry_id, slot_no),
     CONSTRAINT fk_capsule_media_entry
         FOREIGN KEY (time_capsule_entry_id) REFERENCES time_capsule_entry (time_capsule_entry_id),
-    CONSTRAINT ck_capsule_media_type CHECK (media_type IN ('IMAGE', 'VIDEO')),
+    CONSTRAINT ck_capsule_media_type CHECK (media_type = 'IMAGE'),
+    CONSTRAINT ck_capsule_media_slot CHECK (slot_no = 1),
     CONSTRAINT ck_capsule_media_status CHECK (status IN ('PENDING_UPLOAD', 'ACTIVE', 'DELETED'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

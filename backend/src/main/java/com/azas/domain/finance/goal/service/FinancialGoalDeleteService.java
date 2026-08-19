@@ -43,9 +43,6 @@ public class FinancialGoalDeleteService {
                     financialGoalId, accountId) != 1) {
                 throw internalError();
             }
-            if (goalMapper.clearAccountGoalSnapshot(accountId) != 1) {
-                throw internalError();
-            }
         }
 
         if (goalMapper.archiveFinancialGoal(financialGoalId) != 1) {

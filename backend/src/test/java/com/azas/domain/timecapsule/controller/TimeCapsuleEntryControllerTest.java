@@ -3,6 +3,7 @@ package com.azas.domain.timecapsule.controller;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySummaryResponse;
@@ -113,6 +114,57 @@ class TimeCapsuleEntryControllerTest {
                 .andExpect(jsonPath("$.total_count").value(1))
                 .andExpect(jsonPath("$.entries[0].time_capsule_entry_id")
                         .value(1000));
+    }
+
+    @Test
+    void getTimeCapsuleEntryReturnsSingleImageObject() throws Exception {
+        TimeCapsuleEntry entry = createEntry(1000L);
+        ReflectionTestUtils.setField(entry, "status",
+                TimeCapsuleEntryStatus.SEALED);
+        ReflectionTestUtils.setField(entry, "sealedAt",
+                LocalDateTime.of(2026, 8, 5, 11, 40));
+        ReflectionTestUtils.setField(entry, "createdAt",
+                LocalDateTime.of(2026, 8, 5, 10, 35));
+        TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
+                1000L,
+                TimeCapsuleMediaType.IMAGE,
+                "time-capsules/100/entries/1000/media/slot-1.jpg",
+                "image/jpeg",
+                1048576L,
+                1
+        );
+        ReflectionTestUtils.setField(media, "timeCapsuleMediaId", 2000L);
+        media.activate();
+        TimeCapsuleEntryDetailResponse response =
+                new TimeCapsuleEntryDetailResponse(
+                        entry,
+                        new TimeCapsuleEntryDetailResponse.MediaResponse(
+                                media,
+                                "https://storage.example/presigned-get",
+                                LocalDateTime.of(2026, 8, 5, 12, 40)
+                        )
+                );
+
+        given(accessTokenMemberResolver.resolveMemberId("Bearer access-token"))
+                .willReturn(7L);
+        given(timeCapsuleEntryService.getTimeCapsuleEntry(7L, 1000L))
+                .willReturn(response);
+
+        mockMvc.perform(
+                        get("/api/v1/time-capsule-entries/{entryId}", 1000L)
+                                .header("Authorization", "Bearer access-token")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.time_capsule_entry_id").value(1000))
+                .andExpect(jsonPath("$.media.time_capsule_media_id")
+                        .value(2000))
+                .andExpect(jsonPath("$.media.media_type").value("IMAGE"))
+                .andExpect(jsonPath("$.media.download_url")
+                        .value("https://storage.example/presigned-get"))
+                .andExpect(jsonPath("$.media.length()").value(6))
+                .andExpect(jsonPath("$.media_mode").doesNotExist())
+                .andExpect(jsonPath("$.media.slot_no").doesNotExist())
+                .andExpect(jsonPath("$.media[0]").doesNotExist());
     }
 
     @Test
