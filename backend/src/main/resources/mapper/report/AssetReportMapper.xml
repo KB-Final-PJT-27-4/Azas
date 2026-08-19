@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.report.mapper.AssetReportMapper">
+
+    <resultMap id="assetReportListRowMap"
+               type="com.azas.domain.report.dto.AssetReportListRow">
+
+        <id property="assetReportId"
+            column="asset_report_id"/>
+
+        <result property="reportMonth"
+                column="report_month"/>
+
+        <result property="totalAssetAmount"
+                column="total_asset_amount"/>
+
+        <result property="totalAssetChangeAmount"
+                column="total_asset_change_amount"/>
+
+        <result property="monthlySavedAmount"
+                column="monthly_saved_amount"/>
+
+        <result property="goalAchievementRate"
+                column="goal_achievement_rate"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+
+        <result property="updatedAt"
+                column="updated_at"/>
+
+    </resultMap>
+
+    <select id="findActiveChildId"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+            LIMIT 1
+    </select>
+
+    <select id="countParentAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                                AND c.status = 'ACTIVE'
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+    </select>
+
+    <select id="findAssetReports"
+            parameterType="com.azas.domain.report.dto.AssetReportListQuery"
+            resultMap="assetReportListRowMap">
+
+        SELECT
+        ar.asset_report_id,
+        ar.report_month,
+        ar.total_asset_amount,
+        ar.total_asset_change_amount,
+        ar.monthly_saved_amount,
+        ar.goal_achievement_rate,
+        ar.created_at,
+        ar.updated_at
+        FROM asset_report ar
+        WHERE ar.child_id = #{childId}
+
+        <if test="yearStart != null">
+            AND ar.report_month <![CDATA[>=]]> #{yearStart}
+            AND ar.report_month <![CDATA[<]]> #{yearEndExclusive}
+        </if>
+
+        <if test="cursorReportMonth != null">
+            AND (
+            ar.report_month <![CDATA[<]]> #{cursorReportMonth}
+            OR (
+            ar.report_month = #{cursorReportMonth}
+            AND ar.asset_report_id
+            <![CDATA[<]]> #{cursorAssetReportId}
+            )
+            )
+        </if>
+
+        ORDER BY
+        ar.report_month DESC,
+        ar.asset_report_id DESC
+
+        LIMIT #{limit}
+    </select>
+
+</mapper>
