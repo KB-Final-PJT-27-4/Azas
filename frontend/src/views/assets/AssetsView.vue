@@ -308,13 +308,13 @@ const retryTransfer = () => {
     class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white px-[18px] pt-4 pb-9 text-[var(--color-text-primary)]"
   >
     <div
-      class="grid grid-cols-2 rounded-[14px] border border-[var(--color-border)] bg-[#f3f7f9] p-1"
+      class="grid grid-cols-2 rounded-[13px] border border-[var(--color-border)] bg-[#f3f7f9] p-[3px]"
       role="tablist"
       aria-label="계좌 관리 목록 선택"
     >
       <button
         id="accounts-tab"
-        class="h-11 rounded-[10px] text-[13px] font-semibold transition-all"
+        class="h-10 rounded-[10px] text-xs font-semibold transition-all"
         :class="
           activeAssetsTab === 'accounts'
             ? 'bg-white text-[var(--color-selected-text)] shadow-[0_2px_8px_rgba(43,171,232,0.16)]'
@@ -330,7 +330,7 @@ const retryTransfer = () => {
       </button>
       <button
         id="auto-transfers-tab"
-        class="h-11 rounded-[10px] text-[13px] font-semibold transition-all"
+        class="h-10 rounded-[10px] text-xs font-semibold transition-all"
         :class="
           activeAssetsTab === 'autoTransfers'
             ? 'bg-white text-[var(--color-selected-text)] shadow-[0_2px_8px_rgba(43,171,232,0.16)]'
@@ -400,7 +400,7 @@ const retryTransfer = () => {
               :to="group.id === 'parent' ? { name: 'Accounts' } : { name: 'ChildAccountCreate' }"
             >
               <Plus :size="13" :stroke-width="2.8" aria-hidden="true" />
-              계좌 연결
+              {{ group.id === 'parent' ? '계좌 연동' : '계좌 등록' }}
             </RouterLink>
           </div>
 

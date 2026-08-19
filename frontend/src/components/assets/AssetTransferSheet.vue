@@ -66,13 +66,12 @@ watch(
 
 const updateAmount = (event: Event) => {
   const input = event.target as HTMLInputElement
-  const digits = input.value.replace(/\D/g, '')
-  amountInput.value = digits || '0'
+  const digits = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
+  amountInput.value = digits ? Number(digits).toLocaleString('ko-KR') : '0'
   if (input.value !== amountInput.value) input.value = amountInput.value
 }
 
 const startAmountEdit = (event: FocusEvent) => {
-  amountInput.value = String(amount.value)
   const input = event.target as HTMLInputElement
   requestAnimationFrame(() => {
     if (input.value === '0') input.select()
