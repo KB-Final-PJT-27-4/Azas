@@ -25,9 +25,6 @@ public class Child {
     private ChildStatus childStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private LocalDate lastAllowanceRequestMonth;
-    private LocalDateTime lastAllowanceRequestAt;
-
     public static Child from(ChildCreateRequest request){
         Child child = new Child();
         child.setName(request.getName());

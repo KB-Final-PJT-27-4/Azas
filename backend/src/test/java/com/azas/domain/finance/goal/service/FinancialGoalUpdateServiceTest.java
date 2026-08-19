@@ -63,12 +63,9 @@ class FinancialGoalUpdateServiceTest {
                         account(12L, "4800000", 31L),
                         account(13L, "1000000", null)));
         when(goalMapper.deleteFinancialGoalAccount(31L, 12L)).thenReturn(1);
-        when(goalMapper.clearAccountGoalSnapshot(12L)).thenReturn(1);
         when(goalMapper.insertFinancialGoalAccount(31L, 13L)).thenReturn(1);
         when(goalMapper.updateFinancialGoal(eq(31L), any(), any(), any(),
                 eq("ACTIVE"))).thenReturn(1);
-        when(goalMapper.updateAccountGoalSnapshot(anyLong(), eq(1L),
-                eq("대학자금"), any(), any())).thenReturn(1);
         List<FinancialGoalCheckpointRow> checkpoints = checkpoints();
         when(goalMapper.findGoalCheckpoints(31L)).thenReturn(checkpoints);
         when(goalMapper.updateFinancialGoalCheckpoint(anyLong(), any(), any()))
@@ -84,17 +81,10 @@ class FinancialGoalUpdateServiceTest {
 
         assertSame(expected, result);
         verify(goalMapper).deleteFinancialGoalAccount(31L, 12L);
-        verify(goalMapper).clearAccountGoalSnapshot(12L);
         verify(goalMapper).insertFinancialGoalAccount(31L, 13L);
         verify(goalMapper).updateFinancialGoal(31L,
                 new BigDecimal("40000000"), LocalDate.of(2046, 3, 31),
                 new BigDecimal("145532"), "ACTIVE");
-        verify(goalMapper).updateAccountGoalSnapshot(11L, 1L,
-                "대학자금", new BigDecimal("40000000"),
-                LocalDate.of(2046, 3, 31));
-        verify(goalMapper).updateAccountGoalSnapshot(13L, 1L,
-                "대학자금", new BigDecimal("40000000"),
-                LocalDate.of(2046, 3, 31));
         verify(goalMapper).updateFinancialGoalCheckpoint(101L,
                 new BigDecimal("4000000.00"),
                 java.time.LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
@@ -111,8 +101,6 @@ class FinancialGoalUpdateServiceTest {
         when(goalMapper.findAccountTargetsForUpdate(List.of(11L)))
                 .thenReturn(List.of(account(11L, "4800000", 31L)));
         when(goalMapper.updateFinancialGoal(anyLong(), any(), any(), any(), any()))
-                .thenReturn(1);
-        when(goalMapper.updateAccountGoalSnapshot(anyLong(), any(), any(), any(), any()))
                 .thenReturn(1);
         List<FinancialGoalCheckpointRow> checkpoints = checkpoints();
         when(goalMapper.findGoalCheckpoints(31L)).thenReturn(checkpoints);

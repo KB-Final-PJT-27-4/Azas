@@ -7,7 +7,6 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 public class TimeCapsuleEntryDetailResponse {
@@ -33,20 +32,18 @@ public class TimeCapsuleEntryDetailResponse {
     @JsonProperty("contributed_at")
     private final LocalDateTime contributedAt;
 
-    @JsonProperty("media_mode")
-    private final String mediaMode;
     private final String status;
 
     @JsonProperty("sealed_at")
     private final LocalDateTime sealedAt;
-    private final List<MediaResponse> media;
+    private final MediaResponse media;
 
     @JsonProperty("created_at")
     private final LocalDateTime createdAt;
 
     public TimeCapsuleEntryDetailResponse(
             TimeCapsuleEntry entry,
-            List<MediaResponse> media
+            MediaResponse media
     ) {
         this.timeCapsuleEntryId = entry.getTimeCapsuleEntryId();
         this.timeCapsuleId = entry.getTimeCapsuleId();
@@ -56,10 +53,9 @@ public class TimeCapsuleEntryDetailResponse {
         this.message = entry.getMessage();
         this.contributionAmount = entry.getContributionAmount();
         this.contributedAt = entry.getContributedAt();
-        this.mediaMode = entry.getMediaMode().name();
         this.status = entry.getStatus().name();
         this.sealedAt = entry.getSealedAt();
-        this.media = List.copyOf(media);
+        this.media = media;
         this.createdAt = entry.getCreatedAt();
     }
 
@@ -78,9 +74,6 @@ public class TimeCapsuleEntryDetailResponse {
         @JsonProperty("file_size")
         private final long fileSize;
 
-        @JsonProperty("slot_no")
-        private final int slotNo;
-
         @JsonProperty("download_url")
         private final String downloadUrl;
 
@@ -96,7 +89,6 @@ public class TimeCapsuleEntryDetailResponse {
             this.mediaType = media.getMediaType().name();
             this.mimeType = media.getMimeType();
             this.fileSize = media.getFileSize();
-            this.slotNo = media.getSlotNo();
             this.downloadUrl = downloadUrl;
             this.expiresAt = expiresAt;
         }

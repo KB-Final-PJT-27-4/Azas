@@ -52,8 +52,6 @@ class FinancialGoalCreateServiceTest {
                         account(11L, 6L, "적금1", "4800000", null)));
         generateGoalId(31L);
         when(goalMapper.insertFinancialGoalAccount(anyLong(), anyLong())).thenReturn(1);
-        when(goalMapper.updateAccountGoalSnapshot(anyLong(), any(), any(), any(), any()))
-                .thenReturn(1);
         when(goalMapper.insertFinancialGoalCheckpoint(any())).thenReturn(1);
 
         FinancialGoalCreateResult result = service.create(8L, 6L,
@@ -78,8 +76,6 @@ class FinancialGoalCreateServiceTest {
                 .thenReturn(List.of(account(13L, 6L, "적금", "100000", null)));
         generateGoalId(32L);
         when(goalMapper.insertFinancialGoalAccount(32L, 13L)).thenReturn(1);
-        when(goalMapper.updateAccountGoalSnapshot(anyLong(), any(), any(), any(), any()))
-                .thenReturn(1);
         when(goalMapper.insertFinancialGoalCheckpoint(any())).thenReturn(1);
 
         FinancialGoalCreateResult result = service.create(8L, 6L,
