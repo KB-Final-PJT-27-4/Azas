@@ -2,27 +2,6 @@ import { reactive } from 'vue'
 
 export type AllowanceRequestStatus = 'pending' | 'approved' | 'rejected'
 
-export const childQuickActions = [
-  {
-    title: '용돈 요청 내역',
-    description: '승인 대기 1건',
-    icon: '📋',
-    to: '/child/allowance-requests',
-  },
-  {
-    title: '최근 내역',
-    description: '2개 진행 중',
-    icon: '🏦',
-    to: '/child/assets',
-  },
-  {
-    title: '아이 체크리스트',
-    description: '오늘 2/3 완료',
-    icon: '☑️',
-    to: '/child/checklists',
-  },
-]
-
 export const childAllowanceRequests = reactive([
   {
     id: 'request-1',
@@ -54,7 +33,6 @@ export const childMissions = reactive([
     description: '이번 주 용돈기입장 쓰기',
     reward: 1_000,
     status: 'completed',
-    icon: '☑️',
   },
   {
     id: 'mission-2',
@@ -62,7 +40,6 @@ export const childMissions = reactive([
     description: '집 청소기 돌리기',
     reward: 500,
     status: 'progress',
-    icon: '🪙',
   },
   {
     id: 'mission-3',
@@ -70,40 +47,6 @@ export const childMissions = reactive([
     description: '이번 주 계획한 소비 지키기',
     reward: 2_000,
     status: 'review',
-    icon: '💧',
-  },
-])
-
-export const childChecklistItems = reactive([
-  {
-    id: 'check-1',
-    title: '이번 주 사용한 돈 확인하기',
-    count: '완료',
-    completed: true,
-  },
-  {
-    id: 'check-2',
-    title: '받은 용돈 중 저축할 금액 정하기',
-    count: '0/1',
-    completed: false,
-  },
-  {
-    id: 'check-3',
-    title: '갖고 싶은 물건을 목표로 만들기',
-    count: '0/1',
-    completed: false,
-  },
-  {
-    id: 'check-4',
-    title: '돈을 안전하게 사용하는 방법 알아보기',
-    count: '완료',
-    completed: true,
-  },
-  {
-    id: 'check-5',
-    title: '계획한 소비가 잘 지켜졌는지 확인하기',
-    count: '0/1',
-    completed: false,
   },
 ])
 
