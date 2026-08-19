@@ -412,6 +412,17 @@ public enum ErrorCode {
     INVALID_MISSION_ACTION(
             HttpStatus.BAD_REQUEST,
         "미션 상태 변경 요청이 올바르지 않습니다."
+    ),
+
+    // Checklist
+    INVALID_CHECKLIST_STAGE(
+            HttpStatus.BAD_REQUEST,
+            "체크리스트 생애주기 단계가 올바르지 않습니다."
+    ),
+
+    CHECKLIST_STAGE_NOT_SUPPORTED(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "지원하는 체크리스트 생애주기 단계를 계산할 수 없습니다."
     );
 
     private final HttpStatus httpStatus;
