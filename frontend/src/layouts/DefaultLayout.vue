@@ -63,6 +63,7 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
           :variant="toastVariant"
           :with-bottom-navigation="!hideBottomNavigation"
           :above-actions="toastPlacement === 'above-actions'"
+          :placement="toastPlacement"
         />
       </Transition>
     </div>
