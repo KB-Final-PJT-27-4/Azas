@@ -23,7 +23,6 @@ const verificationError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 let profileObjectUrl: string | null = null
 
-const roles: FamilyRole[] = ['부', '모', '보호자']
 const canSave = computed(() => name.value.trim().length > 0 && phoneVerified.value)
 
 const formatPhone = (event: Event) => {
@@ -144,22 +143,16 @@ onBeforeUnmount(() => {
             />
           </label>
 
-          <fieldset class="m-0 border-0 p-0">
-            <legend class="field-label">가족 내 역할 <em>*</em></legend>
-            <div class="mt-2 grid grid-cols-3 gap-2.5">
-              <label v-for="item in roles" :key="item" class="cursor-pointer">
-                <input v-model="role" class="peer sr-only" type="radio" name="family-role" :value="item" />
-                <span class="grid h-12 place-items-center rounded-xl border border-transparent bg-[#f4f6f7] text-sm font-bold text-[#7b8995] transition peer-checked:border-[var(--color-brand-primary)] peer-checked:bg-[#e8f8ff] peer-checked:text-[var(--color-selected-text)] peer-focus-visible:ring-2 peer-focus-visible:ring-[#9cddfa]">
-                  {{ item }}
-                </span>
-              </label>
+          <div>
+            <span class="field-label">가족 내 역할</span>
+            <div class="role-display mt-2" aria-label="가족 내 역할">
+              {{ role }}
             </div>
-          </fieldset>
+          </div>
 
           <label class="block">
             <span class="field-label">이메일</span>
             <input class="field-input text-[#97a3ad]" type="email" value="hana.kim@example.com" disabled />
-            <span class="field-help">소셜 로그인 계정의 이메일은 직접 변경할 수 없어요.</span>
           </label>
 
           <div>
@@ -275,6 +268,21 @@ onBeforeUnmount(() => {
 .field-label em {
   color: #ef5f65;
   font-style: normal;
+}
+
+.role-display {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 52px;
+  padding: 0 14px;
+  color: #667681;
+  font-size: 14px;
+  font-weight: 700;
+  background: #f4f6f8;
+  border: 1px solid #dce7ed;
+  border-radius: 12px;
+  cursor: not-allowed;
 }
 
 .field-input {

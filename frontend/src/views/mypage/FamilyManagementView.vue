@@ -78,19 +78,6 @@ const copyInvitationLink = async () => {
       </p>
     </header>
 
-    <section class="mt-4 flex items-center gap-4 rounded-[24px] border border-[#cfe8f3] bg-[#eaf8fe] p-4">
-      <span class="size-16 shrink-0 overflow-hidden rounded-full bg-white">
-        <img class="size-full object-cover" :src="childProfileUrl" alt="깨비 프로필" />
-      </span>
-      <div class="min-w-0 flex-1">
-        <span class="text-xs font-semibold text-[var(--color-selected-text)]">깨비네 가족</span>
-        <strong class="mt-1 block text-xl">함께 모으는 중이에요</strong>
-        <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
-          보호자 {{ familyMembers.length }}명이 연결되어 있어요.
-        </p>
-      </div>
-    </section>
-
     <section class="mt-5" aria-labelledby="family-members-title">
       <div class="flex items-center justify-between px-0.5">
         <h2 id="family-members-title" class="m-0 text-[18px] font-extrabold">함께 관리하는 가족</h2>
