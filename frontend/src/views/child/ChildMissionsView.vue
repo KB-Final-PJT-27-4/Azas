@@ -118,16 +118,24 @@ const activeRewardTotal = computed(() =>
         >
           <div class="mission-ticket__content">
             <div class="min-w-0">
-              <strong
-                class="block truncate text-[16px] leading-snug font-bold"
-                :class="
-                  mission.status === 'completed'
-                    ? 'text-[#7d8790]'
-                    : 'text-[var(--color-text-primary)]'
-                "
-              >
-                {{ mission.title }}
-              </strong>
+              <div class="flex min-w-0 items-center gap-2">
+                <strong
+                  class="min-w-0 truncate text-[16px] leading-snug font-bold"
+                  :class="
+                    mission.status === 'completed'
+                      ? 'text-[#7d8790]'
+                      : 'text-[var(--color-text-primary)]'
+                  "
+                >
+                  {{ mission.title }}
+                </strong>
+                <span
+                  class="shrink-0 rounded-full px-2.5 py-1 text-[11px] leading-none font-bold"
+                  :class="getStatusBadgeClass(mission.status)"
+                >
+                  {{ getStatusLabel(mission.status) }}
+                </span>
+              </div>
               <span
                 class="mt-1 block truncate text-[13px] leading-snug"
                 :class="
@@ -142,12 +150,6 @@ const activeRewardTotal = computed(() =>
           </div>
 
           <div class="mission-ticket__reward">
-            <span
-              class="rounded-full px-2.5 py-1 text-[11px] leading-none font-bold"
-              :class="getStatusBadgeClass(mission.status)"
-            >
-              {{ getStatusLabel(mission.status) }}
-            </span>
             <strong
               class="text-[18px] leading-tight font-extrabold"
               :class="
