@@ -6,6 +6,7 @@ import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
 import lockImage from '@/assets/images/timeCapsules/archive/lock.png'
 import archiveBackgroundImage from '@/assets/images/timeCapsules/archive/new-bg.png'
 import openImage from '@/assets/images/timeCapsules/archive/open.png'
+import bornBabyPigImage from '@/assets/images/timeCapsules/archive/born-baby-pig.png'
 import avocadoImage from '@/assets/images/pregnancy/avocado.png'
 import bananaImage from '@/assets/images/pregnancy/banana.png'
 import blueberryImage from '@/assets/images/pregnancy/blueberry.png'
@@ -76,6 +77,23 @@ const pregnancyGrowth = computed(() => {
       : nearestStages[(registration.childName.codePointAt(0) ?? 0) % nearestStages.length]!
 
   return { ...stage, currentWeek }
+})
+
+const bornBabyGrowth = computed(() => {
+  if (!registration?.birthDate) return null
+
+  const [year, month, day] = registration.birthDate.split('-').map(Number)
+  if (!year || !month || !day) return null
+
+  const birthDate = new Date(year, month - 1, day)
+  birthDate.setHours(0, 0, 0, 0)
+  if (birthDate > today) return null
+
+  const daysSinceBirth = Math.floor((today.getTime() - birthDate.getTime()) / 86_400_000) + 1
+  return {
+    daysSinceBirth,
+    childName: registration.childName || '아이',
+  }
 })
 const todayKey = [
   today.getFullYear(),
@@ -251,6 +269,35 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
               class="pregnancy-growth-card__image absolute right-0 bottom-7 h-[142px] w-[116px] object-contain object-bottom"
               :src="pregnancyGrowth.image"
               :alt="`${pregnancyGrowth.fruit} 깨비`"
+            />
+          </aside>
+
+          <aside
+            v-else-if="bornBabyGrowth"
+            class="absolute top-1 right-0 h-[156px] w-[184px] translate-y-3"
+            :aria-label="`${bornBabyGrowth.childName}가 태어난 지 ${bornBabyGrowth.daysSinceBirth}일째`"
+          >
+            <div class="absolute right-[116px] bottom-14 z-10 whitespace-nowrap text-right">
+              <span
+                class="block text-[10px] font-semibold text-[var(--color-text-secondary)]"
+              >
+                태어난 지
+              </span>
+              <strong
+                class="mt-1.5 block text-[20px] leading-none font-extrabold tracking-[-0.03em] text-[#f07f9d]"
+              >
+                {{ bornBabyGrowth.daysSinceBirth }}일째
+              </strong>
+              <span
+                class="mt-1.5 block text-[10px] font-semibold text-[var(--color-text-secondary)]"
+              >
+                함께 자라고 있어요
+              </span>
+            </div>
+            <img
+              class="absolute right-0 bottom-7 h-[142px] w-[116px] object-contain object-bottom"
+              :src="bornBabyPigImage"
+              :alt="`${bornBabyGrowth.childName}의 성장 이미지`"
             />
           </aside>
         </div>
