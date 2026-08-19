@@ -20,10 +20,6 @@
         <result property="latestEntryAt" column="latest_entry_at"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
-        <result property="financialGoalTemplateId" column="financial_goal_template_id"/>
-        <result property="goalName" column="goal_name"/>
-        <result property="goalTargetAmount" column="goal_target_amount"/>
-        <result property="goalTargetDate" column="goal_target_date"/>
     </resultMap>
 
     <resultMap id="timeCapsuleAccountResultMap"
@@ -65,11 +61,7 @@
         tc.total_contribution_amount,
         tc.latest_entry_at,
         tc.created_at,
-        tc.updated_at,
-        fa.financial_goal_template_id,
-        COALESCE(fa.goal_name_snapshot, fgt.goal_name) AS goal_name,
-        fa.goal_target_amount,
-        fa.goal_target_date
+        tc.updated_at
     </sql>
 
     <select id="findAccountById"
@@ -122,10 +114,6 @@
         SELECT
             <include refid="timeCapsuleColumnsWithAlias"/>
         FROM time_capsule tc
-        INNER JOIN financial_account fa
-            ON fa.financial_account_id = tc.financial_account_id
-        LEFT JOIN financial_goal_template fgt
-            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.financial_account_id = #{financialAccountId}
     </select>
 
@@ -154,10 +142,6 @@
         SELECT
             <include refid="timeCapsuleColumnsWithAlias"/>
         FROM time_capsule tc
-        INNER JOIN financial_account fa
-            ON fa.financial_account_id = tc.financial_account_id
-        LEFT JOIN financial_goal_template fgt
-            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         INNER JOIN child_parent cp
             ON cp.child_id = tc.child_id
            AND cp.member_id = #{memberId}
@@ -172,10 +156,6 @@
         SELECT
             <include refid="timeCapsuleColumnsWithAlias"/>
         FROM time_capsule tc
-        INNER JOIN financial_account fa
-            ON fa.financial_account_id = tc.financial_account_id
-        LEFT JOIN financial_goal_template fgt
-            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         INNER JOIN child_parent cp
             ON cp.child_id = tc.child_id
            AND cp.member_id = #{memberId}
@@ -196,10 +176,6 @@
         SELECT
             <include refid="timeCapsuleColumnsWithAlias"/>
         FROM time_capsule tc
-        INNER JOIN financial_account fa
-            ON fa.financial_account_id = tc.financial_account_id
-        LEFT JOIN financial_goal_template fgt
-            ON fgt.financial_goal_template_id = fa.financial_goal_template_id
         WHERE tc.child_id = #{childId}
         ORDER BY
             CASE WHEN tc.expected_release_at IS NULL THEN 1 ELSE 0 END,

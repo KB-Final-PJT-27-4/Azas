@@ -194,16 +194,6 @@
         )
     </insert>
 
-    <update id="updateAccountGoalSnapshot">
-        UPDATE financial_account
-        SET financial_goal_template_id = #{financialGoalTemplateId},
-            goal_name_snapshot = #{title},
-            goal_target_amount = #{targetAmount},
-            goal_target_date = #{targetDate},
-            updated_at = UTC_TIMESTAMP(6)
-        WHERE financial_account_id = #{financialAccountId}
-    </update>
-
     <update id="updateFinancialGoal">
         UPDATE financial_goal
         SET target_amount = #{targetAmount},
@@ -219,16 +209,6 @@
         WHERE financial_goal_id = #{financialGoalId}
           AND financial_account_id = #{financialAccountId}
     </delete>
-
-    <update id="clearAccountGoalSnapshot">
-        UPDATE financial_account
-        SET financial_goal_template_id = NULL,
-            goal_name_snapshot = NULL,
-            goal_target_amount = NULL,
-            goal_target_date = NULL,
-            updated_at = UTC_TIMESTAMP(6)
-        WHERE financial_account_id = #{financialAccountId}
-    </update>
 
     <update id="archiveFinancialGoal">
         UPDATE financial_goal
