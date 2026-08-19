@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CheckSquare, ChevronRight, ClipboardList, Shield, Trophy } from 'lucide-vue-next'
+import { ChevronRight } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import childHomePigUrl from '@/assets/images/child/child-home-pig.png'
@@ -16,22 +16,11 @@ const quickActions = computed(() => [
     title: '용돈 요청 내역',
     description: `승인 대기 ${pendingAllowanceCount.value}건`,
     to: '/child/allowance-requests',
-    icon: ClipboardList,
-    iconClass: 'bg-[#eef8ff] text-[var(--color-brand-primary)]',
   },
   {
     title: '최근 내역',
     description: '2건 진행 중',
     to: '/child/assets',
-    icon: Trophy,
-    iconClass: 'bg-[#fff7d7] text-[#c99a13]',
-  },
-  {
-    title: '아이 체크리스트',
-    description: '오늘 2/3 완료',
-    to: '/child/checklists',
-    icon: CheckSquare,
-    iconClass: 'bg-[#eef8ff] text-[var(--color-brand-primary)]',
   },
 ])
 
@@ -42,8 +31,6 @@ const visibleMissions = [
     description: '이번 주 용돈기입장 쓰기',
     reward: 1_000,
     status: 'completed',
-    icon: CheckSquare,
-    iconClass: 'bg-[#eef8ff] text-[#358df7]',
   },
   {
     id: 'mission-spending-plan',
@@ -51,25 +38,19 @@ const visibleMissions = [
     description: '이번 주 계획한 소비 지키기',
     reward: 2_000,
     status: 'progress',
-    icon: Shield,
-    iconClass: 'bg-[#fff7d7] text-[#8a6b13]',
   },
 ]
 
 const formatNumber = (amount: number) => Math.abs(amount).toLocaleString('ko-KR')
 const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
-const remainingLimit = computed(() =>
-  Math.max(childAccountSummary.monthlyLimit - childAccountSummary.monthlySpent, 0),
-)
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-[18px] pt-3 pb-[112px]">
-    <section
-      class="relative overflow-hidden rounded-[26px] border border-[#dceef6] bg-[#eaf8ff] px-5 pt-5 pb-5 shadow-[0_10px_30px_rgba(54,112,139,0.08)]"
-      aria-label="아이 자산 요약"
-    >
-      <div class="relative z-[1] max-w-[64%]">
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef9ff] px-[18px] pt-3 pb-[112px]"
+  >
+    <section class="relative overflow-visible pt-5" aria-label="아이 자산 요약">
+      <div class="relative z-[2] max-w-[58%] px-2">
         <p class="m-0 text-[13px] font-semibold text-[#628096]">
           {{ childAccountSummary.childName }}의 사용 가능 금액
         </p>
@@ -83,24 +64,21 @@ const remainingLimit = computed(() =>
             >원</span
           >
         </div>
-        <span
-          class="mt-3 inline-flex rounded-full bg-white/85 px-3 py-1.5 text-[12px] font-bold text-[var(--color-selected-text)]"
-        >
-          {{ childAccountSummary.accountName }}
-        </span>
       </div>
 
       <img
-        class="pointer-events-none absolute top-[47px] right-6 z-[2] w-[165px] select-none object-contain drop-shadow-[0_10px_18px_rgba(255,154,181,0.18)]"
+        class="pointer-events-none absolute top-[20px] right-3 z-[3] w-[166px] select-none object-contain drop-shadow-[0_10px_18px_rgba(255,154,181,0.18)]"
         :src="childHomePigUrl"
         alt=""
         aria-hidden="true"
       />
 
-      <div class="relative z-[1] mt-5 rounded-[18px] bg-white/90 px-4 py-3.5 backdrop-blur-sm">
+      <div
+        class="relative z-[1] mt-9 rounded-[22px] bg-white px-4 pt-5 pb-4 shadow-[0_8px_24px_rgba(54,112,139,0.06)]"
+      >
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="m-0 text-[12px] text-[var(--color-text-secondary)]">이번 달 사용</p>
+            <p class="m-0 text-[15px] font-bold text-[var(--color-text-primary)]">이번 달 사용</p>
             <strong class="mt-0.5 block text-[15px] text-[var(--color-text-primary)]">
               {{ formatCurrency(childAccountSummary.monthlySpent) }}
               <span class="font-medium text-[var(--color-text-secondary)]"
@@ -108,9 +86,6 @@ const remainingLimit = computed(() =>
               >
             </strong>
           </div>
-          <span class="shrink-0 text-[12px] font-bold text-[var(--color-selected-text)]">
-            {{ formatCurrency(remainingLimit) }} 남음
-          </span>
         </div>
         <div class="mt-3 h-2 overflow-hidden rounded-full bg-[#e3edf2]">
           <div
@@ -121,24 +96,16 @@ const remainingLimit = computed(() =>
       </div>
     </section>
 
-    <section class="mt-8" aria-labelledby="child-quick-title">
-      <h1
-        id="child-quick-title"
-        class="mb-4 text-[21px] leading-none font-extrabold tracking-[-0.025em] text-[var(--color-text-primary)]"
+    <section class="mt-8" aria-label="아이 빠른 메뉴">
+      <div
+        class="overflow-hidden rounded-[20px] border border-[#dce8ee] bg-white shadow-[0_8px_24px_rgba(54,112,139,0.06)]"
       >
-        지금 할 수 있어요
-      </h1>
-
-      <div class="overflow-hidden rounded-[20px] border border-[#e1eaee] bg-white">
         <RouterLink
           v-for="action in quickActions"
           :key="action.title"
-          class="grid min-h-[76px] grid-cols-[44px_minmax(0,1fr)_20px] items-center gap-3 border-b border-[#edf1f3] px-4 py-3 no-underline last:border-b-0 active:bg-[#f8fbfc]"
+          class="grid min-h-[72px] grid-cols-[minmax(0,1fr)_20px] items-center gap-3 border-b border-[#edf1f3] px-5 py-3 no-underline last:border-b-0 active:bg-[#f8fbfc]"
           :to="action.to"
         >
-          <div class="grid size-11 place-items-center rounded-[14px]" :class="action.iconClass">
-            <component :is="action.icon" :size="22" :stroke-width="2.4" />
-          </div>
           <div class="min-w-0">
             <strong
               class="block truncate text-[15px] leading-snug font-bold text-[var(--color-text-primary)]"
@@ -163,11 +130,11 @@ const remainingLimit = computed(() =>
           용돈 미션
         </h2>
         <RouterLink
-          class="flex items-center gap-1 text-[15px] font-semibold text-[var(--color-text-secondary)] no-underline"
+          class="flex items-center gap-0.5 text-[13px] font-semibold text-[var(--color-text-secondary)] no-underline"
           to="/child/missions"
         >
           더보기
-          <ChevronRight :size="17" :stroke-width="2.7" aria-hidden="true" />
+          <ChevronRight :size="15" :stroke-width="2.7" aria-hidden="true" />
         </RouterLink>
       </div>
 
@@ -183,14 +150,6 @@ const remainingLimit = computed(() =>
           "
         >
           <div class="home-mission-ticket__content">
-            <div
-              class="grid size-10 place-items-center rounded-[12px]"
-              :class="
-                mission.status === 'completed' ? 'bg-[#e4e8ec] text-[#8b98a4]' : mission.iconClass
-              "
-            >
-              <component :is="mission.icon" :size="20" :stroke-width="2.4" aria-hidden="true" />
-            </div>
             <div class="min-w-0">
               <strong
                 class="block truncate text-[16px] font-bold"
@@ -277,11 +236,10 @@ const remainingLimit = computed(() =>
 
 .home-mission-ticket__content {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 13px;
   min-width: 0;
-  padding: 16px 14px;
+  padding: 16px 18px;
 }
 
 .home-mission-ticket__reward {
@@ -296,23 +254,12 @@ const remainingLimit = computed(() =>
 
 .home-mission-ticket__reward::before {
   position: absolute;
-  top: 12px;
-  bottom: 12px;
+  top: 0;
+  bottom: 0;
   left: 0;
   width: 1px;
   content: '';
   border-left: 1px dashed #cfd9df;
-}
-
-.home-mission-ticket__reward::after {
-  position: absolute;
-  top: 8px;
-  left: -5px;
-  color: #bdc8cf;
-  font-size: 9px;
-  line-height: 1;
-  transform: rotate(90deg);
-  content: '✂';
 }
 
 .home-mission-ticket--completed {
