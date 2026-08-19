@@ -337,6 +337,11 @@ ALTER TABLE time_capsule_media
     ADD CONSTRAINT ck_capsule_media_slot CHECK (slot_no = 1);
 
 -- 8. Convert notification preference/type names while retaining read history.
+-- The legacy composite unique key is also the only usable index for the
+-- member foreign key. Add a temporary supporting index before replacing it.
+ALTER TABLE notification_preference
+    ADD KEY idx_notification_preference_member_id (member_id);
+
 ALTER TABLE notification_preference
     DROP INDEX uk_notification_preference_member_type,
     CHANGE COLUMN notification_type notification_category VARCHAR(50) NOT NULL,
@@ -354,6 +359,9 @@ ALTER TABLE notification_preference
     DROP COLUMN in_app_enabled,
     DROP COLUMN push_enabled,
     ADD UNIQUE KEY uk_notification_preference_member_category (member_id, notification_category);
+
+ALTER TABLE notification_preference
+    DROP INDEX idx_notification_preference_member_id;
 
 ALTER TABLE notification
     ADD COLUMN notification_category VARCHAR(50) NULL AFTER child_id,
