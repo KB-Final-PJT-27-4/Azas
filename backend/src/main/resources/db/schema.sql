@@ -31,6 +31,7 @@ DROP TABLE IF EXISTS financial_goal_account;
 DROP TABLE IF EXISTS financial_goal;
 DROP TABLE IF EXISTS financial_product;
 DROP TABLE IF EXISTS child_checklist_item;
+DROP TABLE IF EXISTS checklist_item_detail;
 DROP TABLE IF EXISTS checklist_item_template;
 DROP TABLE IF EXISTS allowance_request;
 DROP TABLE IF EXISTS family_invitation;
@@ -258,42 +259,148 @@ CREATE TABLE family_invitation
 CREATE TABLE checklist_item_template
 (
     checklist_item_template_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '체크리스트 템플릿 ID',
-    title                      VARCHAR(150)    NOT NULL COMMENT '공통 항목명',
-    description                TEXT            NULL COMMENT '항목 설명',
-    item_order                 INT             NOT NULL COMMENT '표시 순서',
-    is_active                  TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '노출 여부',
-    created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    lifecycle_stage             VARCHAR(30)     NOT NULL COMMENT '생애주기 단계',
+    title                       VARCHAR(150)    NOT NULL COMMENT '체크리스트 항목명',
+    description                 TEXT            NULL COMMENT '목록 화면 설명',
+    detail_content              TEXT            NULL COMMENT '상세 화면 기본 안내 문구',
+    item_order                  INT             NOT NULL COMMENT '단계 내 표시 순서',
+    is_active                   TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '노출 여부',
+    created_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+
     PRIMARY KEY (checklist_item_template_id),
-    KEY idx_checklist_template_active_order (is_active, item_order)
+
+    UNIQUE KEY uk_checklist_template_stage_order (
+                                                  lifecycle_stage,
+                                                  item_order
+        ),
+
+    KEY idx_checklist_template_stage_active_order (
+                                                   lifecycle_stage,
+                                                   is_active,
+                                                   item_order
+        ),
+
+    CONSTRAINT ck_checklist_template_lifecycle_stage
+        CHECK (
+            lifecycle_stage IN (
+                                'PREGNANCY',
+                                'AGE_0_TO_1',
+                                'AGE_2_TO_4',
+                                'AGE_5_TO_7'
+                )
+            ),
+
+    CONSTRAINT ck_checklist_template_item_order
+        CHECK (item_order > 0)
+
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT ='체크리스트 기본 항목';
+  COLLATE = utf8mb4_unicode_ci
+    COMMENT = '생애주기 체크리스트 템플릿';
+
+
+CREATE TABLE checklist_item_detail
+(
+    checklist_item_detail_id   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '체크리스트 상세 정보 ID',
+    checklist_item_template_id BIGINT UNSIGNED NOT NULL COMMENT '체크리스트 템플릿 ID',
+    title                      VARCHAR(150)    NOT NULL COMMENT '상세 안내 항목명',
+    description                VARCHAR(500)    NULL COMMENT '상세 안내 설명',
+    item_order                 INT             NOT NULL COMMENT '상세 안내 표시 순서',
+    created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+
+    PRIMARY KEY (checklist_item_detail_id),
+
+    UNIQUE KEY uk_checklist_detail_template_order (
+                                                   checklist_item_template_id,
+                                                   item_order
+        ),
+
+    CONSTRAINT fk_checklist_detail_template
+        FOREIGN KEY (checklist_item_template_id)
+            REFERENCES checklist_item_template (checklist_item_template_id)
+            ON DELETE CASCADE,
+
+    CONSTRAINT ck_checklist_detail_item_order
+        CHECK (item_order > 0)
+
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+    COMMENT = '체크리스트 상세 안내 항목';
+
 
 CREATE TABLE child_checklist_item
 (
-    child_checklist_item_id    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '자녀 체크리스트 ID',
-    child_id                   BIGINT UNSIGNED NOT NULL COMMENT '자녀 ID',
-    checklist_item_template_id BIGINT UNSIGNED NOT NULL COMMENT '체크리스트 템플릿 ID',
+    child_checklist_item_id    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '자녀별 체크리스트 진행 ID',
+    child_id                   BIGINT UNSIGNED NOT NULL COMMENT '체크리스트 대상 자녀 ID',
+    checklist_item_template_id BIGINT UNSIGNED NOT NULL COMMENT '공통 체크리스트 템플릿 ID',
     status                     VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, COMPLETED',
-    completed_by_member_id     BIGINT UNSIGNED NULL COMMENT '완료 회원 ID',
+    completed_by_member_id     BIGINT UNSIGNED NULL COMMENT '완료 처리 보호자 회원 ID',
     completed_at               DATETIME(6)     NULL COMMENT '완료 시각',
     created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+
     PRIMARY KEY (child_checklist_item_id),
-    UNIQUE KEY uk_child_checklist_child_template (child_id, checklist_item_template_id),
-    KEY idx_child_checklist_template_id (checklist_item_template_id),
-    KEY idx_child_checklist_completed_by_member_id (completed_by_member_id),
+
+    UNIQUE KEY uk_child_checklist_child_template (
+                                                  child_id,
+                                                  checklist_item_template_id
+        ),
+
+    KEY idx_child_checklist_child_status (
+                                          child_id,
+                                          status
+        ),
+
+    KEY idx_child_checklist_template (
+                                      checklist_item_template_id
+        ),
+
+    KEY idx_child_checklist_completed_member (
+                                              completed_by_member_id
+        ),
+
     CONSTRAINT fk_child_checklist_child
-        FOREIGN KEY (child_id) REFERENCES child (child_id),
+        FOREIGN KEY (child_id)
+            REFERENCES child (child_id)
+            ON DELETE CASCADE,
+
     CONSTRAINT fk_child_checklist_template
-        FOREIGN KEY (checklist_item_template_id) REFERENCES checklist_item_template (checklist_item_template_id),
-    CONSTRAINT fk_child_checklist_completed_by_member
-        FOREIGN KEY (completed_by_member_id) REFERENCES member (member_id),
-    CONSTRAINT ck_child_checklist_status CHECK (status IN ('PENDING', 'COMPLETED'))
+        FOREIGN KEY (checklist_item_template_id)
+            REFERENCES checklist_item_template (checklist_item_template_id)
+            ON DELETE CASCADE,
+
+    CONSTRAINT fk_child_checklist_completed_member
+        FOREIGN KEY (completed_by_member_id)
+            REFERENCES member (member_id),
+
+    CONSTRAINT ck_child_checklist_status
+        CHECK (status IN ('PENDING', 'COMPLETED')),
+
+    CONSTRAINT ck_child_checklist_completion
+        CHECK (
+            (
+                status = 'PENDING'
+                    AND completed_by_member_id IS NULL
+                    AND completed_at IS NULL
+                )
+                OR
+            (
+                status = 'COMPLETED'
+                    AND completed_by_member_id IS NOT NULL
+                    AND completed_at IS NOT NULL
+                )
+            )
+
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT ='자녀별 체크리스트 진행 상태';
+  COLLATE = utf8mb4_unicode_ci
+    COMMENT = '보호자가 관리하는 자녀별 생애주기 체크리스트 진행 상태';
 
 CREATE TABLE financial_product
 (
