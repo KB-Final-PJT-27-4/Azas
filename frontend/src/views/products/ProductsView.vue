@@ -5,16 +5,23 @@ import { ChevronRight, Heart } from 'lucide-vue-next'
 import { recommendedProducts } from '@/data/productDummyData'
 
 const favoriteProductIds = ref(new Set<string>(['kb-child-love-saving-1']))
-type ProductFilter = '전체' | '적금' | '입출금계좌'
+type ProductFilter = '전체' | '적금' | '입출금계좌' | '관심상품'
 
-const productFilters: ProductFilter[] = ['전체', '적금', '입출금계좌']
+const productFilters: ProductFilter[] = ['전체', '적금', '입출금계좌', '관심상품']
 const selectedProductFilter = ref<ProductFilter>('전체')
 
 const filteredProducts = computed(() => {
   if (selectedProductFilter.value === '전체') return recommendedProducts
+  if (selectedProductFilter.value === '관심상품') {
+    return recommendedProducts.filter((product) => favoriteProductIds.value.has(product.id))
+  }
 
   return recommendedProducts.filter((product) => product.type === selectedProductFilter.value)
 })
+
+const productSectionTitle = computed(() =>
+  selectedProductFilter.value === '관심상품' ? '관심 상품' : '추천 상품',
+)
 
 const toggleFavorite = (productId: string) => {
   const nextFavorites = new Set(favoriteProductIds.value)
@@ -45,7 +52,7 @@ const toggleFavorite = (productId: string) => {
       </header>
 
       <h2 class="mt-5 mb-0 flex items-center gap-2 text-[16px] font-extrabold">
-        <span>추천 상품</span>
+        <span>{{ productSectionTitle }}</span>
         <span
           class="rounded-full bg-[var(--color-selected-background)] px-2.5 py-1 text-[11px] font-bold text-[var(--color-selected-text)]"
         >
@@ -56,12 +63,12 @@ const toggleFavorite = (productId: string) => {
       <fieldset class="mt-3">
         <legend class="sr-only">상품 유형 필터</legend>
         <div
-          class="grid grid-cols-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1"
+          class="grid grid-cols-4 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1"
         >
           <button
             v-for="filter in productFilters"
             :key="filter"
-            class="h-10 min-w-0 rounded-[10px] px-2 text-[13px] font-bold transition-all duration-200"
+            class="flex h-10 min-w-0 items-center justify-center gap-1 rounded-[10px] px-1 text-[11px] font-bold whitespace-nowrap transition-all duration-200"
             :class="
               selectedProductFilter === filter
                 ? 'bg-[var(--color-surface)] text-[var(--color-selected-text)] shadow-[0_2px_8px_rgb(43_171_232_/_16%)]'
@@ -107,7 +114,11 @@ const toggleFavorite = (productId: string) => {
             <button
               class="absolute top-5 right-5 z-20 grid size-8 place-items-center rounded-full active:bg-[var(--color-selected-background)]"
               type="button"
-              :aria-label="`${product.name} 찜하기`"
+              :aria-label="
+                favoriteProductIds.has(product.id)
+                  ? `${product.name} 관심상품 해제`
+                  : `${product.name} 관심상품 추가`
+              "
               :aria-pressed="favoriteProductIds.has(product.id)"
               @click="toggleFavorite(product.id)"
             >
@@ -168,9 +179,19 @@ const toggleFavorite = (productId: string) => {
         class="mt-4 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-16 text-center"
         role="status"
       >
-        <p class="m-0 text-[14px] font-bold">해당 유형의 추천 상품이 없어요.</p>
+        <p class="m-0 text-[14px] font-bold">
+          {{
+            selectedProductFilter === '관심상품'
+              ? '저장한 관심 상품이 없어요.'
+              : '해당 유형의 추천 상품이 없어요.'
+          }}
+        </p>
         <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">
-          다른 상품 유형을 선택해 주세요.
+          {{
+            selectedProductFilter === '관심상품'
+              ? '상품 카드의 하트를 눌러 관심 상품을 모아보세요.'
+              : '다른 상품 유형을 선택해 주세요.'
+          }}
         </p>
       </div>
 
