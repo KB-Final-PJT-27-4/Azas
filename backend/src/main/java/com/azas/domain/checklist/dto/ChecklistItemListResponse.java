@@ -66,16 +66,32 @@ public class ChecklistItemListResponse {
     public static class Item {
 
         @JsonProperty("checklist_item_id")
-        @ApiModelProperty(value = "자녀별 체크리스트 진행 항목 ID")
         private final Long checklistItemId;
 
         @JsonProperty("checklist_item_template_id")
-        @ApiModelProperty(value = "체크리스트 템플릿 ID")
         private final Long checklistItemTemplateId;
+
+        @JsonProperty("template_key")
+        private final String templateKey;
+
+        private final String category;
 
         private final String title;
 
         private final String description;
+
+        private final String content;
+
+        @JsonProperty("action_type")
+        private final String actionType;
+
+        private final String url;
+
+        @JsonProperty("info_title")
+        private final String infoTitle;
+
+        @JsonProperty("info_notice")
+        private final String infoNotice;
 
         private final String status;
 
@@ -84,15 +100,61 @@ public class ChecklistItemListResponse {
         @JsonProperty("completed_at")
         private final LocalDateTime completedAt;
 
+        @JsonProperty("info_items")
+        private final List<InfoItem> infoItems;
+
         private static Item from(ChecklistItemResult result) {
             return new Item(
                     result.getChecklistItemId(),
                     result.getChecklistItemTemplateId(),
+                    result.getTemplateKey(),
+                    result.getCategory(),
                     result.getTitle(),
                     result.getDescription(),
+                    result.getContent(),
+                    result.getActionType(),
+                    result.getUrl(),
+                    result.getInfoTitle(),
+                    result.getInfoNotice(),
                     result.getStatus().name(),
                     result.isCompleted(),
-                    result.getCompletedAt()
+                    result.getCompletedAt(),
+                    result.getInfoItems()
+                            .stream()
+                            .map(InfoItem::from)
+                            .toList()
+            );
+        }
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    public static class InfoItem {
+
+        @JsonProperty("checklist_item_detail_id")
+        private final Long checklistItemDetailId;
+
+        private final String title;
+
+        private final String description;
+
+        @JsonProperty("action_label")
+        private final String actionLabel;
+
+        private final String url;
+
+        private final String content;
+
+        private static InfoItem from(
+                ChecklistInfoItemResult result
+        ) {
+            return new InfoItem(
+                    result.getChecklistItemDetailId(),
+                    result.getTitle(),
+                    result.getDescription(),
+                    result.getActionLabel(),
+                    result.getUrl(),
+                    result.getContent()
             );
         }
     }
