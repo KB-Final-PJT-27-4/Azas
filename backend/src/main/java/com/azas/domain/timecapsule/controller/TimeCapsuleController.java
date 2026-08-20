@@ -189,8 +189,9 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-13 타임캡슐 엔트리 삭제",
-            notes = "작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다."
+            value = "TIMECAPSULE-13 타임캡슐 엔트리 삭제",
+            notes = "작성자 본인의 공개 전 DRAFT 또는 SEALED 엔트리를 삭제합니다. "
+                    + "DB 엔트리와 미디어는 삭제 상태로 변경하고 S3 원본 객체를 제거합니다."
     )
     @DeleteMapping("/time-capsule-entries/{entry_id}")
     public ResponseEntity<Void> deleteTimeCapsuleEntry(
