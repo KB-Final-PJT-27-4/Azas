@@ -1,25 +1,22 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Check, ContactRound, FileKey2, Smartphone, X } from 'lucide-vue-next'
+import { Check, ContactRound, Smartphone, X } from 'lucide-vue-next'
 
 import babyImage from '@/assets/images/child/baby.png'
 import completePigUrl from '@/assets/images/accounts/complete-pig.png'
-import completeStarUrl from '@/assets/images/accounts/complete-star.png'
-import completeDiamondUrl from '@/assets/images/accounts/complete-diamond.png'
-import completeCircleUrl from '@/assets/images/accounts/complete-circle.png'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 
 type Child = {
   id: number
   name: string
 }
 
-const children: Child[] = [
-  { id: 1, name: '1번 아이' },
-  { id: 2, name: '2번 아이' },
-]
+const children = ref<Child[]>([])
 
 const router = useRouter()
+const { showToast } = useToast()
 const selectedChildId = ref<number | null>(null)
 const step = ref<1 | 2 | 3>(1)
 const selectedAuthMethod = ref<'kakao' | 'sms' | null>(null)
@@ -35,9 +32,10 @@ const authSheetTouchStartY = ref<number | null>(null)
 const authSheetDragOffset = ref(0)
 const isAuthSheetDragging = ref(false)
 let timerId: ReturnType<typeof setInterval> | null = null
+const verificationId = ref<number | null>(null)
 
 const selectedChildName = computed(
-  () => children.find(({ id }) => id === selectedChildId.value)?.name ?? '아이',
+  () => children.value.find(({ id }) => id === selectedChildId.value)?.name ?? '아이',
 )
 const normalizedPhoneNumber = computed(() => phoneNumber.value.replace(/\D/g, ''))
 const canRequestVerificationCode = computed(() => /^01\d{9}$/.test(normalizedPhoneNumber.value))
@@ -123,37 +121,42 @@ const updatePhoneNumber = (event: Event) => {
   remainingSeconds.value = 180
 }
 
-const requestVerificationCode = () => {
+const requestVerificationCode = async () => {
   if (!canRequestVerificationCode.value) return
-
-  stopVerificationTimer()
-  verificationCode.value = ''
-  isVerificationCodeSent.value = true
-  isVerificationCodeConfirmed.value = false
-  hasVerificationError.value = false
-  remainingSeconds.value = 180
-  timerId = setInterval(() => {
-    if (remainingSeconds.value <= 1) {
-      remainingSeconds.value = 0
-      stopVerificationTimer()
-      return
-    }
-    remainingSeconds.value -= 1
-  }, 1000)
+  try {
+    const { data } = await api.sendVerificationCodeUsingPOST({ phone_number: normalizedPhoneNumber.value })
+    verificationId.value = data.verification_id
+    stopVerificationTimer()
+    verificationCode.value = ''
+    isVerificationCodeSent.value = true
+    isVerificationCodeConfirmed.value = false
+    hasVerificationError.value = false
+    remainingSeconds.value = 180
+    timerId = setInterval(() => {
+      if (remainingSeconds.value <= 1) {
+        remainingSeconds.value = 0
+        stopVerificationTimer()
+        return
+      }
+      remainingSeconds.value -= 1
+    }, 1000)
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '인증번호를 보내지 못했습니다.'), 'error')
+  }
 }
 
-const confirmVerificationCode = () => {
+const confirmVerificationCode = async () => {
   if (!canConfirmVerificationCode.value) return
-
-  if (verificationCode.value !== '123456') {
+  if (!verificationId.value) return
+  try {
+    await api.confirmVerificationCodeUsingPOST(verificationId.value, { verification_code: verificationCode.value })
+    hasVerificationError.value = false
+    isVerificationCodeConfirmed.value = true
+    stopVerificationTimer()
+  } catch {
     hasVerificationError.value = true
     isVerificationCodeConfirmed.value = false
-    return
   }
-
-  hasVerificationError.value = false
-  isVerificationCodeConfirmed.value = true
-  stopVerificationTimer()
 }
 
 const updateVerificationCode = (event: Event) => {
@@ -163,17 +166,42 @@ const updateVerificationCode = (event: Event) => {
 
 const completeAuthentication = () => {
   if (selectedAuthMethod.value === null || !canCompleteAuthentication.value) return
-
-  // 실제 카카오페이/SMS 본인 인증 API는 후속 연동 시 이 위치에서 호출합니다.
+  if (selectedAuthMethod.value === 'kakao') {
+    showToast('현재 서버는 카카오페이 본인 인증 API를 제공하지 않습니다.', 'error')
+    return
+  }
   isAuthenticated.value = true
   isAuthDialogOpen.value = false
 }
 
-const continueAfterAuthentication = () => {
+const continueAfterAuthentication = async () => {
   if (!isAuthenticated.value) return
-
-  step.value = 3
+  if (!selectedChildId.value) return
+  try {
+    type ProductItem = { financial_product_id?: number; product_type?: string }
+    const { data } = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 20)
+    const product = ((data.items ?? []) as unknown as ProductItem[])[0]
+    if (!product?.financial_product_id) throw new Error('개설 가능한 입출금 상품이 없습니다.')
+    await api.openUsingPOST(undefined, {
+      child_id: selectedChildId.value,
+      financial_product_id: product.financial_product_id,
+      initial_deposit_amount: 0,
+      owner_type: 'CHILD',
+    })
+    step.value = 3
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '아이 통장을 개설하지 못했습니다.'), 'error')
+  }
 }
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getChildrenUsingGET()
+    children.value = (data.items ?? []).map((child) => ({ id: child.child_id ?? 0, name: child.name ?? '아이' }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자녀 목록을 불러오지 못했습니다.'), 'error')
+  }
+})
 
 onBeforeUnmount(stopVerificationTimer)
 </script>

@@ -1,6 +1,8 @@
 import type { OAuthProvider } from '@/api/auth'
 
 const OAUTH_STATE_PREFIX = 'azas_oauth_state_'
+const OAUTH_INVITE_PREFIX = 'azas_oauth_invite_'
+export type OAuthInvitationContext = { inviteToken: string; inviteeType: 'PARENT' | 'CHILD' }
 
 const providerConfig = {
   google: {
@@ -21,7 +23,7 @@ export const isOAuthProvider = (value: unknown): value is OAuthProvider =>
 export const getOAuthRedirectUri = (provider: OAuthProvider) =>
   `${window.location.origin}/auth/${provider}/callback`
 
-export const startOAuthLogin = (provider: OAuthProvider) => {
+export const startOAuthLogin = (provider: OAuthProvider, invitation?: OAuthInvitationContext) => {
   const config = providerConfig[provider]
   const clientId = config.clientId()?.trim()
 
@@ -33,6 +35,8 @@ export const startOAuthLogin = (provider: OAuthProvider) => {
 
   const state = createOAuthState()
   sessionStorage.setItem(`${OAUTH_STATE_PREFIX}${provider}`, state)
+  if (invitation) sessionStorage.setItem(`${OAUTH_INVITE_PREFIX}${provider}`, JSON.stringify(invitation))
+  else sessionStorage.removeItem(`${OAUTH_INVITE_PREFIX}${provider}`)
 
   const parameters = new URLSearchParams({
     client_id: clientId,
@@ -45,6 +49,18 @@ export const startOAuthLogin = (provider: OAuthProvider) => {
   if (provider === 'google') parameters.set('prompt', 'select_account')
 
   window.location.assign(`${config.authorizationUrl}?${parameters.toString()}`)
+}
+
+export const consumeOAuthInvitation = (provider: OAuthProvider): OAuthInvitationContext | undefined => {
+  const key = `${OAUTH_INVITE_PREFIX}${provider}`
+  const value = sessionStorage.getItem(key)
+  sessionStorage.removeItem(key)
+  if (!value) return undefined
+  try {
+    return JSON.parse(value) as OAuthInvitationContext
+  } catch {
+    return undefined
+  }
 }
 
 export const consumeOAuthState = (provider: OAuthProvider, returnedState: string | null) => {

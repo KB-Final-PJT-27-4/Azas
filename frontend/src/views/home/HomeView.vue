@@ -10,64 +10,76 @@ import homePigUrl from '@/assets/images/login/logo-pig.png'
 import goalIconUrl from '@/assets/images/home/icon-goal.png'
 import homeProductIconUrl from '@/assets/images/home/home-product.png'
 import timeCapsuleIconUrl from '@/assets/images/home/icon-time-capsule.png'
-import { useChecklistProgress } from '@/composables/useChecklistProgress'
-import { productRecommendationGoal } from '@/data/productDummyData'
-import { currentHomeMemberType, homeDataByMemberType } from '@/mocks/home'
-import { checklistItems as allChecklistItems, currentChildLifecycle } from '@/mocks/lifecycleChecklist'
+import { api, getApiErrorMessage } from '@/api'
+import { requireAuthorizationHeader, resolveCurrentChildId } from '@/api/context'
 
-const homeData = computed(() => homeDataByMemberType[currentHomeMemberType])
-const goalSlides = computed(() => homeData.value.goals ?? [])
-const currentAssetAmount = computed(() => goalSlides.value[0]?.currentAmount ?? 0)
-const { checkedItemIds, toggleChecklistItem } = useChecklistProgress()
+type HomeGoal = {
+  id: number
+  tag: string
+  currentAmount: number
+  targetAmount: number
+  progress: number
+}
+
+type HomeChecklistItem = {
+  id: number
+  title: string
+  completed: boolean
+}
+
+const childName = ref('우리 아이')
+const currentAssetAmount = ref(0)
+const currentAssetChangeAmount = ref(0)
+const goals = ref<HomeGoal[]>([])
+const goalSlides = computed(() => goals.value)
+const checklistItems = ref<HomeChecklistItem[]>([])
+const checklistCompletedCount = ref(0)
+const checklistTotalCount = ref(0)
+const checklistProgress = ref(0)
+const nearestTimeCapsuleDay = ref<number | null>(null)
+const errorMessage = ref('')
 const selectedGoalIndex = ref(0)
 const goalCarouselRef = ref<HTMLElement | null>(null)
 let goalCarouselTimer: ReturnType<typeof window.setInterval> | null = null
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
-const quickMenus = computed(() =>
-  homeData.value.quickMenus.map((menu) => {
-    if (menu.icon === 'checklist') {
-      return {
-        ...menu,
-        title: '맞춤 금융상품',
-        subtitle: '추천 받기',
-        to: '/products',
-      }
-    }
-    if (menu.icon === 'goal' && goalSlides.value.length > 0) {
-      return {
-        ...menu,
-        subtitle: `${goalSlides.value.length}개 진행 중`,
-        to: '/mypage/goals',
-      }
-    }
-    return menu
-  }),
-)
+const quickMenus = computed(() => [
+  { title: '맞춤 금융상품', subtitle: '추천 받기', icon: 'checklist', to: '/products' },
+  {
+    title: '타임캡슐',
+    subtitle: nearestTimeCapsuleDay.value === null ? '만들러가기' : `D - ${nearestTimeCapsuleDay.value}`,
+    icon: 'timeCapsule',
+    to: '/time-capsules',
+  },
+  {
+    title: '목표',
+    subtitle: goalSlides.value.length ? `${goalSlides.value.length}개 진행 중` : '설정하기',
+    icon: 'goal',
+    to: goalSlides.value.length ? '/mypage/goals' : '/goals',
+  },
+])
 
 const quickMenuIconUrls = {
   timeCapsule: timeCapsuleIconUrl,
   goal: goalIconUrl,
 }
 
-const currentChecklistItems = computed(() =>
-  allChecklistItems.filter((item) => item.stageId === currentChildLifecycle.childStatus),
-)
-const checklistItems = computed(() =>
-  currentChecklistItems.value.slice(0, 3).map((item) => ({
-    ...item,
-    completed: checkedItemIds.value.has(item.id),
-  })),
-)
-const checklistCompletedCount = computed(() =>
-  currentChecklistItems.value.filter((item) => checkedItemIds.value.has(item.id)).length,
-)
-const checklistTotalCount = computed(() => currentChecklistItems.value.length)
-const checklistProgress = computed(() =>
-  checklistTotalCount.value
-    ? Math.round((checklistCompletedCount.value / checklistTotalCount.value) * 100)
-    : 0,
-)
+const toggleChecklistItem = async (item: HomeChecklistItem) => {
+  const nextCompleted = !item.completed
+  try {
+    const authorization = requireAuthorizationHeader()
+    await api.updateChecklistItemCompletionUsingPATCH(authorization, item.id, {
+      completed: nextCompleted,
+    } as never)
+    item.completed = nextCompleted
+    checklistCompletedCount.value += nextCompleted ? 1 : -1
+    checklistProgress.value = checklistTotalCount.value
+      ? Math.round((checklistCompletedCount.value / checklistTotalCount.value) * 100)
+      : 0
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '체크리스트를 변경하지 못했어요.')
+  }
+}
 
 const selectGoal = (index: number, behavior: ScrollBehavior = 'smooth') => {
   const goalCount = goalSlides.value.length
@@ -108,10 +120,54 @@ const restartGoalCarousel = () => {
   startGoalCarousel()
 }
 
+const loadHome = async () => {
+  try {
+    errorMessage.value = ''
+    const childId = await resolveCurrentChildId()
+    const authorization = requireAuthorizationHeader()
+    const [dashboardResponse, goalsResponse, checklistResponse] = await Promise.all([
+      api.getDashboardUsingGET1(authorization, childId),
+      api.getGoalsUsingGET(childId),
+      api.getChecklistItemsUsingGET(authorization, childId),
+    ])
+    const dashboard = dashboardResponse.data
+    childName.value = dashboard.child?.name ?? '우리 아이'
+    currentAssetAmount.value = dashboard.asset_summary?.total_asset_amount ?? 0
+    currentAssetChangeAmount.value = dashboard.asset_summary?.total_asset_change_amount ?? 0
+    nearestTimeCapsuleDay.value = dashboard.quick_summary?.nearest_time_capsule?.dday ?? null
+    goals.value = goalsResponse.data.financial_goals.map((goal) => ({
+      id: goal.financial_goal_id ?? 0,
+      tag: goal.title ?? '저축 목표',
+      currentAmount: goal.current_amount ?? 0,
+      targetAmount: goal.target_amount ?? 0,
+      progress: goal.achievement_rate ?? 0,
+    }))
+
+    const checklist = checklistResponse.data
+    checklistItems.value = ((checklist.items ?? []) as unknown as Array<{
+      checklist_item_id?: number
+      title?: string
+      status?: string
+      completed?: boolean
+    }>).slice(0, 3).map((item) => ({
+      id: item.checklist_item_id ?? 0,
+      title: item.title ?? '준비 항목',
+      completed: item.completed ?? item.status === 'COMPLETED',
+    }))
+    checklistCompletedCount.value = checklist.completed_count ?? 0
+    checklistTotalCount.value = checklist.total_count ?? checklistItems.value.length
+    checklistProgress.value = checklist.progress_percent ?? 0
+    startGoalCarousel()
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '홈 정보를 불러오지 못했어요.')
+  }
+}
+
 let previousHtmlBackground = ''
 let previousBodyBackground = ''
 
 onMounted(() => {
+  void loadHome()
   startGoalCarousel()
   previousHtmlBackground = document.documentElement.style.backgroundColor
   previousBodyBackground = document.body.style.backgroundColor
@@ -139,7 +195,7 @@ onBeforeUnmount(() => {
           id="home-title"
           class="mt-1.5 mb-0 text-[20px] leading-[1.22] font-extrabold tracking-[-0.04em]"
         >
-          <span class="text-[var(--color-brand-primary)]">{{ homeData.childName }}</span
+          <span class="text-[var(--color-brand-primary)]">{{ childName }}</span
           >의 미래를<br />함께 준비해요
         </h1>
       </div>
@@ -163,7 +219,7 @@ onBeforeUnmount(() => {
           </strong>
           <p class="mt-3 mb-0 text-[11px] text-[var(--color-text-secondary)]">
             지난달보다
-            <strong class="text-[var(--color-selected-text)]">+350,000원</strong>
+            <strong class="text-[var(--color-selected-text)]">{{ formatCurrency(currentAssetChangeAmount) }}</strong>
           </p>
         </RouterLink>
 
@@ -220,12 +276,12 @@ onBeforeUnmount(() => {
             v-for="goal in goalSlides"
             :key="goal.id"
             class="home-goal-row"
-            :to="homeData.goalCtaTo"
+            :to="{ name: 'MypageGoals' }"
           >
             <span class="grid size-10 shrink-0 place-items-center rounded-full bg-[#eaf8ff]">
               <img
                 class="size-7 object-contain"
-                :src="productRecommendationGoal.icon"
+                :src="goalIconUrl"
                 alt=""
                 aria-hidden="true"
               />
@@ -267,7 +323,7 @@ onBeforeUnmount(() => {
       <RouterLink
         v-else
         class="flex min-h-[78px] items-center justify-between gap-3 border-t border-[#e4edf2] bg-white px-5 py-3 !text-[var(--color-text-primary)]"
-        :to="homeData.goalCtaTo"
+        :to="{ name: 'Goals' }"
       >
         <span>
           <strong class="block text-sm">첫 저축 목표를 만들어보세요</strong>

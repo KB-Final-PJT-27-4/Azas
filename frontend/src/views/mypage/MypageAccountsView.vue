@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { EllipsisVertical } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 
 interface ManagedAccount {
   id: number
@@ -16,40 +18,21 @@ interface ManagedAccount {
 }
 
 const router = useRouter()
+const { showToast } = useToast()
 const openMenuId = ref<number | null>(null)
-const accounts = ref<ManagedAccount[]>([
-  {
-    id: 1,
-    bank: 'KB국민은행',
-    bankMark: 'KB',
-    bankColor: '#FBC629',
-    name: '김하나 통장',
-    accountNumber: '123-****-**789',
-    owner: '김하나',
-    balance: 650_000_000,
-    isPrimary: true,
-  },
-  {
-    id: 2,
-    bank: '신한은행',
-    bankMark: '신한',
-    bankColor: '#3B8DD4',
-    name: '신한트래블SOL 김하나 통장',
-    accountNumber: '110-***-**3456',
-    owner: '김하나',
-    balance: 650_000_000,
-    isPrimary: false,
-  },
-])
+const accounts = ref<ManagedAccount[]>([])
 
 const formatAmount = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
-const setPrimaryAccount = (accountId: number) => {
-  accounts.value = accounts.value.map((account) => ({
-    ...account,
-    isPrimary: account.id === accountId,
-  }))
-  openMenuId.value = null
+const setPrimaryAccount = async (accountId: number) => {
+  try {
+    await api.setPrimaryAccountUsingPATCH(accountId)
+    accounts.value = accounts.value.map((account) => ({ ...account, isPrimary: account.id === accountId }))
+    openMenuId.value = null
+    showToast('대표 계좌를 변경했습니다.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '대표 계좌를 변경하지 못했습니다.'), 'error')
+  }
 }
 
 const toggleAccountMenu = (accountId: number) => {
@@ -60,20 +43,42 @@ const editAccount = () => {
   openMenuId.value = null
 }
 
-const deleteAccount = (accountId: number) => {
-  const deletedAccount = accounts.value.find((account) => account.id === accountId)
-  accounts.value = accounts.value.filter((account) => account.id !== accountId)
-
-  if (deletedAccount?.isPrimary && accounts.value.length > 0) {
-    accounts.value[0]!.isPrimary = true
+const deleteAccount = async (accountId: number) => {
+  try {
+    await api.unlinkAccountUsingDELETE(accountId)
+    const deletedAccount = accounts.value.find((account) => account.id === accountId)
+    accounts.value = accounts.value.filter((account) => account.id !== accountId)
+    if (deletedAccount?.isPrimary && accounts.value.length > 0) accounts.value[0]!.isPrimary = true
+    openMenuId.value = null
+    showToast('계좌 연결을 해제했습니다.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌 연결을 해제하지 못했습니다.'), 'error')
   }
-
-  openMenuId.value = null
 }
 
 const addAccount = () => {
   router.push({ name: 'Accounts' })
 }
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getMyAccountsUsingGET()
+    const details = await Promise.all(data.accounts.map(({ account_id }) => api.getAccountDetailUsingGET(account_id)))
+    accounts.value = details.map(({ data: account }, index) => ({
+      id: account.account_id,
+      bank: account.bank_name,
+      bankMark: account.bank_name.slice(0, 2),
+      bankColor: '#FBC629',
+      name: account.account_name,
+      accountNumber: account.account_number,
+      owner: account.account_holder_name,
+      balance: account.balance,
+      isPrimary: index === 0,
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌 목록을 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>

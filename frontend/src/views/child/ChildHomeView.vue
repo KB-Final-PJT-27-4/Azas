@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import childHomePigUrl from '@/assets/images/child/child-home-pig.png'
-import { childAllowanceRequests } from '@/mocks/childFinanceFlow'
-import { childAccountSummary } from '@/mocks/childHome'
+import { api, getApiErrorMessage } from '@/api'
 import { isChildQuizCompletedToday } from '@/utils/childQuizProgress'
 
-const pendingAllowanceCount = computed(
-  () => childAllowanceRequests.filter((request) => request.status === 'pending').length,
-)
+const childAccountSummary = reactive({
+  childName: '아이',
+  balance: 0,
+  monthlySpent: 0,
+  monthlyLimit: 0,
+  usageProgress: 0,
+})
+const pendingAllowanceCount = ref(0)
+const recentTransactionCount = ref(0)
+const errorMessage = ref('')
 const hasCompletedTodayQuiz = ref(isChildQuizCompletedToday())
 const showQuizCompletedModal = ref(false)
 
@@ -30,27 +36,35 @@ const quickActions = computed(() => [
   },
   {
     title: '최근 내역',
-    description: '2건 진행 중',
+    description: `${recentTransactionCount.value}건 확인`,
     to: '/child/assets',
   },
 ])
 
-const visibleMissions = [
-  {
-    id: 'mission-diary',
-    title: '용돈기입장 작성하기',
-    description: '이번 주 용돈기입장 쓰기',
-    reward: 1_000,
-    status: 'completed',
-  },
-  {
-    id: 'mission-spending-plan',
-    title: '소비 계획 지키기',
-    description: '이번 주 계획한 소비 지키기',
-    reward: 2_000,
-    status: 'progress',
-  },
-]
+const visibleMissions = ref<Array<{ id: number; title: string; description: string; reward: number; status: string }>>([])
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getDashboardUsingGET()
+    const spending = data.spending_summary
+    childAccountSummary.childName = data.child?.name ?? '아이'
+    childAccountSummary.balance = spending?.display_available_amount ?? 0
+    childAccountSummary.monthlySpent = spending?.current_month_spent_amount ?? 0
+    childAccountSummary.monthlyLimit = spending?.monthly_budget_amount ?? 0
+    childAccountSummary.usageProgress = spending?.usage_rate ?? 0
+    pendingAllowanceCount.value = data.activity_summary?.pending_allowance_request_count ?? 0
+    recentTransactionCount.value = data.activity_summary?.current_month_transaction_count ?? 0
+    visibleMissions.value = (data.mission_summary?.items ?? []).slice(0, 2).map((mission) => ({
+      id: mission.mission_id ?? 0,
+      title: mission.title ?? '용돈 미션',
+      description: mission.description ?? '',
+      reward: mission.reward_amount ?? 0,
+      status: mission.status === 'APPROVED' ? 'completed' : 'progress',
+    }))
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '자녀 홈 정보를 불러오지 못했습니다.')
+  }
+})
 
 const formatNumber = (amount: number) => Math.abs(amount).toLocaleString('ko-KR')
 const formatCurrency = (amount: number) => `${formatNumber(amount)}원`

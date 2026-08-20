@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch, type CSSProperties } from 'vue'
+import { computed, onMounted, ref, watch, type CSSProperties } from 'vue'
 import { Send, Wallet, X } from 'lucide-vue-next'
 
 import AssetAccountSelect from '@/components/assets/AssetAccountSelect.vue'
 import allowanceCompletePigUrl from '@/assets/images/child/child-allowance-complete-pig-v2.png'
 import transferCompletePigUrl from '@/assets/images/child/child-transfer-complete-pig-v2.png'
-import { childAccountSummary, recordChildTransfer, transferDefaults } from '@/mocks/childHome'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 type SheetMode = 'menu' | 'transfer' | 'allowance' | 'transferDone' | 'allowanceDone'
 
@@ -16,11 +18,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+const { showToast } = useToast()
 
 const mode = ref<SheetMode>('menu')
-const firstContact = transferDefaults.contacts[0]!
-const sourceAccountId = ref('child-main')
-const selectedContactId = ref(firstContact.id)
+const sourceAccountId = ref('')
+const selectedContactId = ref('')
 const transferAmount = ref('0')
 const transferMessage = ref('')
 const allowanceAmount = ref('0')
@@ -32,30 +34,15 @@ const maxMoneyDigits = 8
 const maxReasonLength = 200
 const maxTransferMemoLength = 50
 
-const sourceAccounts = computed(() => [
-  {
-    id: 'child-main',
-    name: childAccountSummary.accountName,
-    number: '952-17362605-47',
-    balance: transferDefaults.balance,
-  },
-])
-const targetAccounts = computed(() =>
-  transferDefaults.contacts.map((contact) => ({
-    id: contact.id,
-    name: `${contact.name} ${contact.bankName}`,
-    number: contact.accountNumber,
-  })),
-)
-const selectedContact = computed(
-  () => transferDefaults.contacts.find((contact) => contact.id === selectedContactId.value) ?? firstContact,
-)
+const allAccounts = ref<Array<{ id: string; name: string; number: string; balance: number }>>([])
+const sourceAccounts = computed(() => allAccounts.value)
+const targetAccounts = computed(() => allAccounts.value.filter((account) => account.id !== sourceAccountId.value))
 const transferAmountValue = computed(() => Number(transferAmount.value.replace(/\D/g, '')) || 0)
 const canSubmitTransfer = computed(
   () =>
     Boolean(selectedContactId.value) &&
     transferAmountValue.value > 0 &&
-    transferAmountValue.value <= transferDefaults.balance,
+    transferAmountValue.value <= (sourceAccounts.value.find(({ id }) => id === sourceAccountId.value)?.balance ?? 0),
 )
 
 const allowanceAmountValue = computed(() => Number(allowanceAmount.value.replace(/\D/g, '')) || 0)
@@ -97,8 +84,8 @@ const showAllowance = () => {
 
 const resetSheet = () => {
   mode.value = 'menu'
-  sourceAccountId.value = 'child-main'
-  selectedContactId.value = firstContact.id
+  sourceAccountId.value = allAccounts.value[0]?.id ?? ''
+  selectedContactId.value = targetAccounts.value[0]?.id ?? ''
   transferAmount.value = '0'
   transferMessage.value = ''
   allowanceAmount.value = '0'
@@ -137,14 +124,19 @@ const clearTransferAmount = () => {
   transferAmount.value = '0'
 }
 
-const submitTransfer = () => {
+const submitTransfer = async () => {
   if (!canSubmitTransfer.value) return
-
-  recordChildTransfer({
-    amount: transferAmountValue.value,
-    receiverName: selectedContact.value.bankName,
-  })
-  mode.value = 'transferDone'
+  try {
+    await api.createTransferUsingPOST(crypto.randomUUID(), {
+      source_account_id: Number(sourceAccountId.value),
+      destination_account_id: Number(selectedContactId.value),
+      amount: transferAmountValue.value,
+      memo: transferMessage.value.trim() || undefined,
+    })
+    mode.value = 'transferDone'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '이체하지 못했습니다.'), 'error')
+  }
 }
 
 const updateAllowanceAmount = (event: Event) => {
@@ -210,11 +202,37 @@ const endHandleDrag = (event: PointerEvent) => {
   dragOffset.value = 0
 }
 
-const submitAllowance = () => {
+const submitAllowance = async () => {
   if (!canSubmitAllowance.value) return
-
-  mode.value = 'allowanceDone'
+  try {
+    await api.createAllowanceRequestUsingPOST({
+      requested_amount: allowanceAmountValue.value,
+      message: reason.value.trim(),
+    })
+    mode.value = 'allowanceDone'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '용돈 요청을 보내지 못했습니다.'), 'error')
+  }
 }
+
+const loadAccounts = async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const { data } = await api.getChildAccountsUsingGET(childId)
+    allAccounts.value = data.accounts.map((account) => ({
+      id: String(account.account_id),
+      name: account.account_name,
+      number: account.account_number,
+      balance: account.balance,
+    }))
+    sourceAccountId.value = allAccounts.value[0]?.id ?? ''
+    selectedContactId.value = targetAccounts.value[0]?.id ?? ''
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌를 불러오지 못했습니다.'), 'error')
+  }
+}
+
+onMounted(loadAccounts)
 
 watch(
   () => props.open,

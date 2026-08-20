@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { CheckCircle2, ChevronRight, Landmark, LockKeyhole, Plus, Smartphone } from 'lucide-vue-next'
+import { CheckCircle2, ChevronRight, Landmark, Plus, Smartphone } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
 
 defineEmits<{
   import: []
@@ -14,6 +15,7 @@ const verificationCode = ref('')
 const isCodeSent = ref(false)
 const isPhoneVerified = ref(false)
 const verificationError = ref('')
+const verificationId = ref<number | null>(null)
 const canVerify = computed(() => verificationCode.value.length === 6)
 
 const formatPhone = (event: Event) => {
@@ -30,24 +32,39 @@ const formatPhone = (event: Event) => {
   isPhoneVerified.value = false
 }
 
-const sendVerificationCode = () => {
+const sendVerificationCode = async () => {
   if (!/^010-\d{4}-\d{4}$/.test(phone.value)) {
     showToast('휴대폰 번호를 정확히 입력해 주세요.', 'error')
     return
   }
-  isCodeSent.value = true
-  verificationError.value = ''
-  showToast('인증번호를 전송했습니다.', 'info')
+  try {
+    const { data } = await api.sendVerificationCodeUsingPOST({
+      phone_number: phone.value.replace(/-/g, ''),
+    })
+    verificationId.value = data.verification_id
+    isCodeSent.value = true
+    verificationError.value = ''
+    showToast('인증번호를 전송했습니다.', 'info')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '인증번호를 전송하지 못했어요.'), 'error')
+  }
 }
 
-const verifyPhone = () => {
-  if (verificationCode.value !== '123456') {
-    verificationError.value = '인증번호가 일치하지 않습니다.'
+const verifyPhone = async () => {
+  if (!verificationId.value) {
+    verificationError.value = '인증번호를 먼저 전송해 주세요.'
     return
   }
-  isPhoneVerified.value = true
-  verificationError.value = ''
-  showToast('휴대폰 인증이 완료되었습니다.', 'success', 2200, 'slightly-above')
+  try {
+    await api.confirmVerificationCodeUsingPOST(verificationId.value, {
+      verification_code: verificationCode.value,
+    })
+    isPhoneVerified.value = true
+    verificationError.value = ''
+    showToast('휴대폰 인증이 완료되었습니다.', 'success', 2200, 'slightly-above')
+  } catch (error) {
+    verificationError.value = getApiErrorMessage(error, '인증번호가 일치하지 않습니다.')
+  }
 }
 </script>
 

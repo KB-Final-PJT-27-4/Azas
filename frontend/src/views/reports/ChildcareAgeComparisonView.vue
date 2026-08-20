@@ -1,20 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-import {
-  childcareCategories,
-  childcareReportSummary,
-  formatReportManwon,
-  formatReportWon,
-} from '@/data/childcareReportData'
+import { formatReportManwon, formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const maxAmount = Math.max(
-  ...childcareCategories.flatMap(({ amount, averageAmount }) => [amount, averageAmount]),
-)
-const difference =
-  childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount
+const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
+
+const maxAmount = computed(() => Math.max(...childcareCategories.flatMap(({ amount, averageAmount }) => [amount, averageAmount]), 1))
+const difference = computed(() => childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount)
 const selectedCategoryId = ref(childcareCategories[0]?.id ?? '')
-const barHeight = (amount: number) => `${Math.max((amount / maxAmount) * 74, 5)}%`
+const barHeight = (amount: number) => `${Math.max((amount / maxAmount.value) * 74, 5)}%`
+onMounted(load)
 </script>
 
 <template>

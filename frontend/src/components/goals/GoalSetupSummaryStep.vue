@@ -16,7 +16,7 @@ type GoalPlan = {
   targetDate: string
 }
 
-const props = defineProps<{
+defineProps<{
   plans: GoalPlan[]
   linkedSavings: Record<string, string[]>
 }>()
