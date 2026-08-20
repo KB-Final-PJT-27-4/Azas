@@ -10,10 +10,7 @@ import childQuizThinkingPigUrl from '@/assets/images/child/child-quiz-thinking-p
 import childQuizWrongPigUrl from '@/assets/images/child/child-quiz-wrong-pig.png'
 import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-pig.png'
 import { childQuizQuestions } from '@/mocks/childFinanceFlow'
-import {
-  isChildQuizCompletedToday,
-  markChildQuizCompletedToday,
-} from '@/utils/childQuizProgress'
+import { markChildQuizCompletedToday } from '@/utils/childQuizProgress'
 
 const QUIZ_ROUND_SIZE = 5
 
@@ -51,7 +48,6 @@ const quizQuestions = ref(createQuizRound())
 const quizIndex = ref(0)
 const selectedAnswerIndex = ref<number | null>(null)
 const isQuizComplete = ref(false)
-const showAlreadyCompletedModal = ref(isChildQuizCompletedToday())
 const answerResults = ref<Array<'correct' | 'wrong' | null>>(
   Array.from({ length: quizQuestions.value.length }, () => null),
 )
@@ -263,36 +259,6 @@ const getStepClass = (stepIndex: number) => {
       </button>
     </section>
 
-    <Transition name="quiz-modal">
-      <div
-        v-if="showAlreadyCompletedModal"
-        class="fixed inset-0 z-[60] grid place-items-center bg-black/35 px-6"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="child-quiz-completed-modal-title"
-      >
-        <section
-          class="w-full max-w-[320px] rounded-[22px] bg-white px-6 py-7 text-center shadow-[0_18px_48px_rgba(22,45,61,0.18)]"
-        >
-          <h2
-            id="child-quiz-completed-modal-title"
-            class="m-0 text-[21px] font-extrabold text-[var(--color-text-primary)]"
-          >
-            오늘의 퀴즈를 다 풀었어요
-          </h2>
-          <p class="mt-3 mb-6 text-[15px] leading-[1.6] text-[var(--color-text-secondary)]">
-            내일 다시 새로운 금융 퀴즈를 풀 수 있어요.
-          </p>
-          <RouterLink
-            class="grid h-12 place-items-center rounded-[14px] bg-[var(--color-brand-primary)] text-[16px] font-bold !text-white no-underline"
-            to="/child/home"
-          >
-            확인
-          </RouterLink>
-        </section>
-      </div>
-    </Transition>
-
     <ChildBottomNavigation />
   </main>
 </template>
@@ -487,29 +453,6 @@ const getStepClass = (stepIndex: number) => {
 .quiz-feedback-leave-to {
   opacity: 0;
   transform: translateY(8px);
-}
-
-.quiz-modal-enter-active,
-.quiz-modal-leave-active {
-  transition: opacity 180ms ease;
-}
-
-.quiz-modal-enter-active > section,
-.quiz-modal-leave-active > section {
-  transition:
-    opacity 180ms ease,
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.quiz-modal-enter-from,
-.quiz-modal-leave-to {
-  opacity: 0;
-}
-
-.quiz-modal-enter-from > section,
-.quiz-modal-leave-to > section {
-  opacity: 0;
-  transform: translateY(12px) scale(0.96);
 }
 
 @keyframes quiz-step-pop {
