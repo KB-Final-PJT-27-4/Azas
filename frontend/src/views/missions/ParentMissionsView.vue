@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Baby, Plus } from 'lucide-vue-next'
 
 import { BaseBottomSheet } from '@/components/feedback'
 import { useToast } from '@/composables/useToast'
 import missionPigUrl from '@/assets/images/home/mission-pig.png'
-import { childMissions } from '@/mocks/childFinanceFlow'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+
+type MissionStatus = 'progress' | 'review' | 'completed' | 'canceled'
+type Mission = { id: number; title: string; description: string; reward: number; status: MissionStatus }
+const childMissions = ref<Mission[]>([])
+const childId = ref<number | null>(null)
+const rewardSourceAccountId = ref<number | undefined>()
+const rewardDestinationAccountId = ref<number | undefined>()
 
 type MissionFilter = 'all' | 'progress' | 'review' | 'completed' | 'canceled'
 
@@ -23,14 +31,14 @@ const missionTitle = ref('')
 const missionDescription = ref('')
 const missionReward = ref<number | null>(null)
 const pendingMissionAction = ref<{
-  missionId: string
+  missionId: number
   reason: 'reject' | 'cancel'
 } | null>(null)
 const { showToast } = useToast()
 
 const statusOrder = { review: 0, progress: 1, completed: 2, canceled: 3 }
 const missions = computed(() =>
-  [...childMissions]
+  [...childMissions.value]
     .filter((mission) => selectedFilter.value === 'all' || mission.status === selectedFilter.value)
     .sort(
       (current, next) =>
@@ -40,17 +48,17 @@ const missions = computed(() =>
 )
 
 const progressCount = computed(
-  () => childMissions.filter((mission) => mission.status === 'progress').length,
+  () => childMissions.value.filter((mission) => mission.status === 'progress').length,
 )
 const reviewCount = computed(
-  () => childMissions.filter((mission) => mission.status === 'review').length,
+  () => childMissions.value.filter((mission) => mission.status === 'review').length,
 )
 const completedCount = computed(
-  () => childMissions.filter((mission) => mission.status === 'completed').length,
+  () => childMissions.value.filter((mission) => mission.status === 'completed').length,
 )
 const pendingMission = computed(() =>
   pendingMissionAction.value
-    ? childMissions.find((mission) => mission.id === pendingMissionAction.value?.missionId)
+    ? childMissions.value.find((mission) => mission.id === pendingMissionAction.value?.missionId)
     : undefined,
 )
 const missionActionTitle = computed(() =>
@@ -92,15 +100,24 @@ const statusMeta = {
 const getStatusMeta = (status: string) =>
   statusMeta[status as keyof typeof statusMeta] ?? statusMeta.progress
 
-const approveMission = (missionId: string) => {
-  const mission = childMissions.find((item) => item.id === missionId)
+const approveMission = async (missionId: number) => {
+  const mission = childMissions.value.find((item) => item.id === missionId)
   if (!mission) return
-  mission.status = 'completed'
-  showToast(`${mission.title} 미션을 확인하고 보상했어요.`, 'success')
+  try {
+    await api.updateMissionStatusUsingPATCH(missionId, {
+      action: 'APPROVE',
+      source_account_id: rewardSourceAccountId.value,
+      destination_account_id: rewardDestinationAccountId.value,
+    })
+    mission.status = 'completed'
+    showToast(`${mission.title} 미션을 확인하고 보상했어요.`, 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '미션을 승인하지 못했습니다.'), 'error')
+  }
 }
 
-const requestMissionCancellation = (missionId: string, reason: 'reject' | 'cancel') => {
-  const mission = childMissions.find((item) => item.id === missionId)
+const requestMissionCancellation = (missionId: number, reason: 'reject' | 'cancel') => {
+  const mission = childMissions.value.find((item) => item.id === missionId)
   if (!mission) return
 
   pendingMissionAction.value = { missionId, reason }
@@ -110,24 +127,26 @@ const closeMissionActionSheet = () => {
   pendingMissionAction.value = null
 }
 
-const confirmMissionCancellation = () => {
+const confirmMissionCancellation = async () => {
   const action = pendingMissionAction.value
   if (!action) return
 
-  const mission = childMissions.find((item) => item.id === action.missionId)
+  const mission = childMissions.value.find((item) => item.id === action.missionId)
   if (!mission) {
     closeMissionActionSheet()
     return
   }
 
-  mission.status = 'canceled'
-  closeMissionActionSheet()
-  showToast(
-    action.reason === 'reject'
-      ? `${mission.title} 미션을 반려했어요.`
-      : `${mission.title} 미션을 취소했어요.`,
-    'success',
-  )
+  try {
+    await api.updateMissionStatusUsingPATCH(mission.id, {
+      action: action.reason === 'reject' ? 'REJECT' : 'CANCEL',
+    })
+    mission.status = 'canceled'
+    closeMissionActionSheet()
+    showToast(action.reason === 'reject' ? `${mission.title} 미션을 반려했어요.` : `${mission.title} 미션을 취소했어요.`, 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '미션 상태를 변경하지 못했습니다.'), 'error')
+  }
 }
 
 const resetCreateForm = () => {
@@ -141,7 +160,7 @@ const closeCreateSheet = () => {
   resetCreateForm()
 }
 
-const createMission = () => {
+const createMission = async () => {
   const title = missionTitle.value.trim()
   const description = missionDescription.value.trim()
   const reward = Number(missionReward.value)
@@ -151,17 +170,49 @@ const createMission = () => {
     return
   }
 
-  childMissions.unshift({
-    id: `mission-${Date.now()}`,
-    title,
-    description,
-    reward,
-    status: 'progress',
-  })
-  closeCreateSheet()
-  selectedFilter.value = 'all'
-  showToast('깨비에게 새로운 용돈 미션을 보냈어요.', 'success')
+  if (!childId.value) return
+  try {
+    const { data } = await api.createMissionUsingPOST(childId.value, {
+      title,
+      description,
+      reward_amount: reward,
+    })
+    childMissions.value.unshift({
+      id: data.mission_id ?? 0,
+      title: data.title ?? title,
+      description: data.description ?? description,
+      reward: data.reward_amount ?? reward,
+      status: 'progress',
+    })
+    closeCreateSheet()
+    selectedFilter.value = 'all'
+    showToast('깨비에게 새로운 용돈 미션을 보냈어요.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '미션을 만들지 못했습니다.'), 'error')
+  }
 }
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const [{ data }, { data: parentAccounts }, { data: childAccounts }] = await Promise.all([
+      api.getMissionsUsingGET(childId.value),
+      api.getMyAccountsUsingGET(),
+      api.getChildAccountsUsingGET(childId.value),
+    ])
+    rewardSourceAccountId.value = parentAccounts.accounts[0]?.account_id
+    rewardDestinationAccountId.value = childAccounts.accounts[0]?.account_id
+    childMissions.value = (data.items ?? []).map((mission) => ({
+      id: mission.mission_id ?? 0,
+      title: mission.title ?? '용돈 미션',
+      description: mission.description ?? '',
+      reward: mission.reward_amount ?? 0,
+      status: mission.status === 'APPROVED' ? 'completed' : mission.status === 'SUBMITTED' ? 'review' : mission.status === 'CANCELED' || mission.status === 'REJECTED' ? 'canceled' : 'progress',
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '미션을 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>

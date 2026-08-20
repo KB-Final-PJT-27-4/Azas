@@ -1,12 +1,17 @@
 ﻿<script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { CheckSquare } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
-import { childMissions } from '@/mocks/childFinanceFlow'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+
+type ChildMission = { id: number; title: string; description: string; reward: number; status: 'progress' | 'review' | 'completed' }
+const childMissions = ref<ChildMission[]>([])
+const errorMessage = ref('')
 
 const missions = computed(() =>
-  [...childMissions].sort((current, next) => {
+  [...childMissions.value].sort((current, next) => {
     const order = { review: 0, progress: 1, completed: 2 }
     return (
       (order[current.status as keyof typeof order] ?? 1) -
@@ -14,6 +19,22 @@ const missions = computed(() =>
     )
   }),
 )
+
+onMounted(async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const { data } = await api.getMissionsUsingGET(childId)
+    childMissions.value = (data.items ?? []).map((mission) => ({
+      id: mission.mission_id ?? 0,
+      title: mission.title ?? '용돈 미션',
+      description: mission.description ?? '',
+      reward: mission.reward_amount ?? 0,
+      status: mission.status === 'APPROVED' ? 'completed' : mission.status === 'SUBMITTED' ? 'review' : 'progress',
+    }))
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '미션을 불러오지 못했습니다.')
+  }
+})
 
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const getStatusLabel = (status: string) => {

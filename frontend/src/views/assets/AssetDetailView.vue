@@ -1,23 +1,39 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ChevronRight, EllipsisVertical, Landmark, Trash2, X } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import AssetTransferResultSheet from '@/components/assets/AssetTransferResultSheet.vue'
 import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
+import type { AssetAccountSelectOption } from '@/components/assets/AssetAccountSelect.vue'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
-import {
-  getLinkedAssetAccount,
-  getLinkedAssetTransfers,
-  removeLinkedAssetAccount,
-} from '@/data/assetDummyData'
 
 const route = useRoute()
 const router = useRouter()
 const { showToast } = useToast()
-const account = computed(() => getLinkedAssetAccount(String(route.params.assetId ?? '')))
-const isParentAccount = computed(() => account.value.id.startsWith('parent-'))
-const recentTransfers = computed(() => getLinkedAssetTransfers(account.value.id))
+const accountId = computed(() => Number(route.params.assetId))
+const account = ref({
+  id: 0,
+  name: '',
+  accountNumber: '',
+  bankName: '',
+  ownerName: '',
+  type: '입출금' as '적금' | '입출금',
+  balance: 0,
+  ownerType: 'PARENT',
+})
+const isParentAccount = computed(() => account.value.ownerType === 'PARENT')
+const recentTransfers = ref<Array<{
+  id: string
+  transactionId: number
+  transactedAt: string
+  counterparty: string
+  amount: number
+  direction: '입금' | '출금'
+}>>([])
+const transferAccounts = ref<AssetAccountSelectOption[]>([])
 const isTransferSheetOpen = ref(false)
 const transferResult = ref<'success' | 'failure' | null>(null)
 const isDeleteDialogOpen = ref(false)
@@ -48,9 +64,26 @@ onBeforeUnmount(() => {
 
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
-const completeTransfer = ({ success }: { success: boolean }) => {
-  isTransferSheetOpen.value = false
-  transferResult.value = success ? 'success' : 'failure'
+const completeTransfer = async ({ amount, memo, sourceAccountId, targetAccountId }: {
+  amount: number
+  memo: string
+  sourceAccountId: string
+  targetAccountId: string
+}) => {
+  try {
+    await api.createTransferUsingPOST(crypto.randomUUID(), {
+      amount,
+      destination_account_id: Number(targetAccountId),
+      memo,
+      source_account_id: Number(sourceAccountId),
+    })
+    isTransferSheetOpen.value = false
+    transferResult.value = 'success'
+    await loadAccount()
+  } catch {
+    isTransferSheetOpen.value = false
+    transferResult.value = 'failure'
+  }
 }
 
 const retryTransfer = () => {
@@ -70,11 +103,58 @@ const closeAccountMenuOnFocusOut = (event: FocusEvent) => {
 }
 
 const deleteAccount = async () => {
-  removeLinkedAssetAccount(account.value.id)
-  isDeleteDialogOpen.value = false
-  await router.replace({ name: route.query.from === 'goals' ? 'MypageGoals' : 'Assets' })
-  showToast('계좌를 삭제했어요.', 'success')
+  try {
+    await api.unlinkAccountUsingDELETE(accountId.value)
+    isDeleteDialogOpen.value = false
+    await router.replace({ name: route.query.from === 'goals' ? 'MypageGoals' : 'Assets' })
+    showToast('계좌를 삭제했어요.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌를 삭제하지 못했어요.'), 'error')
+  }
 }
+
+const loadAccount = async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const [detailResponse, transactionsResponse, parentResponse, childResponse] = await Promise.all([
+      api.getAccountDetailUsingGET(accountId.value),
+      api.getTransactionsUsingGET(accountId.value, undefined, undefined, 20),
+      api.getMyAccountsUsingGET(),
+      api.getChildAccountsUsingGET(childId),
+    ])
+    const detail = detailResponse.data
+    account.value = {
+      id: detail.account_id,
+      name: detail.account_name,
+      accountNumber: detail.account_number,
+      bankName: detail.bank_name,
+      ownerName: detail.account_holder_name,
+      type: detail.account_product_type === 'DEMAND_DEPOSIT' ? '입출금' : '적금',
+      balance: detail.balance,
+      ownerType: detail.owner_type,
+    }
+    recentTransfers.value = transactionsResponse.data.transactions.map((transaction) => ({
+      id: String(transaction.account_transaction_id),
+      transactionId: transaction.account_transaction_id,
+      transactedAt: new Date(transaction.occurred_at).toLocaleString('ko-KR'),
+      counterparty: transaction.counterparty_name ?? '거래 상대',
+      amount: transaction.amount,
+      direction: transaction.direction === 'CREDIT' ? '입금' : '출금',
+    }))
+    transferAccounts.value = [
+      ...parentResponse.data.accounts.map((item) => ({
+        id: String(item.account_id), name: item.account_name, number: item.account_number, balance: item.balance,
+      })),
+      ...childResponse.data.accounts.map((item) => ({
+        id: String(item.account_id), name: item.account_name, number: item.account_number, balance: item.balance,
+      })),
+    ]
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌 상세를 불러오지 못했어요.'), 'error')
+  }
+}
+
+onMounted(loadAccount)
 </script>
 
 <template>
@@ -304,6 +384,8 @@ const deleteAccount = async () => {
       :open="isTransferSheetOpen"
       :target-account-name="account.name"
       :target-account-number="account.accountNumber"
+      :source-accounts="transferAccounts"
+      :target-accounts="transferAccounts"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"
     />

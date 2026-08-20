@@ -4,6 +4,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import reportPigGraphImage from '@/assets/images/reports/report-pig-graph.png'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 import ChildcareReportOverview from './ChildcareReportOverview.vue'
 
@@ -23,6 +26,7 @@ type GoalReport = {
 
 const route = useRoute()
 const router = useRouter()
+const { showToast } = useToast()
 const activeTab = ref<ReportTab>(route.query.tab === 'allowance' ? 'allowance' : 'assets')
 const activeGoalIndex = ref(0)
 const goalCarousel = ref<HTMLElement | null>(null)
@@ -35,37 +39,19 @@ const setReportTab = (tab: ReportTab) => {
   void router.replace({ query: tab === 'allowance' ? { tab } : {} })
 }
 
-const goalReports: GoalReport[] = [
-  {
-    id: 1,
-    name: '대학자금',
-    targetAmount: 30_000_000,
-    accounts: [
-      { id: 1, name: 'KB 아이사랑적금 1', number: '952-17362605-43', balance: 9_600_000 },
-      { id: 2, name: 'KB 아이사랑적금 2', number: '952-17362605-57', balance: 5_000_000 },
-    ],
-  },
-  {
-    id: 2,
-    name: '목돈 마련',
-    targetAmount: 20_000_000,
-    accounts: [
-      { id: 3, name: 'KB Young Youth 적금', number: '952-17362605-68', balance: 6_150_000 },
-    ],
-  },
-]
+const goalReports = ref<GoalReport[]>([])
 
 const currentAmount = (goal: GoalReport) =>
   goal.accounts.reduce((total, account) => total + account.balance, 0)
 const achievementRate = (goal: GoalReport) =>
   Math.min((currentAmount(goal) / goal.targetAmount) * 100, 100)
 const totalAssets = computed(() =>
-  goalReports.reduce((total, goal) => total + currentAmount(goal), 0),
+  goalReports.value.reduce((total, goal) => total + currentAmount(goal), 0),
 )
 const totalTarget = computed(() =>
-  goalReports.reduce((total, goal) => total + goal.targetAmount, 0),
+  goalReports.value.reduce((total, goal) => total + goal.targetAmount, 0),
 )
-const totalRate = computed(() => (totalAssets.value / totalTarget.value) * 100)
+const totalRate = computed(() => totalTarget.value ? (totalAssets.value / totalTarget.value) * 100 : 0)
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
 const animateTotalAssets = () => {
@@ -112,7 +98,7 @@ const updateActiveGoal = (event: Event) => {
   if (!carousel.clientWidth) return
   const nextIndex = Math.min(
     Math.max(Math.round(carousel.scrollLeft / carousel.clientWidth), 0),
-    goalReports.length - 1,
+    goalReports.value.length - 1,
   )
   if (activeGoalIndex.value === nextIndex) return
   activeGoalIndex.value = nextIndex
@@ -123,7 +109,25 @@ watch(activeTab, (tab) => {
   if (tab === 'assets') void nextTick(animateTotalAssets)
 })
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const now = new Date()
+    const { data } = await api.getAssetReportDetailUsingGET(childId, now.getMonth() + 1, now.getFullYear())
+    goalReports.value = (data.goal_summary ?? []).map((goal) => ({
+      id: goal.financial_goal_id ?? 0,
+      name: goal.title ?? '금융 목표',
+      targetAmount: goal.target_amount ?? 0,
+      accounts: (goal.linked_accounts ?? []).map((account) => ({
+        id: account.account_id ?? 0,
+        name: account.account_name ?? '연결 계좌',
+        number: account.account_number_masked ?? '',
+        balance: account.balance ?? 0,
+      })),
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자산 리포트를 불러오지 못했습니다.'), 'error')
+  }
   syncGoalCarouselHeight()
   if (activeTab.value === 'assets') animateTotalAssets()
 })

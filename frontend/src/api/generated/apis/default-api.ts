@@ -46,6 +46,10 @@ import type { AllowanceRequestListResponse } from '../models';
 // @ts-ignore
 import type { AllowanceRequestResponse } from '../models';
 // @ts-ignore
+import type { AssetReportDetailResponse } from '../models';
+// @ts-ignore
+import type { AssetReportListResponse } from '../models';
+// @ts-ignore
 import type { AutoTransferRetryResponse } from '../models';
 // @ts-ignore
 import type { AutoTransferScheduleDetailResponse } from '../models';
@@ -53,6 +57,12 @@ import type { AutoTransferScheduleDetailResponse } from '../models';
 import type { AutoTransferScheduleListResponse } from '../models';
 // @ts-ignore
 import type { AutoTransferScheduleResponse } from '../models';
+// @ts-ignore
+import type { ChecklistItemCompletionRequest } from '../models';
+// @ts-ignore
+import type { ChecklistItemCompletionResponse } from '../models';
+// @ts-ignore
+import type { ChecklistItemListResponse } from '../models';
 // @ts-ignore
 import type { ChildAccountListResponse } from '../models';
 // @ts-ignore
@@ -63,6 +73,8 @@ import type { ChildAccountUsagePolicyResponse } from '../models';
 import type { ChildAvailableAmountResponse } from '../models';
 // @ts-ignore
 import type { ChildCreateRequest } from '../models';
+// @ts-ignore
+import type { ChildDashboardResponse } from '../models';
 // @ts-ignore
 import type { ChildInviteOAuthRequest } from '../models';
 // @ts-ignore
@@ -76,6 +88,8 @@ import type { ChildResponse } from '../models';
 // @ts-ignore
 import type { ChildUpdateRequest } from '../models';
 // @ts-ignore
+import type { ChildcareReportDetailResponse } from '../models';
+// @ts-ignore
 import type { CompleteTimeCapsuleMediaUploadRequest } from '../models';
 // @ts-ignore
 import type { CompleteTimeCapsuleMediaUploadResponse } from '../models';
@@ -83,6 +97,8 @@ import type { CompleteTimeCapsuleMediaUploadResponse } from '../models';
 import type { CreateAllowanceRequest } from '../models';
 // @ts-ignore
 import type { CreateAutoTransferScheduleRequest } from '../models';
+// @ts-ignore
+import type { CreateMissionRequest } from '../models';
 // @ts-ignore
 import type { CreateTimeCapsuleEntryRequest } from '../models';
 // @ts-ignore
@@ -116,7 +132,13 @@ import type { FinancialGoalCreateRequest } from '../models';
 // @ts-ignore
 import type { FinancialGoalCreateResponse } from '../models';
 // @ts-ignore
+import type { FinancialGoalDetailResponse } from '../models';
+// @ts-ignore
+import type { FinancialGoalListResponse } from '../models';
+// @ts-ignore
 import type { FinancialGoalTemplateListResponse } from '../models';
+// @ts-ignore
+import type { FinancialGoalUpdateRequest } from '../models';
 // @ts-ignore
 import type { FinancialProductBookmarkListResponse } from '../models';
 // @ts-ignore
@@ -136,6 +158,12 @@ import type { MemberProfileResponse } from '../models';
 // @ts-ignore
 import type { MemberProfileUpdateRequest } from '../models';
 // @ts-ignore
+import type { MissionCreateResponse } from '../models';
+// @ts-ignore
+import type { MissionDetailResponse } from '../models';
+// @ts-ignore
+import type { MissionListResponse } from '../models';
+// @ts-ignore
 import type { NotificationListResponse } from '../models';
 // @ts-ignore
 import type { NotificationPreferenceListResponse } from '../models';
@@ -151,6 +179,8 @@ import type { OAuthLoginRequest } from '../models';
 import type { OAuthLoginResponse } from '../models';
 // @ts-ignore
 import type { ParentAccountListResponse } from '../models';
+// @ts-ignore
+import type { ParentDashboardResponse } from '../models';
 // @ts-ignore
 import type { ParentInviteOAuthRequest } from '../models';
 // @ts-ignore
@@ -191,6 +221,8 @@ import type { TransferListResponseMemberTransferListItemResponse } from '../mode
 import type { UpdateAllowanceRequestStatus } from '../models';
 // @ts-ignore
 import type { UpdateAutoTransferScheduleRequest } from '../models';
+// @ts-ignore
+import type { UpdateMissionStatusRequest } from '../models';
 // @ts-ignore
 import type { UpdateNotificationPreferencesRequest } from '../models';
 /**
@@ -570,6 +602,49 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
+         * 연결된 부모가 자녀에게 보상형 용돈 미션을 생성합니다.
+         * @summary 미션 생성
+         * @param {number} childId child_id
+         * @param {CreateMissionRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMissionUsingPOST: async (childId: number, request: CreateMissionRequest, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('createMissionUsingPOST', 'childId', childId)
+            // verify required parameter 'request' is not null or undefined
+            assertParamExists('createMissionUsingPOST', 'request', request)
+            const localVarPath = `/api/v1/children/{child_id}/missions`
+                .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 
          * @summary 자동이체 일정 등록
          * @param {CreateAutoTransferScheduleRequest} request request
@@ -756,6 +831,43 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             assertParamExists('deleteChildUsingDELETE', 'childId', childId)
             const localVarPath = `/api/v1/children/{childId}`
                 .replace('{childId}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 부모가 접근 가능한 자녀 금융 목표를 보관하고 연결된 모든 적금 계좌를 해제합니다. 계좌, 잔액, 거래, 체크포인트와 타임캡슐 데이터는 보존합니다.
+         * @summary GOAL-6 자녀 금융 목표 삭제
+         * @param {number} financialGoalId financial_goal_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteGoalUsingDELETE: async (financialGoalId: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'financialGoalId' is not null or undefined
+            assertParamExists('deleteGoalUsingDELETE', 'financialGoalId', financialGoalId)
+            const localVarPath = `/api/v1/financial-goals/{financial_goal_id}`
+                .replace('{financial_goal_id}', encodeURIComponent(String(financialGoalId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -1027,6 +1139,105 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
+         * 연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
+         * @summary 월간 자산 리포트 상세 조회
+         * @param {number} childId child_id
+         * @param {number} month month
+         * @param {number} year year
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAssetReportDetailUsingGET: async (childId: number, month: number, year: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('getAssetReportDetailUsingGET', 'childId', childId)
+            // verify required parameter 'month' is not null or undefined
+            assertParamExists('getAssetReportDetailUsingGET', 'month', month)
+            // verify required parameter 'year' is not null or undefined
+            assertParamExists('getAssetReportDetailUsingGET', 'year', year)
+            const localVarPath = `/api/v1/children/{child_id}/asset-reports/{year}/{month}`
+                .replace('{child_id}', encodeURIComponent(String(childId)))
+                .replace('{month}', encodeURIComponent(String(month)))
+                .replace('{year}', encodeURIComponent(String(year)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 연결된 부모가 자녀의 월별 자산 리포트를 최신 월순으로 조회합니다.
+         * @summary 자산 리포트 월 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {string} [cursor] cursor
+         * @param {number} [size] size
+         * @param {number} [year] year
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAssetReportsUsingGET: async (childId: number, authorization?: string, cursor?: string, size?: number, year?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('getAssetReportsUsingGET', 'childId', childId)
+            const localVarPath = `/api/v1/children/{child_id}/asset-reports`
+                .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (cursor !== undefined) {
+                localVarQueryParameter['cursor'] = cursor;
+            }
+
+            if (size !== undefined) {
+                localVarQueryParameter['size'] = size;
+            }
+
+            if (year !== undefined) {
+                localVarQueryParameter['year'] = year;
+            }
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 최근 N개월(기본 6개월, 최대 12개월)의 월별 마지막 잔액과 직전 달 대비 순변화액을 조회합니다. 월 경계는 Asia/Seoul 기준이며, 응답 시각은 UTC입니다. change_amount는 실제 저축액이 아니라 월말 잔액의 순변화액입니다. 스냅샷이 없는 월은 null로 반환하며 이전 잔액을 이월하지 않습니다. 이 API는 저장된 잔액 스냅샷만 조회하고 CODEF API를 직접 호출하지 않습니다.
          * @summary ACCOUNT-17 계좌 월별 잔액 변화 조회
          * @param {number} accountId account_id
@@ -1106,6 +1317,51 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
 
             if (size !== undefined) {
                 localVarQueryParameter['size'] = size;
+            }
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 연결된 보호자가 자녀의 생애주기별 체크리스트와 진행률을 조회합니다.
+         * @summary 생애주기 체크리스트 조회
+         * @param {string} authorization Authorization
+         * @param {number} childId 자녀 프로필 ID
+         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getChecklistItemsUsingGET: async (authorization: string, childId: number, stage?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'authorization' is not null or undefined
+            assertParamExists('getChecklistItemsUsingGET', 'authorization', authorization)
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('getChecklistItemsUsingGET', 'childId', childId)
+            const localVarPath = `/api/v1/children/{child_id}/checklist-items`
+                .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (stage !== undefined) {
+                localVarQueryParameter['stage'] = stage;
             }
 
             localVarHeaderParameter['Accept'] = '*/*';
@@ -1377,6 +1633,80 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
+         * 자녀 본인의 월간 사용 현황, 용돈 요청, 최근 거래, 미션 및 읽지 않은 알림 수를 조회합니다. 대표 입출금 계좌가 없으면 spending_summary는 null입니다.
+         * @summary 자녀 본인 홈 대시보드 조회
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getDashboardUsingGET: async (authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/v1/children/me/dashboard`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 부모용 자녀 홈 대시보드 조회
+         * @param {string} authorization Authorization
+         * @param {number} childId childId
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getDashboardUsingGET1: async (authorization: string, childId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'authorization' is not null or undefined
+            assertParamExists('getDashboardUsingGET1', 'authorization', authorization)
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('getDashboardUsingGET1', 'childId', childId)
+            const localVarPath = `/api/v1/children/{childId}/dashboard`
+                .replace('{childId}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 부모가 본인 또는 연결 자녀의 아직 연결하지 않은 Mock 계좌 후보를 조회합니다.
          * @summary ACCOUNT-2 연결 가능한 Mock 계좌 목록 조회
          * @param {string} ownerType owner_type
@@ -1468,6 +1798,82 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             // verify required parameter 'childId' is not null or undefined
             assertParamExists('getFamilyMembersUsingGET', 'childId', childId)
             const localVarPath = `/api/v1/children/{child_id}/family-members`
+                .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 부모가 접근 가능한 자녀의 단일 금융 목표와 연결 적금 계좌, 현재 금액, 남은 금액, 달성률 및 체크포인트를 조회합니다.
+         * @summary GOAL-4 자녀 금융 목표 상세 조회
+         * @param {number} financialGoalId financial_goal_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getGoalUsingGET: async (financialGoalId: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'financialGoalId' is not null or undefined
+            assertParamExists('getGoalUsingGET', 'financialGoalId', financialGoalId)
+            const localVarPath = `/api/v1/financial-goals/{financial_goal_id}`
+                .replace('{financial_goal_id}', encodeURIComponent(String(financialGoalId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 부모가 접근 가능한 자녀의 진행 중·달성 목표와 연결 적금 계좌, 현재 금액, 남은 금액 및 달성률을 조회합니다.
+         * @summary GOAL-3 자녀 금융 목표 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getGoalsUsingGET: async (childId: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('getGoalsUsingGET', 'childId', childId)
+            const localVarPath = `/api/v1/children/{child_id}/financial-goals`
                 .replace('{child_id}', encodeURIComponent(String(childId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1589,6 +1995,97 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
 
             if (transferType !== undefined) {
                 localVarQueryParameter['transfer_type'] = transferType;
+            }
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 연결된 부모 또는 해당 자녀 본인이 미션 상세 정보를 조회합니다.
+         * @summary 미션 상세 조회
+         * @param {number} missionId mission_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMissionDetailUsingGET: async (missionId: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'missionId' is not null or undefined
+            assertParamExists('getMissionDetailUsingGET', 'missionId', missionId)
+            const localVarPath = `/api/v1/missions/{mission_id}`
+                .replace('{mission_id}', encodeURIComponent(String(missionId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 연결된 부모와 해당 자녀 본인이 미션 목록을 조회합니다.
+         * @summary 미션 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {string} [cursor] cursor
+         * @param {string} [filter] filter
+         * @param {number} [size] size
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMissionsUsingGET: async (childId: number, authorization?: string, cursor?: string, filter?: string, size?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('getMissionsUsingGET', 'childId', childId)
+            const localVarPath = `/api/v1/children/{child_id}/missions`
+                .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (cursor !== undefined) {
+                localVarQueryParameter['cursor'] = cursor;
+            }
+
+            if (filter !== undefined) {
+                localVarQueryParameter['filter'] = filter;
+            }
+
+            if (size !== undefined) {
+                localVarQueryParameter['size'] = size;
             }
 
             localVarHeaderParameter['Accept'] = '*/*';
@@ -1891,6 +2388,52 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             if (size !== undefined) {
                 localVarQueryParameter['size'] = size;
             }
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 자녀 입출금계좌의 외부 출금 거래를 기준으로 최근 12개월 월별 지출과 연간 합계를 조회합니다. 자녀 계좌 사이의 내부 이체는 제외합니다.
+         * @summary 월간 양육비 리포트 상세 조회
+         * @param {number} childId child_id
+         * @param {number} month month
+         * @param {number} year year
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getReportUsingGET: async (childId: number, month: number, year: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('getReportUsingGET', 'childId', childId)
+            // verify required parameter 'month' is not null or undefined
+            assertParamExists('getReportUsingGET', 'month', month)
+            // verify required parameter 'year' is not null or undefined
+            assertParamExists('getReportUsingGET', 'year', year)
+            const localVarPath = `/api/v1/children/{child_id}/childcare-reports/{year}/{month}`
+                .replace('{child_id}', encodeURIComponent(String(childId)))
+                .replace('{month}', encodeURIComponent(String(month)))
+                .replace('{year}', encodeURIComponent(String(year)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
 
             localVarHeaderParameter['Accept'] = '*/*';
 
@@ -2958,6 +3501,51 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
         },
         /**
          * 
+         * @summary updateChecklistItemCompletion
+         * @param {string} authorization Authorization
+         * @param {number} checklistItemId checklist_item_id
+         * @param {ChecklistItemCompletionRequest} request request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateChecklistItemCompletionUsingPATCH: async (authorization: string, checklistItemId: number, request: ChecklistItemCompletionRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'authorization' is not null or undefined
+            assertParamExists('updateChecklistItemCompletionUsingPATCH', 'authorization', authorization)
+            // verify required parameter 'checklistItemId' is not null or undefined
+            assertParamExists('updateChecklistItemCompletionUsingPATCH', 'checklistItemId', checklistItemId)
+            // verify required parameter 'request' is not null or undefined
+            assertParamExists('updateChecklistItemCompletionUsingPATCH', 'request', request)
+            const localVarPath = `/api/v1/checklist-items/{checklist_item_id}/completion`
+                .replace('{checklist_item_id}', encodeURIComponent(String(checklistItemId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary updateChild
          * @param {number} childId childId
          * @param {ChildUpdateRequest} request request
@@ -2972,6 +3560,92 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             assertParamExists('updateChildUsingPATCH', 'request', request)
             const localVarPath = `/api/v1/children/{childId}`
                 .replace('{childId}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 부모가 목표 금액, 목표 달성일, 최종 연결 적금 계좌 목록을 부분 수정합니다. 목표 종류와 제목은 변경할 수 없으며 연결 적금은 한 개 이상 유지해야 합니다.
+         * @summary GOAL-5 자녀 금융 목표 수정
+         * @param {number} financialGoalId financial_goal_id
+         * @param {FinancialGoalUpdateRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateGoalUsingPATCH: async (financialGoalId: number, request: FinancialGoalUpdateRequest, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'financialGoalId' is not null or undefined
+            assertParamExists('updateGoalUsingPATCH', 'financialGoalId', financialGoalId)
+            // verify required parameter 'request' is not null or undefined
+            assertParamExists('updateGoalUsingPATCH', 'request', request)
+            const localVarPath = `/api/v1/financial-goals/{financial_goal_id}`
+                .replace('{financial_goal_id}', encodeURIComponent(String(financialGoalId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 자녀 완료 요청 및 부모의 승인·거절·취소를 처리합니다.
+         * @summary 미션 상태 변경
+         * @param {number} missionId mission_id
+         * @param {UpdateMissionStatusRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateMissionStatusUsingPATCH: async (missionId: number, request: UpdateMissionStatusRequest, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'missionId' is not null or undefined
+            assertParamExists('updateMissionStatusUsingPATCH', 'missionId', missionId)
+            // verify required parameter 'request' is not null or undefined
+            assertParamExists('updateMissionStatusUsingPATCH', 'request', request)
+            const localVarPath = `/api/v1/missions/{mission_id}`
+                .replace('{mission_id}', encodeURIComponent(String(missionId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -3338,6 +4012,21 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * 연결된 부모가 자녀에게 보상형 용돈 미션을 생성합니다.
+         * @summary 미션 생성
+         * @param {number} childId child_id
+         * @param {CreateMissionRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createMissionUsingPOST(childId: number, request: CreateMissionRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MissionCreateResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createMissionUsingPOST(childId, request, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.createMissionUsingPOST']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 
          * @summary 자동이체 일정 등록
          * @param {CreateAutoTransferScheduleRequest} request request
@@ -3409,6 +4098,20 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.deleteChildUsingDELETE(childId, authorization, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.deleteChildUsingDELETE']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 부모가 접근 가능한 자녀 금융 목표를 보관하고 연결된 모든 적금 계좌를 해제합니다. 계좌, 잔액, 거래, 체크포인트와 타임캡슐 데이터는 보존합니다.
+         * @summary GOAL-6 자녀 금융 목표 삭제
+         * @param {number} financialGoalId financial_goal_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteGoalUsingDELETE(financialGoalId: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteGoalUsingDELETE(financialGoalId, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.deleteGoalUsingDELETE']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -3500,6 +4203,39 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * 연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
+         * @summary 월간 자산 리포트 상세 조회
+         * @param {number} childId child_id
+         * @param {number} month month
+         * @param {number} year year
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getAssetReportDetailUsingGET(childId: number, month: number, year: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AssetReportDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAssetReportDetailUsingGET(childId, month, year, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getAssetReportDetailUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 연결된 부모가 자녀의 월별 자산 리포트를 최신 월순으로 조회합니다.
+         * @summary 자산 리포트 월 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {string} [cursor] cursor
+         * @param {number} [size] size
+         * @param {number} [year] year
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getAssetReportsUsingGET(childId: number, authorization?: string, cursor?: string, size?: number, year?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AssetReportListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAssetReportsUsingGET(childId, authorization, cursor, size, year, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getAssetReportsUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 최근 N개월(기본 6개월, 최대 12개월)의 월별 마지막 잔액과 직전 달 대비 순변화액을 조회합니다. 월 경계는 Asia/Seoul 기준이며, 응답 시각은 UTC입니다. change_amount는 실제 저축액이 아니라 월말 잔액의 순변화액입니다. 스냅샷이 없는 월은 null로 반환하며 이전 잔액을 이월하지 않습니다. 이 API는 저장된 잔액 스냅샷만 조회하고 CODEF API를 직접 호출하지 않습니다.
          * @summary ACCOUNT-17 계좌 월별 잔액 변화 조회
          * @param {number} accountId account_id
@@ -3529,6 +4265,21 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getBookmarksUsingGET(childId, authorization, page, productType, size, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.getBookmarksUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 연결된 보호자가 자녀의 생애주기별 체크리스트와 진행률을 조회합니다.
+         * @summary 생애주기 체크리스트 조회
+         * @param {string} authorization Authorization
+         * @param {number} childId 자녀 프로필 ID
+         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getChecklistItemsUsingGET(authorization: string, childId: number, stage?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChecklistItemListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getChecklistItemsUsingGET(authorization, childId, stage, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getChecklistItemsUsingGET']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -3620,6 +4371,33 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * 자녀 본인의 월간 사용 현황, 용돈 요청, 최근 거래, 미션 및 읽지 않은 알림 수를 조회합니다. 대표 입출금 계좌가 없으면 spending_summary는 null입니다.
+         * @summary 자녀 본인 홈 대시보드 조회
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getDashboardUsingGET(authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChildDashboardResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getDashboardUsingGET(authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getDashboardUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary 부모용 자녀 홈 대시보드 조회
+         * @param {string} authorization Authorization
+         * @param {number} childId childId
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getDashboardUsingGET1(authorization: string, childId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ParentDashboardResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getDashboardUsingGET1(authorization, childId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getDashboardUsingGET1']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 부모가 본인 또는 연결 자녀의 아직 연결하지 않은 Mock 계좌 후보를 조회합니다.
          * @summary ACCOUNT-2 연결 가능한 Mock 계좌 목록 조회
          * @param {string} ownerType owner_type
@@ -3662,6 +4440,34 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * 부모가 접근 가능한 자녀의 단일 금융 목표와 연결 적금 계좌, 현재 금액, 남은 금액, 달성률 및 체크포인트를 조회합니다.
+         * @summary GOAL-4 자녀 금융 목표 상세 조회
+         * @param {number} financialGoalId financial_goal_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getGoalUsingGET(financialGoalId: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FinancialGoalDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getGoalUsingGET(financialGoalId, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getGoalUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 부모가 접근 가능한 자녀의 진행 중·달성 목표와 연결 적금 계좌, 현재 금액, 남은 금액 및 달성률을 조회합니다.
+         * @summary GOAL-3 자녀 금융 목표 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getGoalsUsingGET(childId: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FinancialGoalListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getGoalsUsingGET(childId, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getGoalsUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 마지막 금융정보 동기화로 저장된 계좌 잔액과 기준 시각을 조회합니다. 이 API에서는 CODEF 등 외부 금융기관 API를 직접 호출하지 않습니다. 부모 명의 계좌는 금융 연결 회원 본인, 자녀 명의 계좌는 해당 자녀와 연결된 부모 또는 자녀 본인만 조회할 수 있습니다.
          * @summary ACCOUNT-16 계좌 최신 잔액 조회
          * @param {number} accountId account_id
@@ -3693,6 +4499,37 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getMemberTransfersUsingGET(authorization, childId, cursor, endDate, size, startDate, status, transferType, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.getMemberTransfersUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 연결된 부모 또는 해당 자녀 본인이 미션 상세 정보를 조회합니다.
+         * @summary 미션 상세 조회
+         * @param {number} missionId mission_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getMissionDetailUsingGET(missionId: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MissionDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getMissionDetailUsingGET(missionId, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getMissionDetailUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 연결된 부모와 해당 자녀 본인이 미션 목록을 조회합니다.
+         * @summary 미션 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {string} [cursor] cursor
+         * @param {string} [filter] filter
+         * @param {number} [size] size
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getMissionsUsingGET(childId: number, authorization?: string, cursor?: string, filter?: string, size?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MissionListResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getMissionsUsingGET(childId, authorization, cursor, filter, size, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getMissionsUsingGET']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -3797,6 +4634,22 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getProductsUsingGET(authorization, cursor, productType, size, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.getProductsUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 자녀 입출금계좌의 외부 출금 거래를 기준으로 최근 12개월 월별 지출과 연간 합계를 조회합니다. 자녀 계좌 사이의 내부 이체는 제외합니다.
+         * @summary 월간 양육비 리포트 상세 조회
+         * @param {number} childId child_id
+         * @param {number} month month
+         * @param {number} year year
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getReportUsingGET(childId: number, month: number, year: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChildcareReportDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getReportUsingGET(childId, month, year, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getReportUsingGET']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -4183,6 +5036,21 @@ export const DefaultApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary updateChecklistItemCompletion
+         * @param {string} authorization Authorization
+         * @param {number} checklistItemId checklist_item_id
+         * @param {ChecklistItemCompletionRequest} request request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateChecklistItemCompletionUsingPATCH(authorization: string, checklistItemId: number, request: ChecklistItemCompletionRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChecklistItemCompletionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateChecklistItemCompletionUsingPATCH(authorization, checklistItemId, request, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.updateChecklistItemCompletionUsingPATCH']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @summary updateChild
          * @param {number} childId childId
          * @param {ChildUpdateRequest} request request
@@ -4194,6 +5062,36 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.updateChildUsingPATCH(childId, request, authorization, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.updateChildUsingPATCH']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 부모가 목표 금액, 목표 달성일, 최종 연결 적금 계좌 목록을 부분 수정합니다. 목표 종류와 제목은 변경할 수 없으며 연결 적금은 한 개 이상 유지해야 합니다.
+         * @summary GOAL-5 자녀 금융 목표 수정
+         * @param {number} financialGoalId financial_goal_id
+         * @param {FinancialGoalUpdateRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateGoalUsingPATCH(financialGoalId: number, request: FinancialGoalUpdateRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FinancialGoalDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateGoalUsingPATCH(financialGoalId, request, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.updateGoalUsingPATCH']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 자녀 완료 요청 및 부모의 승인·거절·취소를 처리합니다.
+         * @summary 미션 상태 변경
+         * @param {number} missionId mission_id
+         * @param {UpdateMissionStatusRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateMissionStatusUsingPATCH(missionId: number, request: UpdateMissionStatusRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<MissionDetailResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateMissionStatusUsingPATCH(missionId, request, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.updateMissionStatusUsingPATCH']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -4382,6 +5280,18 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.createMediaUploadUrlUsingPOST(entryId, request, authorization, options).then((request) => request(axios, basePath));
         },
         /**
+         * 연결된 부모가 자녀에게 보상형 용돈 미션을 생성합니다.
+         * @summary 미션 생성
+         * @param {number} childId child_id
+         * @param {CreateMissionRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMissionUsingPOST(childId: number, request: CreateMissionRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<MissionCreateResponse> {
+            return localVarFp.createMissionUsingPOST(childId, request, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 
          * @summary 자동이체 일정 등록
          * @param {CreateAutoTransferScheduleRequest} request request
@@ -4439,6 +5349,17 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          */
         deleteChildUsingDELETE(childId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.deleteChildUsingDELETE(childId, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 부모가 접근 가능한 자녀 금융 목표를 보관하고 연결된 모든 적금 계좌를 해제합니다. 계좌, 잔액, 거래, 체크포인트와 타임캡슐 데이터는 보존합니다.
+         * @summary GOAL-6 자녀 금융 목표 삭제
+         * @param {number} financialGoalId financial_goal_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteGoalUsingDELETE(financialGoalId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.deleteGoalUsingDELETE(financialGoalId, authorization, options).then((request) => request(axios, basePath));
         },
         /**
          * 작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다.
@@ -4511,6 +5432,33 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.getAllowanceRequestsUsingGET(childId, authorization, cursor, size, status, options).then((request) => request(axios, basePath));
         },
         /**
+         * 연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
+         * @summary 월간 자산 리포트 상세 조회
+         * @param {number} childId child_id
+         * @param {number} month month
+         * @param {number} year year
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAssetReportDetailUsingGET(childId: number, month: number, year: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<AssetReportDetailResponse> {
+            return localVarFp.getAssetReportDetailUsingGET(childId, month, year, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 연결된 부모가 자녀의 월별 자산 리포트를 최신 월순으로 조회합니다.
+         * @summary 자산 리포트 월 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {string} [cursor] cursor
+         * @param {number} [size] size
+         * @param {number} [year] year
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAssetReportsUsingGET(childId: number, authorization?: string, cursor?: string, size?: number, year?: number, options?: RawAxiosRequestConfig): AxiosPromise<AssetReportListResponse> {
+            return localVarFp.getAssetReportsUsingGET(childId, authorization, cursor, size, year, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 최근 N개월(기본 6개월, 최대 12개월)의 월별 마지막 잔액과 직전 달 대비 순변화액을 조회합니다. 월 경계는 Asia/Seoul 기준이며, 응답 시각은 UTC입니다. change_amount는 실제 저축액이 아니라 월말 잔액의 순변화액입니다. 스냅샷이 없는 월은 null로 반환하며 이전 잔액을 이월하지 않습니다. 이 API는 저장된 잔액 스냅샷만 조회하고 CODEF API를 직접 호출하지 않습니다.
          * @summary ACCOUNT-17 계좌 월별 잔액 변화 조회
          * @param {number} accountId account_id
@@ -4535,6 +5483,18 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          */
         getBookmarksUsingGET(childId: number, authorization?: string, page?: number, productType?: string, size?: number, options?: RawAxiosRequestConfig): AxiosPromise<FinancialProductBookmarkListResponse> {
             return localVarFp.getBookmarksUsingGET(childId, authorization, page, productType, size, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 연결된 보호자가 자녀의 생애주기별 체크리스트와 진행률을 조회합니다.
+         * @summary 생애주기 체크리스트 조회
+         * @param {string} authorization Authorization
+         * @param {number} childId 자녀 프로필 ID
+         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getChecklistItemsUsingGET(authorization: string, childId: number, stage?: string, options?: RawAxiosRequestConfig): AxiosPromise<ChecklistItemListResponse> {
+            return localVarFp.getChecklistItemsUsingGET(authorization, childId, stage, options).then((request) => request(axios, basePath));
         },
         /**
          * 해당 자녀와 연결된 부모 또는 자녀 본인이 자녀 명의의 활성 Mock 계좌 목록을 조회합니다. 자녀 계좌 카드에 표시할 잔액 합계와 연결 계좌 수를 함께 반환합니다. 계좌별로 상세 이동과 화면 표시에 필요한 계좌 ID, 계좌명, 전체 계좌번호, 상품 유형, 현재 잔액만 반환합니다. 연결 계좌가 없으면 잔액 합계와 계좌 수가 0인 빈 목록을 반환합니다.
@@ -4607,6 +5567,27 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.getCurrentMonthUsageUsingGET(authorization, options).then((request) => request(axios, basePath));
         },
         /**
+         * 자녀 본인의 월간 사용 현황, 용돈 요청, 최근 거래, 미션 및 읽지 않은 알림 수를 조회합니다. 대표 입출금 계좌가 없으면 spending_summary는 null입니다.
+         * @summary 자녀 본인 홈 대시보드 조회
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getDashboardUsingGET(authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<ChildDashboardResponse> {
+            return localVarFp.getDashboardUsingGET(authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 부모용 자녀 홈 대시보드 조회
+         * @param {string} authorization Authorization
+         * @param {number} childId childId
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getDashboardUsingGET1(authorization: string, childId: number, options?: RawAxiosRequestConfig): AxiosPromise<ParentDashboardResponse> {
+            return localVarFp.getDashboardUsingGET1(authorization, childId, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 부모가 본인 또는 연결 자녀의 아직 연결하지 않은 Mock 계좌 후보를 조회합니다.
          * @summary ACCOUNT-2 연결 가능한 Mock 계좌 목록 조회
          * @param {string} ownerType owner_type
@@ -4640,6 +5621,28 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.getFamilyMembersUsingGET(childId, authorization, options).then((request) => request(axios, basePath));
         },
         /**
+         * 부모가 접근 가능한 자녀의 단일 금융 목표와 연결 적금 계좌, 현재 금액, 남은 금액, 달성률 및 체크포인트를 조회합니다.
+         * @summary GOAL-4 자녀 금융 목표 상세 조회
+         * @param {number} financialGoalId financial_goal_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getGoalUsingGET(financialGoalId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<FinancialGoalDetailResponse> {
+            return localVarFp.getGoalUsingGET(financialGoalId, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 부모가 접근 가능한 자녀의 진행 중·달성 목표와 연결 적금 계좌, 현재 금액, 남은 금액 및 달성률을 조회합니다.
+         * @summary GOAL-3 자녀 금융 목표 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getGoalsUsingGET(childId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<FinancialGoalListResponse> {
+            return localVarFp.getGoalsUsingGET(childId, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 마지막 금융정보 동기화로 저장된 계좌 잔액과 기준 시각을 조회합니다. 이 API에서는 CODEF 등 외부 금융기관 API를 직접 호출하지 않습니다. 부모 명의 계좌는 금융 연결 회원 본인, 자녀 명의 계좌는 해당 자녀와 연결된 부모 또는 자녀 본인만 조회할 수 있습니다.
          * @summary ACCOUNT-16 계좌 최신 잔액 조회
          * @param {number} accountId account_id
@@ -4666,6 +5669,31 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          */
         getMemberTransfersUsingGET(authorization?: string, childId?: number, cursor?: string, endDate?: string, size?: number, startDate?: string, status?: string, transferType?: string, options?: RawAxiosRequestConfig): AxiosPromise<TransferListResponseMemberTransferListItemResponse> {
             return localVarFp.getMemberTransfersUsingGET(authorization, childId, cursor, endDate, size, startDate, status, transferType, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 연결된 부모 또는 해당 자녀 본인이 미션 상세 정보를 조회합니다.
+         * @summary 미션 상세 조회
+         * @param {number} missionId mission_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMissionDetailUsingGET(missionId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<MissionDetailResponse> {
+            return localVarFp.getMissionDetailUsingGET(missionId, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 연결된 부모와 해당 자녀 본인이 미션 목록을 조회합니다.
+         * @summary 미션 목록 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {string} [cursor] cursor
+         * @param {string} [filter] filter
+         * @param {number} [size] size
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMissionsUsingGET(childId: number, authorization?: string, cursor?: string, filter?: string, size?: number, options?: RawAxiosRequestConfig): AxiosPromise<MissionListResponse> {
+            return localVarFp.getMissionsUsingGET(childId, authorization, cursor, filter, size, options).then((request) => request(axios, basePath));
         },
         /**
          * 로그인한 부모 본인 명의의 활성 Mock 계좌를 조회합니다. 부모 계좌 카드에 표시할 잔액 합계와 연결 계좌 수를 함께 반환합니다. 계좌별로 상세 이동과 화면 표시에 필요한 계좌 ID, 계좌명, 전체 계좌번호, 상품 유형, 현재 잔액만 반환합니다. 연결 계좌가 없으면 잔액 합계와 계좌 수가 0인 빈 목록을 반환합니다.
@@ -4749,6 +5777,19 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          */
         getProductsUsingGET(authorization?: string, cursor?: string, productType?: string, size?: number, options?: RawAxiosRequestConfig): AxiosPromise<FinancialProductListResponse> {
             return localVarFp.getProductsUsingGET(authorization, cursor, productType, size, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 자녀 입출금계좌의 외부 출금 거래를 기준으로 최근 12개월 월별 지출과 연간 합계를 조회합니다. 자녀 계좌 사이의 내부 이체는 제외합니다.
+         * @summary 월간 양육비 리포트 상세 조회
+         * @param {number} childId child_id
+         * @param {number} month month
+         * @param {number} year year
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getReportUsingGET(childId: number, month: number, year: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<ChildcareReportDetailResponse> {
+            return localVarFp.getReportUsingGET(childId, month, year, authorization, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -5053,6 +6094,18 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
         },
         /**
          * 
+         * @summary updateChecklistItemCompletion
+         * @param {string} authorization Authorization
+         * @param {number} checklistItemId checklist_item_id
+         * @param {ChecklistItemCompletionRequest} request request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateChecklistItemCompletionUsingPATCH(authorization: string, checklistItemId: number, request: ChecklistItemCompletionRequest, options?: RawAxiosRequestConfig): AxiosPromise<ChecklistItemCompletionResponse> {
+            return localVarFp.updateChecklistItemCompletionUsingPATCH(authorization, checklistItemId, request, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary updateChild
          * @param {number} childId childId
          * @param {ChildUpdateRequest} request request
@@ -5062,6 +6115,30 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          */
         updateChildUsingPATCH(childId: number, request: ChildUpdateRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<ChildResponse> {
             return localVarFp.updateChildUsingPATCH(childId, request, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 부모가 목표 금액, 목표 달성일, 최종 연결 적금 계좌 목록을 부분 수정합니다. 목표 종류와 제목은 변경할 수 없으며 연결 적금은 한 개 이상 유지해야 합니다.
+         * @summary GOAL-5 자녀 금융 목표 수정
+         * @param {number} financialGoalId financial_goal_id
+         * @param {FinancialGoalUpdateRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateGoalUsingPATCH(financialGoalId: number, request: FinancialGoalUpdateRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<FinancialGoalDetailResponse> {
+            return localVarFp.updateGoalUsingPATCH(financialGoalId, request, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 자녀 완료 요청 및 부모의 승인·거절·취소를 처리합니다.
+         * @summary 미션 상태 변경
+         * @param {number} missionId mission_id
+         * @param {UpdateMissionStatusRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateMissionStatusUsingPATCH(missionId: number, request: UpdateMissionStatusRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<MissionDetailResponse> {
+            return localVarFp.updateMissionStatusUsingPATCH(missionId, request, authorization, options).then((request) => request(axios, basePath));
         },
         /**
          * 생년월일, 프로필 이미지 URL, 인증 완료된 휴대폰 번호를 수정합니다. 휴대폰 번호는 인증번호 확인 API에서 발급받은 토큰으로 변경합니다.
@@ -5241,6 +6318,19 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
+     * 연결된 부모가 자녀에게 보상형 용돈 미션을 생성합니다.
+     * @summary 미션 생성
+     * @param {number} childId child_id
+     * @param {CreateMissionRequest} request request
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public createMissionUsingPOST(childId: number, request: CreateMissionRequest, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).createMissionUsingPOST(childId, request, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 
      * @summary 자동이체 일정 등록
      * @param {CreateAutoTransferScheduleRequest} request request
@@ -5302,6 +6392,18 @@ export class DefaultApi extends BaseAPI {
      */
     public deleteChildUsingDELETE(childId: number, authorization?: string, options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).deleteChildUsingDELETE(childId, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 부모가 접근 가능한 자녀 금융 목표를 보관하고 연결된 모든 적금 계좌를 해제합니다. 계좌, 잔액, 거래, 체크포인트와 타임캡슐 데이터는 보존합니다.
+     * @summary GOAL-6 자녀 금융 목표 삭제
+     * @param {number} financialGoalId financial_goal_id
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public deleteGoalUsingDELETE(financialGoalId: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).deleteGoalUsingDELETE(financialGoalId, authorization, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -5381,6 +6483,35 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
+     * 연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
+     * @summary 월간 자산 리포트 상세 조회
+     * @param {number} childId child_id
+     * @param {number} month month
+     * @param {number} year year
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getAssetReportDetailUsingGET(childId: number, month: number, year: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getAssetReportDetailUsingGET(childId, month, year, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 연결된 부모가 자녀의 월별 자산 리포트를 최신 월순으로 조회합니다.
+     * @summary 자산 리포트 월 목록 조회
+     * @param {number} childId child_id
+     * @param {string} [authorization] Authorization
+     * @param {string} [cursor] cursor
+     * @param {number} [size] size
+     * @param {number} [year] year
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getAssetReportsUsingGET(childId: number, authorization?: string, cursor?: string, size?: number, year?: number, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getAssetReportsUsingGET(childId, authorization, cursor, size, year, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 최근 N개월(기본 6개월, 최대 12개월)의 월별 마지막 잔액과 직전 달 대비 순변화액을 조회합니다. 월 경계는 Asia/Seoul 기준이며, 응답 시각은 UTC입니다. change_amount는 실제 저축액이 아니라 월말 잔액의 순변화액입니다. 스냅샷이 없는 월은 null로 반환하며 이전 잔액을 이월하지 않습니다. 이 API는 저장된 잔액 스냅샷만 조회하고 CODEF API를 직접 호출하지 않습니다.
      * @summary ACCOUNT-17 계좌 월별 잔액 변화 조회
      * @param {number} accountId account_id
@@ -5406,6 +6537,19 @@ export class DefaultApi extends BaseAPI {
      */
     public getBookmarksUsingGET(childId: number, authorization?: string, page?: number, productType?: string, size?: number, options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).getBookmarksUsingGET(childId, authorization, page, productType, size, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 연결된 보호자가 자녀의 생애주기별 체크리스트와 진행률을 조회합니다.
+     * @summary 생애주기 체크리스트 조회
+     * @param {string} authorization Authorization
+     * @param {number} childId 자녀 프로필 ID
+     * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getChecklistItemsUsingGET(authorization: string, childId: number, stage?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getChecklistItemsUsingGET(authorization, childId, stage, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -5485,6 +6629,29 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
+     * 자녀 본인의 월간 사용 현황, 용돈 요청, 최근 거래, 미션 및 읽지 않은 알림 수를 조회합니다. 대표 입출금 계좌가 없으면 spending_summary는 null입니다.
+     * @summary 자녀 본인 홈 대시보드 조회
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getDashboardUsingGET(authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getDashboardUsingGET(authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 부모용 자녀 홈 대시보드 조회
+     * @param {string} authorization Authorization
+     * @param {number} childId childId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getDashboardUsingGET1(authorization: string, childId: number, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getDashboardUsingGET1(authorization, childId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 부모가 본인 또는 연결 자녀의 아직 연결하지 않은 Mock 계좌 후보를 조회합니다.
      * @summary ACCOUNT-2 연결 가능한 Mock 계좌 목록 조회
      * @param {string} ownerType owner_type
@@ -5521,6 +6688,30 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
+     * 부모가 접근 가능한 자녀의 단일 금융 목표와 연결 적금 계좌, 현재 금액, 남은 금액, 달성률 및 체크포인트를 조회합니다.
+     * @summary GOAL-4 자녀 금융 목표 상세 조회
+     * @param {number} financialGoalId financial_goal_id
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getGoalUsingGET(financialGoalId: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getGoalUsingGET(financialGoalId, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 부모가 접근 가능한 자녀의 진행 중·달성 목표와 연결 적금 계좌, 현재 금액, 남은 금액 및 달성률을 조회합니다.
+     * @summary GOAL-3 자녀 금융 목표 목록 조회
+     * @param {number} childId child_id
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getGoalsUsingGET(childId: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getGoalsUsingGET(childId, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 마지막 금융정보 동기화로 저장된 계좌 잔액과 기준 시각을 조회합니다. 이 API에서는 CODEF 등 외부 금융기관 API를 직접 호출하지 않습니다. 부모 명의 계좌는 금융 연결 회원 본인, 자녀 명의 계좌는 해당 자녀와 연결된 부모 또는 자녀 본인만 조회할 수 있습니다.
      * @summary ACCOUNT-16 계좌 최신 잔액 조회
      * @param {number} accountId account_id
@@ -5548,6 +6739,33 @@ export class DefaultApi extends BaseAPI {
      */
     public getMemberTransfersUsingGET(authorization?: string, childId?: number, cursor?: string, endDate?: string, size?: number, startDate?: string, status?: string, transferType?: string, options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).getMemberTransfersUsingGET(authorization, childId, cursor, endDate, size, startDate, status, transferType, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 연결된 부모 또는 해당 자녀 본인이 미션 상세 정보를 조회합니다.
+     * @summary 미션 상세 조회
+     * @param {number} missionId mission_id
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getMissionDetailUsingGET(missionId: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getMissionDetailUsingGET(missionId, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 연결된 부모와 해당 자녀 본인이 미션 목록을 조회합니다.
+     * @summary 미션 목록 조회
+     * @param {number} childId child_id
+     * @param {string} [authorization] Authorization
+     * @param {string} [cursor] cursor
+     * @param {string} [filter] filter
+     * @param {number} [size] size
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getMissionsUsingGET(childId: number, authorization?: string, cursor?: string, filter?: string, size?: number, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getMissionsUsingGET(childId, authorization, cursor, filter, size, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -5638,6 +6856,20 @@ export class DefaultApi extends BaseAPI {
      */
     public getProductsUsingGET(authorization?: string, cursor?: string, productType?: string, size?: number, options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).getProductsUsingGET(authorization, cursor, productType, size, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 자녀 입출금계좌의 외부 출금 거래를 기준으로 최근 12개월 월별 지출과 연간 합계를 조회합니다. 자녀 계좌 사이의 내부 이체는 제외합니다.
+     * @summary 월간 양육비 리포트 상세 조회
+     * @param {number} childId child_id
+     * @param {number} month month
+     * @param {number} year year
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getReportUsingGET(childId: number, month: number, year: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getReportUsingGET(childId, month, year, authorization, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -5970,6 +7202,19 @@ export class DefaultApi extends BaseAPI {
 
     /**
      * 
+     * @summary updateChecklistItemCompletion
+     * @param {string} authorization Authorization
+     * @param {number} checklistItemId checklist_item_id
+     * @param {ChecklistItemCompletionRequest} request request
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public updateChecklistItemCompletionUsingPATCH(authorization: string, checklistItemId: number, request: ChecklistItemCompletionRequest, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).updateChecklistItemCompletionUsingPATCH(authorization, checklistItemId, request, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
      * @summary updateChild
      * @param {number} childId childId
      * @param {ChildUpdateRequest} request request
@@ -5979,6 +7224,32 @@ export class DefaultApi extends BaseAPI {
      */
     public updateChildUsingPATCH(childId: number, request: ChildUpdateRequest, authorization?: string, options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).updateChildUsingPATCH(childId, request, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 부모가 목표 금액, 목표 달성일, 최종 연결 적금 계좌 목록을 부분 수정합니다. 목표 종류와 제목은 변경할 수 없으며 연결 적금은 한 개 이상 유지해야 합니다.
+     * @summary GOAL-5 자녀 금융 목표 수정
+     * @param {number} financialGoalId financial_goal_id
+     * @param {FinancialGoalUpdateRequest} request request
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public updateGoalUsingPATCH(financialGoalId: number, request: FinancialGoalUpdateRequest, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).updateGoalUsingPATCH(financialGoalId, request, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 자녀 완료 요청 및 부모의 승인·거절·취소를 처리합니다.
+     * @summary 미션 상태 변경
+     * @param {number} missionId mission_id
+     * @param {UpdateMissionStatusRequest} request request
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public updateMissionStatusUsingPATCH(missionId: number, request: UpdateMissionStatusRequest, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).updateMissionStatusUsingPATCH(missionId, request, authorization, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

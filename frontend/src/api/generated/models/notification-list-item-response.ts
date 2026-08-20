@@ -47,6 +47,7 @@ export const NotificationListItemResponseNotificationTypeEnum = {
     GoalCheckpointReached: 'GOAL_CHECKPOINT_REACHED',
     MissionApproved: 'MISSION_APPROVED',
     MissionAssigned: 'MISSION_ASSIGNED',
+    MissionCanceled: 'MISSION_CANCELED',
     MissionRejected: 'MISSION_REJECTED',
     MissionSubmitted: 'MISSION_SUBMITTED',
     PregnancyCharacterChanged: 'PREGNANCY_CHARACTER_CHANGED',

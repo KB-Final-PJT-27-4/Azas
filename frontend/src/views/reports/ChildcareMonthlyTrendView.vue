@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import ChildcareCategoryAnalysisContent from '@/components/reports/ChildcareCategoryAnalysisContent.vue'
-import {
-  childcareReportSummary,
-  formatReportWon,
-  monthlyChildcareExpenses,
-} from '@/data/childcareReportData'
+import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
+
+const { childcareReportSummary, monthlyChildcareExpenses, load } = useChildcareReport()
 
 type Period = '6months' | 'year'
 type ChartPoint = { x: number; y: number }
@@ -58,6 +56,7 @@ const selectPeriod = (nextPeriod: Period) => {
   period.value = nextPeriod
   activePointIndex.value = null
 }
+onMounted(load)
 </script>
 
 <template>

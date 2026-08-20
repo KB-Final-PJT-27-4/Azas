@@ -20,7 +20,6 @@ export interface MediaResponse {
     'file_size'?: number;
     'media_type'?: string;
     'mime_type'?: string;
-    'slot_no'?: number;
     'time_capsule_media_id'?: number;
 }
 

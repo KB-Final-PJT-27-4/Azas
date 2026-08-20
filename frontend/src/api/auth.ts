@@ -1,36 +1,38 @@
 import axios from 'axios'
 
 import type { ApiErrorResponse, OAuthLoginMemberResponse, OAuthLoginResponse } from '@/api/generated'
-import { ACCESS_TOKEN_STORAGE_KEY, http } from '@/api/http'
+import { api } from '@/api'
+import { clearTokenPair, getRefreshToken, saveTokenPair } from '@/api/http'
 
 export type OAuthProvider = 'google' | 'kakao'
 
-const REFRESH_TOKEN_STORAGE_KEY = 'azas_refresh_token'
 const AUTH_MEMBER_STORAGE_KEY = 'azas_auth_member'
+export { getRefreshToken }
 
 export const loginWithOAuthCode = async (
   provider: OAuthProvider,
   authorizationCode: string,
   redirectUri: string,
+  invitation?: { inviteToken: string; inviteeType: 'PARENT' | 'CHILD' },
 ) => {
-  const { data } = await http.post<OAuthLoginResponse>(`/v1/auth/oauth/${provider}`, {
-    authorization_code: authorizationCode,
-    redirect_uri: redirectUri,
-  })
+  const request = { authorization_code: authorizationCode, redirect_uri: redirectUri }
+  const { data } = invitation?.inviteeType === 'CHILD'
+    ? await api.loginWithChildInviteUsingPOST(provider, { ...request, invite_token: invitation.inviteToken })
+    : invitation?.inviteeType === 'PARENT'
+      ? await api.loginWithParentInviteUsingPOST(provider, { ...request, invite_token: invitation.inviteToken })
+      : await api.loginUsingPOST(provider, request)
 
   saveAuthSession(data)
   return data
 }
 
 export const saveAuthSession = (response: OAuthLoginResponse) => {
-  sessionStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, response.access_token)
-  sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, response.refresh_token)
+  saveTokenPair(response.access_token, response.refresh_token)
   sessionStorage.setItem(AUTH_MEMBER_STORAGE_KEY, JSON.stringify(response.member))
 }
 
 export const clearAuthSession = () => {
-  sessionStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
-  sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
+  clearTokenPair()
   sessionStorage.removeItem(AUTH_MEMBER_STORAGE_KEY)
 }
 

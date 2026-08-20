@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import { Check, ChevronDown, ImagePlus, Landmark, X } from 'lucide-vue-next'
-import capsulePigImage from '@/assets/images/timeCapsules/archive/capsule-pig.png'
-import { timeCapsuleAccounts, type TimeCapsuleRecord } from '@/data/timeCapsuleDummyData'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,24 +16,14 @@ const isPageLeaving = ref(false)
 const isAccountMenuOpen = ref(false)
 const isTransferMenuOpen = ref(false)
 
-const accounts = Object.values(timeCapsuleAccounts).map((account) => ({
-  id: account.id,
-  bank: account.bankName,
-  name: account.bankName === 'KB국민은행' ? `KB ${account.name}` : account.name,
-  number: account.accountNumber,
-}))
-
-const transfers = [
-  { id: 1, date: '2026.07.21', name: '대학자금', amount: 100000 },
-  { id: 2, date: '2026.07.14', name: '생일 축하금', amount: 50000 },
-  { id: 3, date: '2026.07.01', name: '정기 저축', amount: 30000 },
-]
+const accounts = ref<Array<{ id: number; accountId: number; bank: string; name: string; number: string }>>([])
+const transfers = ref<Array<{ id: number; date: string; name: string; amount: number }>>([])
 
 const requestedAccountId = Number(route.query.account)
-const selectedAccountId = ref(accounts.some(({ id }) => id === requestedAccountId) ? requestedAccountId : 1)
-const selectedTransferId = ref(1)
-const selectedAccount = computed(() => accounts.find(({ id }) => id === selectedAccountId.value)!)
-const selectedTransfer = computed(() => transfers.find(({ id }) => id === selectedTransferId.value)!)
+const selectedAccountId = ref(requestedAccountId || 0)
+const selectedTransferId = ref(0)
+const selectedAccount = computed(() => accounts.value.find(({ id }) => id === selectedAccountId.value) ?? { id: 0, accountId: 0, bank: '', name: '계좌를 선택해주세요', number: '' })
+const selectedTransfer = computed(() => transfers.value.find(({ id }) => id === selectedTransferId.value) ?? { id: 0, date: '', name: '거래를 선택해주세요', amount: 0 })
 const title = ref('')
 const letter = ref('')
 type MediaItem = {
@@ -48,7 +39,7 @@ const hasCreated = ref(false)
 const canPreview = computed(() =>
   Boolean(selectedAccount.value && title.value.trim() && letter.value.trim()),
 )
-const formattedAmount = computed(() => `${selectedTransfer.value.amount.toLocaleString('ko-KR')}원`)
+const formattedAmount = computed(() => `${(selectedTransfer.value?.amount ?? 0).toLocaleString('ko-KR')}원`)
 
 const selectAccount = (id: number) => {
   selectedAccountId.value = id
@@ -131,41 +122,74 @@ const createTimeCapsule = async () => {
     return
   }
 
-  const account = timeCapsuleAccounts[String(selectedAccountId.value)] ?? timeCapsuleAccounts['1']!
-  const recordId = Date.now()
-
   try {
-    const photos = mediaItems.value.map(({ url, type, orientation }) => ({
-      src: url,
-      type,
-      orientation,
-    }))
-    const newRecord: TimeCapsuleRecord = {
-      id: recordId,
+    const { data } = await api.createTimeCapsuleEntryUsingPOST(selectedAccountId.value, {
+      account_transaction_id: selectedTransferId.value || undefined,
       title: title.value.trim(),
-      date: selectedTransfer.value.date.replaceAll('.', '-'),
-      amount: selectedTransfer.value.amount,
-      transferName: selectedTransfer.value.name,
-      letter: letter.value.trim(),
-      photos,
-      thumbnail: photos[0]?.src ?? capsulePigImage,
-      remainingEdits: 1,
+      message: letter.value.trim(),
+    })
+    const entryId = data.time_capsule_entry_id ?? 0
+    const media = mediaItems.value[0]
+    if (media) {
+      const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
+        file_size: media.file.size,
+        mime_type: media.file.type,
+      })
+      if (upload.upload_url && upload.time_capsule_media_id) {
+        await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
+        await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
+      }
     }
-
-    account.records.push(newRecord)
+    await api.sealTimeCapsuleEntryUsingPATCH(entryId)
     hasCreated.value = true
     isPageLeaving.value = true
-    await new Promise((resolve) => window.setTimeout(resolve, 150))
-    await router.push(`/time-capsules/${account.id}/${recordId}`)
+    await router.push(`/time-capsules/${selectedAccountId.value}/${entryId}`)
     showToast('저장되었습니다.', 'success', 2200, 'above-actions')
-  } catch {
-    const createdIndex = account.records.findIndex(({ id }) => id === recordId)
-    if (createdIndex >= 0) account.records.splice(createdIndex, 1)
+  } catch (error) {
     hasCreated.value = false
     isPageLeaving.value = false
-    showToast('캡슐 저장에 실패했습니다. 다시 시도해주세요.', 'error')
+    showToast(getApiErrorMessage(error, '캡슐 저장에 실패했습니다.'), 'error')
   }
 }
+
+const loadTransfers = async () => {
+  const account = selectedAccount.value
+  if (!account) return
+  const { data } = await api.getTransactionsUsingGET(account.accountId, undefined, undefined, 50)
+  transfers.value = data.transactions.map((transaction) => ({
+    id: transaction.account_transaction_id,
+    date: new Date(transaction.occurred_at).toLocaleDateString('ko-KR'),
+    name: transaction.counterparty_name ?? '계좌 거래',
+    amount: transaction.amount,
+  }))
+  selectedTransferId.value = transfers.value[0]?.id ?? 0
+}
+
+watch(selectedAccountId, () => void loadTransfers())
+
+onMounted(async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const [{ data: capsules }, { data: childAccounts }] = await Promise.all([
+      api.getTimeCapsulesUsingGET(childId),
+      api.getChildAccountsUsingGET(childId),
+    ])
+    accounts.value = (capsules.time_capsules ?? []).map((capsule) => {
+      const linked = childAccounts.accounts.find(({ account_id }) => account_id === capsule.account_id)
+      return {
+        id: capsule.time_capsule_id ?? 0,
+        accountId: capsule.account_id ?? 0,
+        bank: '',
+        name: capsule.title ?? linked?.account_name ?? '타임캡슐',
+        number: linked?.account_number ?? '',
+      }
+    })
+    if (!accounts.value.some(({ id }) => id === selectedAccountId.value)) selectedAccountId.value = accounts.value[0]?.id ?? 0
+    await loadTransfers()
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐 정보를 불러오지 못했습니다.'), 'error')
+  }
+})
 
 onBeforeUnmount(() => {
   if (hasCreated.value) return

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { ChevronDown } from 'lucide-vue-next'
 import capsulePigImage from '@/assets/images/timeCapsules/archive/list-capsule-pig.png'
-import { getTimeCapsuleAccount } from '@/data/timeCapsuleDummyData'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
+const { showToast } = useToast()
 const activeTab = ref<'list' | 'calendar'>('list')
 const isOpeningRecord = ref(false)
 const today = new Date()
@@ -15,7 +17,7 @@ const currentMonth = today.getMonth() + 1
 const selectedYear = ref(currentYear)
 
 const accountId = computed(() => String(route.params.capsuleListId ?? '1'))
-const account = computed(() => getTimeCapsuleAccount(accountId.value))
+const account = ref({ name: '타임캡슐', description: '아이의 성장 순간과 금융 기록을 모아보세요.', totalSavedAmount: 0, records: [] as Array<{ id: number; title: string; date: string; amount: number; thumbnail: string; photos: Array<{ src: string; orientation: 'portrait'; type: 'image' }> }> })
 const listRecords = computed(() =>
   [...account.value.records].sort((a, b) => b.date.localeCompare(a.date)),
 )
@@ -37,6 +39,27 @@ const getMonthCells = (year: number, month: number) => {
     ...Array.from({ length: lastDate }, (_, index) => index + 1),
   ]
 }
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getTimeCapsuleEntriesUsingGET(Number(accountId.value))
+    account.value = {
+      name: data.time_capsule?.title ?? '타임캡슐',
+      description: '아이의 성장 순간과 금융 기록을 모아보세요.',
+      totalSavedAmount: data.time_capsule?.total_saved_amount ?? 0,
+      records: (data.entries ?? []).map((entry) => ({
+        id: entry.time_capsule_entry_id ?? 0,
+        title: entry.title ?? '소중한 기록',
+        date: entry.contributed_at?.slice(0, 10) ?? '',
+        amount: entry.contribution_amount ?? 0,
+        thumbnail: entry.thumbnail_url ?? capsulePigImage,
+        photos: entry.thumbnail_url ? [{ src: entry.thumbnail_url, orientation: 'portrait', type: 'image' }] : [],
+      })),
+    }
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐 기록을 불러오지 못했습니다.'), 'error')
+  }
+})
 
 const getRecord = (year: number, month: number, day: number | null) => {
   if (!day) return undefined

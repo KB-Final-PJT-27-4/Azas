@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import childProfileImage from '@/assets/images/child/baby.png'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
 
 type PermissionItem = {
   id: string
@@ -18,18 +19,15 @@ type ChildProfile = {
 }
 
 const { showToast } = useToast()
-const children: ChildProfile[] = [
-  { id: 1, name: '아이 1', age: 12, schoolLevel: '초등학생' },
-  { id: 2, name: '아이 2', age: 10, schoolLevel: '초등학생' },
-  { id: 3, name: '아이 3', age: 7, schoolLevel: '초등학생' },
-]
-const selectedChildId = ref(1)
+const children = ref<ChildProfile[]>([])
+const selectedChildId = ref(0)
+const selectedAccountId = ref<number | null>(null)
 const isChildSheetOpen = ref(false)
 const sheetTouchStartY = ref<number | null>(null)
 const sheetDragOffset = ref(0)
 const isSheetDragging = ref(false)
 const selectedChild = computed(() =>
-  children.find(({ id }) => id === selectedChildId.value) ?? children[0]!,
+  children.value.find(({ id }) => id === selectedChildId.value) ?? children.value[0] ?? { id: 0, name: '아이', age: 0, schoolLevel: '' },
 )
 const permissions = ref<PermissionItem[]>([
   {
@@ -62,8 +60,17 @@ const setMonthlyLimit = (amount: number) => {
   monthlyLimit.value = amount
 }
 
-const savePermissions = () => {
-  showToast('아이 이용 권한이 저장되었습니다.', 'success')
+const savePermissions = async () => {
+  if (!selectedAccountId.value) return
+  try {
+    await api.updateUsagePolicyUsingPATCH(selectedAccountId.value, {
+      child_usage_mode: permissions.value.find(({ id }) => id === 'limit')?.enabled ? 'CO_MANAGED' : 'UNRESTRICTED',
+      child_monthly_budget_amount: monthlyLimit.value,
+    })
+    showToast('아이 이용 권한이 저장되었습니다.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '권한 설정을 저장하지 못했습니다.'), 'error')
+  }
 }
 
 const changeChild = () => {
@@ -92,8 +99,38 @@ const endSheetDrag = () => {
 const selectChild = (child: ChildProfile) => {
   selectedChildId.value = child.id
   isChildSheetOpen.value = false
-  showToast(`${child.name}의 권한 설정을 불러왔습니다.`, 'info')
+  void loadUsagePolicy(child.id)
 }
+
+const loadUsagePolicy = async (childId: number) => {
+  try {
+    const { data: accounts } = await api.getChildAccountsUsingGET(childId)
+    selectedAccountId.value = accounts.accounts[0]?.account_id ?? null
+    if (!selectedAccountId.value) return
+    const { data } = await api.getUsagePolicyUsingGET(selectedAccountId.value)
+    monthlyLimit.value = data.child_monthly_budget_amount ?? 0
+    const limitPermission = permissions.value.find(({ id }) => id === 'limit')
+    if (limitPermission) limitPermission.enabled = data.child_usage_mode === 'CO_MANAGED'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '권한 설정을 불러오지 못했습니다.'), 'error')
+  }
+}
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getChildrenUsingGET()
+    children.value = (data.items ?? []).map((child) => ({
+      id: child.child_id ?? 0,
+      name: child.name ?? '아이',
+      age: child.age ?? 0,
+      schoolLevel: child.age && child.age >= 14 ? '중학생 이상' : '초등학생',
+    }))
+    selectedChildId.value = children.value[0]?.id ?? 0
+    if (selectedChildId.value) await loadUsagePolicy(selectedChildId.value)
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자녀 목록을 불러오지 못했습니다.'), 'error')
+  }
+})
 
 const disconnectChild = () => {
   showToast('아이 계정 연결 해제는 보호자 확인이 필요해요.', 'error')
