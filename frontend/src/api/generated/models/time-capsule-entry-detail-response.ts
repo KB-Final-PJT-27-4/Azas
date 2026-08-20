@@ -23,8 +23,7 @@ export interface TimeCapsuleEntryDetailResponse {
     'contributed_at'?: string;
     'contribution_amount'?: number;
     'created_at'?: string;
-    'media'?: Array<MediaResponse>;
-    'media_mode'?: string;
+    'media'?: MediaResponse;
     'message'?: string;
     'sealed_at'?: string;
     'status'?: string;

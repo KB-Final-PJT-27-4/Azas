@@ -1,5 +1,7 @@
 import { Configuration } from '@/api/generated'
 
 export const apiConfig = new Configuration({
-  basePath: import.meta.env.VITE_API_BASE_URL,
+  // Generated paths already start with /api. Keep them same-origin so both the
+  // Vite and Vercel proxies can forward requests to the deployed backend.
+  basePath: '',
 })
