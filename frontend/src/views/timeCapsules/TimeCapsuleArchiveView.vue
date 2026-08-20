@@ -373,13 +373,13 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
     </section>
 
     <button
-      class="time-capsule-create-button fixed z-[60]"
+      class="time-capsule-create-button fixed z-[40]"
       type="button"
       aria-label="타임캡슐 생성하기"
       @click="navigateForward('/time-capsules/new')"
     >
       <span class="time-capsule-create-button__surface">
-        <Plus :size="23" :stroke-width="3" aria-hidden="true" />
+        <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
       </span>
     </button>
 
@@ -486,7 +486,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 }
 
 .time-capsule-create-button {
-  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 1px);
+  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 7px);
   left: 50%;
   width: 88px;
   height: 47px;

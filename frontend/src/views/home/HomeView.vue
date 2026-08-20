@@ -10,12 +10,15 @@ import homePigUrl from '@/assets/images/login/logo-pig.png'
 import goalIconUrl from '@/assets/images/home/icon-goal.png'
 import homeProductIconUrl from '@/assets/images/home/home-product.png'
 import timeCapsuleIconUrl from '@/assets/images/home/icon-time-capsule.png'
+import { useChecklistProgress } from '@/composables/useChecklistProgress'
 import { productRecommendationGoal } from '@/data/productDummyData'
 import { currentHomeMemberType, homeDataByMemberType } from '@/mocks/home'
+import { checklistItems as allChecklistItems, currentChildLifecycle } from '@/mocks/lifecycleChecklist'
 
 const homeData = computed(() => homeDataByMemberType[currentHomeMemberType])
 const goalSlides = computed(() => homeData.value.goals ?? [])
 const currentAssetAmount = computed(() => goalSlides.value[0]?.currentAmount ?? 0)
+const { checkedItemIds, toggleChecklistItem } = useChecklistProgress()
 const selectedGoalIndex = ref(0)
 const goalCarouselRef = ref<HTMLElement | null>(null)
 let goalCarouselTimer: ReturnType<typeof window.setInterval> | null = null
@@ -47,13 +50,24 @@ const quickMenuIconUrls = {
   goal: goalIconUrl,
 }
 
-const checklistItems = computed(() => [
-  { title: '아이 통장 준비하기', completed: currentHomeMemberType === 'existing' },
-  { title: '우리 아이 저축 목표 세우기', completed: currentHomeMemberType === 'existing' },
-  { title: '가족 금융 계획 점검하기', completed: false },
-])
-
-const checklistCompletedCount = computed(() => (currentHomeMemberType === 'existing' ? 3 : 0))
+const currentChecklistItems = computed(() =>
+  allChecklistItems.filter((item) => item.stageId === currentChildLifecycle.childStatus),
+)
+const checklistItems = computed(() =>
+  currentChecklistItems.value.slice(0, 3).map((item) => ({
+    ...item,
+    completed: checkedItemIds.value.has(item.id),
+  })),
+)
+const checklistCompletedCount = computed(() =>
+  currentChecklistItems.value.filter((item) => checkedItemIds.value.has(item.id)).length,
+)
+const checklistTotalCount = computed(() => currentChecklistItems.value.length)
+const checklistProgress = computed(() =>
+  checklistTotalCount.value
+    ? Math.round((checklistCompletedCount.value / checklistTotalCount.value) * 100)
+    : 0,
+)
 
 const selectGoal = (index: number, behavior: ScrollBehavior = 'smooth') => {
   const goalCount = goalSlides.value.length
@@ -294,9 +308,8 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="mt-[16px]" aria-labelledby="home-checklist-title">
-      <RouterLink
-        to="/checklists"
-        class="block overflow-hidden rounded-[20px] border border-[#dce8ee] bg-white !text-[var(--color-text-primary)] shadow-[0_6px_18px_rgba(64,106,126,0.04)] transition-transform active:scale-[0.99]"
+      <div
+        class="block overflow-hidden rounded-[20px] border border-[#dce8ee] bg-white text-[var(--color-text-primary)] shadow-[0_6px_18px_rgba(64,106,126,0.04)]"
       >
         <div class="px-5 pb-4 pt-5">
           <div class="flex items-end justify-between gap-3">
@@ -306,20 +319,22 @@ onBeforeUnmount(() => {
               </span>
               <p class="mt-1 text-[22px] font-extrabold leading-none">
                 {{ checklistCompletedCount
-                }}<span class="text-[14px] text-[var(--color-text-secondary)]"> / 6 완료</span>
+                }}<span class="text-[14px] text-[var(--color-text-secondary)]">
+                  / {{ checklistTotalCount }} 완료</span
+                >
               </p>
             </div>
             <span
               class="rounded-full bg-[#eaf8ff] px-3 py-1.5 text-[11px] font-bold text-[var(--color-selected-text)]"
             >
-              {{ Math.round((checklistCompletedCount / 6) * 100) }}%
+              {{ checklistProgress }}%
             </span>
           </div>
 
           <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#e8eef2]">
             <span
               class="block h-full rounded-full bg-[var(--color-brand-primary)] transition-[width] duration-700"
-              :style="{ width: `${(checklistCompletedCount / 6) * 100}%` }"
+              :style="{ width: `${checklistProgress}%` }"
             />
           </div>
         </div>
@@ -327,41 +342,46 @@ onBeforeUnmount(() => {
         <ul class="m-0 list-none border-t border-[#e7eef2] px-5 py-2">
           <li
             v-for="item in checklistItems"
-            :key="item.title"
-            class="flex min-h-10 items-center gap-3 border-b border-[#edf2f5] py-2 last:border-b-0"
+            :key="item.id"
+            class="border-b border-[#edf2f5] last:border-b-0"
           >
-            <span
-              class="grid size-4.5 shrink-0 place-items-center rounded-full"
-              :class="
-                item.completed
-                  ? 'bg-[var(--color-brand-primary)] text-white'
-                  : 'border-2 border-[#b8b8b8] bg-white'
-              "
+            <button
+              class="flex min-h-10 w-full items-center gap-3 py-2 text-left transition-colors active:bg-[#f7fbfe]"
+              type="button"
+              :aria-pressed="item.completed"
+              :aria-label="item.completed ? `${item.title} 완료 취소` : `${item.title} 완료`"
+              @click="toggleChecklistItem(item)"
             >
-              <Check v-if="item.completed" :size="12" :stroke-width="3" />
-            </span>
-            <span
-              class="min-w-0 flex-1 truncate text-[12px] font-semibold"
-              :class="item.completed ? 'text-[var(--color-text-secondary)] line-through' : ''"
-            >
-              {{ item.title }}
-            </span>
-            <!-- <span
-              v-if="!item.completed"
-              class="text-[10px] font-semibold text-[var(--color-selected-text)]"
-            >
-              준비하기
-            </span> -->
+              <span
+                class="grid size-4.5 shrink-0 place-items-center rounded-full"
+                :class="
+                  item.completed
+                    ? 'bg-[var(--color-brand-primary)] text-white'
+                    : 'border-2 border-[#b8b8b8] bg-white'
+                "
+              >
+                <Check v-if="item.completed" :size="12" :stroke-width="3" />
+              </span>
+              <span
+                class="min-w-0 flex-1 truncate text-[12px] font-semibold"
+                :class="item.completed ? 'text-[var(--color-text-secondary)] line-through' : ''"
+              >
+                {{ item.title }}
+              </span>
+            </button>
           </li>
         </ul>
 
-        <div class="flex items-center justify-between bg-[#f8fbfd] px-5 py-3 text-[11px] font-bold">
-          <span>남은 준비 항목 {{ 6 - checklistCompletedCount }}개</span>
+        <RouterLink
+          to="/checklists"
+          class="flex items-center justify-between bg-[#f8fbfd] px-5 py-3 text-[11px] font-bold !text-[var(--color-text-primary)] transition-colors active:bg-[#eef5f8]"
+        >
+          <span>남은 준비 항목 {{ checklistTotalCount - checklistCompletedCount }}개</span>
           <span class="inline-flex items-center gap-1 text-[var(--color-selected-text)]">
-            이어서 확인하기 <ChevronRight :size="14" />
+            전체 확인하기 <ChevronRight :size="14" />
           </span>
-        </div>
-      </RouterLink>
+        </RouterLink>
+      </div>
     </section>
   </main>
 </template>
