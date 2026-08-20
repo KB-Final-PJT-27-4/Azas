@@ -5,6 +5,7 @@ import { Check, ChevronRight, FileText } from 'lucide-vue-next'
 
 import completeStarUrl from '@/assets/images/accounts/complete-star.png'
 import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-pig.png'
+import { useChecklistProgress } from '@/composables/useChecklistProgress'
 import {
   checklistItems,
   currentChildLifecycle,
@@ -14,15 +15,13 @@ import {
 } from '@/mocks/lifecycleChecklist'
 
 const router = useRouter()
+const { checkedItemIds, isChecklistItemCompleted, toggleChecklistItem } = useChecklistProgress()
 
 const selectedInfoItem = ref<ChecklistItem | null>(null)
 const selectedDetailInfo = ref<ChecklistInfoItem | null>(null)
 const pendingRouteItem = ref<ChecklistItem | null>(null)
 const isCompleteSheetOpen = ref(false)
 const selectedStageId = ref(currentChildLifecycle.childStatus)
-const checkedItemIds = ref(
-  new Set(checklistItems.filter((item) => item.completed).map((item) => item.id)),
-)
 const draggingSheet = ref<'info' | 'complete' | null>(null)
 const sheetDragStartY = ref<number | null>(null)
 const sheetDragOffsetY = ref(0)
@@ -53,25 +52,11 @@ const progressPercent = computed(() =>
 )
 const progressStyle = computed(() => ({ width: `${progressPercent.value}%` }))
 
-const isChecklistItemCompleted = (item: ChecklistItem) => checkedItemIds.value.has(item.id)
-
 const hasChecklistAction = (item: ChecklistItem) =>
   item.actionType === 'info' || Boolean(item.route) || Boolean(item.externalUrl)
 
 const openExternalUrl = (url: string) => {
   window.open(url, '_blank', 'noopener,noreferrer')
-}
-
-const toggleChecklistItem = (item: ChecklistItem) => {
-  const nextCheckedItemIds = new Set(checkedItemIds.value)
-
-  if (nextCheckedItemIds.has(item.id)) {
-    nextCheckedItemIds.delete(item.id)
-  } else {
-    nextCheckedItemIds.add(item.id)
-  }
-
-  checkedItemIds.value = nextCheckedItemIds
 }
 
 const openChecklistAction = (item: ChecklistItem) => {
