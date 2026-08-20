@@ -10,7 +10,6 @@ Name | Type | Description | Notes
 **file_size** | **number** |  | [optional] [default to undefined]
 **media_type** | **string** |  | [optional] [default to undefined]
 **mime_type** | **string** |  | [optional] [default to undefined]
-**slot_no** | **number** |  | [optional] [default to undefined]
 **time_capsule_media_id** | **number** |  | [optional] [default to undefined]
 
 ## Example
@@ -24,7 +23,6 @@ const instance: MediaResponse = {
     file_size,
     media_type,
     mime_type,
-    slot_no,
     time_capsule_media_id,
 };
 ```

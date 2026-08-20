@@ -35,9 +35,10 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false, hideNavigation: true },
   },
   {
-    path: '/register/child',
-    name: 'ChildInvitation',
-    component: () => import('@/views/auth/ChildInvitationView.vue'),
+    path: '/family-invitations/:inviteToken',
+    name: 'FamilyInvitation',
+    component: () => import('@/views/auth/FamilyInvitationView.vue'),
+    props: true,
     meta: { requiresAuth: false, hideNavigation: true },
   },
   {

@@ -1,6 +1,6 @@
 # DefaultApi
 
-All URIs are relative to *http://localhost:8080*
+All URIs are relative to *http://localhost*
 
 |Method | HTTP request | Description|
 |------------- | ------------- | -------------|
@@ -13,30 +13,41 @@ All URIs are relative to *http://localhost:8080*
 |[**createFamilyInvitationUsingPOST**](#createfamilyinvitationusingpost) | **POST** /api/v1/children/{child_id}/family-invitations | 가족/아이 초대코드 발급|
 |[**createGoalUsingPOST**](#creategoalusingpost) | **POST** /api/v1/children/{child_id}/financial-goals | GOAL-2 자녀 금융 목표 생성|
 |[**createMediaUploadUrlUsingPOST**](#createmediauploadurlusingpost) | **POST** /api/v1/time-capsule-entries/{entry_id}/media/upload-url | TIMECAPSULE-7 타임캡슐 대표 이미지 업로드 URL 발급|
+|[**createMissionUsingPOST**](#createmissionusingpost) | **POST** /api/v1/children/{child_id}/missions | 미션 생성|
 |[**createScheduleUsingPOST**](#createscheduleusingpost) | **POST** /api/v1/auto-transfer-schedules | 자동이체 일정 등록|
 |[**createTimeCapsuleEntryUsingPOST**](#createtimecapsuleentryusingpost) | **POST** /api/v1/time-capsules/{time_capsule_id}/entries | TIMECAPSULE-5 타임캡슐 기록 생성|
 |[**createTimeCapsuleUsingPOST**](#createtimecapsuleusingpost) | **POST** /api/v1/children/{child_id}/time-capsules | TIMECAPSULE-1 타임캡슐 보관함 생성|
 |[**createTransferUsingPOST**](#createtransferusingpost) | **POST** /api/v1/transfers | TRANSFER-1 목표 계좌로 이체 요청(수동)|
 |[**deleteChildUsingDELETE**](#deletechildusingdelete) | **DELETE** /api/v1/children/{childId} | deleteChild|
+|[**deleteGoalUsingDELETE**](#deletegoalusingdelete) | **DELETE** /api/v1/financial-goals/{financial_goal_id} | GOAL-6 자녀 금융 목표 삭제|
 |[**deleteTimeCapsuleEntryUsingDELETE**](#deletetimecapsuleentryusingdelete) | **DELETE** /api/v1/time-capsule-entries/{entry_id} | TC-13 타임캡슐 엔트리 삭제|
 |[**deleteTimeCapsuleUsingDELETE**](#deletetimecapsuleusingdelete) | **DELETE** /api/v1/time-capsules/{time_capsule_id} | TIMECAPSULE-6 타임캡슐 보관함 삭제|
 |[**estimateMaturityUsingPOST**](#estimatematurityusingpost) | **POST** /api/v1/financial-products/{financial_product_id}/maturity-estimate | PRODUCT-5 예상 만기금액 계산|
 |[**getAccountDetailUsingGET**](#getaccountdetailusingget) | **GET** /api/v1/accounts/{account_id} | ACCOUNT-15 계좌 상세 조회|
 |[**getAllowanceRequestDetailUsingGET**](#getallowancerequestdetailusingget) | **GET** /api/v1/allowance-requests/{allowance_request_id} | 용돈 요청 상세 조회|
 |[**getAllowanceRequestsUsingGET**](#getallowancerequestsusingget) | **GET** /api/v1/children/{child_id}/allowance-requests | 자녀 용돈 요청 목록 조회|
+|[**getAssetReportDetailUsingGET**](#getassetreportdetailusingget) | **GET** /api/v1/children/{child_id}/asset-reports/{year}/{month} | 월간 자산 리포트 상세 조회|
+|[**getAssetReportsUsingGET**](#getassetreportsusingget) | **GET** /api/v1/children/{child_id}/asset-reports | 자산 리포트 월 목록 조회|
 |[**getBalanceHistoryUsingGET**](#getbalancehistoryusingget) | **GET** /api/v1/accounts/{account_id}/balance-history | ACCOUNT-17 계좌 월별 잔액 변화 조회|
 |[**getBookmarksUsingGET**](#getbookmarksusingget) | **GET** /api/v1/children/{child_id}/financial-products/bookmarks | PRODUCT-2 자녀별 관심상품 목록 조회|
+|[**getChecklistItemsUsingGET**](#getchecklistitemsusingget) | **GET** /api/v1/children/{child_id}/checklist-items | 생애주기 체크리스트 조회|
 |[**getChildAccountsUsingGET**](#getchildaccountsusingget) | **GET** /api/v1/children/{child_id}/accounts | ACCOUNT-14 자녀 계좌 목록 조회|
 |[**getChildMemberLinkUsingGET**](#getchildmemberlinkusingget) | **GET** /api/v1/children/{child_id}/member-link | 아이 계정 연결 상태 조회|
 |[**getChildTransfersUsingGET**](#getchildtransfersusingget) | **GET** /api/v1/children/{child_id}/transfers | TRANSFER-2 자녀 목표별 서비스 이체 내역 조회|
 |[**getChildUsingGET**](#getchildusingget) | **GET** /api/v1/children/{childId} | 자녀 상세 조회|
 |[**getChildrenUsingGET**](#getchildrenusingget) | **GET** /api/v1/children | 자녀 목록 조회|
 |[**getCurrentMonthUsageUsingGET**](#getcurrentmonthusageusingget) | **GET** /api/v1/children/me/available-amount | ACCOUNT-19 자녀 본인 월간 사용 현황 조회|
+|[**getDashboardUsingGET**](#getdashboardusingget) | **GET** /api/v1/children/me/dashboard | 자녀 본인 홈 대시보드 조회|
+|[**getDashboardUsingGET1**](#getdashboardusingget1) | **GET** /api/v1/children/{childId}/dashboard | 부모용 자녀 홈 대시보드 조회|
 |[**getDiscoveredAccountsUsingGET**](#getdiscoveredaccountsusingget) | **GET** /api/v1/accounts/discovered | ACCOUNT-2 연결 가능한 Mock 계좌 목록 조회|
 |[**getFamilyInvitationInfoUsingGET**](#getfamilyinvitationinfousingget) | **GET** /api/v1/family-invitations/{invite_token} | 초대코드 정보 조회|
 |[**getFamilyMembersUsingGET**](#getfamilymembersusingget) | **GET** /api/v1/children/{child_id}/family-members | 함께 관리하는 보호자 목록 조회|
+|[**getGoalUsingGET**](#getgoalusingget) | **GET** /api/v1/financial-goals/{financial_goal_id} | GOAL-4 자녀 금융 목표 상세 조회|
+|[**getGoalsUsingGET**](#getgoalsusingget) | **GET** /api/v1/children/{child_id}/financial-goals | GOAL-3 자녀 금융 목표 목록 조회|
 |[**getLatestBalanceUsingGET**](#getlatestbalanceusingget) | **GET** /api/v1/accounts/{account_id}/balance | ACCOUNT-16 계좌 최신 잔액 조회|
 |[**getMemberTransfersUsingGET**](#getmembertransfersusingget) | **GET** /api/v1/members/me/transfers | TRANSFER-3 이체 처리 결과 전체 조회|
+|[**getMissionDetailUsingGET**](#getmissiondetailusingget) | **GET** /api/v1/missions/{mission_id} | 미션 상세 조회|
+|[**getMissionsUsingGET**](#getmissionsusingget) | **GET** /api/v1/children/{child_id}/missions | 미션 목록 조회|
 |[**getMyAccountsUsingGET**](#getmyaccountsusingget) | **GET** /api/v1/members/me/accounts | ACCOUNT-13 부모 계좌 목록 조회|
 |[**getMyProfileUsingGET**](#getmyprofileusingget) | **GET** /api/v1/members/me | 내 회원 정보 조회|
 |[**getNotificationPreferencesUsingGET**](#getnotificationpreferencesusingget) | **GET** /api/v1/notification-preferences | 알림 유형별 수신 설정 조회|
@@ -44,6 +55,7 @@ All URIs are relative to *http://localhost:8080*
 |[**getPregnancyStatusUsingGET**](#getpregnancystatususingget) | **GET** /api/v1/children/{child_id}/pregnancy-status | 임신 주차 및 캐릭터 조회|
 |[**getProductDetailUsingGET**](#getproductdetailusingget) | **GET** /api/v1/financial-products/{financial_product_id} | PRODUCT-4 금융상품 상세 조회|
 |[**getProductsUsingGET**](#getproductsusingget) | **GET** /api/v1/financial-products | PRODUCT-1 KB 금융상품 목록 조회|
+|[**getReportUsingGET**](#getreportusingget) | **GET** /api/v1/children/{child_id}/childcare-reports/{year}/{month} | 월간 양육비 리포트 상세 조회|
 |[**getScheduleDetailUsingGET**](#getscheduledetailusingget) | **GET** /api/v1/auto-transfer-schedules/{schedule_id} | 자동이체 일정 상세 조회|
 |[**getSchedulesUsingGET**](#getschedulesusingget) | **GET** /api/v1/children/{child_id}/auto-transfer-schedules | 자녀 자동이체 일정 목록 조회|
 |[**getTemplatesUsingGET**](#gettemplatesusingget) | **GET** /api/v1/financial-goal-templates | GOAL-1 금융 목표 템플릿 조회|
@@ -71,7 +83,10 @@ All URIs are relative to *http://localhost:8080*
 |[**unlinkAccountUsingDELETE**](#unlinkaccountusingdelete) | **DELETE** /api/v1/accounts/{account_id} | ACCOUNT-18 계좌 서비스 연결 해제|
 |[**updateAllowanceRequestStatusUsingPATCH**](#updateallowancerequeststatususingpatch) | **PATCH** /api/v1/allowance-requests/{allowance_request_id} | 용돈 요청 상태 변경|
 |[**updateBookmarkUsingPUT**](#updatebookmarkusingput) | **PUT** /api/v1/children/{child_id}/financial-products/{financial_product_id}/bookmark | PRODUCT-3 자녀별 관심상품 저장·해제|
+|[**updateChecklistItemCompletionUsingPATCH**](#updatechecklistitemcompletionusingpatch) | **PATCH** /api/v1/checklist-items/{checklist_item_id}/completion | updateChecklistItemCompletion|
 |[**updateChildUsingPATCH**](#updatechildusingpatch) | **PATCH** /api/v1/children/{childId} | updateChild|
+|[**updateGoalUsingPATCH**](#updategoalusingpatch) | **PATCH** /api/v1/financial-goals/{financial_goal_id} | GOAL-5 자녀 금융 목표 수정|
+|[**updateMissionStatusUsingPATCH**](#updatemissionstatususingpatch) | **PATCH** /api/v1/missions/{mission_id} | 미션 상태 변경|
 |[**updateMyProfileUsingPATCH**](#updatemyprofileusingpatch) | **PATCH** /api/v1/members/me | 내 회원 정보 수정|
 |[**updateNotificationPreferencesUsingPUT**](#updatenotificationpreferencesusingput) | **PUT** /api/v1/notification-preferences | 알림 유형별 수신 설정 저장|
 |[**updateScheduleUsingPATCH**](#updatescheduleusingpatch) | **PATCH** /api/v1/auto-transfer-schedules/{schedule_id} | 자동이체 일정 수정·일시정지·재개|
@@ -604,6 +619,69 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **createMissionUsingPOST**
+> MissionCreateResponse createMissionUsingPOST(request)
+
+연결된 부모가 자녀에게 보상형 용돈 미션을 생성합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    CreateMissionRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let request: CreateMissionRequest; //request
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.createMissionUsingPOST(
+    childId,
+    request,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **CreateMissionRequest**| request | |
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**MissionCreateResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
+|**201** | 미션 생성 성공 |  -  |
+|**400** | 미션 입력값 오류 |  -  |
+|**401** | 인증 오류 |  -  |
+|**403** | 부모 권한 없음 |  -  |
+|**404** | 자녀 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **createScheduleUsingPOST**
 > AutoTransferScheduleResponse createScheduleUsingPOST(request)
 
@@ -884,6 +962,66 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deleteGoalUsingDELETE**
+> deleteGoalUsingDELETE()
+
+부모가 접근 가능한 자녀 금융 목표를 보관하고 연결된 모든 적금 계좌를 해제합니다. 계좌, 잔액, 거래, 체크포인트와 타임캡슐 데이터는 보존합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let financialGoalId: number; //financial_goal_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.deleteGoalUsingDELETE(
+    financialGoalId,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **financialGoalId** | [**number**] | financial_goal_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: Not defined
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
+|**204** | 자녀 금융 목표 삭제 성공 |  -  |
+|**400** | 금융 목표 ID 오류 |  -  |
+|**401** | 유효하지 않은 Access Token |  -  |
+|**403** | 부모 권한 없음 |  -  |
+|**404** | 금융 목표를 찾을 수 없음 |  -  |
+|**500** | 서버 오류 |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -1226,6 +1364,137 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getAssetReportDetailUsingGET**
+> AssetReportDetailResponse getAssetReportDetailUsingGET()
+
+연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let month: number; //month (default to undefined)
+let year: number; //year (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getAssetReportDetailUsingGET(
+    childId,
+    month,
+    year,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **month** | [**number**] | month | defaults to undefined|
+| **year** | [**number**] | year | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**AssetReportDetailResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 월간 자산 리포트 상세 조회 성공 |  -  |
+|**400** | 잘못된 자녀 ID, 연도 또는 월 |  -  |
+|**401** | Access Token 누락·만료·위조 |  -  |
+|**403** | 해당 자녀의 부모 권한 없음 |  -  |
+|**404** | 자녀 또는 해당 월 자산 리포트 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAssetReportsUsingGET**
+> AssetReportListResponse getAssetReportsUsingGET()
+
+연결된 부모가 자녀의 월별 자산 리포트를 최신 월순으로 조회합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+let cursor: string; //cursor (optional) (default to undefined)
+let size: number; //size (optional) (default to undefined)
+let year: number; //year (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getAssetReportsUsingGET(
+    childId,
+    authorization,
+    cursor,
+    size,
+    year
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+| **cursor** | [**string**] | cursor | (optional) defaults to undefined|
+| **size** | [**number**] | size | (optional) defaults to undefined|
+| **year** | [**number**] | year | (optional) defaults to undefined|
+
+
+### Return type
+
+**AssetReportListResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 자산 리포트 월 목록 조회 성공 |  -  |
+|**400** | 잘못된 year, cursor 또는 size |  -  |
+|**401** | Access Token 누락·만료·위조 |  -  |
+|**403** | 해당 자녀의 부모 권한 없음 |  -  |
+|**404** | 활성 자녀 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getBalanceHistoryUsingGET**
 > AccountBalanceHistoryResponse getBalanceHistoryUsingGET()
 
@@ -1332,6 +1601,63 @@ const { status, data } = await apiInstance.getBookmarksUsingGET(
 ### Return type
 
 **FinancialProductBookmarkListResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getChecklistItemsUsingGET**
+> ChecklistItemListResponse getChecklistItemsUsingGET()
+
+연결된 보호자가 자녀의 생애주기별 체크리스트와 진행률을 조회합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let authorization: string; //Authorization (default to undefined)
+let childId: number; //자녀 프로필 ID (default to undefined)
+let stage: string; //PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7 (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getChecklistItemsUsingGET(
+    authorization,
+    childId,
+    stage
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **authorization** | [**string**] | Authorization | defaults to undefined|
+| **childId** | [**number**] | 자녀 프로필 ID | defaults to undefined|
+| **stage** | [**string**] | PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7 | (optional) defaults to undefined|
+
+
+### Return type
+
+**ChecklistItemListResponse**
 
 ### Authorization
 
@@ -1693,6 +2019,115 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getDashboardUsingGET**
+> ChildDashboardResponse getDashboardUsingGET()
+
+자녀 본인의 월간 사용 현황, 용돈 요청, 최근 거래, 미션 및 읽지 않은 알림 수를 조회합니다. 대표 입출금 계좌가 없으면 spending_summary는 null입니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getDashboardUsingGET(
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**ChildDashboardResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 자녀 대시보드 조회 성공 |  -  |
+|**401** | Access Token 누락·만료·위조 |  -  |
+|**403** | 자녀 회원 계정이 아님 |  -  |
+|**404** | 로그인 회원과 연결된 활성 자녀 프로필 없음 |  -  |
+|**409** | 대표 계좌의 자녀 사용 관리 정책이 설정되지 않음 |  -  |
+|**500** | 저장된 대시보드 집계 데이터가 올바르지 않음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getDashboardUsingGET1**
+> ParentDashboardResponse getDashboardUsingGET1()
+
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let authorization: string; //Authorization (default to undefined)
+let childId: number; //childId (default to undefined)
+
+const { status, data } = await apiInstance.getDashboardUsingGET1(
+    authorization,
+    childId
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **authorization** | [**string**] | Authorization | defaults to undefined|
+| **childId** | [**number**] | childId | defaults to undefined|
+
+
+### Return type
+
+**ParentDashboardResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getDiscoveredAccountsUsingGET**
 > DiscoveredAccountListResponse getDiscoveredAccountsUsingGET()
 
@@ -1858,6 +2293,124 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getGoalUsingGET**
+> FinancialGoalDetailResponse getGoalUsingGET()
+
+부모가 접근 가능한 자녀의 단일 금융 목표와 연결 적금 계좌, 현재 금액, 남은 금액, 달성률 및 체크포인트를 조회합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let financialGoalId: number; //financial_goal_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getGoalUsingGET(
+    financialGoalId,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **financialGoalId** | [**number**] | financial_goal_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**FinancialGoalDetailResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 자녀 금융 목표 상세 조회 성공 |  -  |
+|**400** | 금융 목표 ID 오류 |  -  |
+|**401** | 유효하지 않은 Access Token |  -  |
+|**403** | 부모 권한 없음 |  -  |
+|**404** | 금융 목표를 찾을 수 없음 |  -  |
+|**500** | 서버 오류 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getGoalsUsingGET**
+> FinancialGoalListResponse getGoalsUsingGET()
+
+부모가 접근 가능한 자녀의 진행 중·달성 목표와 연결 적금 계좌, 현재 금액, 남은 금액 및 달성률을 조회합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getGoalsUsingGET(
+    childId,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**FinancialGoalListResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 자녀 금융 목표 목록 조회 성공 |  -  |
+|**400** | 자녀 ID 오류 |  -  |
+|**401** | 유효하지 않은 Access Token |  -  |
+|**403** | 부모 권한 또는 자녀 접근 권한 없음 |  -  |
+|**404** | 자녀를 찾을 수 없음 |  -  |
+|**500** | 서버 오류 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getLatestBalanceUsingGET**
 > AccountBalanceResponse getLatestBalanceUsingGET()
 
@@ -1986,6 +2539,131 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getMissionDetailUsingGET**
+> MissionDetailResponse getMissionDetailUsingGET()
+
+연결된 부모 또는 해당 자녀 본인이 미션 상세 정보를 조회합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let missionId: number; //mission_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getMissionDetailUsingGET(
+    missionId,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **missionId** | [**number**] | mission_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**MissionDetailResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 미션 상세 조회 성공 |  -  |
+|**400** | 미션 ID 오류 |  -  |
+|**401** | 인증 오류 |  -  |
+|**403** | 미션 접근 권한 없음 |  -  |
+|**404** | 미션 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getMissionsUsingGET**
+> MissionListResponse getMissionsUsingGET()
+
+연결된 부모와 해당 자녀 본인이 미션 목록을 조회합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+let cursor: string; //cursor (optional) (default to undefined)
+let filter: string; //filter (optional) (default to undefined)
+let size: number; //size (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getMissionsUsingGET(
+    childId,
+    authorization,
+    cursor,
+    filter,
+    size
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+| **cursor** | [**string**] | cursor | (optional) defaults to undefined|
+| **filter** | [**string**] | filter | (optional) defaults to undefined|
+| **size** | [**number**] | size | (optional) defaults to undefined|
+
+
+### Return type
+
+**MissionListResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 미션 목록 조회 성공 |  -  |
+|**400** | 조회 조건 오류 |  -  |
+|**401** | 인증 오류 |  -  |
+|**403** | 자녀 접근 권한 없음 |  -  |
+|**404** | 자녀 없음 |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -2383,6 +3061,70 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getReportUsingGET**
+> ChildcareReportDetailResponse getReportUsingGET()
+
+자녀 입출금계좌의 외부 출금 거래를 기준으로 최근 12개월 월별 지출과 연간 합계를 조회합니다. 자녀 계좌 사이의 내부 이체는 제외합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let month: number; //month (default to undefined)
+let year: number; //year (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getReportUsingGET(
+    childId,
+    month,
+    year,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **month** | [**number**] | month | defaults to undefined|
+| **year** | [**number**] | year | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**ChildcareReportDetailResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 월간 양육비 리포트 조회 성공 |  -  |
+|**400** | 잘못된 자녀 ID, 연도 또는 월 |  -  |
+|**401** | Access Token 누락·만료·위조 |  -  |
+|**403** | 해당 자녀의 부모 권한 없음 |  -  |
+|**404** | 활성 자녀 없음 |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -3918,6 +4660,63 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **updateChecklistItemCompletionUsingPATCH**
+> ChecklistItemCompletionResponse updateChecklistItemCompletionUsingPATCH(request)
+
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    ChecklistItemCompletionRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let authorization: string; //Authorization (default to undefined)
+let checklistItemId: number; //checklist_item_id (default to undefined)
+let request: ChecklistItemCompletionRequest; //request
+
+const { status, data } = await apiInstance.updateChecklistItemCompletionUsingPATCH(
+    authorization,
+    checklistItemId,
+    request
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **ChecklistItemCompletionRequest**| request | |
+| **authorization** | [**string**] | Authorization | defaults to undefined|
+| **checklistItemId** | [**number**] | checklist_item_id | defaults to undefined|
+
+
+### Return type
+
+**ChecklistItemCompletionResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **updateChildUsingPATCH**
 > ChildResponse updateChildUsingPATCH(request)
 
@@ -3972,6 +4771,135 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateGoalUsingPATCH**
+> FinancialGoalDetailResponse updateGoalUsingPATCH(request)
+
+부모가 목표 금액, 목표 달성일, 최종 연결 적금 계좌 목록을 부분 수정합니다. 목표 종류와 제목은 변경할 수 없으며 연결 적금은 한 개 이상 유지해야 합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    FinancialGoalUpdateRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let financialGoalId: number; //financial_goal_id (default to undefined)
+let request: FinancialGoalUpdateRequest; //request
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.updateGoalUsingPATCH(
+    financialGoalId,
+    request,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **FinancialGoalUpdateRequest**| request | |
+| **financialGoalId** | [**number**] | financial_goal_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**FinancialGoalDetailResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 자녀 금융 목표 수정 성공 |  -  |
+|**400** | 금융 목표 수정 요청 오류 |  -  |
+|**401** | 유효하지 않은 Access Token |  -  |
+|**403** | 부모 권한 없음 |  -  |
+|**404** | 목표 또는 적금 계좌를 찾을 수 없음 |  -  |
+|**409** | 적금 계좌가 다른 목표에 이미 연결됨 |  -  |
+|**422** | 목표에 연결할 수 없는 계좌 또는 이미 달성한 금액 |  -  |
+|**500** | 서버 오류 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateMissionStatusUsingPATCH**
+> MissionDetailResponse updateMissionStatusUsingPATCH(request)
+
+자녀 완료 요청 및 부모의 승인·거절·취소를 처리합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    UpdateMissionStatusRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let missionId: number; //mission_id (default to undefined)
+let request: UpdateMissionStatusRequest; //request
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.updateMissionStatusUsingPATCH(
+    missionId,
+    request,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **UpdateMissionStatusRequest**| request | |
+| **missionId** | [**number**] | mission_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**MissionDetailResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 미션 상태 변경 성공 |  -  |
+|**400** | 상태 변경 요청 오류 |  -  |
+|**401** | 인증 오류 |  -  |
+|**403** | 미션 처리 권한 없음 |  -  |
+|**404** | 미션 또는 계좌 없음 |  -  |
+|**409** | 상태 전이 또는 이체 오류 |  -  |
+|**422** | 보상 계좌 조합 오류 |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

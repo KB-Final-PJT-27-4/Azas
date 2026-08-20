@@ -5,7 +5,6 @@
     "version": "v1",
     "title": "Azas Backend API"
   },
-  "host": "localhost:8080",
   "basePath": "/",
   "tags": [
     {
@@ -17,12 +16,24 @@
       "description": "금융상품 조회 및 관심상품 API"
     },
     {
+      "name": "대시보드",
+      "description": "Parent Dashboard Controller"
+    },
+    {
+      "name": "리포트",
+      "description": "Childcare Report Controller"
+    },
+    {
       "name": "목표·자산 형성",
       "description": "Financial Goal Controller"
     },
     {
       "name": "알림",
       "description": "Notification Controller"
+    },
+    {
+      "name": "용돈 미션",
+      "description": "Mission Controller"
     },
     {
       "name": "용돈 요청",
@@ -47,6 +58,10 @@
     {
       "name": "자동이체",
       "description": "Auto Transfer Schedule Controller"
+    },
+    {
+      "name": "체크리스트",
+      "description": "Checklist Controller"
     },
     {
       "name": "타임캡슐",
@@ -1328,6 +1343,55 @@
         }
       }
     },
+    "/api/v1/checklist-items/{checklist_item_id}/completion": {
+      "patch": {
+        "tags": [
+          "체크리스트"
+        ],
+        "summary": "updateChecklistItemCompletion",
+        "operationId": "updateChecklistItemCompletionUsingPATCH",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "checklist_item_id",
+            "in": "path",
+            "description": "checklist_item_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChecklistItemCompletionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ChecklistItemCompletionResponse"
+            }
+          }
+        }
+      }
+    },
     "/api/v1/children": {
       "get": {
         "tags": [
@@ -1484,6 +1548,51 @@
         }
       }
     },
+    "/api/v1/children/me/dashboard": {
+      "get": {
+        "tags": [
+          "대시보드"
+        ],
+        "summary": "자녀 본인 홈 대시보드 조회",
+        "description": "자녀 본인의 월간 사용 현황, 용돈 요청, 최근 거래, 미션 및 읽지 않은 알림 수를 조회합니다. 대표 입출금 계좌가 없으면 spending_summary는 null입니다.",
+        "operationId": "getDashboardUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "자녀 대시보드 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/ChildDashboardResponse"
+            }
+          },
+          "401": {
+            "description": "Access Token 누락·만료·위조"
+          },
+          "403": {
+            "description": "자녀 회원 계정이 아님"
+          },
+          "404": {
+            "description": "로그인 회원과 연결된 활성 자녀 프로필 없음"
+          },
+          "409": {
+            "description": "대표 계좌의 자녀 사용 관리 정책이 설정되지 않음"
+          },
+          "500": {
+            "description": "저장된 대시보드 집계 데이터가 올바르지 않음"
+          }
+        }
+      }
+    },
     "/api/v1/children/{childId}": {
       "get": {
         "tags": [
@@ -1601,6 +1710,43 @@
         }
       }
     },
+    "/api/v1/children/{childId}/dashboard": {
+      "get": {
+        "tags": [
+          "대시보드"
+        ],
+        "summary": "부모용 자녀 홈 대시보드 조회",
+        "operationId": "getDashboardUsingGET_1",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "childId",
+            "in": "path",
+            "description": "childId",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ParentDashboardResponse"
+            }
+          }
+        }
+      }
+    },
     "/api/v1/children/{child_id}/accounts": {
       "get": {
         "tags": [
@@ -1712,6 +1858,145 @@
         }
       }
     },
+    "/api/v1/children/{child_id}/asset-reports": {
+      "get": {
+        "tags": [
+          "리포트"
+        ],
+        "summary": "자산 리포트 월 목록 조회",
+        "description": "연결된 부모가 자녀의 월별 자산 리포트를 최신 월순으로 조회합니다.",
+        "operationId": "getAssetReportsUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "child_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "cursor",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "size",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "year",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "자산 리포트 월 목록 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/AssetReportListResponse"
+            }
+          },
+          "400": {
+            "description": "잘못된 year, cursor 또는 size"
+          },
+          "401": {
+            "description": "Access Token 누락·만료·위조"
+          },
+          "403": {
+            "description": "해당 자녀의 부모 권한 없음"
+          },
+          "404": {
+            "description": "활성 자녀 없음"
+          }
+        }
+      }
+    },
+    "/api/v1/children/{child_id}/asset-reports/{year}/{month}": {
+      "get": {
+        "tags": [
+          "리포트"
+        ],
+        "summary": "월간 자산 리포트 상세 조회",
+        "description": "연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.",
+        "operationId": "getAssetReportDetailUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "child_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "description": "month",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "year",
+            "in": "path",
+            "description": "year",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "월간 자산 리포트 상세 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/AssetReportDetailResponse"
+            }
+          },
+          "400": {
+            "description": "잘못된 자녀 ID, 연도 또는 월"
+          },
+          "401": {
+            "description": "Access Token 누락·만료·위조"
+          },
+          "403": {
+            "description": "해당 자녀의 부모 권한 없음"
+          },
+          "404": {
+            "description": "자녀 또는 해당 월 자산 리포트 없음"
+          }
+        }
+      }
+    },
     "/api/v1/children/{child_id}/auto-transfer-schedules": {
       "get": {
         "tags": [
@@ -1773,6 +2058,117 @@
           },
           "403": {
             "description": "자녀 접근 권한 없음"
+          }
+        }
+      }
+    },
+    "/api/v1/children/{child_id}/checklist-items": {
+      "get": {
+        "tags": [
+          "체크리스트"
+        ],
+        "summary": "생애주기 체크리스트 조회",
+        "description": "연결된 보호자가 자녀의 생애주기별 체크리스트와 진행률을 조회합니다.",
+        "operationId": "getChecklistItemsUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "자녀 프로필 ID",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "stage",
+            "in": "query",
+            "description": "PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ChecklistItemListResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/children/{child_id}/childcare-reports/{year}/{month}": {
+      "get": {
+        "tags": [
+          "리포트"
+        ],
+        "summary": "월간 양육비 리포트 상세 조회",
+        "description": "자녀 입출금계좌의 외부 출금 거래를 기준으로 최근 12개월 월별 지출과 연간 합계를 조회합니다. 자녀 계좌 사이의 내부 이체는 제외합니다.",
+        "operationId": "getReportUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "child_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "description": "month",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "year",
+            "in": "path",
+            "description": "year",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "월간 양육비 리포트 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/ChildcareReportDetailResponse"
+            }
+          },
+          "400": {
+            "description": "잘못된 자녀 ID, 연도 또는 월"
+          },
+          "401": {
+            "description": "Access Token 누락·만료·위조"
+          },
+          "403": {
+            "description": "해당 자녀의 부모 권한 없음"
+          },
+          "404": {
+            "description": "활성 자녀 없음"
           }
         }
       }
@@ -1864,6 +2260,57 @@
       }
     },
     "/api/v1/children/{child_id}/financial-goals": {
+      "get": {
+        "tags": [
+          "목표·자산 형성"
+        ],
+        "summary": "GOAL-3 자녀 금융 목표 목록 조회",
+        "description": "부모가 접근 가능한 자녀의 진행 중·달성 목표와 연결 적금 계좌, 현재 금액, 남은 금액 및 달성률을 조회합니다.",
+        "operationId": "getGoalsUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "child_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "자녀 금융 목표 목록 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/FinancialGoalListResponse"
+            }
+          },
+          "400": {
+            "description": "자녀 ID 오류"
+          },
+          "401": {
+            "description": "유효하지 않은 Access Token"
+          },
+          "403": {
+            "description": "부모 권한 또는 자녀 접근 권한 없음"
+          },
+          "404": {
+            "description": "자녀를 찾을 수 없음"
+          },
+          "500": {
+            "description": "서버 오류"
+          }
+        }
+      },
       "post": {
         "tags": [
           "목표·자산 형성"
@@ -2087,6 +2534,141 @@
             "schema": {
               "$ref": "#/definitions/ChildMemberLinkResponse"
             }
+          }
+        }
+      }
+    },
+    "/api/v1/children/{child_id}/missions": {
+      "get": {
+        "tags": [
+          "용돈 미션"
+        ],
+        "summary": "미션 목록 조회",
+        "description": "연결된 부모와 해당 자녀 본인이 미션 목록을 조회합니다.",
+        "operationId": "getMissionsUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "child_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "cursor",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "filter",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "size",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "미션 목록 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/MissionListResponse"
+            }
+          },
+          "400": {
+            "description": "조회 조건 오류"
+          },
+          "401": {
+            "description": "인증 오류"
+          },
+          "403": {
+            "description": "자녀 접근 권한 없음"
+          },
+          "404": {
+            "description": "자녀 없음"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "용돈 미션"
+        ],
+        "summary": "미션 생성",
+        "description": "연결된 부모가 자녀에게 보상형 용돈 미션을 생성합니다.",
+        "operationId": "createMissionUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "child_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateMissionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/MissionCreateResponse"
+            }
+          },
+          "201": {
+            "description": "미션 생성 성공"
+          },
+          "400": {
+            "description": "미션 입력값 오류"
+          },
+          "401": {
+            "description": "인증 오류"
+          },
+          "403": {
+            "description": "부모 권한 없음"
+          },
+          "404": {
+            "description": "자녀 없음"
           }
         }
       }
@@ -2404,6 +2986,179 @@
           },
           "401": {
             "description": "Access Token 누락·만료·위조 또는 탈퇴 회원"
+          },
+          "500": {
+            "description": "서버 오류"
+          }
+        }
+      }
+    },
+    "/api/v1/financial-goals/{financial_goal_id}": {
+      "get": {
+        "tags": [
+          "목표·자산 형성"
+        ],
+        "summary": "GOAL-4 자녀 금융 목표 상세 조회",
+        "description": "부모가 접근 가능한 자녀의 단일 금융 목표와 연결 적금 계좌, 현재 금액, 남은 금액, 달성률 및 체크포인트를 조회합니다.",
+        "operationId": "getGoalUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "financial_goal_id",
+            "in": "path",
+            "description": "financial_goal_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "자녀 금융 목표 상세 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/FinancialGoalDetailResponse"
+            }
+          },
+          "400": {
+            "description": "금융 목표 ID 오류"
+          },
+          "401": {
+            "description": "유효하지 않은 Access Token"
+          },
+          "403": {
+            "description": "부모 권한 없음"
+          },
+          "404": {
+            "description": "금융 목표를 찾을 수 없음"
+          },
+          "500": {
+            "description": "서버 오류"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "목표·자산 형성"
+        ],
+        "summary": "GOAL-6 자녀 금융 목표 삭제",
+        "description": "부모가 접근 가능한 자녀 금융 목표를 보관하고 연결된 모든 적금 계좌를 해제합니다. 계좌, 잔액, 거래, 체크포인트와 타임캡슐 데이터는 보존합니다.",
+        "operationId": "deleteGoalUsingDELETE",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "financial_goal_id",
+            "in": "path",
+            "description": "financial_goal_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "204": {
+            "description": "자녀 금융 목표 삭제 성공"
+          },
+          "400": {
+            "description": "금융 목표 ID 오류"
+          },
+          "401": {
+            "description": "유효하지 않은 Access Token"
+          },
+          "403": {
+            "description": "부모 권한 없음"
+          },
+          "404": {
+            "description": "금융 목표를 찾을 수 없음"
+          },
+          "500": {
+            "description": "서버 오류"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "목표·자산 형성"
+        ],
+        "summary": "GOAL-5 자녀 금융 목표 수정",
+        "description": "부모가 목표 금액, 목표 달성일, 최종 연결 적금 계좌 목록을 부분 수정합니다. 목표 종류와 제목은 변경할 수 없으며 연결 적금은 한 개 이상 유지해야 합니다.",
+        "operationId": "updateGoalUsingPATCH",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "financial_goal_id",
+            "in": "path",
+            "description": "financial_goal_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinancialGoalUpdateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "자녀 금융 목표 수정 성공",
+            "schema": {
+              "$ref": "#/definitions/FinancialGoalDetailResponse"
+            }
+          },
+          "400": {
+            "description": "금융 목표 수정 요청 오류"
+          },
+          "401": {
+            "description": "유효하지 않은 Access Token"
+          },
+          "403": {
+            "description": "부모 권한 없음"
+          },
+          "404": {
+            "description": "목표 또는 적금 계좌를 찾을 수 없음"
+          },
+          "409": {
+            "description": "적금 계좌가 다른 목표에 이미 연결됨"
+          },
+          "422": {
+            "description": "목표에 연결할 수 없는 계좌 또는 이미 달성한 금액"
           },
           "500": {
             "description": "서버 오류"
@@ -2902,6 +3657,122 @@
             "schema": {
               "$ref": "#/definitions/TransferListResponse«MemberTransferListItemResponse»"
             }
+          }
+        }
+      }
+    },
+    "/api/v1/missions/{mission_id}": {
+      "get": {
+        "tags": [
+          "용돈 미션"
+        ],
+        "summary": "미션 상세 조회",
+        "description": "연결된 부모 또는 해당 자녀 본인이 미션 상세 정보를 조회합니다.",
+        "operationId": "getMissionDetailUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "mission_id",
+            "in": "path",
+            "description": "mission_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "미션 상세 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/MissionDetailResponse"
+            }
+          },
+          "400": {
+            "description": "미션 ID 오류"
+          },
+          "401": {
+            "description": "인증 오류"
+          },
+          "403": {
+            "description": "미션 접근 권한 없음"
+          },
+          "404": {
+            "description": "미션 없음"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "용돈 미션"
+        ],
+        "summary": "미션 상태 변경",
+        "description": "자녀 완료 요청 및 부모의 승인·거절·취소를 처리합니다.",
+        "operationId": "updateMissionStatusUsingPATCH",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "mission_id",
+            "in": "path",
+            "description": "mission_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateMissionStatusRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "미션 상태 변경 성공",
+            "schema": {
+              "$ref": "#/definitions/MissionDetailResponse"
+            }
+          },
+          "400": {
+            "description": "상태 변경 요청 오류"
+          },
+          "401": {
+            "description": "인증 오류"
+          },
+          "403": {
+            "description": "미션 처리 권한 없음"
+          },
+          "404": {
+            "description": "미션 또는 계좌 없음"
+          },
+          "409": {
+            "description": "상태 전이 또는 이체 오류"
+          },
+          "422": {
+            "description": "보상 계좌 조합 오류"
           }
         }
       }
@@ -3986,6 +4857,20 @@
       "title": "AccountTransactionPartyResponse",
       "description": "거래 입금처 또는 출금처"
     },
+    "ActivitySummary": {
+      "type": "object",
+      "properties": {
+        "current_month_transaction_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pending_allowance_request_count": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ActivitySummary"
+    },
     "AllowanceRequestDetailResponse": {
       "type": "object",
       "properties": {
@@ -4124,6 +5009,146 @@
         }
       },
       "title": "AppliedInterestRate"
+    },
+    "AssetReportDetailResponse": {
+      "type": "object",
+      "properties": {
+        "asset_report_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": 10001
+        },
+        "child_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": 10
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "goal_summary": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GoalSummary"
+          }
+        },
+        "insight_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InsightItem"
+          }
+        },
+        "period": {
+          "$ref": "#/definitions/Period"
+        },
+        "report_month": {
+          "type": "integer",
+          "format": "int32",
+          "example": 7
+        },
+        "report_year": {
+          "type": "integer",
+          "format": "int32",
+          "example": 2026
+        },
+        "summary": {
+          "$ref": "#/definitions/Summary"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "AssetReportDetailResponse",
+      "description": "월간 자산 리포트 상세 응답"
+    },
+    "AssetReportListItemResponse": {
+      "type": "object",
+      "properties": {
+        "asset_report_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": 10001
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "goal_achievement_rate": {
+          "type": "number",
+          "example": 41.5
+        },
+        "monthly_saved_amount": {
+          "type": "number",
+          "example": 1250000
+        },
+        "period": {
+          "type": "string",
+          "example": "2026-07"
+        },
+        "report_month": {
+          "type": "integer",
+          "format": "int32",
+          "example": 7
+        },
+        "report_year": {
+          "type": "integer",
+          "format": "int32",
+          "example": 2026
+        },
+        "total_asset_amount": {
+          "type": "number",
+          "example": 20750000
+        },
+        "total_asset_change_amount": {
+          "type": "number",
+          "example": 350000
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "AssetReportListItemResponse",
+      "description": "자산 리포트 월 목록 아이템"
+    },
+    "AssetReportListResponse": {
+      "type": "object",
+      "properties": {
+        "has_next": {
+          "type": "boolean"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AssetReportListItemResponse"
+          }
+        },
+        "next_cursor": {
+          "type": "string"
+        }
+      },
+      "title": "AssetReportListResponse",
+      "description": "자산 리포트 월 목록 응답"
+    },
+    "AssetSummary": {
+      "type": "object",
+      "properties": {
+        "six_month_flow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FlowItem"
+          }
+        },
+        "total_asset_amount": {
+          "type": "number"
+        },
+        "total_asset_change_amount": {
+          "type": "number"
+        }
+      },
+      "title": "AssetSummary"
     },
     "AutoTransferRetryResponse": {
       "type": "object",
@@ -4421,6 +5446,146 @@
       },
       "title": "Badge"
     },
+    "ChecklistItem": {
+      "type": "object",
+      "properties": {
+        "checklist_item_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "ChecklistItem"
+    },
+    "ChecklistItemCompletionRequest": {
+      "type": "object",
+      "properties": {
+        "completed": {
+          "type": "boolean"
+        }
+      },
+      "title": "ChecklistItemCompletionRequest"
+    },
+    "ChecklistItemCompletionResponse": {
+      "type": "object",
+      "properties": {
+        "checklist_item_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "completed_at": {
+          "type": "string"
+        },
+        "is_completed": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "COMPLETED",
+            "PENDING"
+          ]
+        }
+      },
+      "title": "ChecklistItemCompletionResponse"
+    },
+    "ChecklistItemListResponse": {
+      "type": "object",
+      "properties": {
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "completed_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Item"
+          }
+        },
+        "lifecycle_stage": {
+          "type": "string"
+        },
+        "progress_percent": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stage_completed": {
+          "type": "boolean"
+        },
+        "stage_description": {
+          "type": "string"
+        },
+        "stage_title": {
+          "type": "string"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ChecklistItemListResponse",
+      "description": "생애주기 체크리스트 목록 응답"
+    },
+    "ChecklistSummary": {
+      "type": "object",
+      "properties": {
+        "achievement_rate": {
+          "type": "number"
+        },
+        "completed_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "preview_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ChecklistItem"
+          }
+        },
+        "remaining_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ChecklistSummary"
+    },
+    "CheckpointResponse": {
+      "type": "object",
+      "properties": {
+        "financial_goal_checkpoint_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "percentage": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "reached": {
+          "type": "boolean"
+        },
+        "reached_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "target_amount": {
+          "type": "number"
+        }
+      },
+      "title": "CheckpointResponse"
+    },
     "ChildAccountListItemResponse": {
       "type": "object",
       "required": [
@@ -4679,6 +5844,44 @@
         }
       },
       "title": "ChildCreateRequest"
+    },
+    "ChildDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "activity_summary": {
+          "$ref": "#/definitions/ActivitySummary"
+        },
+        "child": {
+          "$ref": "#/definitions/ChildInfo"
+        },
+        "mission_summary": {
+          "$ref": "#/definitions/MissionSummary"
+        },
+        "notification_summary": {
+          "$ref": "#/definitions/NotificationSummary"
+        },
+        "spending_summary": {
+          "$ref": "#/definitions/SpendingSummary"
+        }
+      },
+      "title": "ChildDashboardResponse",
+      "description": "자녀 본인 홈 대시보드"
+    },
+    "ChildInfo": {
+      "type": "object",
+      "properties": {
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "profile_image_url": {
+          "type": "string"
+        }
+      },
+      "title": "ChildInfo"
     },
     "ChildInviteChildResponse": {
       "type": "object",
@@ -5052,6 +6255,44 @@
       },
       "title": "ChildUpdateRequest"
     },
+    "ChildcareReportDetailResponse": {
+      "type": "object",
+      "properties": {
+        "calculated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "child_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": 6
+        },
+        "monthly_flow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MonthlyFlowItem"
+          }
+        },
+        "period": {
+          "$ref": "#/definitions/Period"
+        },
+        "report_month": {
+          "type": "integer",
+          "format": "int32",
+          "example": 7
+        },
+        "report_year": {
+          "type": "integer",
+          "format": "int32",
+          "example": 2026
+        },
+        "summary": {
+          "$ref": "#/definitions/Summary"
+        }
+      },
+      "title": "ChildcareReportDetailResponse",
+      "description": "월간 양육비 리포트 상세 응답"
+    },
     "CompleteTimeCapsuleMediaUploadRequest": {
       "type": "object",
       "properties": {
@@ -5148,6 +6389,21 @@
         }
       },
       "title": "CreateAutoTransferScheduleRequest"
+    },
+    "CreateMissionRequest": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "reward_amount": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "CreateMissionRequest"
     },
     "CreateTimeCapsuleEntryRequest": {
       "type": "object",
@@ -5706,6 +6962,100 @@
       },
       "title": "FinancialGoalCreateResponse"
     },
+    "FinancialGoalDetailResponse": {
+      "type": "object",
+      "properties": {
+        "achievement_rate": {
+          "type": "number"
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CheckpointResponse"
+          }
+        },
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "current_amount": {
+          "type": "number"
+        },
+        "financial_goal_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "financial_goal_template_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "icon_key": {
+          "type": "string"
+        },
+        "linked_account_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "linked_accounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LinkedAccountResponse"
+          }
+        },
+        "monthly_saving_amount": {
+          "type": "number"
+        },
+        "remaining_amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        },
+        "target_amount": {
+          "type": "number"
+        },
+        "target_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialGoalDetailResponse",
+      "description": "자녀 금융 목표 상세 조회 응답"
+    },
+    "FinancialGoalListResponse": {
+      "type": "object",
+      "required": [
+        "child_id",
+        "financial_goals",
+        "total_count"
+      ],
+      "properties": {
+        "child_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": 6,
+          "description": "자녀 ID"
+        },
+        "financial_goals": {
+          "type": "array",
+          "description": "진행 중·달성 목표 목록",
+          "items": {
+            "$ref": "#/definitions/GoalResponse"
+          }
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int32",
+          "example": 2,
+          "description": "목표 수"
+        }
+      },
+      "title": "FinancialGoalListResponse",
+      "description": "자녀 금융 목표 목록 조회 응답"
+    },
     "FinancialGoalTemplateListResponse": {
       "type": "object",
       "properties": {
@@ -5717,6 +7067,26 @@
         }
       },
       "title": "FinancialGoalTemplateListResponse"
+    },
+    "FinancialGoalUpdateRequest": {
+      "type": "object",
+      "properties": {
+        "account_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "target_amount": {
+          "type": "number"
+        },
+        "target_date": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "title": "FinancialGoalUpdateRequest"
     },
     "FinancialProductBookmarkListResponse": {
       "type": "object",
@@ -5924,6 +7294,117 @@
       },
       "title": "FinancialProductMaturityEstimateResponse"
     },
+    "FlowItem": {
+      "type": "object",
+      "properties": {
+        "report_month": {
+          "type": "string"
+        },
+        "total_asset_amount": {
+          "type": "number"
+        }
+      },
+      "title": "FlowItem"
+    },
+    "GoalResponse": {
+      "type": "object",
+      "properties": {
+        "achievement_rate": {
+          "type": "number"
+        },
+        "current_amount": {
+          "type": "number"
+        },
+        "financial_goal_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "financial_goal_template_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "icon_key": {
+          "type": "string"
+        },
+        "linked_account_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "linked_accounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LinkedAccountResponse"
+          }
+        },
+        "remaining_amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        },
+        "target_amount": {
+          "type": "number"
+        },
+        "target_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "GoalResponse"
+    },
+    "GoalSummary": {
+      "type": "object",
+      "properties": {
+        "achievement_rate": {
+          "type": "number"
+        },
+        "current_amount": {
+          "type": "number"
+        },
+        "financial_goal_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "linked_account_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "linked_accounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LinkedAccount"
+          }
+        },
+        "monthly_saved_amount": {
+          "type": "number"
+        },
+        "target_amount": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "GoalSummary"
+    },
+    "InsightItem": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "title": "InsightItem"
+    },
     "InterestPaymentMethod": {
       "type": "object",
       "properties": {
@@ -5975,6 +7456,28 @@
       "type": "object",
       "title": "JsonNode"
     },
+    "LinkedAccount": {
+      "type": "object",
+      "properties": {
+        "account_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "account_number_masked": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "number"
+        },
+        "bank_name": {
+          "type": "string"
+        }
+      },
+      "title": "LinkedAccount"
+    },
     "LinkedAccountResponse": {
       "type": "object",
       "properties": {
@@ -6013,10 +7516,6 @@
         },
         "mime_type": {
           "type": "string"
-        },
-        "slot_no": {
-          "type": "integer",
-          "format": "int32"
         },
         "time_capsule_media_id": {
           "type": "integer",
@@ -6228,6 +7727,211 @@
       },
       "title": "MemberTransferListItemResponse"
     },
+    "MissionCreateResponse": {
+      "type": "object",
+      "properties": {
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string"
+        },
+        "mission_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "reward_amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "APPROVED",
+            "ASSIGNED",
+            "CANCELED",
+            "REJECTED",
+            "SUBMITTED"
+          ]
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "MissionCreateResponse"
+    },
+    "MissionDetailResponse": {
+      "type": "object",
+      "properties": {
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string"
+        },
+        "mission_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "reward_amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "APPROVED",
+            "ASSIGNED",
+            "CANCELED",
+            "REJECTED",
+            "SUBMITTED"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "MissionDetailResponse"
+    },
+    "MissionItem": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "mission_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "reward_amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "APPROVED",
+            "ASSIGNED",
+            "CANCELED",
+            "REJECTED",
+            "SUBMITTED"
+          ]
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "MissionItem"
+    },
+    "MissionListItemResponse": {
+      "type": "object",
+      "properties": {
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string"
+        },
+        "mission_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "reward_amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "APPROVED",
+            "ASSIGNED",
+            "CANCELED",
+            "REJECTED",
+            "SUBMITTED"
+          ]
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "MissionListItemResponse"
+    },
+    "MissionListResponse": {
+      "type": "object",
+      "properties": {
+        "has_next": {
+          "type": "boolean"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MissionListItemResponse"
+          }
+        },
+        "next_cursor": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "summary": {
+          "$ref": "#/definitions/MissionListSummaryResponse"
+        }
+      },
+      "title": "MissionListResponse"
+    },
+    "MissionListSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "completed_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "in_progress_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "needs_review_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "MissionListSummaryResponse"
+    },
+    "MissionSummary": {
+      "type": "object",
+      "properties": {
+        "active_count": {
+          "type": "integer",
+          "format": "int32",
+          "description": "ASSIGNED, SUBMITTED, REJECTED 상태 미션 수"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MissionItem"
+          }
+        }
+      },
+      "title": "MissionSummary"
+    },
     "MonthlyAccountBalanceResponse": {
       "type": "object",
       "required": [
@@ -6270,6 +7974,23 @@
         }
       },
       "title": "MonthlyDeposit"
+    },
+    "MonthlyFlowItem": {
+      "type": "object",
+      "properties": {
+        "expense_amount": {
+          "type": "number"
+        },
+        "month": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "year": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "MonthlyFlowItem"
     },
     "NotificationListItemResponse": {
       "type": "object",
@@ -6317,6 +8038,7 @@
             "GOAL_CHECKPOINT_REACHED",
             "MISSION_APPROVED",
             "MISSION_ASSIGNED",
+            "MISSION_CANCELED",
             "MISSION_REJECTED",
             "MISSION_SUBMITTED",
             "PREGNANCY_CHARACTER_CHANGED",
@@ -6434,6 +8156,16 @@
         }
       },
       "title": "NotificationReadResponse"
+    },
+    "NotificationSummary": {
+      "type": "object",
+      "properties": {
+        "unread_count": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "NotificationSummary"
     },
     "NotificationUnreadCountResponse": {
       "type": "object",
@@ -6660,6 +8392,30 @@
       "title": "ParentAccountListResponse",
       "description": "부모 계좌 목록 조회 응답"
     },
+    "ParentDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "asset_summary": {
+          "$ref": "#/definitions/AssetSummary"
+        },
+        "checklist_summary": {
+          "$ref": "#/definitions/ChecklistSummary"
+        },
+        "child": {
+          "$ref": "#/definitions/ChildInfo"
+        },
+        "notifications": {
+          "$ref": "#/definitions/NotificationSummary"
+        },
+        "primary_goal": {
+          "$ref": "#/definitions/PrimaryGoal"
+        },
+        "quick_summary": {
+          "$ref": "#/definitions/QuickSummary"
+        }
+      },
+      "title": "ParentDashboardResponse"
+    },
     "ParentInviteChildResponse": {
       "type": "object",
       "required": [
@@ -6804,6 +8560,20 @@
       },
       "title": "ParentInviteOAuthResponse",
       "description": "부모 초대 기반 소셜 로그인 및 수락 대기 응답"
+    },
+    "Period": {
+      "type": "object",
+      "properties": {
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "title": "Period"
     },
     "PhoneVerificationConfirmRequest": {
       "type": "object",
@@ -6966,6 +8736,116 @@
       },
       "title": "PregnancyStatusResponse"
     },
+    "PrimaryGoal": {
+      "type": "object",
+      "properties": {
+        "achievement_rate": {
+          "type": "number"
+        },
+        "financial_goal_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "saved_amount": {
+          "type": "number"
+        },
+        "target_amount": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "PrimaryGoal"
+    },
+    "QuickSummary": {
+      "type": "object",
+      "properties": {
+        "active_goal_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "nearest_time_capsule": {
+          "$ref": "#/definitions/TimeCapsuleSummary"
+        }
+      },
+      "title": "QuickSummary"
+    },
+    "SpendingSummary": {
+      "type": "object",
+      "properties": {
+        "account_balance_hidden": {
+          "type": "boolean",
+          "example": true,
+          "description": "자녀 화면에서 실제 계좌 잔액을 숨기는지 여부"
+        },
+        "account_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": 40002
+        },
+        "budget_exceeded": {
+          "type": "boolean"
+        },
+        "child_usage_mode": {
+          "type": "string",
+          "example": "CO_MANAGED",
+          "enum": [
+            "CO_MANAGED",
+            "UNRESTRICTED"
+          ]
+        },
+        "current_month_spent_amount": {
+          "type": "number",
+          "example": 14000
+        },
+        "display_available_amount": {
+          "type": "number",
+          "example": 6000,
+          "description": "화면 상단에 표시할 사용 가능 금액"
+        },
+        "monthly_budget_amount": {
+          "type": "number",
+          "example": 20000
+        },
+        "period": {
+          "type": "string",
+          "example": "2026-08"
+        },
+        "remaining_monthly_budget_amount": {
+          "type": "number",
+          "example": 6000
+        },
+        "usage_rate": {
+          "type": "integer",
+          "format": "int32",
+          "example": 70,
+          "description": "프로그레스바 표시용 0~100 사용률"
+        }
+      },
+      "title": "SpendingSummary"
+    },
+    "Summary": {
+      "type": "object",
+      "properties": {
+        "annual_expense_amount": {
+          "type": "number"
+        },
+        "previous_month_change_amount": {
+          "type": "number"
+        },
+        "previous_month_change_rate": {
+          "type": "number"
+        },
+        "previous_month_expense_amount": {
+          "type": "number"
+        },
+        "total_expense_amount": {
+          "type": "number"
+        }
+      },
+      "title": "Summary"
+    },
     "TimeCapsuleAccountResponse": {
       "type": "object",
       "properties": {
@@ -7009,13 +8889,7 @@
           "format": "date-time"
         },
         "media": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/MediaResponse"
-          }
-        },
-        "media_mode": {
-          "type": "string"
+          "$ref": "#/definitions/MediaResponse"
         },
         "message": {
           "type": "string"
@@ -7121,6 +8995,23 @@
         }
       },
       "title": "TimeCapsuleListResponse"
+    },
+    "TimeCapsuleSummary": {
+      "type": "object",
+      "properties": {
+        "dday": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "time_capsule_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "TimeCapsuleSummary"
     },
     "TimeCapsuleSummaryResponse": {
       "type": "object",
@@ -7419,6 +9310,29 @@
         }
       },
       "title": "UpdateAutoTransferScheduleRequest"
+    },
+    "UpdateMissionStatusRequest": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "APPROVE",
+            "CANCEL",
+            "REJECT",
+            "SUBMIT"
+          ]
+        },
+        "destination_account_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "source_account_id": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "UpdateMissionStatusRequest"
     },
     "UpdateNotificationPreferencesRequest": {
       "type": "object",

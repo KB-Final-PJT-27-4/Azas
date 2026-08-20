@@ -10,50 +10,76 @@ import homePigUrl from '@/assets/images/login/logo-pig.png'
 import goalIconUrl from '@/assets/images/home/icon-goal.png'
 import homeProductIconUrl from '@/assets/images/home/home-product.png'
 import timeCapsuleIconUrl from '@/assets/images/home/icon-time-capsule.png'
-import { productRecommendationGoal } from '@/data/productDummyData'
-import { currentHomeMemberType, homeDataByMemberType } from '@/mocks/home'
+import { api, getApiErrorMessage } from '@/api'
+import { requireAuthorizationHeader, resolveCurrentChildId } from '@/api/context'
 
-const homeData = computed(() => homeDataByMemberType[currentHomeMemberType])
-const goalSlides = computed(() => homeData.value.goals ?? [])
-const currentAssetAmount = computed(() => goalSlides.value[0]?.currentAmount ?? 0)
+type HomeGoal = {
+  id: number
+  tag: string
+  currentAmount: number
+  targetAmount: number
+  progress: number
+}
+
+type HomeChecklistItem = {
+  id: number
+  title: string
+  completed: boolean
+}
+
+const childName = ref('우리 아이')
+const currentAssetAmount = ref(0)
+const currentAssetChangeAmount = ref(0)
+const goals = ref<HomeGoal[]>([])
+const goalSlides = computed(() => goals.value)
+const checklistItems = ref<HomeChecklistItem[]>([])
+const checklistCompletedCount = ref(0)
+const checklistTotalCount = ref(0)
+const checklistProgress = ref(0)
+const nearestTimeCapsuleDay = ref<number | null>(null)
+const errorMessage = ref('')
 const selectedGoalIndex = ref(0)
 const goalCarouselRef = ref<HTMLElement | null>(null)
 let goalCarouselTimer: ReturnType<typeof window.setInterval> | null = null
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
-const quickMenus = computed(() =>
-  homeData.value.quickMenus.map((menu) => {
-    if (menu.icon === 'checklist') {
-      return {
-        ...menu,
-        title: '맞춤 금융상품',
-        subtitle: '추천 받기',
-        to: '/products',
-      }
-    }
-    if (menu.icon === 'goal' && goalSlides.value.length > 0) {
-      return {
-        ...menu,
-        subtitle: `${goalSlides.value.length}개 진행 중`,
-        to: '/mypage/goals',
-      }
-    }
-    return menu
-  }),
-)
+const quickMenus = computed(() => [
+  { title: '맞춤 금융상품', subtitle: '추천 받기', icon: 'checklist', to: '/products' },
+  {
+    title: '타임캡슐',
+    subtitle: nearestTimeCapsuleDay.value === null ? '만들러가기' : `D - ${nearestTimeCapsuleDay.value}`,
+    icon: 'timeCapsule',
+    to: '/time-capsules',
+  },
+  {
+    title: '목표',
+    subtitle: goalSlides.value.length ? `${goalSlides.value.length}개 진행 중` : '설정하기',
+    icon: 'goal',
+    to: goalSlides.value.length ? '/mypage/goals' : '/goals',
+  },
+])
 
 const quickMenuIconUrls = {
   timeCapsule: timeCapsuleIconUrl,
   goal: goalIconUrl,
 }
 
-const checklistItems = computed(() => [
-  { title: '아이 통장 준비하기', completed: currentHomeMemberType === 'existing' },
-  { title: '우리 아이 저축 목표 세우기', completed: currentHomeMemberType === 'existing' },
-  { title: '가족 금융 계획 점검하기', completed: false },
-])
-
-const checklistCompletedCount = computed(() => (currentHomeMemberType === 'existing' ? 3 : 0))
+const toggleChecklistItem = async (item: HomeChecklistItem) => {
+  const nextCompleted = !item.completed
+  try {
+    const authorization = requireAuthorizationHeader()
+    await api.updateChecklistItemCompletionUsingPATCH(authorization, item.id, {
+      completed: nextCompleted,
+    } as never)
+    item.completed = nextCompleted
+    checklistCompletedCount.value += nextCompleted ? 1 : -1
+    checklistProgress.value = checklistTotalCount.value
+      ? Math.round((checklistCompletedCount.value / checklistTotalCount.value) * 100)
+      : 0
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '체크리스트를 변경하지 못했어요.')
+  }
+}
 
 const selectGoal = (index: number, behavior: ScrollBehavior = 'smooth') => {
   const goalCount = goalSlides.value.length
@@ -94,10 +120,54 @@ const restartGoalCarousel = () => {
   startGoalCarousel()
 }
 
+const loadHome = async () => {
+  try {
+    errorMessage.value = ''
+    const childId = await resolveCurrentChildId()
+    const authorization = requireAuthorizationHeader()
+    const [dashboardResponse, goalsResponse, checklistResponse] = await Promise.all([
+      api.getDashboardUsingGET1(authorization, childId),
+      api.getGoalsUsingGET(childId),
+      api.getChecklistItemsUsingGET(authorization, childId),
+    ])
+    const dashboard = dashboardResponse.data
+    childName.value = dashboard.child?.name ?? '우리 아이'
+    currentAssetAmount.value = dashboard.asset_summary?.total_asset_amount ?? 0
+    currentAssetChangeAmount.value = dashboard.asset_summary?.total_asset_change_amount ?? 0
+    nearestTimeCapsuleDay.value = dashboard.quick_summary?.nearest_time_capsule?.dday ?? null
+    goals.value = goalsResponse.data.financial_goals.map((goal) => ({
+      id: goal.financial_goal_id ?? 0,
+      tag: goal.title ?? '저축 목표',
+      currentAmount: goal.current_amount ?? 0,
+      targetAmount: goal.target_amount ?? 0,
+      progress: goal.achievement_rate ?? 0,
+    }))
+
+    const checklist = checklistResponse.data
+    checklistItems.value = ((checklist.items ?? []) as unknown as Array<{
+      checklist_item_id?: number
+      title?: string
+      status?: string
+      completed?: boolean
+    }>).slice(0, 3).map((item) => ({
+      id: item.checklist_item_id ?? 0,
+      title: item.title ?? '준비 항목',
+      completed: item.completed ?? item.status === 'COMPLETED',
+    }))
+    checklistCompletedCount.value = checklist.completed_count ?? 0
+    checklistTotalCount.value = checklist.total_count ?? checklistItems.value.length
+    checklistProgress.value = checklist.progress_percent ?? 0
+    startGoalCarousel()
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '홈 정보를 불러오지 못했어요.')
+  }
+}
+
 let previousHtmlBackground = ''
 let previousBodyBackground = ''
 
 onMounted(() => {
+  void loadHome()
   startGoalCarousel()
   previousHtmlBackground = document.documentElement.style.backgroundColor
   previousBodyBackground = document.body.style.backgroundColor
@@ -125,7 +195,7 @@ onBeforeUnmount(() => {
           id="home-title"
           class="mt-1.5 mb-0 text-[20px] leading-[1.22] font-extrabold tracking-[-0.04em]"
         >
-          <span class="text-[var(--color-brand-primary)]">{{ homeData.childName }}</span
+          <span class="text-[var(--color-brand-primary)]">{{ childName }}</span
           >의 미래를<br />함께 준비해요
         </h1>
       </div>
@@ -141,23 +211,27 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="home-asset-card" aria-label="미래자산 요약">
-      <RouterLink class="home-asset-overview" :to="{ name: 'Assets' }">
-        <div class="home-asset-copy">
+      <div class="home-asset-overview">
+        <RouterLink class="home-asset-copy" :to="{ name: 'Assets' }">
           <span class="text-[13px] font-extrabold">현재</span>
           <strong class="mt-2 block text-[26px] leading-none tracking-[-0.045em]">
             {{ formatCurrency(currentAssetAmount) }}
           </strong>
           <p class="mt-3 mb-0 text-[11px] text-[var(--color-text-secondary)]">
             지난달보다
-            <strong class="text-[var(--color-selected-text)]">+350,000원</strong>
+            <strong class="text-[var(--color-selected-text)]">{{ formatCurrency(currentAssetChangeAmount) }}</strong>
           </p>
-        </div>
+        </RouterLink>
 
-        <span class="home-asset-more">
+        <RouterLink class="home-asset-more" :to="{ name: 'Reports' }">
           자산 리포트 보기 <ChevronRight :size="11" :stroke-width="2.5" />
-        </span>
+        </RouterLink>
 
-        <span class="home-mini-chart-wrap" aria-hidden="true">
+        <RouterLink
+          class="home-mini-chart-wrap"
+          :to="{ name: 'Reports' }"
+          aria-label="자산 변화 리포트 보기"
+        >
           <svg class="home-mini-chart" width="148" height="91" viewBox="0 0 148 91">
             <defs>
               <linearGradient id="home-chart-bar" x1="0" x2="0" y1="0" y2="1">
@@ -181,8 +255,8 @@ onBeforeUnmount(() => {
               />
             </g>
           </svg>
-        </span>
-      </RouterLink>
+        </RouterLink>
+      </div>
 
       <div
         v-if="goalSlides.length"
@@ -202,12 +276,12 @@ onBeforeUnmount(() => {
             v-for="goal in goalSlides"
             :key="goal.id"
             class="home-goal-row"
-            :to="homeData.goalCtaTo"
+            :to="{ name: 'MypageGoals' }"
           >
             <span class="grid size-10 shrink-0 place-items-center rounded-full bg-[#eaf8ff]">
               <img
                 class="size-7 object-contain"
-                :src="productRecommendationGoal.icon"
+                :src="goalIconUrl"
                 alt=""
                 aria-hidden="true"
               />
@@ -249,7 +323,7 @@ onBeforeUnmount(() => {
       <RouterLink
         v-else
         class="flex min-h-[78px] items-center justify-between gap-3 border-t border-[#e4edf2] bg-white px-5 py-3 !text-[var(--color-text-primary)]"
-        :to="homeData.goalCtaTo"
+        :to="{ name: 'Goals' }"
       >
         <span>
           <strong class="block text-sm">첫 저축 목표를 만들어보세요</strong>
@@ -290,9 +364,8 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="mt-[16px]" aria-labelledby="home-checklist-title">
-      <RouterLink
-        to="/checklists"
-        class="block overflow-hidden rounded-[20px] border border-[#dce8ee] bg-white !text-[var(--color-text-primary)] shadow-[0_6px_18px_rgba(64,106,126,0.04)] transition-transform active:scale-[0.99]"
+      <div
+        class="block overflow-hidden rounded-[20px] border border-[#dce8ee] bg-white text-[var(--color-text-primary)] shadow-[0_6px_18px_rgba(64,106,126,0.04)]"
       >
         <div class="px-5 pb-4 pt-5">
           <div class="flex items-end justify-between gap-3">
@@ -302,20 +375,22 @@ onBeforeUnmount(() => {
               </span>
               <p class="mt-1 text-[22px] font-extrabold leading-none">
                 {{ checklistCompletedCount
-                }}<span class="text-[14px] text-[var(--color-text-secondary)]"> / 6 완료</span>
+                }}<span class="text-[14px] text-[var(--color-text-secondary)]">
+                  / {{ checklistTotalCount }} 완료</span
+                >
               </p>
             </div>
             <span
               class="rounded-full bg-[#eaf8ff] px-3 py-1.5 text-[11px] font-bold text-[var(--color-selected-text)]"
             >
-              {{ Math.round((checklistCompletedCount / 6) * 100) }}%
+              {{ checklistProgress }}%
             </span>
           </div>
 
           <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#e8eef2]">
             <span
               class="block h-full rounded-full bg-[var(--color-brand-primary)] transition-[width] duration-700"
-              :style="{ width: `${(checklistCompletedCount / 6) * 100}%` }"
+              :style="{ width: `${checklistProgress}%` }"
             />
           </div>
         </div>
@@ -323,41 +398,46 @@ onBeforeUnmount(() => {
         <ul class="m-0 list-none border-t border-[#e7eef2] px-5 py-2">
           <li
             v-for="item in checklistItems"
-            :key="item.title"
-            class="flex min-h-10 items-center gap-3 border-b border-[#edf2f5] py-2 last:border-b-0"
+            :key="item.id"
+            class="border-b border-[#edf2f5] last:border-b-0"
           >
-            <span
-              class="grid size-4.5 shrink-0 place-items-center rounded-full"
-              :class="
-                item.completed
-                  ? 'bg-[var(--color-brand-primary)] text-white'
-                  : 'border-2 border-[#b8b8b8] bg-white'
-              "
+            <button
+              class="flex min-h-10 w-full items-center gap-3 py-2 text-left transition-colors active:bg-[#f7fbfe]"
+              type="button"
+              :aria-pressed="item.completed"
+              :aria-label="item.completed ? `${item.title} 완료 취소` : `${item.title} 완료`"
+              @click="toggleChecklistItem(item)"
             >
-              <Check v-if="item.completed" :size="12" :stroke-width="3" />
-            </span>
-            <span
-              class="min-w-0 flex-1 truncate text-[12px] font-semibold"
-              :class="item.completed ? 'text-[var(--color-text-secondary)] line-through' : ''"
-            >
-              {{ item.title }}
-            </span>
-            <!-- <span
-              v-if="!item.completed"
-              class="text-[10px] font-semibold text-[var(--color-selected-text)]"
-            >
-              준비하기
-            </span> -->
+              <span
+                class="grid size-4.5 shrink-0 place-items-center rounded-full"
+                :class="
+                  item.completed
+                    ? 'bg-[var(--color-brand-primary)] text-white'
+                    : 'border-2 border-[#b8b8b8] bg-white'
+                "
+              >
+                <Check v-if="item.completed" :size="12" :stroke-width="3" />
+              </span>
+              <span
+                class="min-w-0 flex-1 truncate text-[12px] font-semibold"
+                :class="item.completed ? 'text-[var(--color-text-secondary)] line-through' : ''"
+              >
+                {{ item.title }}
+              </span>
+            </button>
           </li>
         </ul>
 
-        <div class="flex items-center justify-between bg-[#f8fbfd] px-5 py-3 text-[11px] font-bold">
-          <span>남은 준비 항목 {{ 6 - checklistCompletedCount }}개</span>
+        <RouterLink
+          to="/checklists"
+          class="flex items-center justify-between bg-[#f8fbfd] px-5 py-3 text-[11px] font-bold !text-[var(--color-text-primary)] transition-colors active:bg-[#eef5f8]"
+        >
+          <span>남은 준비 항목 {{ checklistTotalCount - checklistCompletedCount }}개</span>
           <span class="inline-flex items-center gap-1 text-[var(--color-selected-text)]">
-            이어서 확인하기 <ChevronRight :size="14" />
+            전체 확인하기 <ChevronRight :size="14" />
           </span>
-        </div>
-      </RouterLink>
+        </RouterLink>
+      </div>
     </section>
   </main>
 </template>
@@ -429,7 +509,9 @@ onBeforeUnmount(() => {
 .home-asset-copy {
   position: relative;
   z-index: 2;
+  display: block;
   max-width: 60%;
+  color: var(--color-text-primary) !important;
 }
 
 .home-asset-more {

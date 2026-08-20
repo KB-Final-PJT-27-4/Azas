@@ -1,34 +1,65 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { Pencil } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
-import { childAccountSummary, getChildTransaction } from '@/mocks/childHome'
+import { api, getApiErrorMessage } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
-const transaction = computed(() => getChildTransaction(String(route.params.transactionId ?? '')))
+const transaction = reactive({
+  amount: 0,
+  type: 'expense' as 'income' | 'expense',
+  memo: '',
+  time: '',
+  accountLabel: '',
+  depositName: '',
+  depositAccountNumber: '',
+  withdrawalName: '',
+  withdrawalAccountNumber: '',
+  balanceAfterTransaction: 0,
+})
+const errorMessage = ref('')
 
-const memo = ref(transaction.value.memo ?? '')
+const memo = ref('')
 const memoDraft = ref(memo.value)
 const isEditingMemo = ref(false)
 const memoInput = ref<HTMLTextAreaElement | null>(null)
 
 const signedAmount = computed(() => {
-  const prefix = transaction.value.type === 'income' ? '+' : '-'
-  return `${prefix}${Math.abs(transaction.value.amount).toLocaleString('ko-KR')} 원`
+  const prefix = transaction.type === 'income' ? '+' : '-'
+  return `${prefix}${Math.abs(transaction.amount).toLocaleString('ko-KR')} 원`
 })
 
-const accountLabel = computed(() => transaction.value.accountLabel ?? childAccountSummary.accountName)
-const depositName = computed(() => transaction.value.depositName ?? transaction.value.title)
-const depositAccountNumber = computed(() => transaction.value.depositAccountNumber ?? '가맹점 결제')
-const withdrawalName = computed(() => transaction.value.withdrawalName ?? childAccountSummary.accountName)
-const withdrawalAccountNumber = computed(
-  () => transaction.value.withdrawalAccountNumber ?? '952-17362605-47',
-)
-const balanceAfterTransaction = computed(
-  () => transaction.value.balanceAfterTransaction ?? childAccountSummary.balance,
-)
+const accountLabel = computed(() => transaction.accountLabel || transaction.withdrawalName || '거래 계좌')
+const depositName = computed(() => transaction.depositName || '입금처')
+const depositAccountNumber = computed(() => transaction.depositAccountNumber || '-')
+const withdrawalName = computed(() => transaction.withdrawalName || '출금처')
+const withdrawalAccountNumber = computed(() => transaction.withdrawalAccountNumber || '-')
+const balanceAfterTransaction = computed(() => transaction.balanceAfterTransaction)
+
+onMounted(async () => {
+  try {
+    const transactionId = Number(route.params.transactionId)
+    const { data } = await api.getTransactionDetailUsingGET(transactionId)
+    transaction.amount = data.amount
+    transaction.type = data.direction === 'CREDIT' ? 'income' : 'expense'
+    transaction.memo = data.memo ?? ''
+    transaction.time = new Date(data.occurred_at).toLocaleString('ko-KR')
+    transaction.accountLabel = data.direction === 'CREDIT'
+      ? (data.deposit_account.account_name ?? '')
+      : (data.withdrawal_account.account_name ?? '')
+    transaction.depositName = data.deposit_account.account_name ?? data.deposit_account.bank_name ?? ''
+    transaction.depositAccountNumber = data.deposit_account.account_number ?? ''
+    transaction.withdrawalName = data.withdrawal_account.account_name ?? data.withdrawal_account.bank_name ?? ''
+    transaction.withdrawalAccountNumber = data.withdrawal_account.account_number ?? ''
+    transaction.balanceAfterTransaction = data.balance_after ?? 0
+    memo.value = transaction.memo
+    memoDraft.value = transaction.memo
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '거래 상세를 불러오지 못했습니다.')
+  }
+})
 
 const startMemoEdit = async () => {
   memoDraft.value = memo.value

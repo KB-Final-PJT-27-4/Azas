@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Check, Plus, X } from 'lucide-vue-next'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
@@ -21,7 +21,8 @@ import strawberryImage from '@/assets/images/pregnancy/strawberry.png'
 import watermelonImage from '@/assets/images/pregnancy/watermelon.png'
 import BaseDatePicker from '@/components/common/BaseDatePicker.vue'
 import { useToast } from '@/composables/useToast'
-import { loadRegistrationDraft } from '@/utils/registrationDraft'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 
 const router = useRouter()
 const { showToast } = useToast()
@@ -33,7 +34,10 @@ let freeCapsuleDragStartY = 0
 let freeCapsuleDragStartTime = 0
 const freeCapsuleOpenDate = ref('')
 const isFreeCapsuleCreated = ref(false)
-const registration = loadRegistrationDraft()
+const registration = ref<{ birthDate: string; childName: string } | null>(null)
+const childId = ref<number | null>(null)
+const demandAccountId = ref<number | null>(null)
+const capsuleAccounts = ref<Array<{ id: number; name: string; createdAt: string; savedAmount: number; isFree?: boolean }>>([])
 
 const pregnancyStages = [
   { week: 7, fruit: '블루베리', image: blueberryImage, color: '#777bdc' },
@@ -54,9 +58,9 @@ const today = new Date()
 today.setHours(0, 0, 0, 0)
 
 const pregnancyGrowth = computed(() => {
-  if (!registration?.birthDate) return null
+  if (!registration.value?.birthDate) return null
 
-  const [year, month, day] = registration.birthDate.split('-').map(Number)
+  const [year, month, day] = registration.value.birthDate.split('-').map(Number)
   if (!year || !month || !day) return null
 
   const dueDate = new Date(year, month - 1, day)
@@ -74,15 +78,15 @@ const pregnancyGrowth = computed(() => {
   const stage =
     nearestStages.length === 1
       ? nearestStages[0]!
-      : nearestStages[(registration.childName.codePointAt(0) ?? 0) % nearestStages.length]!
+      : nearestStages[(registration.value.childName.codePointAt(0) ?? 0) % nearestStages.length]!
 
   return { ...stage, currentWeek }
 })
 
 const bornBabyGrowth = computed(() => {
-  if (!registration?.birthDate) return null
+  if (!registration.value?.birthDate) return null
 
-  const [year, month, day] = registration.birthDate.split('-').map(Number)
+  const [year, month, day] = registration.value.birthDate.split('-').map(Number)
   if (!year || !month || !day) return null
 
   const birthDate = new Date(year, month - 1, day)
@@ -92,7 +96,7 @@ const bornBabyGrowth = computed(() => {
   const daysSinceBirth = Math.floor((today.getTime() - birthDate.getTime()) / 86_400_000) + 1
   return {
     daysSinceBirth,
-    childName: registration.childName || '아이',
+    childName: registration.value.childName || '아이',
   }
 })
 const todayKey = [
@@ -153,14 +157,33 @@ const endFreeCapsuleSheetDrag = (event: PointerEvent) => {
   if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
 }
 
-const confirmFreeCapsule = () => {
+const confirmFreeCapsule = async () => {
   if (!freeCapsuleOpenDate.value) {
     showToast('오픈 날짜를 선택해주세요.', 'error')
     return
   }
-  isFreeCapsuleCreated.value = true
-  closeFreeCapsuleSheet()
-  showToast('입출금계좌의 오픈 날짜를 설정했습니다.', 'success')
+  if (!childId.value || !demandAccountId.value) {
+    showToast('연결된 입출금계좌가 필요합니다.', 'error')
+    return
+  }
+  try {
+    const { data } = await api.createTimeCapsuleUsingPOST(childId.value, {
+      financial_account_id: demandAccountId.value,
+      release_date: freeCapsuleOpenDate.value,
+    })
+    capsuleAccounts.value.push({
+      id: data.time_capsule_id ?? 0,
+      name: data.title ?? '입출금계좌 타임캡슐',
+      createdAt: data.release_date?.replaceAll('-', '.') ?? formattedFreeOpenDate.value,
+      savedAmount: data.total_saved_amount ?? 0,
+      isFree: true,
+    })
+    isFreeCapsuleCreated.value = true
+    closeFreeCapsuleSheet()
+    showToast('입출금계좌의 오픈 날짜를 설정했습니다.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐을 만들지 못했습니다.'), 'error')
+  }
 }
 
 const navigateForward = async (to: RouteLocationRaw) => {
@@ -199,32 +222,36 @@ const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean 
   openFreeCapsuleList()
 }
 
-const capsuleAccounts = computed(() => [
-  {
-    id: 1,
-    name: '아이사랑적금',
-    createdAt: '2026.08.06',
-    savedAmount: 200000,
-  },
-  {
-    id: 2,
-    name: '우리사랑적금',
-    createdAt: '2027.07.18',
-    savedAmount: 200000,
-  },
-  {
-    id: 3,
-    name: '입출금계좌',
-    createdAt: isFreeCapsuleCreated.value ? formattedFreeOpenDate.value : '오픈 날짜 설정',
-    savedAmount: 0,
-    isFree: true,
-  },
-])
-
 const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
   capsule.isFree
     ? isFreeCapsuleCreated.value && isReleased(capsule.createdAt)
     : isReleased(capsule.createdAt)
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const [{ data: child }, { data: capsules }, { data: accounts }] = await Promise.all([
+      api.getChildUsingGET(childId.value),
+      api.getTimeCapsulesUsingGET(childId.value),
+      api.getChildAccountsUsingGET(childId.value),
+    ])
+    registration.value = {
+      birthDate: child.birth_date ?? child.expected_birth_date ?? '',
+      childName: child.name ?? '아이',
+    }
+    demandAccountId.value = accounts.accounts.find(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')?.account_id ?? null
+    capsuleAccounts.value = (capsules.time_capsules ?? []).map((capsule) => ({
+      id: capsule.time_capsule_id ?? 0,
+      name: capsule.title ?? '타임캡슐',
+      createdAt: capsule.release_date?.replaceAll('-', '.') ?? '오픈 날짜 설정',
+      savedAmount: capsule.total_saved_amount ?? 0,
+      isFree: capsule.account_id === demandAccountId.value,
+    }))
+    isFreeCapsuleCreated.value = capsuleAccounts.value.some(({ isFree }) => isFree)
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐을 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>
@@ -373,13 +400,13 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
     </section>
 
     <button
-      class="time-capsule-create-button fixed z-[60]"
+      class="time-capsule-create-button fixed z-[40]"
       type="button"
       aria-label="타임캡슐 생성하기"
       @click="navigateForward('/time-capsules/new')"
     >
       <span class="time-capsule-create-button__surface">
-        <Plus :size="23" :stroke-width="3" aria-hidden="true" />
+        <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
       </span>
     </button>
 
@@ -486,7 +513,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 }
 
 .time-capsule-create-button {
-  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 1px);
+  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 7px);
   left: 50%;
   width: 88px;
   height: 47px;

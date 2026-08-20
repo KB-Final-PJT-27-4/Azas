@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { api, getApiErrorMessage } from '@/api'
 import { useToast } from '@/composables/useToast'
 
 type AlarmSetting = {
@@ -17,62 +18,51 @@ type AlarmGroup = {
 }
 
 const { showToast } = useToast()
-const alarmGroups = ref<AlarmGroup[]>([
-  {
-    id: 'finance',
-    title: '금융·기록 알림',
-    description: '저축 일정과 가족의 금융 기록을 알려드려요.',
-    settings: [
-      {
-        id: 'scheduled-saving',
-        title: '저축 예정 알림',
-        description: '저축일과 자동이체 예정 일정을 미리 알려드려요.',
-        enabled: true,
-      },
-      {
-        id: 'time-capsule-release',
-        title: '타임캡슐 공개 알림',
-        description: '타임캡슐을 열 수 있는 날에 알려드려요.',
-        enabled: true,
-      },
-    ],
-  },
-  {
-    id: 'child',
-    title: '아이 성장·활동 알림',
-    description: '아이의 성장 과정과 서비스 활동을 챙겨드려요.',
-    settings: [
-      {
-        id: 'allowance-request',
-        title: '용돈 요청 알림',
-        description: '아이가 용돈을 요청하면 바로 알려드려요.',
-        enabled: true,
-      },
-      {
-        id: 'pregnancy-week',
-        title: '임신 주차별 알림',
-        description: '주차별 아이의 성장 정보와 팁을 알려드려요.',
-        enabled: true,
-      },
-      {
-        id: 'child-limit-exceeded',
-        title: '아이 한도 초과 알림',
-        description: '아이가 설정한 사용 한도를 넘으면 알려드려요.',
-        enabled: true,
-      },
-      {
-        id: 'child-mission-success',
-        title: '아이 미션 성공 알림',
-        description: '아이가 미션을 완료한 순간을 알려드려요.',
-        enabled: true,
-      },
-    ],
-  },
-])
+const alarmGroups = ref<AlarmGroup[]>([])
 
-const saveSettings = () => {
-  showToast('알림 설정이 저장되었습니다.', 'success')
+const loadSettings = async () => {
+  try {
+    const { data } = await api.getNotificationPreferencesUsingGET()
+    const settings = (data.items ?? []).map((item) => ({
+      id: item.notification_category ?? '',
+      title: item.label ?? item.notification_category ?? '알림',
+      description: item.description ?? '',
+      enabled: item.enabled ?? false,
+    }))
+    alarmGroups.value = [
+      {
+        id: 'finance',
+        title: '금융·기록 알림',
+        description: '저축 일정과 가족의 금융 기록을 알려드려요.',
+        settings: settings.filter(({ id }) => ['SAVINGS', 'TIME_CAPSULE'].includes(id)),
+      },
+      {
+        id: 'child',
+        title: '아이 성장·활동 알림',
+        description: '아이의 성장 과정과 서비스 활동을 챙겨드려요.',
+        settings: settings.filter(({ id }) => !['SAVINGS', 'TIME_CAPSULE'].includes(id)),
+      },
+    ]
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '알림 설정을 불러오지 못했어요.'), 'error')
+  }
 }
+
+const saveSettings = async () => {
+  try {
+    await api.updateNotificationPreferencesUsingPUT({
+      items: alarmGroups.value.flatMap((group) => group.settings).map((setting) => ({
+        notification_category: setting.id,
+        enabled: setting.enabled,
+      })),
+    } as never)
+    showToast('알림 설정이 저장되었습니다.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '알림 설정을 저장하지 못했어요.'), 'error')
+  }
+}
+
+onMounted(loadSettings)
 </script>
 
 <template>

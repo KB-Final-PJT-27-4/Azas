@@ -10,8 +10,7 @@ Name | Type | Description | Notes
 **contributed_at** | **string** |  | [optional] [default to undefined]
 **contribution_amount** | **number** |  | [optional] [default to undefined]
 **created_at** | **string** |  | [optional] [default to undefined]
-**media** | [**Array&lt;MediaResponse&gt;**](MediaResponse.md) |  | [optional] [default to undefined]
-**media_mode** | **string** |  | [optional] [default to undefined]
+**media** | [**MediaResponse**](MediaResponse.md) |  | [optional] [default to undefined]
 **message** | **string** |  | [optional] [default to undefined]
 **sealed_at** | **string** |  | [optional] [default to undefined]
 **status** | **string** |  | [optional] [default to undefined]
@@ -31,7 +30,6 @@ const instance: TimeCapsuleEntryDetailResponse = {
     contribution_amount,
     created_at,
     media,
-    media_mode,
     message,
     sealed_at,
     status,

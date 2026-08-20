@@ -5,7 +5,7 @@ import { LoaderCircle } from 'lucide-vue-next'
 
 import { getOAuthErrorMessage, loginWithOAuthCode } from '@/api/auth'
 import logoPigUrl from '@/assets/images/login/logo-pig.png'
-import { consumeOAuthState, getOAuthRedirectUri, isOAuthProvider } from '@/utils/oauth'
+import { consumeOAuthInvitation, consumeOAuthState, getOAuthRedirectUri, isOAuthProvider } from '@/utils/oauth'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,9 +36,10 @@ onMounted(async () => {
   }
 
   try {
-    const response = await loginWithOAuthCode(provider, code, getOAuthRedirectUri(provider))
+    const invitation = consumeOAuthInvitation(provider)
+    const response = await loginWithOAuthCode(provider, code, getOAuthRedirectUri(provider), invitation)
 
-    await router.replace({ name: response.is_new_member ? 'Register' : 'Home' })
+    await router.replace({ name: response.is_new_member && !invitation ? 'Register' : invitation?.inviteeType === 'CHILD' ? 'ChildHome' : 'Home' })
   } catch (error) {
     errorMessage.value = getOAuthErrorMessage(error)
   }

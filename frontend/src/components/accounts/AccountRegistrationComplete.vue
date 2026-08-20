@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { Landmark } from 'lucide-vue-next'
 import completePigUrl from '@/assets/images/accounts/complete-pig.png'
-import completeStarUrl from '@/assets/images/accounts/complete-star.png'
-import completeDiamondUrl from '@/assets/images/accounts/complete-diamond.png'
-import completeCircleUrl from '@/assets/images/accounts/complete-circle.png'
 
 defineProps<{
   accounts: {
