@@ -4,7 +4,9 @@ import { ChevronRight, LogOut, ShieldCheck, UserRound, X } from 'lucide-vue-next
 import { useRouter } from 'vue-router'
 
 import childProfileUrl from '@/assets/images/home/home-profile-baby.png'
+import { ACCESS_TOKEN_STORAGE_KEY } from '@/api/http'
 import { useToast } from '@/composables/useToast'
+import { disablePushNotifications } from '@/services/pushNotifications'
 
 const router = useRouter()
 const { showToast } = useToast()
@@ -22,10 +24,18 @@ const serviceMenus = [
   { label: '도움말', description: '서비스 이용 방법을 확인해요', to: { name: 'Guide' } },
 ]
 
-const logout = () => {
+const logout = async () => {
   accountAction.value = null
+
+  try {
+    await disablePushNotifications()
+  } catch (error) {
+    console.warn('로그아웃 중 푸시 기기 해제에 실패했습니다.', error)
+  }
+
+  sessionStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
   showToast('로그아웃되었습니다.', 'info')
-  router.push({ name: 'Login' })
+  await router.push({ name: 'Login' })
 }
 
 const withdraw = () => {
