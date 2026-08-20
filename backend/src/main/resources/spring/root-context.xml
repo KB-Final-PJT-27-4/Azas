@@ -36,7 +36,7 @@
     <import resource="database-context.xml"/>
 
     <!-- 별도 프로필이 없으면 실제 문자 비용 없이 로컬 발송 흐름을 검증한다. -->
-    <beans profile="default">
+    <beans profile="default,demo">
         <bean id="smsSender"
               class="com.azas.domain.member.service.FakeSmsSender"/>
     </beans>
