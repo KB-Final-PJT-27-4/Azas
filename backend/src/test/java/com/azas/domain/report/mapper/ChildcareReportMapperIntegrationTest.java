@@ -1,6 +1,5 @@
 package com.azas.domain.report.mapper;
 
-import com.azas.domain.report.dto.AssetReportListQuery;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.datasource.pooled.PooledDataSource;
 import org.apache.ibatis.io.Resources;
@@ -14,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.InputStream;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -23,10 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
         named = "RUN_MYSQL_INTEGRATION_TESTS",
         matches = "true"
 )
-class AssetReportMapperIntegrationTest {
+class ChildcareReportMapperIntegrationTest {
 
     @Test
-    void 실제_MySQL에서_자산_리포트_SQL을_실행한다()
+    void 실제_MySQL에서_양육비_리포트_SQL을_실행한다()
             throws Exception {
 
         String dbUrl = requireEnvironment("DB_URL");
@@ -54,12 +53,13 @@ class AssetReportMapperIntegrationTest {
                 new Configuration(environment);
 
         String resourcePath =
-                "mapper/report/AssetReportMapper.xml";
+                "mapper/report/ChildcareReportMapper.xml";
 
         try (InputStream inputStream =
                      Resources.getResourceAsStream(
                              resourcePath
                      )) {
+
             new XMLMapperBuilder(
                     inputStream,
                     configuration,
@@ -75,34 +75,24 @@ class AssetReportMapperIntegrationTest {
         try (SqlSession sqlSession =
                      sqlSessionFactory.openSession(true)) {
 
-            AssetReportMapper mapper =
+            ChildcareReportMapper mapper =
                     sqlSession.getMapper(
-                            AssetReportMapper.class
-                    );
-
-            AssetReportListQuery query =
-                    new AssetReportListQuery(
-                            1L,
-                            null,
-                            null,
-                            null,
-                            null,
-                            1
+                            ChildcareReportMapper.class
                     );
 
             assertDoesNotThrow(() -> {
                 assertNotNull(
-                        mapper.findAssetReports(query)
+                        mapper.findMonthlyExpenses(
+                                6L,
+                                LocalDateTime.of(
+                                        2025, 7, 31, 15, 0
+                                ),
+                                LocalDateTime.of(
+                                        2026, 7, 31, 15, 0
+                                )
+                        )
                 );
             });
-
-            assertDoesNotThrow(() ->
-                    mapper.findAssetReportDetail(
-                            1L,
-                            LocalDate.of(2026, 7, 1)
-                    )
-            );
-
         } finally {
             dataSource.forceCloseAll();
         }
