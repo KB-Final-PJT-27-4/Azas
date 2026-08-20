@@ -89,16 +89,11 @@ jobs:
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/dev-be') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev-be')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, backend]
     timeout-minutes: 10
     concurrency:
       group: backend-production-deploy
       cancel-in-progress: false
-    env:
-      EC2_HOST: ${{ secrets.EC2_HOST }}
-      EC2_USER: ${{ secrets.EC2_USER }}
-      EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-      EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
     steps:
       - name: Download WAR artifact
         uses: actions/download-artifact@v4
@@ -106,100 +101,11 @@ jobs:
           name: backend-war-${{ github.sha }}
           path: deploy
 
-      - name: Validate deployment secrets
-        run: |
-          : "${EC2_HOST:?Missing EC2_HOST secret}"
-          : "${EC2_USER:?Missing EC2_USER secret}"
-          : "${EC2_SSH_PRIVATE_KEY:?Missing EC2_SSH_PRIVATE_KEY secret}"
-          : "${EC2_KNOWN_HOSTS:?Missing EC2_KNOWN_HOSTS secret}"
-
-      - name: Configure SSH
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/azas-backend-key.pem
-          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/azas-backend-key.pem ~/.ssh/known_hosts
-
-      - name: Upload WAR to EC2
-        run: |
-          scp \
-            -i ~/.ssh/azas-backend-key.pem \
-            -o IdentitiesOnly=yes \
-            -o ConnectTimeout=10 \
-            "deploy/${WAR_NAME}" \
-            "${EC2_USER}@${EC2_HOST}:/tmp/azas-ROOT-${GITHUB_SHA}.war"
+      - name: Stage WAR for deployment
+        run: install -m 0600 "deploy/${WAR_NAME}" /tmp/azas-ROOT.war
 
       - name: Deploy WAR and verify internal health
-        run: |
-          ssh \
-            -i ~/.ssh/azas-backend-key.pem \
-            -o IdentitiesOnly=yes \
-            -o ConnectTimeout=10 \
-            "${EC2_USER}@${EC2_HOST}" \
-            "DEPLOY_SHA='${GITHUB_SHA}' bash -s" <<'REMOTE_SCRIPT'
-          set -Eeuo pipefail
-
-          incoming_war="/tmp/azas-ROOT-${DEPLOY_SHA}.war"
-          webapps_dir="/opt/tomcat/webapps"
-          current_war="${webapps_dir}/ROOT.war"
-          exploded_app="${webapps_dir}/ROOT"
-          backup_dir="/opt/azas-backups"
-          deploy_stamp="$(date +%Y%m%d%H%M%S)"
-          backup_war="${backup_dir}/ROOT.war.${deploy_stamp}"
-
-          exec 9>/tmp/azas-backend-deploy.lock
-          flock -n 9 || {
-            echo "Another backend deployment is in progress."
-            exit 1
-          }
-
-          test -s "$incoming_war"
-          sudo test -d "$webapps_dir"
-          sudo mkdir -p "$backup_dir"
-
-          if sudo test -f "$current_war"; then
-            sudo cp -p "$current_war" "$backup_war"
-          fi
-
-          rollback() {
-            echo "Deployment failed. Restoring the previous WAR."
-            sudo systemctl stop azas-tomcat || true
-            if sudo test -f "$backup_war"; then
-              sudo install -o tomcat -g tomcat -m 0640 "$backup_war" "$current_war"
-            fi
-            if sudo test -d "$exploded_app"; then
-              sudo rm -rf -- "$exploded_app"
-            fi
-            sudo systemctl start azas-tomcat || true
-          }
-          trap rollback ERR
-
-          sudo systemctl stop azas-tomcat
-          if sudo test -d "$exploded_app"; then
-            sudo rm -rf -- "$exploded_app"
-          fi
-          sudo install -o tomcat -g tomcat -m 0640 "$incoming_war" "$current_war"
-          sudo systemctl start azas-tomcat
-
-          health_ok=false
-          for _ in $(seq 1 45); do
-            if curl -fsS http://127.0.0.1:8080/api/v1/health \
-              | grep -q '"status":"UP"'; then
-              health_ok=true
-              break
-            fi
-            sleep 2
-          done
-
-          if [ "$health_ok" != true ]; then
-            echo "Internal health check failed."
-            exit 1
-          fi
-
-          sudo systemctl is-active --quiet azas-tomcat
-          rm -f -- "$incoming_war"
-          trap - ERR
-          REMOTE_SCRIPT
+        run: sudo /usr/local/sbin/deploy-azas-backend
 
       - name: Verify external HTTPS health
         run: |
@@ -225,3 +131,7 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Health: ${HEALTH_URL}"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove staged WAR
+        if: always()
+        run: rm -f /tmp/azas-ROOT.war
