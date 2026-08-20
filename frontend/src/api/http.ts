@@ -1,5 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 
+import { apiBaseUrl } from '@/api/config'
+
 export const ACCESS_TOKEN_STORAGE_KEY = 'azas_access_token'
 export const REFRESH_TOKEN_STORAGE_KEY = 'azas_refresh_token'
 
@@ -26,8 +28,7 @@ export const applyAccessToken = (config: InternalAxiosRequestConfig) => {
 }
 
 export const http = axios.create({
-  // Keep requests same-origin; Vite and Vercel proxy /api to the deployment.
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',
+  baseURL: apiBaseUrl,
   timeout: 15_000,
 })
 
