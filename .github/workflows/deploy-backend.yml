@@ -1,0 +1,227 @@
+name: Backend CI/CD
+
+on:
+  pull_request:
+    branches: [dev-be]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  push:
+    branches: [dev-be]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: "17"
+  BACKEND_DIR: backend
+  WAR_NAME: backend-1.0-SNAPSHOT.war
+  HEALTH_URL: https://api.43-202-193-156.sslip.io/api/v1/health
+
+jobs:
+  build:
+    name: Test and build WAR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ${{ env.BACKEND_DIR }}
+    env:
+      ACCOUNT_NUMBER_ENCRYPTION_KEY_BASE64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      PHONE_NUMBER_ENCRYPTION_KEY_BASE64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      PHONE_VERIFICATION_SECRET_BASE64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      JWT_SECRET_BASE64: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      DB_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      DB_URL: jdbc:mysql://localhost:3306/azas
+      DB_USERNAME: test
+      DB_PASSWORD: test
+      GOOGLE_CLIENT_ID: test
+      GOOGLE_CLIENT_SECRET: test
+      KAKAO_CLIENT_ID: test
+      KAKAO_CLIENT_SECRET: test
+      JWT_ACCESS_TOKEN_EXPIRATION_SECONDS: "3600"
+      REFRESH_TOKEN_EXPIRATION_SECONDS: "1209600"
+      FAMILY_INVITATION_DEFAULT_EXPIRE_HOURS: "24"
+      FAMILY_INVITATION_URL_BASE: http://localhost:5173/family-invitations
+      NCP_SENS_ACCESS_KEY: test
+      NCP_SENS_SECRET_KEY: test
+      NCP_SENS_SENDER_NUMBER: "01000000000"
+      NCP_SENS_SERVICE_ID: test
+      S3_BUCKET: test-bucket
+      AWS_REGION: ap-northeast-2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant Gradle wrapper permission
+        run: chmod +x gradlew
+
+      - name: Run tests and build WAR
+        run: ./gradlew test war --no-daemon
+
+      - name: Verify WAR
+        run: test -s "build/libs/${WAR_NAME}"
+
+      - name: Upload WAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-war-${{ github.sha }}
+          path: backend/build/libs/${{ env.WAR_NAME }}
+          if-no-files-found: error
+          retention-days: 3
+
+  deploy:
+    name: Deploy to EC2
+    needs: build
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/dev-be') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev-be')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: backend-production-deploy
+      cancel-in-progress: false
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+      EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+    steps:
+      - name: Download WAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-war-${{ github.sha }}
+          path: deploy
+
+      - name: Validate deployment secrets
+        run: |
+          : "${EC2_HOST:?Missing EC2_HOST secret}"
+          : "${EC2_USER:?Missing EC2_USER secret}"
+          : "${EC2_SSH_PRIVATE_KEY:?Missing EC2_SSH_PRIVATE_KEY secret}"
+          : "${EC2_KNOWN_HOSTS:?Missing EC2_KNOWN_HOSTS secret}"
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/azas-backend-key.pem
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/azas-backend-key.pem ~/.ssh/known_hosts
+
+      - name: Upload WAR to EC2
+        run: |
+          scp \
+            -i ~/.ssh/azas-backend-key.pem \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=10 \
+            "deploy/${WAR_NAME}" \
+            "${EC2_USER}@${EC2_HOST}:/tmp/azas-ROOT-${GITHUB_SHA}.war"
+
+      - name: Deploy WAR and verify internal health
+        run: |
+          ssh \
+            -i ~/.ssh/azas-backend-key.pem \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=10 \
+            "${EC2_USER}@${EC2_HOST}" \
+            "DEPLOY_SHA='${GITHUB_SHA}' bash -s" <<'REMOTE_SCRIPT'
+          set -Eeuo pipefail
+
+          incoming_war="/tmp/azas-ROOT-${DEPLOY_SHA}.war"
+          webapps_dir="/opt/tomcat/webapps"
+          current_war="${webapps_dir}/ROOT.war"
+          exploded_app="${webapps_dir}/ROOT"
+          backup_dir="/opt/azas-backups"
+          deploy_stamp="$(date +%Y%m%d%H%M%S)"
+          backup_war="${backup_dir}/ROOT.war.${deploy_stamp}"
+
+          exec 9>/tmp/azas-backend-deploy.lock
+          flock -n 9 || {
+            echo "Another backend deployment is in progress."
+            exit 1
+          }
+
+          test -s "$incoming_war"
+          sudo test -d "$webapps_dir"
+          sudo mkdir -p "$backup_dir"
+
+          if sudo test -f "$current_war"; then
+            sudo cp -p "$current_war" "$backup_war"
+          fi
+
+          rollback() {
+            echo "Deployment failed. Restoring the previous WAR."
+            sudo systemctl stop azas-tomcat || true
+            if sudo test -f "$backup_war"; then
+              sudo install -o tomcat -g tomcat -m 0640 "$backup_war" "$current_war"
+            fi
+            if sudo test -d "$exploded_app"; then
+              sudo rm -rf -- "$exploded_app"
+            fi
+            sudo systemctl start azas-tomcat || true
+          }
+          trap rollback ERR
+
+          sudo systemctl stop azas-tomcat
+          if sudo test -d "$exploded_app"; then
+            sudo rm -rf -- "$exploded_app"
+          fi
+          sudo install -o tomcat -g tomcat -m 0640 "$incoming_war" "$current_war"
+          sudo systemctl start azas-tomcat
+
+          health_ok=false
+          for _ in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8080/api/v1/health \
+              | grep -q '"status":"UP"'; then
+              health_ok=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$health_ok" != true ]; then
+            echo "Internal health check failed."
+            exit 1
+          fi
+
+          sudo systemctl is-active --quiet azas-tomcat
+          rm -f -- "$incoming_war"
+          trap - ERR
+          REMOTE_SCRIPT
+
+      - name: Verify external HTTPS health
+        run: |
+          health_ok=false
+          for _ in $(seq 1 15); do
+            if curl -fsS "$HEALTH_URL" | jq -e '.status == "UP"' >/dev/null; then
+              health_ok=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$health_ok" != true ]; then
+            echo "External health check failed: $HEALTH_URL"
+            exit 1
+          fi
+
+      - name: Deployment summary
+        run: |
+          {
+            echo "## Backend deployment completed"
+            echo ""
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Health: ${HEALTH_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"
