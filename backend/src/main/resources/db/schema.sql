@@ -306,6 +306,9 @@ CREATE TABLE checklist_item_detail
     title                      VARCHAR(150)    NOT NULL COMMENT '상세 안내 항목명',
     description                VARCHAR(500)    NULL COMMENT '상세 안내 설명',
     item_order                 INT             NOT NULL COMMENT '상세 안내 표시 순서',
+    action_label VARCHAR(100)  NULL COMMENT '상세 항목 버튼 문구',
+    external_url VARCHAR(2048) NULL COMMENT '외부 이동 URL',
+    detail_content TEXT        NULL COMMENT '이동하지 않을 때 표시할 상세 내용',
     created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
     updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
         ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',

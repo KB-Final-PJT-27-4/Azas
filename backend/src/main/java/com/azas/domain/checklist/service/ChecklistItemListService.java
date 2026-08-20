@@ -220,6 +220,22 @@ public class ChecklistItemListService {
             return ChecklistLifecycleStage.AGE_5_TO_7;
         }
 
+        if (age <= 10) {
+            return ChecklistLifecycleStage.AGE_8_TO_10;
+        }
+
+        if (age <= 13) {
+            return ChecklistLifecycleStage.AGE_11_TO_13;
+        }
+
+        if (age <= 16) {
+            return ChecklistLifecycleStage.AGE_14_TO_16;
+        }
+
+        if (age <= 19) {
+            return ChecklistLifecycleStage.AGE_17_TO_19;
+        }
+
         throw new BusinessException(
                 ErrorCode.CHECKLIST_STAGE_NOT_SUPPORTED
         );

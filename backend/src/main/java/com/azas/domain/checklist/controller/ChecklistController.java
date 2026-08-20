@@ -39,7 +39,9 @@ public class ChecklistController {
             Long childId,
 
             @ApiParam(
-                    value = "PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7"
+                    value = "PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, "
+                            + "AGE_5_TO_7, AGE_8_TO_10, AGE_11_TO_13, "
+                            + "AGE_14_TO_16, AGE_17_TO_19"
             )
             @RequestParam(
                     value = "stage",

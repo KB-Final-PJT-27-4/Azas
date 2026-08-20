@@ -61,29 +61,65 @@
     </insert>
 
     <select id="findItems"
-            resultType="com.azas.domain.checklist.dto.ChecklistItemRow">
+            resultMap="checklistItemRowMap">
+
         SELECT
-        progress.child_checklist_item_id AS checklistItemId,
-        template.checklist_item_template_id AS checklistItemTemplateId,
-        template.title AS title,
-        template.description AS description,
-        progress.status AS status,
-        progress.completed_at AS completedAt,
-        template.item_order AS itemOrder
+        progress.child_checklist_item_id
+        AS checklist_item_id,
+        template.checklist_item_template_id
+        AS checklist_item_template_id,
+        template.template_key,
+        template.category,
+        template.title
+        AS template_title,
+        template.description
+        AS template_description,
+        template.detail_content
+        AS template_content,
+        template.action_type,
+        template.action_url,
+        template.info_title,
+        template.info_notice,
+        progress.status,
+        progress.completed_at,
+        template.item_order
+        AS template_order,
+
+        detail.checklist_item_detail_id,
+        detail.title
+        AS detail_title,
+        detail.description
+        AS detail_description,
+        detail.action_label,
+        detail.external_url,
+        detail.detail_content,
+        detail.item_order
+        AS detail_order
+
         FROM child_checklist_item progress
-        JOIN checklist_item_template template
+
+        INNER JOIN checklist_item_template template
         ON template.checklist_item_template_id =
         progress.checklist_item_template_id
+
+        LEFT JOIN checklist_item_detail detail
+        ON detail.checklist_item_template_id =
+        template.checklist_item_template_id
+
         WHERE progress.child_id = #{childId}
         AND template.lifecycle_stage = #{lifecycleStage}
         AND template.is_active = 1
+
         ORDER BY
         CASE
-        WHEN progress.status = 'COMPLETED' THEN 1
+        WHEN progress.status = 'COMPLETED'
+        THEN 1
         ELSE 0
-        END ASC,
-        template.item_order ASC,
-        template.checklist_item_template_id ASC
+        END,
+        template.item_order,
+        template.checklist_item_template_id,
+        detail.item_order,
+        detail.checklist_item_detail_id
     </select>
 
     <select id="findCompletionTargetForUpdate"
@@ -142,5 +178,76 @@
         updated_at = UTC_TIMESTAMP(6)
         WHERE child_checklist_item_id = #{checklistItemId}
     </update>
+    <resultMap id="checklistItemRowMap"
+               type="com.azas.domain.checklist.dto.ChecklistItemRow">
+
+        <id property="checklistItemId"
+            column="checklist_item_id"/>
+
+        <result property="checklistItemTemplateId"
+                column="checklist_item_template_id"/>
+
+        <result property="templateKey"
+                column="template_key"/>
+
+        <result property="category"
+                column="category"/>
+
+        <result property="title"
+                column="template_title"/>
+
+        <result property="description"
+                column="template_description"/>
+
+        <result property="content"
+                column="template_content"/>
+
+        <result property="actionType"
+                column="action_type"/>
+
+        <result property="url"
+                column="action_url"/>
+
+        <result property="infoTitle"
+                column="info_title"/>
+
+        <result property="infoNotice"
+                column="info_notice"/>
+
+        <result property="status"
+                column="status"/>
+
+        <result property="completedAt"
+                column="completed_at"/>
+
+        <result property="itemOrder"
+                column="template_order"/>
+
+        <collection property="infoItems"
+                    ofType="com.azas.domain.checklist.dto.ChecklistInfoItemRow"
+                    notNullColumn="checklist_item_detail_id">
+
+            <id property="checklistItemDetailId"
+                column="checklist_item_detail_id"/>
+
+            <result property="title"
+                    column="detail_title"/>
+
+            <result property="description"
+                    column="detail_description"/>
+
+            <result property="actionLabel"
+                    column="action_label"/>
+
+            <result property="url"
+                    column="external_url"/>
+
+            <result property="content"
+                    column="detail_content"/>
+
+            <result property="itemOrder"
+                    column="detail_order"/>
+        </collection>
+    </resultMap>
 
 </mapper>
