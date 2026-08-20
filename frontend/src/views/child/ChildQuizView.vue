@@ -10,15 +10,53 @@ import childQuizThinkingPigUrl from '@/assets/images/child/child-quiz-thinking-p
 import childQuizWrongPigUrl from '@/assets/images/child/child-quiz-wrong-pig.png'
 import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-pig.png'
 import { childQuizQuestions } from '@/mocks/childFinanceFlow'
+import {
+  isChildQuizCompletedToday,
+  markChildQuizCompletedToday,
+} from '@/utils/childQuizProgress'
 
+const QUIZ_ROUND_SIZE = 5
+
+const shuffleItems = <T,>(items: T[]) => {
+  const shuffledItems = [...items]
+
+  for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    const currentItem = shuffledItems[index]!
+    shuffledItems[index] = shuffledItems[swapIndex]!
+    shuffledItems[swapIndex] = currentItem
+  }
+
+  return shuffledItems
+}
+
+const createQuizRound = () =>
+  shuffleItems(childQuizQuestions)
+    .slice(0, QUIZ_ROUND_SIZE)
+    .map((question) => {
+      const shuffledOptions = shuffleItems(
+        question.options.map((option, optionIndex) => ({ option, optionIndex })),
+      )
+
+      return {
+        ...question,
+        options: shuffledOptions.map(({ option }) => option),
+        answerIndex: shuffledOptions.findIndex(
+          ({ optionIndex }) => optionIndex === question.answerIndex,
+        ),
+      }
+    })
+
+const quizQuestions = ref(createQuizRound())
 const quizIndex = ref(0)
 const selectedAnswerIndex = ref<number | null>(null)
 const isQuizComplete = ref(false)
+const showAlreadyCompletedModal = ref(isChildQuizCompletedToday())
 const answerResults = ref<Array<'correct' | 'wrong' | null>>(
-  Array.from({ length: childQuizQuestions.length }, () => null),
+  Array.from({ length: quizQuestions.value.length }, () => null),
 )
 
-const quiz = computed(() => childQuizQuestions[quizIndex.value] ?? childQuizQuestions[0]!)
+const quiz = computed(() => quizQuestions.value[quizIndex.value] ?? quizQuestions.value[0]!)
 const hasAnsweredQuiz = computed(() => selectedAnswerIndex.value !== null)
 const currentAnswerResult = computed(() => answerResults.value[quizIndex.value])
 const quizReactionImage = computed(() => {
@@ -38,7 +76,8 @@ const selectQuizAnswer = (optionIndex: number) => {
 const goNextQuiz = () => {
   if (!hasAnsweredQuiz.value) return
 
-  if (quizIndex.value + 1 >= childQuizQuestions.length) {
+  if (quizIndex.value + 1 >= quizQuestions.value.length) {
+    markChildQuizCompletedToday()
     isQuizComplete.value = true
     return
   }
@@ -113,8 +152,8 @@ const getStepClass = (stepIndex: number) => {
         오늘의 퀴즈 완료!
       </h1>
       <p class="mt-4 mb-10 text-[16px] leading-[1.6] text-[var(--color-text-secondary)]">
-        정답을 모두 맞혔어요!<br />
-        정말 대단해요.
+        오늘도 금융 습관을 하나 배웠어요.<br />
+        내일 또 새로운 퀴즈를 풀어봐요.
       </p>
       <RouterLink
         class="grid h-14 w-full place-items-center rounded-[14px] bg-[var(--color-brand-primary)] text-[18px] font-bold !text-white no-underline"
@@ -132,10 +171,10 @@ const getStepClass = (stepIndex: number) => {
       <div class="pt-7 pb-7 px-1" aria-label="퀴즈 진행 상태">
         <ol
           class="quiz-steps m-0 grid list-none p-0"
-          :style="{ gridTemplateColumns: `repeat(${childQuizQuestions.length}, minmax(0, 1fr))` }"
+          :style="{ gridTemplateColumns: `repeat(${quizQuestions.length}, minmax(0, 1fr))` }"
         >
           <li
-            v-for="(_, stepIndex) in childQuizQuestions"
+            v-for="(_, stepIndex) in quizQuestions"
             :key="stepIndex"
             class="quiz-step"
           >
@@ -220,9 +259,39 @@ const getStepClass = (stepIndex: number) => {
         :disabled="!hasAnsweredQuiz"
         @click="goNextQuiz"
       >
-        {{ quizIndex + 1 === childQuizQuestions.length ? '완료하기' : '다음 문제' }}
+        {{ quizIndex + 1 === quizQuestions.length ? '완료하기' : '다음 문제' }}
       </button>
     </section>
+
+    <Transition name="quiz-modal">
+      <div
+        v-if="showAlreadyCompletedModal"
+        class="fixed inset-0 z-[60] grid place-items-center bg-black/35 px-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="child-quiz-completed-modal-title"
+      >
+        <section
+          class="w-full max-w-[320px] rounded-[22px] bg-white px-6 py-7 text-center shadow-[0_18px_48px_rgba(22,45,61,0.18)]"
+        >
+          <h2
+            id="child-quiz-completed-modal-title"
+            class="m-0 text-[21px] font-extrabold text-[var(--color-text-primary)]"
+          >
+            오늘의 퀴즈를 다 풀었어요
+          </h2>
+          <p class="mt-3 mb-6 text-[15px] leading-[1.6] text-[var(--color-text-secondary)]">
+            내일 다시 새로운 금융 퀴즈를 풀 수 있어요.
+          </p>
+          <RouterLink
+            class="grid h-12 place-items-center rounded-[14px] bg-[var(--color-brand-primary)] text-[16px] font-bold !text-white no-underline"
+            to="/child/home"
+          >
+            확인
+          </RouterLink>
+        </section>
+      </div>
+    </Transition>
 
     <ChildBottomNavigation />
   </main>
@@ -418,6 +487,29 @@ const getStepClass = (stepIndex: number) => {
 .quiz-feedback-leave-to {
   opacity: 0;
   transform: translateY(8px);
+}
+
+.quiz-modal-enter-active,
+.quiz-modal-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.quiz-modal-enter-active > section,
+.quiz-modal-leave-active > section {
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.quiz-modal-enter-from,
+.quiz-modal-leave-to {
+  opacity: 0;
+}
+
+.quiz-modal-enter-from > section,
+.quiz-modal-leave-to > section {
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
 }
 
 @keyframes quiz-step-pop {

@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import childHomePigUrl from '@/assets/images/child/child-home-pig.png'
 import { childAllowanceRequests } from '@/mocks/childFinanceFlow'
 import { childAccountSummary } from '@/mocks/childHome'
+import { isChildQuizCompletedToday } from '@/utils/childQuizProgress'
 
 const pendingAllowanceCount = computed(
   () => childAllowanceRequests.filter((request) => request.status === 'pending').length,
 )
+const hasCompletedTodayQuiz = ref(isChildQuizCompletedToday())
 
 const quickActions = computed(() => [
   {
@@ -207,14 +209,23 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
       <div>
         <h2 class="m-0 text-[18px] font-bold text-[var(--color-text-primary)]">오늘의 퀴즈</h2>
         <p class="mt-1 mb-0 text-[15px] text-[var(--color-text-secondary)]">
-          돈을 불리려면 무엇이 필요할까요?
+          {{
+            hasCompletedTodayQuiz
+              ? '오늘의 퀴즈를 풀었어요'
+              : '짧은 금융 퀴즈로 습관을 배워봐요'
+          }}
         </p>
       </div>
       <RouterLink
-        class="grid h-11 shrink-0 place-items-center rounded-[13px] border border-[#f0dfa1] bg-white px-4 text-[14px] font-bold text-[#9e7812] no-underline active:bg-[#fffdf4]"
+        class="grid h-11 shrink-0 place-items-center rounded-[13px] border px-4 text-[14px] font-bold no-underline active:bg-[#fffdf4]"
+        :class="
+          hasCompletedTodayQuiz
+            ? 'border-[#d8e7f0] bg-white text-[var(--color-brand-primary)]'
+            : 'border-[#f0dfa1] bg-white text-[#9e7812]'
+        "
         to="/child/quiz"
       >
-        퀴즈 풀러 가기
+        {{ hasCompletedTodayQuiz ? '완료 확인' : '퀴즈 풀러 가기' }}
       </RouterLink>
     </section>
 
