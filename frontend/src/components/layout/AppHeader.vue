@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Bell, Check, ChevronLeft, ChevronRight, Plus, UserRound } from 'lucide-vue-next'
+import {
+  Bell,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  UserRound,
+} from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import defaultProfileImageUrl from '@/assets/images/home/home-profile-baby.png'
@@ -152,6 +160,7 @@ onBeforeUnmount(() => {
         @pointerup="clearProfilePress"
         @pointercancel="clearProfilePress"
         @pointerleave="clearProfilePress"
+        @click="openProfileSheet"
         @contextmenu.prevent
         @keydown.enter.prevent="openProfileSheet"
         @keydown.space.prevent="openProfileSheet"
@@ -173,9 +182,15 @@ onBeforeUnmount(() => {
           />
           <span v-else>{{ props.profileEmoji }}</span>
         </span>
-        <strong class="text-[length:var(--font-size-lg)] leading-none">{{
-          activeProfile.name
-        }}</strong>
+        <strong class="text-[length:var(--font-size-lg)] leading-none">
+          {{ activeProfile.name }}
+        </strong>
+        <ChevronDown
+          :size="18"
+          :stroke-width="2.5"
+          class="-ml-1 shrink-0 text-[var(--color-unselected-text)]"
+          aria-hidden="true"
+        />
       </button>
 
       <button
