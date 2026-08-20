@@ -38,6 +38,7 @@ public class ChildcareReportDetailResponse {
     @Getter
     @RequiredArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @ApiModel(value = "ChildcareReportPeriodResponse")
     public static class Period {
 
         private final LocalDate startDate;
@@ -48,6 +49,7 @@ public class ChildcareReportDetailResponse {
     @Getter
     @RequiredArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @ApiModel(value = "ChildcareReportSummaryResponse")
     public static class Summary {
 
         private final BigDecimal totalExpenseAmount;

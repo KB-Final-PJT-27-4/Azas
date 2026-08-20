@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import io.swagger.annotations.ApiModel;
 
 @Getter
 @RequiredArgsConstructor
@@ -125,6 +126,7 @@ public class ParentDashboardResponse {
     @Getter
     @RequiredArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @ApiModel(value = "ParentDashboardChildInfoResponse")
     public static class ChildInfo {
         private final Long childId;
         private final String name;
@@ -199,6 +201,7 @@ public class ParentDashboardResponse {
     @Getter
     @RequiredArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @ApiModel(value = "ParentDashboardNotificationSummaryResponse")
     public static class NotificationSummary {
         private final int unreadCount;
     }

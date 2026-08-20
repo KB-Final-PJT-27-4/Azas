@@ -27,6 +27,7 @@ public class ChildDashboardResponse {
     @Getter
     @RequiredArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @ApiModel(value = "ChildDashboardChildInfoResponse")
     public static class ChildInfo {
         @ApiModelProperty(example = "6")
         private final Long childId;
@@ -117,6 +118,7 @@ public class ChildDashboardResponse {
     @Getter
     @RequiredArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @ApiModel(value = "ChildDashboardNotificationSummaryResponse")
     public static class NotificationSummary {
         private final long unreadCount;
     }

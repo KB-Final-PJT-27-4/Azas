@@ -169,6 +169,44 @@ class SpringContextConfigurationTest {
                                     "$.definitions.OAuthLoginMemberResponse"
                                             + ".properties.member_type"
                             ).exists()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.FinancialProductListResponse"
+                                            + ".properties.items.items['$ref']"
+                            ).value(
+                                    "#/definitions/FinancialProductListItemResponse"
+                            )
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.ChecklistItemListResponse"
+                                            + ".properties.items.items['$ref']"
+                            ).value(
+                                    "#/definitions/ChecklistItemListItemResponse"
+                            )
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.FinancialProductListItemResponse"
+                                            + ".properties.financial_product_id"
+                            ).exists()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.ChecklistItemListItemResponse"
+                                            + ".properties.checklist_item_id"
+                            ).exists()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.NotificationPreferenceUpdateItemRequest"
+                                            + ".properties.notification_category"
+                            ).exists()
+                    )
+                    .andExpect(
+                            jsonPath("$.definitions.Item")
+                                    .doesNotExist()
                     );
 
             mockMvc.perform(get("/v2/api-docs"))
