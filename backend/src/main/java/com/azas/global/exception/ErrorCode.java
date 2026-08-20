@@ -432,6 +432,12 @@ public enum ErrorCode {
     CHECKLIST_ITEM_ACCESS_DENIED(
             HttpStatus.FORBIDDEN,
             "해당 체크리스트 항목에 접근할 권한이 없습니다."
+    ),
+
+    // Report
+    ASSET_REPORT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "해당 월의 자산 리포트를 찾을 수 없습니다."
     );
 
     private final HttpStatus httpStatus;
