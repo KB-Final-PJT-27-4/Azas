@@ -1,34 +1,79 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ChevronRight, Heart } from 'lucide-vue-next'
 
-import { recommendedProducts } from '@/data/productDummyData'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
+import { resolveCurrentChildId } from '@/api/context'
+import productMascot1 from '@/assets/images/products/product-1.png'
+import productMascot2 from '@/assets/images/products/product-2.png'
+import productMascot3 from '@/assets/images/products/product-3.png'
+import productMascot4 from '@/assets/images/products/product-4.png'
 
-const favoriteProductIds = ref(new Set<string>(['kb-child-love-saving-1']))
+type Product = { id: string; name: string; bankName: string; type: '적금' | '입출금계좌'; rate: string; period: string; monthlyLimit: string; mascot: string }
+type ProductApiItem = {
+  financial_product_id?: number; name?: string; bank_name?: string; product_type?: string
+  interest_rate?: { max_rate?: number }; contract_period?: { max_months?: number }
+  monthly_deposit?: { max_amount?: number }; is_bookmarked?: boolean
+}
+const { showToast } = useToast()
+const recommendedProducts = ref<Product[]>([])
+const childId = ref<number | null>(null)
+
+const favoriteProductIds = ref(new Set<string>())
 type ProductFilter = '전체' | '적금' | '입출금계좌' | '관심상품'
 
 const productFilters: ProductFilter[] = ['전체', '적금', '입출금계좌', '관심상품']
 const selectedProductFilter = ref<ProductFilter>('전체')
 
 const filteredProducts = computed(() => {
-  if (selectedProductFilter.value === '전체') return recommendedProducts
+  if (selectedProductFilter.value === '전체') return recommendedProducts.value
   if (selectedProductFilter.value === '관심상품') {
-    return recommendedProducts.filter((product) => favoriteProductIds.value.has(product.id))
+    return recommendedProducts.value.filter((product) => favoriteProductIds.value.has(product.id))
   }
 
-  return recommendedProducts.filter((product) => product.type === selectedProductFilter.value)
+  return recommendedProducts.value.filter((product) => product.type === selectedProductFilter.value)
 })
 
 const productSectionTitle = computed(() =>
   selectedProductFilter.value === '관심상품' ? '관심 상품' : '추천 상품',
 )
 
-const toggleFavorite = (productId: string) => {
+const toggleFavorite = async (productId: string) => {
   const nextFavorites = new Set(favoriteProductIds.value)
-  if (nextFavorites.has(productId)) nextFavorites.delete(productId)
-  else nextFavorites.add(productId)
-  favoriteProductIds.value = nextFavorites
+  const isBookmarked = !nextFavorites.has(productId)
+  try {
+    if (!childId.value) childId.value = await resolveCurrentChildId()
+    await api.updateBookmarkUsingPUT(childId.value, Number(productId), { is_bookmarked: isBookmarked })
+    if (isBookmarked) nextFavorites.add(productId)
+    else nextFavorites.delete(productId)
+    favoriteProductIds.value = nextFavorites
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '관심상품을 변경하지 못했습니다.'), 'error')
+  }
 }
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const { data } = await api.getProductsUsingGET(undefined, undefined, undefined, 100)
+    const items = (data.items ?? []) as unknown as ProductApiItem[]
+    const mascots = [productMascot1, productMascot2, productMascot3, productMascot4]
+    recommendedProducts.value = items.map((product, index) => ({
+      id: String(product.financial_product_id ?? ''),
+      name: product.name ?? '금융 상품',
+      bankName: product.bank_name ?? '',
+      type: product.product_type === 'DEMAND_DEPOSIT' ? '입출금계좌' : '적금',
+      rate: product.interest_rate?.max_rate !== undefined ? `${product.interest_rate.max_rate}%` : '-',
+      period: product.contract_period?.max_months ? `${product.contract_period.max_months}개월` : '-',
+      monthlyLimit: product.monthly_deposit?.max_amount ? `${Math.round(product.monthly_deposit.max_amount / 10000)}만원` : '-',
+      mascot: mascots[index % mascots.length]!,
+    }))
+    favoriteProductIds.value = new Set(items.filter(({ is_bookmarked }) => is_bookmarked).map(({ financial_product_id }) => String(financial_product_id ?? '')))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '상품 목록을 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>

@@ -1,27 +1,52 @@
 ﻿<script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Check, ChevronRight, FileText } from 'lucide-vue-next'
 
 import completeStarUrl from '@/assets/images/accounts/complete-star.png'
 import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-pig.png'
-import { useChecklistProgress } from '@/composables/useChecklistProgress'
-import {
-  checklistItems,
-  currentChildLifecycle,
-  lifecycleStages,
-  type ChecklistItem,
-  type ChecklistInfoItem,
-} from '@/mocks/lifecycleChecklist'
+import { api, getApiErrorMessage } from '@/api'
+import { requireAuthorizationHeader, resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
+
+type ChecklistInfoItem = { title: string; description: string; actionLabel: string; externalUrl?: string; detail?: string }
+type ChecklistItem = { id: string; stageId: string; category: 'service'; title: string; description: string; completed: boolean; actionType: 'info' | 'route'; route?: string; externalUrl?: string; infoTitle?: string; infoDescription?: string; infoItems?: ChecklistInfoItem[]; infoNotice?: string }
+const lifecycleStages = [
+  { id: 'prenatal', ageRange: '임신 중~출산 전', title: '미래 준비', description: '출산 전 금융 준비를 시작해보세요.' },
+  { id: 'baby', ageRange: '출생~1세', title: '첫 금융 시작', description: '아이의 금융생활을 준비해요.' },
+  { id: 'toddler', ageRange: '2~4세', title: '자산 기반 형성', description: '저축 습관의 씨앗을 만들어요.' },
+  { id: 'preschool', ageRange: '5~7세', title: '금융 습관 형성', description: '소비와 저축을 함께 배워요.' },
+  { id: 'childhood', ageRange: '8~10세', title: '금융 이해 확장', description: '돈의 흐름을 알려줘요.' },
+  { id: 'earlyTeen', ageRange: '11~13세', title: '금융 경험 시작', description: '직접 관리하는 경험을 시작해요.' },
+  { id: 'teen', ageRange: '14~16세', title: '자산 성장', description: '장기 목표를 이해해요.' },
+  { id: 'future', ageRange: '17~19세', title: '미래 자산 완성', description: '독립 전 자산 준비를 마무리해요.' },
+]
 
 const router = useRouter()
-const { checkedItemIds, isChecklistItemCompleted, toggleChecklistItem } = useChecklistProgress()
+const { showToast } = useToast()
+const checkedItemIds = ref(new Set<string>())
+const checklistItems = ref<ChecklistItem[]>([])
+const childId = ref<number | null>(null)
+const authorization = ref('')
+const isChecklistItemCompleted = (item: ChecklistItem) => checkedItemIds.value.has(item.id)
+const toggleChecklistItem = async (item: ChecklistItem) => {
+  const completed = !checkedItemIds.value.has(item.id)
+  try {
+    await api.updateChecklistItemCompletionUsingPATCH(authorization.value, Number(item.id), { completed })
+    const next = new Set(checkedItemIds.value)
+    if (completed) next.add(item.id)
+    else next.delete(item.id)
+    checkedItemIds.value = next
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '체크 상태를 변경하지 못했습니다.'), 'error')
+  }
+}
 
 const selectedInfoItem = ref<ChecklistItem | null>(null)
 const selectedDetailInfo = ref<ChecklistInfoItem | null>(null)
 const pendingRouteItem = ref<ChecklistItem | null>(null)
 const isCompleteSheetOpen = ref(false)
-const selectedStageId = ref(currentChildLifecycle.childStatus)
+const selectedStageId = ref('prenatal')
 const draggingSheet = ref<'info' | 'complete' | null>(null)
 const sheetDragStartY = ref<number | null>(null)
 const sheetDragOffsetY = ref(0)
@@ -31,7 +56,7 @@ const currentStage = computed(
 )
 
 const currentStageItems = computed(() =>
-  checklistItems
+  checklistItems.value
     .filter((item) => item.stageId === currentStage.value.id)
     .map((item, index) => ({ item, index }))
     .sort((current, next) => {
@@ -42,6 +67,38 @@ const currentStageItems = computed(() =>
     })
     .map(({ item }) => item),
 )
+
+const loadChecklist = async (stage?: string) => {
+  if (!childId.value) return
+  try {
+    const { data } = await api.getChecklistItemsUsingGET(authorization.value, childId.value, stage)
+    const rawItems = (data.items ?? []) as unknown as Array<{ checklist_item_id?: number; status?: string; title?: string; description?: string }>
+    if (data.lifecycle_stage) selectedStageId.value = data.lifecycle_stage
+    checklistItems.value = rawItems.map((item) => ({
+      id: String(item.checklist_item_id ?? ''),
+      stageId: data.lifecycle_stage ?? selectedStageId.value,
+      category: 'service',
+      title: item.title ?? '체크리스트',
+      description: item.description ?? '준비 상태를 확인해보세요.',
+      completed: item.status === 'COMPLETED',
+      actionType: 'info',
+      infoItems: [],
+    }))
+    checkedItemIds.value = new Set(checklistItems.value.filter(({ completed }) => completed).map(({ id }) => id))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '체크리스트를 불러오지 못했습니다.'), 'error')
+  }
+}
+
+onMounted(async () => {
+  childId.value = await resolveCurrentChildId()
+  authorization.value = requireAuthorizationHeader()
+  await loadChecklist()
+})
+
+watch(selectedStageId, (stage, previous) => {
+  if (stage !== previous && childId.value) void loadChecklist(stage)
+})
 
 const completedCount = computed(
   () => currentStageItems.value.filter((item) => checkedItemIds.value.has(item.id)).length,

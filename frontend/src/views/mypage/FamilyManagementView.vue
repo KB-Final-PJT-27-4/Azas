@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Baby, Check, ChevronRight, Copy, Link2, UserRound, X } from 'lucide-vue-next'
 
-import childProfileUrl from '@/assets/images/home/home-profile-baby.png'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 
 type InviteType = 'guardian' | 'child'
 
@@ -11,24 +12,9 @@ const { showToast } = useToast()
 const inviteType = ref<InviteType | null>(null)
 const copied = ref(false)
 
-const familyMembers = [
-  {
-    id: 1,
-    name: '김하나',
-    relation: '모',
-    initials: '하',
-    isMe: true,
-    color: 'bg-[#e8f8ff] text-[#339dcc]',
-  },
-  {
-    id: 2,
-    name: '김민수',
-    relation: '부',
-    initials: '민',
-    isMe: false,
-    color: 'bg-[#fff5dc] text-[#b58a2d]',
-  },
-]
+const childId = ref<number | null>(null)
+const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; isMe: boolean; color: string }>>([])
+const createdInvitationLink = ref('')
 
 const invitationTitle = computed(() =>
   inviteType.value === 'guardian' ? '보호자 초대 링크' : '자녀 초대 링크',
@@ -39,22 +25,48 @@ const invitationDescription = computed(() =>
     : '자녀가 링크로 가입하면 이 가족 계정에 안전하게 연결돼요.',
 )
 const invitationLink = computed(() => {
-  if (!inviteType.value) return ''
-  if (inviteType.value === 'guardian') {
-    return `${window.location.origin}/register?invited=true&role=guardian`
-  }
-  return `${window.location.origin}/register/child?invited=true`
+  return createdInvitationLink.value
 })
 
-const openInvitation = (type: InviteType) => {
+const openInvitation = async (type: InviteType) => {
   inviteType.value = type
   copied.value = false
+  createdInvitationLink.value = ''
+  if (!childId.value) return
+  try {
+    const { data } = await api.createFamilyInvitationUsingPOST(childId.value, {
+      invitee_type: type === 'guardian' ? 'PARENT' : 'CHILD',
+      expires_in_hours: 24,
+    })
+    createdInvitationLink.value = data.invite_url
+      ?? `${window.location.origin}/family-invitations/${data.invite_token ?? ''}`
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '초대 링크를 만들지 못했습니다.'), 'error')
+    closeInvitation()
+  }
 }
 
 const closeInvitation = () => {
   inviteType.value = null
   copied.value = false
 }
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const { data } = await api.getFamilyMembersUsingGET(childId.value)
+    familyMembers.value = (data.items ?? []).map((member, index) => ({
+      id: member.member_id ?? index,
+      name: member.name ?? '보호자',
+      relation: member.relation_type === 'FATHER' ? '부' : member.relation_type === 'MOTHER' ? '모' : '보호자',
+      initials: (member.name ?? '보').slice(-1),
+      isMe: member.is_me ?? false,
+      color: index % 2 === 0 ? 'bg-[#e8f8ff] text-[#339dcc]' : 'bg-[#fff5dc] text-[#b58a2d]',
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '가족 정보를 불러오지 못했습니다.'), 'error')
+  }
+})
 
 const copyInvitationLink = async () => {
   try {

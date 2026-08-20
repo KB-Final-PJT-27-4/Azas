@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ArrowUpRight, ChevronDown } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 type Period = '6개월' | '1년'
 type MonthlyRecord = {
@@ -12,43 +15,33 @@ type MonthlyRecord = {
 
 const periods: Period[] = ['6개월', '1년']
 const selectedPeriod = ref<Period>('1년')
-const selectedMonthKey = ref('2026-07')
+const selectedMonthKey = ref('')
 const showAllHistory = ref(false)
 
-const allMonthlyData: MonthlyRecord[] = [
-  { key: '2025-08', month: '8월', saving: 620_000, increase: 280_000 },
-  { key: '2025-09', month: '9월', saving: 830_000, increase: 310_000 },
-  { key: '2025-10', month: '10월', saving: 900_000, increase: 350_000 },
-  { key: '2025-11', month: '11월', saving: 780_000, increase: 290_000 },
-  { key: '2025-12', month: '12월', saving: 1_050_000, increase: 420_000 },
-  { key: '2026-01', month: '1월', saving: 980_000, increase: 360_000 },
-  { key: '2026-02', month: '2월', saving: 750_000, increase: 400_000 },
-  { key: '2026-03', month: '3월', saving: 1_100_000, increase: 400_000 },
-  { key: '2026-04', month: '4월', saving: 1_450_000, increase: 150_000 },
-  { key: '2026-05', month: '5월', saving: 1_280_000, increase: 320_000 },
-  { key: '2026-06', month: '6월', saving: 1_200_000, increase: 480_000 },
-  { key: '2026-07', month: '7월', saving: 1_750_000, increase: 350_000 },
-]
+const { showToast } = useToast()
+const allMonthlyData = ref<MonthlyRecord[]>([])
+const currentAssets = ref(0)
+const goalAssets = ref<Array<{ name: string; amount: number; color: string }>>([])
 
 const visibleData = computed(() => {
-  if (selectedPeriod.value === '6개월') return allMonthlyData.slice(-6)
-  return allMonthlyData.slice(-12)
+  if (selectedPeriod.value === '6개월') return allMonthlyData.value.slice(-6)
+  return allMonthlyData.value.slice(-12)
 })
 const selectedMonth = computed(
   () =>
     visibleData.value.find(({ key }) => key === selectedMonthKey.value) ??
-    visibleData.value.at(-1)!,
+    visibleData.value.at(-1) ?? { key: '', month: '-', saving: 0, increase: 0 },
 )
-const maxSaving = computed(() => Math.max(...visibleData.value.map(({ saving }) => saving)))
+const maxSaving = computed(() => Math.max(...visibleData.value.map(({ saving }) => saving), 1))
 const periodSaving = computed(() =>
   visibleData.value.reduce((total, { saving }) => total + saving, 0),
 )
 const periodIncrease = computed(() =>
   visibleData.value.reduce((total, { increase }) => total + increase, 0),
 )
-const averageSaving = computed(() => Math.round(periodSaving.value / visibleData.value.length))
+const averageSaving = computed(() => visibleData.value.length ? Math.round(periodSaving.value / visibleData.value.length) : 0)
 const bestMonth = computed(() =>
-  visibleData.value.reduce((best, item) => (item.saving > best.saving ? item : best)),
+  visibleData.value.reduce((best, item) => (item.saving > best.saving ? item : best), { key: '', month: '-', saving: 0, increase: 0 }),
 )
 const historyItems = computed(() => {
   const reversed = [...visibleData.value].reverse()
@@ -56,14 +49,33 @@ const historyItems = computed(() => {
 })
 const periodLabel = computed(() => `최근 ${selectedPeriod.value}`)
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
-const currentAssets = 20_750_000
-const goalAssets = [
-  { name: '대학자금', amount: 14_600_000, color: '#55bcef' },
-  { name: '목돈 마련', amount: 6_150_000, color: '#f2c94c' },
-]
+onMounted(async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const year = new Date().getFullYear()
+    const { data } = await api.getAssetReportsUsingGET(childId, undefined, undefined, 24, year)
+    allMonthlyData.value = (data.items ?? []).map((item) => ({
+      key: `${item.report_year}-${String(item.report_month).padStart(2, '0')}`,
+      month: `${item.report_month}월`,
+      saving: item.monthly_saved_amount ?? 0,
+      increase: item.total_asset_change_amount ?? 0,
+    })).sort((a, b) => a.key.localeCompare(b.key))
+    selectedMonthKey.value = allMonthlyData.value.at(-1)?.key ?? ''
+    currentAssets.value = data.items?.at(-1)?.total_asset_amount ?? 0
+    const now = new Date()
+    const { data: detail } = await api.getAssetReportDetailUsingGET(childId, now.getMonth() + 1, now.getFullYear())
+    goalAssets.value = (detail.goal_summary ?? []).map((goal, index) => ({
+      name: goal.title ?? '금융 목표',
+      amount: goal.current_amount ?? 0,
+      color: index % 2 ? '#f2c94c' : '#55bcef',
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자산 이력을 불러오지 못했습니다.'), 'error')
+  }
+})
 
 watch(selectedPeriod, () => {
-  selectedMonthKey.value = visibleData.value.at(-1)!.key
+  selectedMonthKey.value = visibleData.value.at(-1)?.key ?? ''
   showAllHistory.value = false
 })
 </script>

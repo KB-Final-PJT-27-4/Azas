@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Info } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import childProfileUrl from '@/assets/images/home/home-profile-baby.png'
 import BaseDatePicker from '@/components/common/BaseDatePicker.vue'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 
 const router = useRouter()
 const { showToast } = useToast()
 
-const name = ref('깨비')
-const birthDate = ref('2014-07-15')
+const childId = ref<number | null>(null)
+const name = ref('')
+const birthDate = ref('')
 const gender = ref<'남자' | '여자' | '아직 모름'>('남자')
 const genders = ['남자', '여자', '아직 모름'] as const
 
@@ -34,7 +36,7 @@ const ageText = computed(() => {
   return age >= 0 ? `만 ${age}세` : ''
 })
 
-const saveChild = () => {
+const saveChild = async () => {
   if (!name.value.trim()) {
     showToast('자녀 이름을 입력해 주세요.', 'error')
     return
@@ -44,9 +46,32 @@ const saveChild = () => {
     return
   }
 
-  showToast(`${name.value.trim()}의 정보가 저장되었습니다.`, 'success')
-  router.push({ name: 'Mypage' })
+  if (!childId.value) return
+  try {
+    await api.updateChildUsingPATCH(childId.value, {
+      name: name.value.trim(),
+      birth_date: birthDate.value,
+      birth_status: 'BORN',
+      gender: gender.value === '남자' ? 'MALE' : gender.value === '여자' ? 'FEMALE' : 'UNKNOWN',
+    })
+    showToast(`${name.value.trim()}의 정보가 저장되었습니다.`, 'success')
+    await router.push({ name: 'Mypage' })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자녀 정보를 저장하지 못했습니다.'), 'error')
+  }
 }
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const { data } = await api.getChildUsingGET(childId.value)
+    name.value = data.name ?? ''
+    birthDate.value = data.birth_date ?? data.expected_birth_date ?? ''
+    gender.value = data.gender === 'FEMALE' ? '여자' : data.gender === 'UNKNOWN' ? '아직 모름' : '남자'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자녀 정보를 불러오지 못했습니다.'), 'error')
+  }
+})
 
 </script>
 

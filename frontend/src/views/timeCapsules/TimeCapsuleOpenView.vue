@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import memorySheetUrl from '@/assets/images/timeCapsules/open/memory-sheet.png'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 
 type Memory = {
   year: number
@@ -11,60 +13,32 @@ type Memory = {
   letter: string
 }
 
-const years = [2023, 2024, 2025]
-const shortMessages = [
-  '오늘의 웃음을 오래 기억할게',
-  '너와 함께라서 평범한 날도 특별했어',
-  '천천히, 너의 속도로 자라렴',
-] as const
-const monthNames = [
-  '처음 마주 본 봄',
-  '작은 손의 온기',
-  '함께 웃던 오후',
-  '벚꽃 아래 우리',
-  '한 뼘 더 자란 날',
-  '햇살 가득한 소풍',
-  '첫 여름의 바다',
-  '달콤했던 생일',
-  '가을빛 산책',
-  '우리만의 여행',
-  '포근한 집의 밤',
-  '눈처럼 쌓인 사랑',
-]
-
-const allMemories: Memory[] = years.flatMap((year) =>
-  monthNames.map((title, index) => ({
-    year,
-    month: index + 1,
-    title,
-    short: shortMessages[index % shortMessages.length] ?? shortMessages[0],
-    letter: `사랑하는 우리 아가에게.\n\n${year}년 ${index + 1}월, ${title}을 기억하니? 작은 순간 하나도 놓치고 싶지 않아 사진과 마음을 이곳에 함께 담아두었어.\n\n앞으로 네가 어떤 꿈을 만나더라도 지금처럼 환하게 웃기를 바라. 서두르지 않아도 괜찮아. 우리는 언제나 네 곁에서 같은 마음으로 응원할게.`,
-  })),
-)
+const allMemories = ref<Memory[]>([])
+const years = computed(() => [...new Set(allMemories.value.map(({ year }) => year))].sort())
+const emptyMemory: Memory = { year: new Date().getFullYear(), month: 1, title: '타임캡슐', short: '', letter: '' }
 
 const currentIndex = ref(0)
 const selectedMemoryIndex = ref<number | null>(null)
-const activeYear = ref(years[0] ?? 2023)
+const activeYear = ref(new Date().getFullYear())
 const isLetterOpen = ref(false)
 const isFullLetterModalOpen = ref(false)
 const isOverviewModalOpen = ref(false)
 const touchStartX = ref<number | null>(null)
 
-const firstMemory = allMemories[0] as Memory
-const currentMemory = computed<Memory>(() => allMemories[currentIndex.value] ?? firstMemory)
+const currentMemory = computed<Memory>(() => allMemories.value[currentIndex.value] ?? emptyMemory)
 const selectedMemory = computed<Memory>(() =>
   selectedMemoryIndex.value === null
     ? currentMemory.value
-    : (allMemories[selectedMemoryIndex.value] ?? currentMemory.value),
+    : (allMemories.value[selectedMemoryIndex.value] ?? currentMemory.value),
 )
 const currentMemoryLabel = computed(() => String(currentIndex.value + 1).padStart(2, '0'))
-const savingDurationMonths = computed(() => allMemories.length)
+const savingDurationMonths = computed(() => allMemories.value.length)
 const savingDurationYears = computed(() => Math.max(1, Math.round(savingDurationMonths.value / 12)))
-const yearRangeLabel = computed(() => `${years[0]} — ${years[years.length - 1]}`)
+const yearRangeLabel = computed(() => years.value.length ? `${years.value[0]} — ${years.value.at(-1)}` : '-')
 const isFirstMemory = computed(() => currentIndex.value === 0)
-const isLastMemory = computed(() => currentIndex.value === allMemories.length - 1)
+const isLastMemory = computed(() => currentIndex.value === allMemories.value.length - 1)
 const activeYearMemories = computed(() =>
-  allMemories
+  allMemories.value
     .map((memory, index) => ({ ...memory, index }))
     .filter((memory) => memory.year === activeYear.value),
 )
@@ -98,7 +72,7 @@ const getPhotoStyle = (index: number) => {
 }
 
 const moveMemory = (direction: number) => {
-  const nextIndex = Math.min(Math.max(currentIndex.value + direction, 0), allMemories.length - 1)
+  const nextIndex = Math.min(Math.max(currentIndex.value + direction, 0), Math.max(allMemories.value.length - 1, 0))
 
   if (nextIndex === currentIndex.value) return
 
@@ -135,8 +109,31 @@ const openLetterModal = (index: number) => {
 
 const router = useRouter()
 const route = useRoute()
+const { showToast } = useToast()
 const goBack = () => router.back()
 const goToList = () => router.push(`/time-capsules/${String(route.params.capsuleListId)}`)
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getTimeCapsuleEntriesUsingGET(Number(route.params.capsuleListId))
+    const details = await Promise.all((data.entries ?? []).map(({ time_capsule_entry_id }) =>
+      api.getTimeCapsuleEntryUsingGET(time_capsule_entry_id ?? 0).then(({ data: detail }) => detail),
+    ))
+    allMemories.value = details.map((entry) => {
+      const date = new Date(entry.contributed_at ?? entry.created_at ?? Date.now())
+      return {
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+        title: entry.title ?? '소중한 기록',
+        short: entry.message?.split('\n')[0] ?? '',
+        letter: entry.message ?? '',
+      }
+    })
+    activeYear.value = years.value[0] ?? new Date().getFullYear()
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐을 열지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>

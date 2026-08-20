@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { CheckCircle2 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import BaseDatePicker from '@/components/common/BaseDatePicker.vue'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
 
 type FamilyRole = '부' | '모' | '보호자'
 
@@ -20,8 +21,8 @@ const phoneVerified = ref(true)
 const verificationCodeSent = ref(false)
 const verificationCode = ref('')
 const verificationError = ref('')
-const fileInput = ref<HTMLInputElement | null>(null)
-let profileObjectUrl: string | null = null
+const verificationId = ref<number | null>(null)
+const phoneVerificationToken = ref('')
 
 const canSave = computed(() => name.value.trim().length > 0 && phoneVerified.value)
 
@@ -43,17 +44,23 @@ const formatPhone = (event: Event) => {
   verificationError.value = ''
 }
 
-const sendVerificationCode = () => {
+const sendVerificationCode = async () => {
   if (!/^010-\d{4}-\d{4}$/.test(phone.value)) {
     showToast('휴대폰 번호를 정확히 입력해 주세요.', 'error')
     return
   }
 
-  phoneVerified.value = false
-  verificationCodeSent.value = true
-  verificationCode.value = ''
-  verificationError.value = ''
-  showToast('인증번호를 전송했습니다.', 'info')
+  try {
+    const { data } = await api.sendVerificationCodeUsingPOST({ phone_number: phone.value.replace(/-/g, '') })
+    verificationId.value = data.verification_id
+    phoneVerified.value = false
+    verificationCodeSent.value = true
+    verificationCode.value = ''
+    verificationError.value = ''
+    showToast('인증번호를 전송했습니다.', 'info')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '인증번호를 보내지 못했습니다.'), 'error')
+  }
 }
 
 const formatVerificationCode = (event: Event) => {
@@ -64,37 +71,28 @@ const formatVerificationCode = (event: Event) => {
   verificationError.value = ''
 }
 
-const confirmVerificationCode = () => {
+const confirmVerificationCode = async () => {
   if (verificationCode.value.length !== 6) {
     verificationError.value = '인증번호 6자리를 입력해 주세요.'
     return
   }
-  if (verificationCode.value !== '123456') {
-    verificationError.value = '인증번호가 일치하지 않습니다.'
-    return
+  if (!verificationId.value) return
+  try {
+    const { data } = await api.confirmVerificationCodeUsingPOST(verificationId.value, {
+      verification_code: verificationCode.value,
+    })
+    phoneVerificationToken.value = data.phone_verification_token
+    phoneVerified.value = true
+    verificationCodeSent.value = false
+    verificationCode.value = ''
+    verificationError.value = ''
+    showToast('휴대폰 번호가 인증되었습니다.', 'success')
+  } catch (error) {
+    verificationError.value = getApiErrorMessage(error, '인증번호가 일치하지 않습니다.')
   }
-
-  phoneVerified.value = true
-  verificationCodeSent.value = false
-  verificationCode.value = ''
-  verificationError.value = ''
-  showToast('휴대폰 번호가 인증되었습니다.', 'success')
 }
 
-const changeProfileImage = (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  if (!file.type.startsWith('image/')) {
-    showToast('이미지 파일만 선택할 수 있어요.', 'error')
-    return
-  }
-
-  if (profileObjectUrl) URL.revokeObjectURL(profileObjectUrl)
-  profileObjectUrl = URL.createObjectURL(file)
-  profileImage.value = profileObjectUrl
-}
-
-const saveProfile = () => {
+const saveProfile = async () => {
   if (!name.value.trim()) {
     showToast('이름을 입력해 주세요.', 'error')
     return
@@ -104,13 +102,32 @@ const saveProfile = () => {
     return
   }
 
-  showToast('내 정보가 저장되었습니다.', 'success')
-  router.push({ name: 'Mypage' })
+  try {
+    await api.updateMyProfileUsingPATCH({
+      birth_date: birthDate.value || undefined,
+      phone_verification_token: phoneVerificationToken.value || undefined,
+      profile_image_url: profileImage.value?.startsWith('blob:') ? undefined : (profileImage.value ?? undefined),
+    })
+    showToast('내 정보가 저장되었습니다.', 'success')
+    await router.push({ name: 'Mypage' })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '내 정보를 저장하지 못했습니다.'), 'error')
+  }
 }
 
-onBeforeUnmount(() => {
-  if (profileObjectUrl) URL.revokeObjectURL(profileObjectUrl)
+onMounted(async () => {
+  try {
+    const { data } = await api.getMyProfileUsingGET()
+    name.value = data.name
+    phone.value = data.phone_number ?? ''
+    birthDate.value = data.birth_date ?? ''
+    profileImage.value = data.profile_image_url ?? null
+    phoneVerified.value = data.phone_verified
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '내 정보를 불러오지 못했습니다.'), 'error')
+  }
 })
+
 </script>
 
 <template>
@@ -226,7 +243,7 @@ onBeforeUnmount(() => {
               {{ verificationError }}
             </p>
             <p v-else class="mt-2 mb-0 text-[11px] text-[var(--color-text-secondary)]">
-              테스트 인증번호는 <strong>123456</strong>이에요.
+              문자로 받은 6자리 인증번호를 입력해주세요.
             </p>
           </div>
 

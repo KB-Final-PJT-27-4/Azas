@@ -1,20 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ChevronRight, LogOut, ShieldCheck, UserRound, X } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import childProfileUrl from '@/assets/images/home/home-profile-baby.png'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
+import { clearAuthSession, getRefreshToken } from '@/api/auth'
+import { resolveCurrentChildId } from '@/api/context'
 
 const router = useRouter()
 const { showToast } = useToast()
 const accountAction = ref<'logout' | 'withdrawal' | null>(null)
 
-const familyMembers = [
-  { id: 1, name: '김둘', relation: '부', initials: '김', color: 'bg-[#eaf7ff] text-[#419ac5]' },
-  { id: 2, name: '김다섯', relation: '보호자', initials: '김', color: 'bg-[#fff6dc] text-[#b88a20]' },
-  { id: 3, name: '김여섯', relation: '모', initials: '김', color: 'bg-[#f4edff] text-[#8b68bd]' },
-]
+const profileName = ref('보호자')
+const childName = ref('아이')
+const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; color: string }>>([])
 
 const serviceMenus = [
   { label: '목표 관리', description: '아이의 저축 목표를 확인해요', to: { name: 'MypageGoals' } },
@@ -23,17 +24,53 @@ const serviceMenus = [
   { label: '도움말', description: '서비스 이용 방법을 확인해요', to: { name: 'Guide' } },
 ]
 
-const logout = () => {
+const logout = async () => {
   accountAction.value = null
-  showToast('로그아웃되었습니다.', 'info')
-  router.push({ name: 'Login' })
+  try {
+    const refreshToken = getRefreshToken()
+    if (refreshToken) await api.logoutUsingPOST({ refresh_token: refreshToken })
+  } finally {
+    clearAuthSession()
+    showToast('로그아웃되었습니다.', 'info')
+    await router.push({ name: 'Login' })
+  }
 }
 
-const withdraw = () => {
+const withdraw = async () => {
   accountAction.value = null
-  showToast('회원 탈퇴가 완료되었습니다.', 'info')
-  router.push({ name: 'Login' })
+  try {
+    await api.withdrawMyMembershipUsingDELETE()
+    clearAuthSession()
+    showToast('회원 탈퇴가 완료되었습니다.', 'info')
+    await router.push({ name: 'Login' })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '회원 탈퇴에 실패했습니다.'), 'error')
+  }
 }
+
+onMounted(async () => {
+  try {
+    const [{ data: profile }, selectedChildId] = await Promise.all([
+      api.getMyProfileUsingGET(),
+      resolveCurrentChildId(),
+    ])
+    profileName.value = profile.name
+    const [{ data: child }, { data: guardians }] = await Promise.all([
+      api.getChildUsingGET(selectedChildId),
+      api.getFamilyMembersUsingGET(selectedChildId),
+    ])
+    childName.value = child.name ?? '아이'
+    familyMembers.value = (guardians.items ?? []).map((member, index) => ({
+      id: member.member_id ?? index,
+      name: member.name ?? '보호자',
+      relation: member.relation_type === 'FATHER' ? '부' : member.relation_type === 'MOTHER' ? '모' : '보호자',
+      initials: (member.name ?? '보').slice(0, 1),
+      color: index % 3 === 0 ? 'bg-[#eaf7ff] text-[#419ac5]' : index % 3 === 1 ? 'bg-[#fff6dc] text-[#b88a20]' : 'bg-[#f4edff] text-[#8b68bd]',
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '마이페이지 정보를 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>
@@ -47,8 +84,8 @@ const withdraw = () => {
         </span>
         <div class="min-w-0 flex-1 pt-0.5">
           <span class="text-xs font-semibold text-[var(--color-selected-text)]">가족 대표</span>
-          <h2 class="mt-0.5 text-[22px] font-extrabold tracking-[-0.035em]">김하나님</h2>
-          <p class="mt-1 text-xs text-[var(--color-text-secondary)]">깨비의 든든한 보호자예요.</p>
+          <h2 class="mt-0.5 text-[22px] font-extrabold tracking-[-0.035em]">{{ profileName }}님</h2>
+          <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ childName }}의 든든한 보호자예요.</p>
         </div>
         <RouterLink
           class="rounded-full bg-white px-3 py-2 text-xs font-bold !text-[var(--color-selected-text)] active:bg-[#f5fbfe]"
@@ -60,11 +97,11 @@ const withdraw = () => {
         :to="{ name: 'ChildEdit' }"
       >
         <span class="size-13 shrink-0 overflow-hidden rounded-full bg-[var(--color-selected-background)]">
-          <img class="size-full object-cover" :src="childProfileUrl" alt="깨비 프로필" />
+          <img class="size-full object-cover" :src="childProfileUrl" :alt="`${childName} 프로필`" />
         </span>
         <span class="min-w-0 flex-1">
           <span class="block text-[11px] font-semibold text-[var(--color-text-secondary)]">함께 관리 중인 아이</span>
-          <strong class="mt-0.5 block text-[16px]">깨비</strong>
+          <strong class="mt-0.5 block text-[16px]">{{ childName }}</strong>
         </span>
         <span class="text-right">
           <span class="block text-xs font-semibold text-[var(--color-text-secondary)]">12세</span>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 
 import completePigImage from '@/assets/images/accounts/complete-pig.png'
 import googleLoginImage from '@/assets/images/login/google-login.png'
@@ -17,6 +18,7 @@ const slides = [
 ] as const
 
 const currentSlide = ref(0)
+const route = useRoute()
 const isLoginOpen = ref(false)
 const errorMessage = ref('')
 const touchStartX = ref(0)
@@ -59,7 +61,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleKeydown))
 
 const login = (provider: OAuthProvider) => {
   errorMessage.value = ''
-  try { startOAuthLogin(provider) }
+  try {
+    const inviteToken = typeof route.query.inviteToken === 'string' ? route.query.inviteToken : ''
+    const inviteeType = route.query.inviteeType
+    startOAuthLogin(provider, inviteToken && (inviteeType === 'PARENT' || inviteeType === 'CHILD')
+      ? { inviteToken, inviteeType }
+      : undefined)
+  }
   catch (error) { errorMessage.value = getOAuthErrorMessage(error) }
 }
 </script>

@@ -6,12 +6,15 @@ import path from 'node:path'
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const schemaPath = path.join(frontendRoot, 'openapi', 'openapi.json')
 const outputPath = path.join(frontendRoot, 'src', 'api', 'generated')
-const defaultSchemaUrl = 'http://localhost:8080/api/v2/api-docs'
-const schemaUrl = process.argv[2] || process.env.OPENAPI_SCHEMA_URL || defaultSchemaUrl
+const schemaUrl = process.argv[2] || process.env.OPENAPI_SCHEMA_URL
 
 const fail = (message) => {
   console.error(`\n[API 생성 실패] ${message}`)
   process.exit(1)
+}
+
+if (!schemaUrl) {
+  fail('OPENAPI_SCHEMA_URL을 .env.development에 설정하거나 문서 주소를 인자로 전달해 주세요.')
 }
 
 let response
@@ -37,6 +40,11 @@ try {
 if (!schema.swagger && !schema.openapi) {
   fail(`Swagger/OpenAPI 문서가 아닌 응답을 받았습니다: ${schemaUrl}`)
 }
+
+// Do not commit deployment infrastructure details into the downloaded schema
+// or the generated client's fallback base path.
+delete schema.host
+delete schema.schemes
 
 await mkdir(path.dirname(schemaPath), { recursive: true })
 await writeFile(schemaPath, `${JSON.stringify(schema, null, 2)}\n`, 'utf8')

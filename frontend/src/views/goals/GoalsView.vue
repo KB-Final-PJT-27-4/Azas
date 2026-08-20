@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import AppSubHeader from '@/components/layout/AppSubHeader.vue'
@@ -8,10 +8,16 @@ import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import GoalSelectionStep from '@/components/goals/GoalSelectionStep.vue'
 import GoalSavingsLinkStep from '@/components/goals/GoalSavingsLinkStep.vue'
 import GoalSetupSummaryStep from '@/components/goals/GoalSetupSummaryStep.vue'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 type GoalSetting = { amount: number; targetDate: string }
 
 const router = useRouter()
+const { showToast } = useToast()
+const childId = ref<number | null>(null)
+const savingsAccounts = ref<Array<{ id: string; name: string; number: string; balance: number; rate: string; maturity: string }>>([])
 const currentStep = ref<'setup' | 'summary'>('setup')
 const selectedGoals = ref<string[]>([])
 const customGoal = ref('')
@@ -92,15 +98,46 @@ const goBack = () => {
   router.back()
 }
 
-const goNext = () => {
+const goNext = async () => {
   if (currentStep.value === 'summary') {
-    router.push({ name: 'MypageGoals' })
+    if (!childId.value || !canComplete.value) return
+    try {
+      await api.createGoalUsingPOST(childId.value, {
+        title: currentGoalName.value,
+        target_amount: setting.amount,
+        target_date: setting.targetDate,
+        account_ids: (linkedSavings[currentGoalId.value] ?? []).map(Number).filter(Number.isFinite),
+      })
+      showToast('목표를 만들었어요.', 'success')
+      await router.push({ name: 'MypageGoals' })
+    } catch (error) {
+      showToast(getApiErrorMessage(error, '목표를 만들지 못했습니다.'), 'error')
+    }
     return
   }
   if (!canComplete.value) return
   slideDirection.value = 'forward'
   currentStep.value = 'summary'
 }
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const { data } = await api.getChildAccountsUsingGET(childId.value)
+    savingsAccounts.value = data.accounts
+      .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
+      .map((account) => ({
+        id: String(account.account_id),
+        name: account.account_name,
+        number: account.account_number,
+        balance: account.balance,
+        rate: '',
+        maturity: '',
+      }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌 정보를 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>
@@ -152,6 +189,7 @@ const goNext = () => {
                   :goal-count="1"
                   :selected-savings-ids="linkedSavings[currentGoalId] ?? []"
                   :unavailable-savings-ids="[]"
+                  :savings-accounts="savingsAccounts"
                   embedded
                   @toggle="toggleLinkedSaving"
                 />

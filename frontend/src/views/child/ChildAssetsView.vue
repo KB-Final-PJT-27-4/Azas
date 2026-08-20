@@ -1,26 +1,49 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import childCloudBackgroundUrl from '@/assets/images/home/home-hero-bg.png'
-import {
-  childAccountSummary,
-  childAssetTransactions,
-  type ChildTransaction,
-} from '@/mocks/childHome'
+import { api, getApiErrorMessage } from '@/api'
+
+type ChildTransaction = { id: string; title: string; time: string; amount: number; type: 'income' | 'expense' }
+
+const childAccountSummary = reactive({ monthlySpent: 0, monthlyLimit: 0, usageProgress: 0 })
+const childAssetTransactions = ref<ChildTransaction[]>([])
+const errorMessage = ref('')
 
 const showAllTransactions = ref(false)
 const transactions = computed(() => {
   const unique = new Map<string, ChildTransaction>()
 
-  childAssetTransactions.forEach((transaction) => {
+  childAssetTransactions.value.forEach((transaction) => {
     if (!unique.has(transaction.id)) {
       unique.set(transaction.id, transaction)
     }
   })
 
   return Array.from(unique.values())
+})
+
+onMounted(async () => {
+  try {
+    const { data: dashboard } = await api.getDashboardUsingGET()
+    const spending = dashboard.spending_summary
+    childAccountSummary.monthlySpent = spending?.current_month_spent_amount ?? 0
+    childAccountSummary.monthlyLimit = spending?.monthly_budget_amount ?? 0
+    childAccountSummary.usageProgress = spending?.usage_rate ?? 0
+    if (!spending?.account_id) return
+    const { data } = await api.getTransactionsUsingGET(spending.account_id, undefined, undefined, 50)
+    childAssetTransactions.value = data.transactions.map((item) => ({
+      id: String(item.account_transaction_id),
+      title: item.counterparty_name ?? '계좌 거래',
+      time: new Date(item.occurred_at).toLocaleString('ko-KR'),
+      amount: item.amount,
+      type: item.direction === 'CREDIT' ? 'income' : 'expense',
+    }))
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '거래 내역을 불러오지 못했습니다.')
+  }
 })
 const displayTransactions = computed(() => {
   if (showAllTransactions.value) return transactions.value

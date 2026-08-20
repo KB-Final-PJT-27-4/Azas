@@ -2,10 +2,14 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
+
 import allowancePageBgUrl from '@/assets/images/child/child-allowance-page-bg.png'
 import allowanceRequestPigUrl from '@/assets/images/child/child-allowance-request-pig.png'
 
 const router = useRouter()
+const { showToast } = useToast()
 const allowanceAmount = ref('')
 const reason = ref('')
 const maxMoneyDigits = 8
@@ -38,9 +42,21 @@ const updateReason = (event: Event) => {
   if (textarea.value !== reason.value) textarea.value = reason.value
 }
 
-const submitRequest = () => {
+const isSubmitting = ref(false)
+const submitRequest = async () => {
   if (!canSubmit.value) return
-  router.push('/child/allowance-done')
+  isSubmitting.value = true
+  try {
+    await api.createAllowanceRequestUsingPOST({
+      requested_amount: allowanceAmountValue.value,
+      message: reason.value.trim(),
+    })
+    await router.push('/child/allowance-done')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '용돈 요청을 보내지 못했습니다.'), 'error')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 

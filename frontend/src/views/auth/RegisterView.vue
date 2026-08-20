@@ -5,6 +5,8 @@ import { Baby, UserRound } from 'lucide-vue-next'
 import { BaseDatePicker } from '@/components/common'
 import logoPigUrl from '@/assets/images/login/logo-pig.png'
 import type { FamilyInvitationInfoResponse } from '@/api/generated'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 import {
   loadRegistrationDraft,
   saveRegistrationDraft,
@@ -14,6 +16,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+const { showToast } = useToast()
 
 const props = defineProps<{
   invitation?: FamilyInvitationInfoResponse
@@ -51,18 +54,30 @@ const isSubmitDisabled = computed(() =>
     : !form.childName.trim() || !form.birthDate.trim(),
 )
 
-const submitRegistration = () => {
+const submitRegistration = async () => {
   if (isSubmitDisabled.value) return
 
   saveRegistrationDraft({ ...form, invited: isGuardianInvitation.value })
 
-  // TODO: 회원가입 또는 공동 보호자 초대 수락 API 연결
-  router.push({
-    name: isGuardianInvitation.value ? 'Login' : 'Onboarding',
-    query: isGuardianInvitation.value && props.inviteToken
-      ? { inviteToken: props.inviteToken, inviteeType: 'PARENT' }
-      : undefined,
-  })
+  try {
+    if (isGuardianInvitation.value && props.inviteToken) {
+      await api.acceptFamilyInvitationUsingPOST(props.inviteToken, undefined, {
+        relation_type: form.guardianRole.toUpperCase() as 'FATHER' | 'MOTHER' | 'GUARDIAN',
+      })
+      await router.push({ name: 'Home' })
+      return
+    }
+    await api.createChildUsingPOST({
+      name: form.childName.trim(),
+      birth_date: form.birthDate,
+      birth_status: 'BORN',
+      gender: form.gender.toUpperCase() as 'MALE' | 'FEMALE' | 'UNKNOWN',
+      relation_type: form.guardianRole.toUpperCase() as 'FATHER' | 'MOTHER' | 'GUARDIAN',
+    })
+    await router.push({ name: 'Onboarding' })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '가족 정보를 등록하지 못했습니다.'), 'error')
+  }
 }
 
 const declineInvitation = () => router.push({ name: 'Login' })
