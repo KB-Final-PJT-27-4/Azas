@@ -60,7 +60,6 @@ const selectedMemory = computed<Memory>(() =>
 const currentMemoryLabel = computed(() => String(currentIndex.value + 1).padStart(2, '0'))
 const savingDurationMonths = computed(() => allMemories.length)
 const savingDurationYears = computed(() => Math.max(1, Math.round(savingDurationMonths.value / 12)))
-const yearRangeLabel = computed(() => `${years[0]} — ${years[years.length - 1]}`)
 const isFirstMemory = computed(() => currentIndex.value === 0)
 const isLastMemory = computed(() => currentIndex.value === allMemories.length - 1)
 const activeYearMemories = computed(() =>
@@ -199,7 +198,7 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
           aria-label="이전 기록"
           @click="moveMemory(-1)"
         >
-          ←
+          이전 추억 보기
         </button>
         <button
           class="journey-next"
@@ -207,14 +206,8 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
           @click="isLastMemory ? (isOverviewModalOpen = true) : moveMemory(1)"
         >
           {{ isLastMemory ? '마지막 추억 콜라주 보기' : '다음 추억 보기' }}
-          <span>→</span>
         </button>
       </div>
-
-      <button class="all-memory-link" type="button" @click="isOverviewModalOpen = true">
-        전체 추억 한눈에 보기 <span>⌄</span>
-      </button>
-      <p class="swipe-hint">사진 위에서 좌우로 넘겨도 추억이 이동해요</p>
     </section>
 
     <section class="album-section" aria-label="타임캡슐 추억 전시">
@@ -293,9 +286,8 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
       <p>{{ savingDurationMonths }}개월의 마음을 한 장에</p>
       <h2>우리의 시간이<br />하나의 작품이 되었어요</h2>
       <button class="collage-button" type="button" @click="isOverviewModalOpen = true">
-        마지막 추억 콜라주 보기 <span>→</span>
+        마지막 추억 콜라주 보기
       </button>
-      <small>대표 사진 12장은 언제든 직접 바꿀 수 있어요</small>
 
       <button class="list-button" type="button" @click="goToList">기록 리스트 보기</button>
       <button class="back-button" type="button" @click="goBack">돌아가기</button>
@@ -390,16 +382,11 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
             >
               <span class="memory-photo" :style="getPhotoStyle(index * 3)"></span>
             </button>
-            <div class="collage-message">
-              <b>언제나 네 편</b>
-              <span>{{ yearRangeLabel }}</span>
-            </div>
           </div>
 
           <button class="save-button" type="button" @click="isOverviewModalOpen = false">
             이 장면 간직하기
           </button>
-          <button class="change-button" type="button">대표 사진 바꾸기</button>
         </section>
       </div>
     </Teleport>
@@ -510,8 +497,10 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 .ago-copy {
   margin: 24px 0 8px;
   color: #7699aa;
-  font: 12px/1.6 Georgia, 'Noto Serif KR', serif;
-  letter-spacing: -0.01em;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: -0.02em;
 }
 
 .first-memory-copy h1 {
@@ -528,7 +517,8 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
   gap: 7px;
   margin: 11px 0 0;
   color: #9dafb6;
-  font: 8px Georgia, serif;
+  font-size: 9px;
+  font-weight: 800;
   letter-spacing: 0.18em;
 }
 
@@ -586,14 +576,17 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 
 .first-polaroid-caption span {
   color: #99a5a8;
-  font: 9px Georgia, serif;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.14em;
 }
 
 .first-polaroid-caption b {
   margin-top: 6px;
   color: #62645f;
-  font: 400 12px Georgia, 'Noto Serif KR', serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .first-letter {
@@ -624,14 +617,18 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 .letter-to {
   margin: 0 0 11px;
   color: #a1844c;
-  font: 11px Georgia, 'Noto Serif KR', serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .letter-body {
   margin: 0;
   white-space: pre-line;
   word-break: keep-all;
-  font: 11px/1.88 Georgia, 'Noto Serif KR', serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.8;
 }
 
 .first-letter-fade {
@@ -649,10 +646,10 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
   right: 14px;
   bottom: 10px;
   z-index: 2;
-  padding: 5px 6px;
+  padding: 7px 8px;
   color: #7da5b6;
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   background: rgba(255, 248, 232, 0.94);
   border: 0;
   cursor: pointer;
@@ -660,67 +657,44 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 
 .journey-actions {
   display: grid;
-  grid-template-columns: 44px 1fr;
-  gap: 9px;
-  width: min(100%, 360px);
-  margin: 25px auto 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: min(100%, 380px);
+  margin: 28px auto 0;
 }
 
 .journey-prev,
 .journey-next {
-  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 18px;
   border: 0;
   border-radius: 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
 }
 
 .journey-prev {
-  color: #6da5c7;
+  color: #6b8794;
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 6px 18px rgba(64, 103, 124, 0.08);
 }
 
 .journey-prev:disabled {
   cursor: default;
-  opacity: 0.34;
+  color: #b5c3ca;
+  background: rgba(255, 255, 255, 0.58);
+  opacity: 1;
 }
 
 .journey-next {
-  padding: 0 18px;
   color: white;
-  text-align: left;
   background: #79bdf0;
   box-shadow: 0 10px 24px rgba(76, 159, 214, 0.22);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.journey-next span {
-  float: right;
-  font-size: 17px;
-}
-
-.all-memory-link {
-  display: block;
-  margin: 13px auto 0;
-  padding: 8px 12px;
-  color: #7f969f;
-  background: transparent;
-  border: 0;
-  font-size: 10px;
-  cursor: pointer;
-}
-
-.all-memory-link span {
-  margin-left: 5px;
-  color: #6faac9;
-}
-
-.swipe-hint {
-  margin: 5px 0 0;
-  color: #b1babc;
-  text-align: center;
-  font-size: 8px;
 }
 
 .memory-photo {
@@ -743,8 +717,10 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 .section-copy h2 {
   margin: 0;
   color: #223239;
-  font: 400 29px/1.35 Georgia, 'Noto Serif KR', serif;
-  letter-spacing: -0.045em;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.28;
+  letter-spacing: -0.03em;
 }
 
 .section-copy p:not(.tiny-title) {
@@ -814,7 +790,8 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
   margin-bottom: 18px;
   color: #9aa5a9;
   text-align: center;
-  font: 8px Georgia, serif;
+  font-size: 9px;
+  font-weight: 800;
   letter-spacing: 0.18em;
 }
 
@@ -880,7 +857,8 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
   display: block;
   margin-top: 7px;
   color: #716f68;
-  font: 9px Georgia, 'Noto Serif KR', serif;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .clip {
@@ -910,14 +888,17 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 
 .note-card b {
   color: #7d8277;
-  font: 8px Georgia, 'Noto Serif KR', serif;
+  font-size: 9px;
+  font-weight: 700;
 }
 
 .note-card span {
   margin-top: 9px;
   color: #5f675f;
   word-break: keep-all;
-  font: 12px/1.5 Georgia, 'Noto Serif KR', serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .note-card small {
@@ -952,14 +933,17 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
   margin: 32px 0 0;
   color: #6f777a;
   text-align: center;
-  font: 16px/1.8 Georgia, 'Noto Serif KR', serif;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.8;
 }
 
 .ending {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   min-height: 72dvh;
-  place-items: center;
-  padding: 52px 20px 68px;
+  padding: 76px 20px 68px;
   text-align: center;
   background: #eff9ff;
 }
@@ -989,59 +973,54 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 .ending h2 {
   margin: 0;
   color: #223239;
-  font: 400 30px/1.46 Georgia, 'Noto Serif KR', serif;
-  letter-spacing: -0.04em;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.42;
+  letter-spacing: -0.03em;
 }
 
 .collage-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: min(100%, 320px);
-  min-height: 54px;
+  min-height: 56px;
   margin-top: 30px;
   padding: 0 22px;
   color: white;
-  text-align: left;
+  text-align: center;
   background: #79bdf0;
   border: 0;
   border-radius: 17px;
   box-shadow: 0 14px 30px rgba(76, 159, 214, 0.22);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
   cursor: pointer;
 }
 
-.collage-button span {
-  float: right;
-  font-size: 18px;
-}
-
-.ending small {
-  margin-top: 14px;
-  color: #a2aeb2;
-  font-size: 10px;
-}
-
 .back-button {
-  margin-top: 22px;
-  padding: 10px 22px;
+  min-width: 116px;
+  margin-top: 16px;
+  padding: 12px 22px;
   color: #7f939d;
   background: transparent;
   border: 1px solid rgba(127, 147, 157, 0.32);
   border-radius: 14px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .list-button {
   width: min(100%, 320px);
-  min-height: 50px;
-  margin-top: 26px;
+  min-height: 56px;
+  margin-top: 68px;
   color: white;
   background: #79bdf0;
   border: 0;
   border-radius: 15px;
   box-shadow: 0 10px 24px rgba(76, 159, 214, 0.2);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -1119,7 +1098,8 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
   left: 22px;
   z-index: 2;
   color: white;
-  font: 14px Georgia, serif;
+  font-size: 13px;
+  font-weight: 800;
   letter-spacing: 0.12em;
 }
 
@@ -1137,7 +1117,9 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 
 .modal-body h2 {
   margin: 0;
-  font: 400 25px Georgia, 'Noto Serif KR', serif;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .modal-short {
@@ -1157,13 +1139,13 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 .letter-preview b {
   display: block;
   color: #a28c58;
-  font: 11px Georgia, 'Noto Serif KR', serif;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .letter-preview p {
   margin: 12px 0 0;
   white-space: pre-line;
-  font-family: Georgia, 'Noto Serif KR', serif;
   font-size: 11px;
   line-height: 1.9;
 }
@@ -1185,9 +1167,10 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 }
 
 .collage-modal {
-  padding: 30px 22px 24px;
+  width: min(560px, 100%);
+  padding: 32px 20px 24px;
   text-align: center;
-  background: #fcfaf4;
+  background: #f8f7f2;
 }
 
 .collage-modal .modal-close {
@@ -1205,65 +1188,185 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
 
 .collage-modal h2 {
   margin: 0;
-  font: 400 27px Georgia, 'Noto Serif KR', serif;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.32;
 }
 
 .collage-desc {
-  margin: 9px 0 20px;
+  margin: 9px 0 22px;
   color: #90999b;
   font-size: 10px;
 }
 
 .final-collage {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  padding: 8px;
-  background: white;
-  box-shadow: 0 12px 34px rgba(51, 51, 45, 0.14);
+  height: clamp(360px, 90vw, 470px);
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(148, 129, 103, 0.12) 1px, transparent 1px),
+    linear-gradient(135deg, #ece2d2 0%, #faf2df 42%, #d9c8ae 100%);
+  background-size:
+    16px 16px,
+    16px 16px,
+    cover;
+  border: 10px solid #fffdf8;
+  box-shadow: 0 18px 42px rgba(51, 51, 45, 0.16);
 }
 
 .collage-photo-button {
-  display: block;
-  padding: 0;
+  position: absolute;
+  display: flex;
+  aspect-ratio: 0.88;
+  padding: clamp(6px, 1.7vw, 9px) clamp(6px, 1.7vw, 9px) clamp(20px, 5vw, 30px);
   overflow: hidden;
-  background: transparent;
+  background: #fffdf8;
   border: 0;
+  box-shadow: 0 12px 24px rgba(50, 38, 22, 0.24);
   cursor: pointer;
 }
 
 .final-collage .memory-photo {
   display: block;
-  aspect-ratio: 1 / 1.08;
+  width: 100%;
+  height: 100%;
+  background-color: #1a1a1a;
 }
 
-.collage-message {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 126px;
-  padding: 12px 8px;
-  background: rgba(255, 250, 235, 0.94);
-  box-shadow: 0 4px 12px rgba(48, 43, 34, 0.14);
-  transform: translate(-50%, -50%) rotate(-2deg);
+.collage-photo-button:nth-child(1) {
+  top: 8%;
+  left: 28%;
+  z-index: 7;
+  width: 44%;
+  transform: rotate(4deg);
 }
 
-.collage-message b,
-.collage-message span {
-  display: block;
+.collage-photo-button:nth-child(2) {
+  top: 13%;
+  left: -18%;
+  z-index: 2;
+  width: 36%;
+  transform: rotate(-17deg);
 }
 
-.collage-message b {
-  color: #5b5a52;
-  font: 13px Georgia, 'Noto Serif KR', serif;
+.collage-photo-button:nth-child(3) {
+  top: 12%;
+  right: -12%;
+  z-index: 3;
+  width: 42%;
+  transform: rotate(15deg);
 }
 
-.collage-message span {
-  margin-top: 4px;
-  color: #9b937f;
-  font: 7px Georgia, serif;
-  letter-spacing: 0.12em;
+.collage-photo-button:nth-child(4) {
+  top: 42%;
+  left: 4%;
+  z-index: 5;
+  width: 40%;
+  transform: rotate(12deg);
+}
+
+.collage-photo-button:nth-child(5) {
+  top: 45%;
+  right: 3%;
+  z-index: 6;
+  width: 43%;
+  transform: rotate(-8deg);
+}
+
+.collage-photo-button:nth-child(6) {
+  top: 61%;
+  left: 28%;
+  z-index: 8;
+  width: 44%;
+  transform: rotate(6deg);
+}
+
+.collage-photo-button:nth-child(7) {
+  top: -13%;
+  left: 3%;
+  z-index: 1;
+  width: 38%;
+  transform: rotate(-7deg);
+}
+
+.collage-photo-button:nth-child(8) {
+  top: -10%;
+  right: 9%;
+  z-index: 1;
+  width: 37%;
+  transform: rotate(9deg);
+}
+
+.collage-photo-button:nth-child(9) {
+  bottom: -20%;
+  left: -6%;
+  z-index: 2;
+  width: 42%;
+  transform: rotate(-10deg);
+}
+
+.collage-photo-button:nth-child(10) {
+  bottom: -23%;
+  right: -5%;
+  z-index: 2;
+  width: 39%;
+  transform: rotate(13deg);
+}
+
+.collage-photo-button:nth-child(11) {
+  bottom: -27%;
+  left: 32%;
+  z-index: 1;
+  width: 36%;
+  transform: rotate(-3deg);
+}
+
+.collage-photo-button:nth-child(12) {
+  top: 70%;
+  right: 28%;
+  z-index: 4;
+  width: 34%;
+  transform: rotate(-16deg);
+}
+
+@media (max-width: 430px) {
+  .collage-modal {
+    padding: 30px 14px 22px;
+  }
+
+  .collage-modal h2 {
+    font-size: 24px;
+  }
+
+  .collage-desc {
+    margin-bottom: 16px;
+  }
+
+  .final-collage {
+    height: clamp(330px, 94vw, 400px);
+    border-width: 8px;
+  }
+
+  .collage-photo-button:nth-child(1) {
+    top: 10%;
+    left: 27%;
+    width: 46%;
+  }
+
+  .collage-photo-button:nth-child(4) {
+    top: 43%;
+    left: 1%;
+  }
+
+  .collage-photo-button:nth-child(5) {
+    top: 46%;
+    right: 0;
+  }
+
+  .collage-photo-button:nth-child(6) {
+    top: 64%;
+  }
 }
 
 .save-button {
@@ -1276,15 +1379,6 @@ const goToList = () => router.push(`/time-capsules/${String(route.params.capsule
   border-radius: 15px;
   font-size: 12px;
   font-weight: 700;
-  cursor: pointer;
-}
-
-.change-button {
-  padding: 12px;
-  color: #7f939d;
-  background: transparent;
-  border: 0;
-  font-size: 10px;
   cursor: pointer;
 }
 
