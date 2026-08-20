@@ -673,7 +673,7 @@ const retryTransfer = () => {
       @click="isTransferSheetOpen = true"
     >
       <span class="asset-transfer-button__surface">
-        <Plus :size="23" :stroke-width="3" aria-hidden="true" />
+        <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
       </span>
     </button>
 
