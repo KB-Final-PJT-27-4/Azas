@@ -165,4 +165,106 @@
 
     </select>
 
+    <select id="findAllActiveChildIds"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE status = 'ACTIVE'
+        ORDER BY child_id
+    </select>
+
+    <select id="findTotalAssetAmountAt"
+            resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(abs.balance), 0)
+        FROM account_balance_snapshot abs
+                 INNER JOIN (
+            SELECT
+                financial_account_id,
+                MAX(observed_at) AS latest_observed_at
+            FROM account_balance_snapshot
+            WHERE observed_at <![CDATA[<]]> #{endExclusive}
+            GROUP BY financial_account_id
+        ) latest
+                            ON latest.financial_account_id = abs.financial_account_id
+                                AND latest.latest_observed_at = abs.observed_at
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = abs.financial_account_id
+        WHERE fa.child_id = #{childId}
+          AND fa.owner_type = 'CHILD'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.account_status IN ('ACTIVE', 'MATURED')
+    </select>
+
+    <select id="findMonthlySavedAmount"
+            resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(at.amount), 0)
+        FROM account_transaction at
+    INNER JOIN financial_goal_account fga
+        ON fga.financial_account_id = at.financial_account_id
+            INNER JOIN financial_goal fg
+            ON fg.financial_goal_id = fga.financial_goal_id
+            AND fg.child_id = #{childId}
+        WHERE at.direction = 'CREDIT'
+          AND at.occurred_at <![CDATA[>=]]> #{startAt}
+          AND at.occurred_at <![CDATA[<]]> #{endExclusive}
+    </select>
+
+    <select id="findPreviousTotalAssetAmount"
+            resultType="java.math.BigDecimal">
+        SELECT total_asset_amount
+        FROM asset_report
+        WHERE child_id = #{childId}
+          AND report_month = #{reportMonth}
+            LIMIT 1
+    </select>
+
+    <insert id="upsertAssetReport"
+            parameterType="com.azas.domain.report.dto.AssetReportUpsertCommand">
+
+        INSERT INTO asset_report (
+            child_id,
+            report_month,
+            total_asset_amount,
+            total_asset_change_amount,
+            monthly_saved_amount,
+            total_goal_target_amount,
+            total_goal_saved_amount,
+            goal_achievement_rate,
+            six_month_flow_json,
+            savings_goal_summary_json,
+            insight_items_json
+        )
+        VALUES (
+                   #{childId},
+                   #{reportMonth},
+                   #{totalAssetAmount},
+                   #{totalAssetChangeAmount},
+                   #{monthlySavedAmount},
+                   #{totalGoalTargetAmount},
+                   #{totalGoalSavedAmount},
+                   #{goalAchievementRate},
+                   #{sixMonthFlowJson},
+                   #{savingsGoalSummaryJson},
+                   #{insightItemsJson}
+               )
+            ON DUPLICATE KEY UPDATE
+                                 total_asset_amount = VALUES(total_asset_amount),
+                                 total_asset_change_amount =
+                             VALUES(total_asset_change_amount),
+                                 monthly_saved_amount = VALUES(monthly_saved_amount),
+                                 total_goal_target_amount =
+                             VALUES(total_goal_target_amount),
+                                 total_goal_saved_amount =
+                             VALUES(total_goal_saved_amount),
+                                 goal_achievement_rate =
+                             VALUES(goal_achievement_rate),
+                                 six_month_flow_json =
+                             VALUES(six_month_flow_json),
+                                 savings_goal_summary_json =
+                             VALUES(savings_goal_summary_json),
+                                 insight_items_json =
+                             VALUES(insight_items_json),
+                                 updated_at = CURRENT_TIMESTAMP(6)
+
+    </insert>
 </mapper>
