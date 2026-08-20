@@ -647,51 +647,79 @@ INSERT INTO time_capsule_entry (
   (1, 1, 1, 1, '7월 저축 기록', '이번 달에도 깨비를 위해 10만 원을 넣었어.', 100000, '2026-07-20 09:00:00.000000', 'NONE', 'DRAFT', NULL);
 
 INSERT INTO asset_report (
-  asset_report_id,
-  child_id,
-  report_month,
-  total_asset_amount,
-  total_asset_change_amount,
-  monthly_saved_amount,
-  total_goal_target_amount,
-  total_goal_saved_amount,
-  goal_achievement_rate,
-  six_month_flow_json,
-  savings_goal_summary_json,
-  insight_items_json
-) VALUES
-  (
-    1,
-    1,
-    '2026-07-01',
-    16750000,
-    250000,
-    250000,
-    30000000,
-    14600000,
-    48.6667,
-    JSON_ARRAY(
-      JSON_OBJECT('month', '2026-02', 'saved_amount', 310000),
-      JSON_OBJECT('month', '2026-03', 'saved_amount', 420000),
-      JSON_OBJECT('month', '2026-04', 'saved_amount', 560000),
-      JSON_OBJECT('month', '2026-05', 'saved_amount', 730000),
-      JSON_OBJECT('month', '2026-06', 'saved_amount', 810000),
-      JSON_OBJECT('month', '2026-07', 'saved_amount', 900000)
-    ),
-    JSON_ARRAY(
-      JSON_OBJECT(
-        'account_id', 3,
-        'goal_name', '대학자금 마련',
-        'current_amount', 14600000,
-        'target_amount', 30000000,
-        'achievement_rate', 48.7,
-        'monthly_saved_amount', 150000
-      )
-    ),
-    JSON_ARRAY(
-      JSON_OBJECT('type', 'SAVED_MORE_THAN_LAST_MONTH', 'title', '지난달보다 9만원 더 저축했어요.')
-    )
-  );
+    child_id,
+    report_month,
+    total_asset_amount,
+    total_asset_change_amount,
+    monthly_saved_amount,
+    total_goal_target_amount,
+    total_goal_saved_amount,
+    goal_achievement_rate,
+    savings_goal_summary_json,
+    insight_items_json
+) VALUES (
+             6,
+             '2026-07-01',
+             20750000,
+             350000,
+             1250000,
+             50000000,
+             20750000,
+             41.5,
+
+             JSON_ARRAY(
+                     JSON_OBJECT(
+                             'financial_goal_id', 100,
+                             'title', '대학자금',
+                             'current_amount', 14600000,
+                             'target_amount', 30000000,
+                             'achievement_rate', 48.67,
+                             'monthly_saved_amount', 750000,
+                             'monthly_saving_target_amount', 3000000,
+                             'linked_accounts', JSON_ARRAY(
+                                     JSON_OBJECT(
+                                             'account_id', 3,
+                                             'account_name', 'KB 아이사랑적금 1',
+                                             'bank_name', 'KB국민은행',
+                                             'account_number_masked', '952-****-**43',
+                                             'balance', 9600000
+                                     ),
+                                     JSON_OBJECT(
+                                             'account_id', 4,
+                                             'account_name', 'KB 아이사랑적금 2',
+                                             'bank_name', 'KB국민은행',
+                                             'account_number_masked', '952-****-**57',
+                                             'balance', 5000000
+                                     )
+                                                )
+                     )
+             ),
+
+             JSON_ARRAY(
+                     JSON_OBJECT(
+                             'type', 'MONTHLY_SAVING_COMPARISON',
+                             'title', '지난달보다 90,000원을 더 저축했어요.',
+                             'description', '꾸준한 저축 흐름이 아주 좋아요.'
+                     ),
+                     JSON_OBJECT(
+                             'type', 'GOAL_PROGRESS',
+                             'title', '대학자금 목표의 절반에 가까워졌어요.',
+                             'description', '현재 속도라면 계획대로 달성할 수 있어요.'
+                     ),
+                     JSON_OBJECT(
+                             'type', 'EXPECTED_EARLY_ACHIEVEMENT',
+                             'title', '목표 달성 시기를 4개월 앞당길 수 있어요.',
+                             'description', '지금처럼 저축을 이어가 보세요.',
+                             'metadata', JSON_OBJECT(
+                                     'target_date', '2030-12-31',
+                                     'planned_monthly_saving_amount', 300000,
+                                     'recent_average_monthly_saving_amount', 420000,
+                                     'expected_achievement_date', '2030-08-31',
+                                     'months_accelerated', 4
+                                         )
+                     )
+             )
+         );
 
 INSERT INTO notification_preference (
     notification_preference_id,
