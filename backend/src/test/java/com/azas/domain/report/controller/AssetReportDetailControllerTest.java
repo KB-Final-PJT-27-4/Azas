@@ -7,6 +7,7 @@ import com.azas.global.exception.ErrorCode;
 import com.azas.global.exception.GlobalExceptionHandler;
 import com.azas.global.security.AccessTokenMemberResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,9 @@ class AssetReportDetailControllerTest {
 
         objectMapper.registerModule(
                 new JavaTimeModule()
+        );
+        objectMapper.disable(
+                SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
         );
 
         mockMvc = MockMvcBuilders

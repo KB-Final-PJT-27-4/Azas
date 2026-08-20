@@ -1,5 +1,10 @@
 package com.azas.domain.report.service;
 
+import com.azas.domain.report.dto.AssetReportAccountSnapshot;
+import com.azas.domain.report.dto.AssetReportDetailResponse;
+import com.azas.domain.report.dto.AssetReportDetailRow;
+import com.azas.domain.report.dto.AssetReportGoalSnapshot;
+import com.azas.domain.report.dto.AssetReportInsightSnapshot;
 import com.azas.domain.report.dto.AssetReportListItemResponse;
 import com.azas.domain.report.dto.AssetReportListQuery;
 import com.azas.domain.report.dto.AssetReportListResponse;
@@ -7,26 +12,17 @@ import com.azas.domain.report.dto.AssetReportListRow;
 import com.azas.domain.report.mapper.AssetReportMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.azas.domain.report.dto.AssetReportAccountSnapshot;
-import com.azas.domain.report.dto.AssetReportDetailResponse;
-import com.azas.domain.report.dto.AssetReportDetailRow;
-import com.azas.domain.report.dto.AssetReportGoalSnapshot;
-import com.azas.domain.report.dto.AssetReportInsightSnapshot;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
-
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -44,9 +40,9 @@ public class AssetReportService {
 
     private static final int MAX_YEAR = 9999;
 
-    private final ObjectMapper objectMapper;
-
     private final AssetReportMapper assetReportMapper;
+
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public AssetReportListResponse getAssetReports(

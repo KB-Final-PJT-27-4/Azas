@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.InputStream;
+import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -94,6 +95,13 @@ class AssetReportMapperIntegrationTest {
                         mapper.findAssetReports(query)
                 );
             });
+
+            assertDoesNotThrow(() ->
+                    mapper.findAssetReportDetail(
+                            1L,
+                            LocalDate.of(2026, 7, 1)
+                    )
+            );
         } finally {
             dataSource.forceCloseAll();
         }

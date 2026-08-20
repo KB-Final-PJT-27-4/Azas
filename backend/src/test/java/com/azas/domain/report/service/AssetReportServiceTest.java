@@ -6,6 +6,7 @@ import com.azas.domain.report.dto.AssetReportListRow;
 import com.azas.domain.report.mapper.AssetReportMapper;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +40,10 @@ class AssetReportServiceTest {
     @BeforeEach
     void setUp() {
         assetReportService =
-                new AssetReportService(assetReportMapper);
+                new AssetReportService(
+                        assetReportMapper,
+                        new ObjectMapper()
+                );
     }
 
     @Test

@@ -270,6 +270,66 @@ class AssetReportDetailServiceTest {
         );
     }
 
+    @Test
+    void 기존_형식의_리포트_JSON도_상세_조회할_수_있다() {
+        mockAccess();
+
+        AssetReportDetailRow row = detailRow();
+
+        row.setSavingsGoalSummaryJson("""
+                [
+                  {
+                    "account_id": 3,
+                    "goal_name": "대학자금 마련",
+                    "current_amount": 14600000,
+                    "target_amount": 30000000,
+                    "achievement_rate": 48.7,
+                    "monthly_change_amount": 150000
+                  }
+                ]
+                """);
+
+        row.setInsightItemsJson("""
+                [
+                  {
+                    "type": "MONTH_COMPARISON",
+                    "message": "지난달보다 90,000원을 더 저축했어요."
+                  }
+                ]
+                """);
+
+        when(assetReportMapper.findAssetReportDetail(
+                CHILD_ID,
+                LocalDate.of(2026, 7, 1)
+        )).thenReturn(row);
+
+        AssetReportDetailResponse response =
+                assetReportService.getAssetReportDetail(
+                        MEMBER_ID,
+                        CHILD_ID,
+                        2026,
+                        7
+                );
+
+        assertEquals(
+                "대학자금 마련",
+                response.getGoalSummary().get(0).getTitle()
+        );
+        assertEquals(
+                new BigDecimal("150000"),
+                response.getGoalSummary().get(0)
+                        .getMonthlySavedAmount()
+        );
+        assertTrue(
+                response.getGoalSummary().get(0)
+                        .getLinkedAccounts().isEmpty()
+        );
+        assertEquals(
+                "지난달보다 90,000원을 더 저축했어요.",
+                response.getInsightItems().get(0).getTitle()
+        );
+    }
+
     private void mockAccess() {
         when(assetReportMapper.findActiveChildId(CHILD_ID))
                 .thenReturn(CHILD_ID);
