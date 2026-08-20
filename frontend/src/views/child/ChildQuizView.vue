@@ -10,15 +10,49 @@ import childQuizThinkingPigUrl from '@/assets/images/child/child-quiz-thinking-p
 import childQuizWrongPigUrl from '@/assets/images/child/child-quiz-wrong-pig.png'
 import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-pig.png'
 import { childQuizQuestions } from '@/mocks/childFinanceFlow'
+import { markChildQuizCompletedToday } from '@/utils/childQuizProgress'
 
+const QUIZ_ROUND_SIZE = 5
+
+const shuffleItems = <T,>(items: T[]) => {
+  const shuffledItems = [...items]
+
+  for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    const currentItem = shuffledItems[index]!
+    shuffledItems[index] = shuffledItems[swapIndex]!
+    shuffledItems[swapIndex] = currentItem
+  }
+
+  return shuffledItems
+}
+
+const createQuizRound = () =>
+  shuffleItems(childQuizQuestions)
+    .slice(0, QUIZ_ROUND_SIZE)
+    .map((question) => {
+      const shuffledOptions = shuffleItems(
+        question.options.map((option, optionIndex) => ({ option, optionIndex })),
+      )
+
+      return {
+        ...question,
+        options: shuffledOptions.map(({ option }) => option),
+        answerIndex: shuffledOptions.findIndex(
+          ({ optionIndex }) => optionIndex === question.answerIndex,
+        ),
+      }
+    })
+
+const quizQuestions = ref(createQuizRound())
 const quizIndex = ref(0)
 const selectedAnswerIndex = ref<number | null>(null)
 const isQuizComplete = ref(false)
 const answerResults = ref<Array<'correct' | 'wrong' | null>>(
-  Array.from({ length: childQuizQuestions.length }, () => null),
+  Array.from({ length: quizQuestions.value.length }, () => null),
 )
 
-const quiz = computed(() => childQuizQuestions[quizIndex.value] ?? childQuizQuestions[0]!)
+const quiz = computed(() => quizQuestions.value[quizIndex.value] ?? quizQuestions.value[0]!)
 const hasAnsweredQuiz = computed(() => selectedAnswerIndex.value !== null)
 const currentAnswerResult = computed(() => answerResults.value[quizIndex.value])
 const quizReactionImage = computed(() => {
@@ -38,7 +72,8 @@ const selectQuizAnswer = (optionIndex: number) => {
 const goNextQuiz = () => {
   if (!hasAnsweredQuiz.value) return
 
-  if (quizIndex.value + 1 >= childQuizQuestions.length) {
+  if (quizIndex.value + 1 >= quizQuestions.value.length) {
+    markChildQuizCompletedToday()
     isQuizComplete.value = true
     return
   }
@@ -113,8 +148,8 @@ const getStepClass = (stepIndex: number) => {
         오늘의 퀴즈 완료!
       </h1>
       <p class="mt-4 mb-10 text-[16px] leading-[1.6] text-[var(--color-text-secondary)]">
-        정답을 모두 맞혔어요!<br />
-        정말 대단해요.
+        오늘도 금융 습관을 하나 배웠어요.<br />
+        내일 또 새로운 퀴즈를 풀어봐요.
       </p>
       <RouterLink
         class="grid h-14 w-full place-items-center rounded-[14px] bg-[var(--color-brand-primary)] text-[18px] font-bold !text-white no-underline"
@@ -132,10 +167,10 @@ const getStepClass = (stepIndex: number) => {
       <div class="pt-7 pb-7 px-1" aria-label="퀴즈 진행 상태">
         <ol
           class="quiz-steps m-0 grid list-none p-0"
-          :style="{ gridTemplateColumns: `repeat(${childQuizQuestions.length}, minmax(0, 1fr))` }"
+          :style="{ gridTemplateColumns: `repeat(${quizQuestions.length}, minmax(0, 1fr))` }"
         >
           <li
-            v-for="(_, stepIndex) in childQuizQuestions"
+            v-for="(_, stepIndex) in quizQuestions"
             :key="stepIndex"
             class="quiz-step"
           >
@@ -220,7 +255,7 @@ const getStepClass = (stepIndex: number) => {
         :disabled="!hasAnsweredQuiz"
         @click="goNextQuiz"
       >
-        {{ quizIndex + 1 === childQuizQuestions.length ? '완료하기' : '다음 문제' }}
+        {{ quizIndex + 1 === quizQuestions.length ? '완료하기' : '다음 문제' }}
       </button>
     </section>
 
