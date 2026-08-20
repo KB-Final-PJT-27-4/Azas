@@ -263,6 +263,12 @@ CREATE TABLE checklist_item_template
     detail_content              TEXT            NULL COMMENT '상세 화면 기본 안내 문구',
     item_order                  INT             NOT NULL COMMENT '단계 내 표시 순서',
     is_active                   TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '노출 여부',
+    template_key  VARCHAR(100) NOT NULL COMMENT '템플릿 고유 식별 키',
+    category      VARCHAR(20)  NOT NULL COMMENT '분류 카테고리',
+    action_type   VARCHAR(20)  NOT NULL COMMENT '액션 유형 (링크 이동, 팝업 등)',
+    action_url    VARCHAR(2048) NULL      COMMENT '액션 실행 시 연결될 URL',
+    info_title    VARCHAR(150) NULL      COMMENT '안내 정보 제목',
+    info_notice   VARCHAR(500) NULL      COMMENT '안내 공지 사항 내용',
     created_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
     updated_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
         ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
@@ -286,7 +292,11 @@ CREATE TABLE checklist_item_template
                                 'PREGNANCY',
                                 'AGE_0_TO_1',
                                 'AGE_2_TO_4',
-                                'AGE_5_TO_7'
+                                'AGE_5_TO_7',
+                                'AGE_8_TO_10',
+                                'AGE_11_TO_13',
+                                'AGE_14_TO_16',
+                                'AGE_17_TO_19'
                 )
             ),
 
