@@ -83,6 +83,26 @@ class PushDeviceMapperIntegrationTest {
             assertNotNull(row);
             assertEquals(PushPlatform.WEB, row.getPlatform());
             assertTrue(row.isActive());
+
+            assertEquals(
+                    1,
+                    mapper.findActiveByMemberId(1L)
+                            .stream()
+                            .filter(device ->
+                                    device.getPushDeviceId()
+                                            .equals(
+                                                    row.getPushDeviceId()
+                                            )
+                            )
+                            .count()
+            );
+
+            assertEquals(
+                    1,
+                    mapper.deactivateById(
+                            row.getPushDeviceId()
+                    )
+            );
             session.rollback();
         } finally {
             dataSource.forceCloseAll();

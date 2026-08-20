@@ -92,4 +92,23 @@
           AND member_id = #{memberId}
           AND is_active = 1
     </update>
+
+    <select id="findActiveByMemberId"
+            resultType="com.azas.domain.notification.dto.ActivePushDeviceRow">
+        SELECT
+            push_device_id,
+            token_ciphertext
+        FROM push_device
+        WHERE member_id = #{memberId}
+          AND is_active = 1
+        ORDER BY push_device_id ASC
+    </select>
+
+    <update id="deactivateById">
+        UPDATE push_device
+        SET is_active = 0,
+            updated_at = CURRENT_TIMESTAMP(6)
+        WHERE push_device_id = #{pushDeviceId}
+          AND is_active = 1
+    </update>
 </mapper>

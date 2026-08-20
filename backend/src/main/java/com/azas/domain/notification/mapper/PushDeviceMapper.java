@@ -2,8 +2,11 @@ package com.azas.domain.notification.mapper;
 
 import com.azas.domain.notification.dto.PushDeviceCommand;
 import com.azas.domain.notification.dto.PushDeviceRow;
+import com.azas.domain.notification.dto.ActivePushDeviceRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 @Mapper
 public interface PushDeviceMapper {
@@ -24,5 +27,13 @@ public interface PushDeviceMapper {
     int deactivate(
             @Param("pushDeviceId") Long pushDeviceId,
             @Param("memberId") Long memberId
+    );
+
+    List<ActivePushDeviceRow> findActiveByMemberId(
+            @Param("memberId") Long memberId
+    );
+
+    int deactivateById(
+            @Param("pushDeviceId") Long pushDeviceId
     );
 }
