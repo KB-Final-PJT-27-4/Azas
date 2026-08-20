@@ -7,6 +7,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -24,6 +25,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -201,6 +204,96 @@ class SpringContextConfigurationTest {
             mockMvc.perform(get("/swagger-ui/index.html"))
                     .andExpect(status().isOk());
         }
+    }
+
+    @Test
+    void corsConfigurationHandlesApiPreflightRequests() throws Exception {
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext();
+                XmlWebApplicationContext servletContext =
+                        new XmlWebApplicationContext()
+        ) {
+            servletContext.setParent(rootContext);
+            servletContext.setServletContext(
+                    new MockServletContext()
+            );
+            servletContext.setConfigLocation(
+                    "classpath:spring/servlet-context.xml"
+            );
+            servletContext.refresh();
+
+            MockMvc mockMvc =
+                    MockMvcBuilders
+                            .webAppContextSetup(servletContext)
+                            .build();
+
+            assertAllowedPreflight(
+                    mockMvc,
+                    "https://azas-seven.vercel.app"
+            );
+            assertAllowedPreflight(
+                    mockMvc,
+                    "http://localhost:5173"
+            );
+
+            mockMvc.perform(
+                            options("/api/v1/members/me")
+                                    .header(
+                                            HttpHeaders.ORIGIN,
+                                            "https://untrusted.example.com"
+                                    )
+                                    .header(
+                                            HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD,
+                                            "GET"
+                                    )
+                    )
+                    .andExpect(status().isForbidden())
+                    .andExpect(
+                            header().doesNotExist(
+                                    HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN
+                            )
+                    );
+        }
+    }
+
+    private void assertAllowedPreflight(
+            MockMvc mockMvc,
+            String origin
+    ) throws Exception {
+        mockMvc.perform(
+                        options("/api/v1/members/me")
+                                .header(HttpHeaders.ORIGIN, origin)
+                                .header(
+                                        HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD,
+                                        "GET"
+                                )
+                                .header(
+                                        HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS,
+                                        "Authorization,Content-Type"
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        header().string(
+                                HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
+                                origin
+                        )
+                )
+                .andExpect(
+                        header().string(
+                                HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS,
+                                org.hamcrest.Matchers.containsString("GET")
+                        )
+                )
+                .andExpect(
+                        header().string(
+                                HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS,
+                                org.hamcrest.Matchers.containsString(
+                                        "Authorization"
+                                )
+                        )
+                );
     }
 
     @Test
