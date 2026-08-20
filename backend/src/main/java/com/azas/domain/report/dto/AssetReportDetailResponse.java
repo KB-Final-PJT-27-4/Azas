@@ -45,6 +45,7 @@ public class AssetReportDetailResponse {
     @Getter
     @RequiredArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @ApiModel(value = "AssetReportPeriodResponse")
     public static class Period {
 
         private final LocalDate startDate;
@@ -55,6 +56,7 @@ public class AssetReportDetailResponse {
     @Getter
     @RequiredArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @ApiModel(value = "AssetReportSummaryResponse")
     public static class Summary {
 
         private final BigDecimal totalAssetAmount;

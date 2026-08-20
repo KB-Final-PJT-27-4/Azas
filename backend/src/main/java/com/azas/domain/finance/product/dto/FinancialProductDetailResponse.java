@@ -6,6 +6,7 @@ import com.azas.global.exception.ErrorCode;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -204,6 +205,7 @@ public class FinancialProductDetailResponse {
     }
 
     @Getter
+    @ApiModel(value = "FinancialProductDetailContractPeriodResponse")
     public static class ContractPeriod {
         @JsonProperty("min_months")
         private final Integer minMonths;

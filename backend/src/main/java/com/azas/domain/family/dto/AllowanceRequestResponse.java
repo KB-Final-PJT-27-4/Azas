@@ -1,6 +1,7 @@
 package com.azas.domain.family.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @AllArgsConstructor
+@ApiModel(value = "FamilyAllowanceRequestResponse")
 public class AllowanceRequestResponse {
 
     @JsonProperty("child_id")

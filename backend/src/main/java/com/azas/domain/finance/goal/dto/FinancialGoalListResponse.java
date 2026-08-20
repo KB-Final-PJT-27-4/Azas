@@ -98,6 +98,7 @@ public final class FinancialGoalListResponse {
 
     @Getter
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    @ApiModel(value = "FinancialGoalListLinkedAccountResponse")
     public static final class LinkedAccountResponse {
 
         @JsonProperty("account_id")

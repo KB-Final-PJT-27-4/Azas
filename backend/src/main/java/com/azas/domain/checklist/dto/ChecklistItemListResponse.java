@@ -62,7 +62,10 @@ public class ChecklistItemListResponse {
 
     @Getter
     @RequiredArgsConstructor
-    @ApiModel(description = "체크리스트 항목")
+    @ApiModel(
+            value = "ChecklistItemListItemResponse",
+            description = "체크리스트 항목"
+    )
     public static class Item {
 
         @JsonProperty("checklist_item_id")
@@ -129,6 +132,7 @@ public class ChecklistItemListResponse {
 
     @Getter
     @RequiredArgsConstructor
+    @ApiModel(value = "ChecklistInfoItemResponse")
     public static class InfoItem {
 
         @JsonProperty("checklist_item_detail_id")
