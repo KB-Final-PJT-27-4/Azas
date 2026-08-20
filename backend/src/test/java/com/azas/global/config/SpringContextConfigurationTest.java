@@ -1,5 +1,6 @@
 package com.azas.global.config;
 
+import com.azas.domain.member.service.FakeSmsSender;
 import com.azas.domain.member.service.PhoneNumberProtector;
 import com.azas.domain.member.service.PhoneVerificationHasher;
 import com.azas.domain.member.service.SmsSender;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
@@ -48,6 +50,19 @@ class SpringContextConfigurationTest {
                     )
             );
             assertNotNull(
+                    rootContext.getBean(SmsSender.class)
+            );
+        }
+    }
+
+    @Test
+    void demoProfileUsesFakeSmsSender() {
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext("demo")
+        ) {
+            assertInstanceOf(
+                    FakeSmsSender.class,
                     rootContext.getBean(SmsSender.class)
             );
         }
@@ -358,8 +373,12 @@ class SpringContextConfigurationTest {
         }
     }
 
-    private ClassPathXmlApplicationContext createRootContext() {
+    private ClassPathXmlApplicationContext createRootContext(
+            String... activeProfiles
+    ) {
         ClassPathXmlApplicationContext rootContext = new ClassPathXmlApplicationContext();
+        rootContext.getEnvironment()
+                .setActiveProfiles(activeProfiles);
         rootContext.getEnvironment().getPropertySources().addFirst(
                 new MapPropertySource("testProperties", Map.of(
                         "DB_URL", "jdbc:mysql://localhost:3306/azas",
