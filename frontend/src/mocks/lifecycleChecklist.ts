@@ -18,6 +18,8 @@ export interface ChecklistInfoItem {
   title: string
   description: string
   actionLabel: string
+  externalUrl?: string
+  detail?: string
 }
 
 export interface ChecklistItem {
@@ -29,6 +31,7 @@ export interface ChecklistItem {
   completed: boolean
   actionType: ChecklistActionType
   route?: string
+  externalUrl?: string
   infoTitle?: string
   infoDescription?: string
   infoItems?: ChecklistInfoItem[]
@@ -154,11 +157,13 @@ const infoItemsByCategory: Record<LifecycleCategory, ChecklistInfoItem[]> = {
       title: '아이에게 설명할 금융 개념 정리',
       description: '저축, 소비, 이자, 계좌처럼 아이가 나중에 이해할 개념을 쉬운 말로 정리해요.',
       actionLabel: '개념 살펴보기',
+      externalUrl: 'https://www.fss.or.kr/edu',
     },
     {
       title: '기록이 필요한 순간 확인',
       description: '축하금, 세뱃돈, 증여금처럼 나중에 근거가 필요할 수 있는 기록 기준을 확인해요.',
       actionLabel: '기록 기준 보기',
+      detail: '아이 명의로 받은 돈은 언제, 누구에게, 어떤 목적으로 받았는지 메모해두면 나중에 자금 출처를 설명할 때 도움이 됩니다.',
     },
   ],
   support: [
@@ -166,11 +171,13 @@ const infoItemsByCategory: Record<LifecycleCategory, ChecklistInfoItem[]> = {
       title: '정부 지원 확인',
       description: '출산, 양육, 돌봄, 교육과 관련된 공통 지원을 확인해요.',
       actionLabel: '지원 확인하기',
+      externalUrl: 'https://www.bokjiro.go.kr/ssis-tbu/index.do',
     },
     {
       title: '지역 지원 확인',
       description: '거주 지역별로 받을 수 있는 지원이 있는지 살펴봐요.',
       actionLabel: '지역별 보기',
+      externalUrl: 'https://www.gov.kr/portal/main',
     },
   ],
   allowance: [
@@ -222,21 +229,25 @@ export const checklistItems: ChecklistItem[] = [
         title: '첫만남 이용권',
         description: '출생 초기 양육 부담을 덜기 위한 지원을 확인해요.',
         actionLabel: '대상·조건 확인하기',
+        externalUrl: 'https://www.bokjiro.go.kr/ssis-tbu/index.do',
       },
       {
         title: '부모급여',
         description: '영아기 양육 가정을 위한 지원 조건을 확인해요.',
         actionLabel: '대상·조건 확인하기',
+        externalUrl: 'https://www.bokjiro.go.kr/ssis-tbu/index.do',
       },
       {
         title: '아동수당',
         description: '아동 양육과 관련된 기본 지원 내용을 확인해요.',
         actionLabel: '대상·조건 확인하기',
+        externalUrl: 'https://www.bokjiro.go.kr/ssis-tbu/index.do',
       },
       {
         title: '거주 지역 출산지원',
         description: '지자체별 출산·양육 지원이 있는지 확인해요.',
         actionLabel: '지역별 지원 확인하기',
+        externalUrl: 'https://www.gov.kr/portal/main',
       },
     ],
   }),
@@ -279,16 +290,19 @@ export const checklistItems: ChecklistItem[] = [
         title: '보호자 신분증',
         description: '법정대리인 확인을 위해 보호자 신분증이 필요해요.',
         actionLabel: '준비물 확인하기',
+        detail: '은행 방문 전 보호자 신분증과 아이 기준 서류가 필요한지 먼저 확인해두면 다시 방문하는 일을 줄일 수 있습니다.',
       },
       {
         title: '가족관계 확인 서류',
         description: '아이와 보호자 관계를 확인할 수 있는 서류를 준비해요.',
         actionLabel: '서류 확인하기',
+        externalUrl: 'https://efamily.scourt.go.kr/',
       },
       {
         title: '아이 기본증명서',
         description: '금융기관 요청에 따라 기본증명서가 필요할 수 있어요.',
         actionLabel: '발급 방법 보기',
+        externalUrl: 'https://efamily.scourt.go.kr/',
       },
     ],
   }),

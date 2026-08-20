@@ -8,15 +8,15 @@ import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-p
 import {
   checklistItems,
   currentChildLifecycle,
-  lifecycleCategories,
   lifecycleStages,
   type ChecklistItem,
-  type LifecycleCategory,
+  type ChecklistInfoItem,
 } from '@/mocks/lifecycleChecklist'
 
 const router = useRouter()
 
 const selectedInfoItem = ref<ChecklistItem | null>(null)
+const selectedDetailInfo = ref<ChecklistInfoItem | null>(null)
 const pendingRouteItem = ref<ChecklistItem | null>(null)
 const isCompleteSheetOpen = ref(false)
 const selectedStageId = ref(currentChildLifecycle.childStatus)
@@ -32,7 +32,16 @@ const currentStage = computed(
 )
 
 const currentStageItems = computed(() =>
-  checklistItems.filter((item) => item.stageId === currentStage.value.id),
+  checklistItems
+    .filter((item) => item.stageId === currentStage.value.id)
+    .map((item, index) => ({ item, index }))
+    .sort((current, next) => {
+      const currentCompleted = checkedItemIds.value.has(current.item.id) ? 1 : 0
+      const nextCompleted = checkedItemIds.value.has(next.item.id) ? 1 : 0
+
+      return currentCompleted - nextCompleted || current.index - next.index
+    })
+    .map(({ item }) => item),
 )
 
 const completedCount = computed(
@@ -44,36 +53,14 @@ const progressPercent = computed(() =>
 )
 const progressStyle = computed(() => ({ width: `${progressPercent.value}%` }))
 
-const categoryLabelMap = computed(
-  () =>
-    new Map(
-      lifecycleCategories
-        .filter((category) => category.id !== 'all')
-        .map((category) => [category.id, category.label]),
-    ),
-)
-
-const categoryToneMap: Record<LifecycleCategory, string> = {
-  service: 'bg-[#EBFAFF] text-[#2BABE8]',
-  asset: 'bg-[#F6F8FA] text-[#6E7A8A]',
-  education: 'bg-[#FFF7D7] text-[#8A6A00]',
-  support: 'bg-[#FFF7D7] text-[#8A6A00]',
-  allowance: 'bg-[#FDECA7] text-[#8A6A00]',
-}
-
-const getCategoryTone = (category: LifecycleCategory) => categoryToneMap[category]
-
 const isChecklistItemCompleted = (item: ChecklistItem) => checkedItemIds.value.has(item.id)
 
-const hasChecklistAction = (item: ChecklistItem) => item.actionType === 'info' || Boolean(item.route)
+const hasChecklistAction = (item: ChecklistItem) =>
+  item.actionType === 'info' || Boolean(item.route) || Boolean(item.externalUrl)
 
-const infoFullViewLabel = computed(() => {
-  if (!selectedInfoItem.value) return '전체 보기'
-
-  const categoryLabel = categoryLabelMap.value.get(selectedInfoItem.value.category)
-
-  return `${categoryLabel ?? '정보'} 전체 보기`
-})
+const openExternalUrl = (url: string) => {
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
 
 const toggleChecklistItem = (item: ChecklistItem) => {
   const nextCheckedItemIds = new Set(checkedItemIds.value)
@@ -88,6 +75,11 @@ const toggleChecklistItem = (item: ChecklistItem) => {
 }
 
 const openChecklistAction = (item: ChecklistItem) => {
+  if (item.externalUrl) {
+    openExternalUrl(item.externalUrl)
+    return
+  }
+
   if (item.actionType === 'info') {
     selectedInfoItem.value = item
     return
@@ -110,21 +102,23 @@ const confirmRouteNavigation = () => {
   router.push(route)
 }
 
-const closeInfoSheet = () => {
-  selectedInfoItem.value = null
-  resetSheetDrag()
-}
-
-const openInfoFullView = () => {
-  if (!selectedInfoItem.value) return
-
-  if (selectedInfoItem.value.category === 'education') {
-    router.push('/checklists?category=education')
-    selectedInfoItem.value = null
+const openInfoItem = (info: ChecklistInfoItem) => {
+  if (info.externalUrl) {
+    openExternalUrl(info.externalUrl)
     return
   }
 
-  closeInfoSheet()
+  selectedDetailInfo.value = info
+}
+
+const closeDetailInfo = () => {
+  selectedDetailInfo.value = null
+}
+
+const closeInfoSheet = () => {
+  selectedInfoItem.value = null
+  selectedDetailInfo.value = null
+  resetSheetDrag()
 }
 
 const openCompleteSheet = () => {
@@ -235,7 +229,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
       </section>
 
       <div v-else key="checklist">
-    <section class="px-5 pt-6 pb-6" aria-label="생애주기 로드맵">
+    <section class="px-5 pt-6 pb-5" aria-label="생애주기 로드맵">
       <div
         class="flex gap-2 overflow-x-auto rounded-[22px] border border-[#dce8f0] bg-[#f4f9fc] p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
@@ -256,14 +250,21 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
       </div>
     </section>
 
-    <section class="px-5 pb-7">
+    <section class="px-5 pb-5">
       <article
         class="rounded-[22px] border border-[#d5e8f8] bg-[#EBFAFF] px-5 py-5 shadow-[0_14px_34px_rgb(31_72_97_/_7%),inset_0_0_0_1px_rgb(255_255_255_/_70%)]"
       >
         <div class="min-w-0">
-          <strong class="block text-[18px] leading-[1.35] font-bold text-[#55C0F4]">
-            {{ currentStage.ageRange }} · {{ currentStage.title }}
-          </strong>
+          <div class="flex items-start justify-between gap-3">
+            <strong class="min-w-0 text-[22px] leading-[1.35] font-extrabold text-[#55C0F4]">
+              {{ currentStage.title }}
+            </strong>
+            <span
+              class="shrink-0 rounded-full bg-white px-3 py-1.5 text-[12px] leading-none font-bold text-[var(--color-selected-text)] shadow-[0_8px_18px_rgb(85_192_244_/_14%)]"
+            >
+              {{ currentStage.ageRange }}
+            </span>
+          </div>
           <span class="mt-2 block text-[13px] leading-[1.45] text-[var(--color-text-secondary)]">
             {{ currentStage.description }}
           </span>
@@ -278,7 +279,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
               {{ progressPercent }}%
             </strong>
           </div>
-          <div class="h-2 overflow-hidden rounded-full bg-[#e9eef3]">
+          <div class="h-2.5 overflow-hidden rounded-full bg-white shadow-[inset_0_0_0_1px_rgb(215_232_248_/_42%)]">
             <div
               class="h-full rounded-full bg-[#55C0F4] transition-[width] duration-300"
               :style="progressStyle"
@@ -301,7 +302,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
       </div>
 
       <ul
-        class="mt-6 m-0 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-white p-0 shadow-[0_10px_24px_rgb(31_72_97_/_6%)]"
+        class="mt-3 m-0 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-white p-0 shadow-[0_10px_24px_rgb(31_72_97_/_6%)]"
       >
         <li
           v-for="item in currentStageItems"
@@ -309,7 +310,8 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
           class="border-b border-[var(--color-border)] last:border-b-0"
         >
           <div
-            class="grid min-h-[104px] w-full cursor-pointer grid-cols-[26px_minmax(0,1fr)_68px] items-center gap-3 bg-white py-0 pr-0 pl-4 text-left transition-colors active:bg-[#f7fbfe]"
+            class="grid min-h-[92px] w-full cursor-pointer grid-cols-[26px_minmax(0,1fr)_68px] items-center gap-3 py-0 pr-0 pl-4 text-left transition-colors active:bg-[#f7fbfe]"
+            :class="isChecklistItemCompleted(item) ? 'bg-[#f6f8fa]' : 'bg-white'"
             @click="toggleChecklistItem(item)"
           >
             <button
@@ -328,24 +330,30 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
               <Check :size="14" :stroke-width="3" />
             </button>
             <span class="min-w-0 py-4">
-              <span
-                class="mb-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold"
-                :class="getCategoryTone(item.category)"
-              >
-                {{ categoryLabelMap.get(item.category) }}
-              </span>
               <strong
-                class="block text-[14px] leading-[1.35] font-bold text-[var(--color-text-primary)]"
+                class="block text-[14px] leading-[1.35] font-bold"
+                :class="
+                  isChecklistItemCompleted(item)
+                    ? 'text-[#8f9aa3]'
+                    : 'text-[var(--color-text-primary)]'
+                "
               >
                 {{ item.title }}
               </strong>
-              <span class="mt-0.5 block text-[12px] leading-[1.45] text-[var(--color-text-secondary)]">
+              <span
+                class="mt-1 block text-[12px] leading-[1.45]"
+                :class="
+                  isChecklistItemCompleted(item)
+                    ? 'text-[#a8b1b9]'
+                    : 'text-[var(--color-text-secondary)]'
+                "
+              >
                 {{ item.description }}
               </span>
             </span>
             <button
               v-if="hasChecklistAction(item)"
-              class="grid h-full min-h-[104px] w-full shrink-0 place-items-center border-0 bg-transparent p-0 text-[#8A95A3] transition-colors active:bg-[#f7fbfe]"
+              class="grid h-full min-h-[92px] w-full shrink-0 place-items-center border-0 bg-transparent p-0 text-[#8A95A3] transition-colors active:bg-[#f7fbfe]"
               type="button"
               :aria-label="`${item.title} 바로가기`"
               @click.stop="openChecklistAction(item)"
@@ -354,7 +362,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
             </button>
             <span
               v-else
-              class="h-full min-h-[104px]"
+              class="h-full min-h-[92px]"
               aria-hidden="true"
             ></span>
           </div>
@@ -394,15 +402,9 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
               <span class="mx-auto block h-1.5 w-12 rounded-full bg-[#ccd6df]"></span>
             </button>
             <div class="mt-6">
-              <span
-                class="inline-flex rounded-full px-3 py-1 text-[12px] font-bold"
-                :class="getCategoryTone(selectedInfoItem.category)"
-              >
-                {{ categoryLabelMap.get(selectedInfoItem.category) }}
-              </span>
               <h2
                 :id="`${selectedInfoItem.id}-title`"
-                class="mt-3 mb-0 text-[25px] leading-[1.22] font-bold text-[var(--color-text-primary)]"
+                class="m-0 text-[25px] leading-[1.22] font-bold text-[var(--color-text-primary)]"
               >
                 {{ selectedInfoItem.infoTitle }}
               </h2>
@@ -417,6 +419,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                   <button
                     class="grid min-h-[76px] w-full grid-cols-[44px_1fr_auto] items-center gap-3 rounded-[16px] border border-[var(--color-border)] bg-white px-4 text-left"
                     type="button"
+                    @click="openInfoItem(info)"
                   >
                     <span
                       class="grid size-10 place-items-center rounded-full bg-[var(--color-selected-background)] text-[var(--color-selected-text)]"
@@ -440,26 +443,48 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
               </ul>
             </div>
 
-            <div class="mt-5 grid grid-cols-[0.9fr_1.4fr] gap-3">
+            <div class="mt-5">
               <button
-                class="h-[52px] rounded-[14px] border-0 bg-[#f1f5f8] text-[15px] font-bold text-[var(--color-text-secondary)]"
+                class="h-[52px] w-full rounded-[14px] border-0 bg-[#f1f5f8] text-[15px] font-bold text-[var(--color-text-secondary)]"
                 type="button"
                 @click="closeInfoSheet"
               >
                 닫기
               </button>
-              <button
-                class="relative h-[52px] rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-bold text-transparent"
-                type="button"
-                :aria-label="infoFullViewLabel"
-                @click="openInfoFullView"
-              >
-                <span class="absolute inset-0 grid place-items-center text-white">
-                  {{ infoFullViewLabel }}
-                </span>
-                지원정보 전체 보기
-              </button>
             </div>
+          </section>
+        </div>
+      </Transition>
+
+      <Transition name="checklist-modal">
+        <div
+          v-if="selectedDetailInfo"
+          class="fixed inset-0 z-[calc(var(--z-index-overlay)+1)] grid place-items-center bg-black/40 px-6"
+          role="presentation"
+          @click.self="closeDetailInfo"
+        >
+          <section
+            class="w-full max-w-[320px] rounded-[22px] bg-white px-5 py-5 shadow-[0_18px_40px_rgb(15_23_42_/_18%)]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checklist-detail-title"
+          >
+            <h2
+              id="checklist-detail-title"
+              class="m-0 text-[19px] font-bold text-[var(--color-text-primary)]"
+            >
+              {{ selectedDetailInfo.title }}
+            </h2>
+            <p class="mt-3 mb-0 text-[14px] leading-[1.6] text-[var(--color-text-secondary)]">
+              {{ selectedDetailInfo.detail ?? selectedDetailInfo.description }}
+            </p>
+            <button
+              class="mt-5 h-12 w-full rounded-[14px] border-0 bg-[#55C0F4] text-[15px] font-bold text-white"
+              type="button"
+              @click="closeDetailInfo"
+            >
+              확인
+            </button>
           </section>
         </div>
       </Transition>
