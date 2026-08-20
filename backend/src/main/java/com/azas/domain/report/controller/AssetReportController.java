@@ -1,5 +1,6 @@
 package com.azas.domain.report.controller;
 
+import com.azas.domain.report.dto.AssetReportDetailResponse;
 import com.azas.domain.report.dto.AssetReportListResponse;
 import com.azas.domain.report.service.AssetReportService;
 import com.azas.global.response.ApiErrorResponse;
@@ -92,6 +93,65 @@ public class AssetReportController {
                         year,
                         cursor,
                         size
+                )
+        );
+    }
+    @ApiOperation(
+            value = "월간 자산 리포트 상세 조회",
+            notes = "연결된 부모가 특정 연월의 자산 리포트, "
+                    + "목표별 달성률, 연결 적금 및 인사이트를 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    code = 200,
+                    message = "월간 자산 리포트 상세 조회 성공",
+                    response = AssetReportDetailResponse.class
+            ),
+            @ApiResponse(
+                    code = 400,
+                    message = "잘못된 자녀 ID, 연도 또는 월",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
+                    code = 401,
+                    message = "Access Token 누락·만료·위조",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
+                    code = 403,
+                    message = "해당 자녀의 부모 권한 없음",
+                    response = ApiErrorResponse.class
+            ),
+            @ApiResponse(
+                    code = 404,
+                    message = "자녀 또는 해당 월 자산 리포트 없음",
+                    response = ApiErrorResponse.class
+            )
+    })
+    @GetMapping(
+            "/{child_id}/asset-reports/{year}/{month}"
+    )
+    public ResponseEntity<AssetReportDetailResponse>
+    getAssetReportDetail(
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            ) String authorization,
+            @PathVariable("child_id") Long childId,
+            @PathVariable("year") Integer year,
+            @PathVariable("month") Integer month
+    ) {
+        Long memberId =
+                memberResolver.resolveMemberId(
+                        authorization
+                );
+
+        return ResponseEntity.ok(
+                assetReportService.getAssetReportDetail(
+                        memberId,
+                        childId,
+                        year,
+                        month
                 )
         );
     }

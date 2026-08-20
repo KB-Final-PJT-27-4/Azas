@@ -10,6 +10,20 @@ import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.azas.domain.report.dto.AssetReportAccountSnapshot;
+import com.azas.domain.report.dto.AssetReportDetailResponse;
+import com.azas.domain.report.dto.AssetReportDetailRow;
+import com.azas.domain.report.dto.AssetReportGoalSnapshot;
+import com.azas.domain.report.dto.AssetReportInsightSnapshot;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -29,6 +43,8 @@ public class AssetReportService {
     private static final int MIN_YEAR = 1900;
 
     private static final int MAX_YEAR = 9999;
+
+    private final ObjectMapper objectMapper;
 
     private final AssetReportMapper assetReportMapper;
 
@@ -258,5 +274,285 @@ public class AssetReportService {
             this.reportMonth = reportMonth;
             this.assetReportId = assetReportId;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public AssetReportDetailResponse getAssetReportDetail(
+            Long memberId,
+            Long childId,
+            Integer year,
+            Integer month
+    ) {
+        validateDetailRequest(
+                childId,
+                year,
+                month
+        );
+
+        if (assetReportMapper.findActiveChildId(childId) == null) {
+            throw new BusinessException(
+                    ErrorCode.CHILD_NOT_FOUND
+            );
+        }
+
+        if (assetReportMapper.countParentAccess(
+                memberId,
+                childId
+        ) <= 0) {
+            throw new BusinessException(
+                    ErrorCode.PARENT_ACCESS_REQUIRED
+            );
+        }
+
+        LocalDate reportMonth =
+                LocalDate.of(year, month, 1);
+
+        AssetReportDetailRow row =
+                assetReportMapper.findAssetReportDetail(
+                        childId,
+                        reportMonth
+                );
+
+        if (row == null) {
+            throw new BusinessException(
+                    ErrorCode.ASSET_REPORT_NOT_FOUND
+            );
+        }
+
+        List<AssetReportGoalSnapshot> goalSnapshots =
+                parseGoalSnapshots(
+                        row.getSavingsGoalSummaryJson()
+                );
+
+        List<AssetReportInsightSnapshot> insightSnapshots =
+                parseInsightSnapshots(
+                        row.getInsightItemsJson()
+                );
+
+        BigDecimal monthlySavingTargetAmount =
+                goalSnapshots.stream()
+                        .map(
+                                AssetReportGoalSnapshot
+                                        ::getMonthlySavingTargetAmount
+                        )
+                        .map(this::zeroIfNull)
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add
+                        );
+
+        BigDecimal monthlySavingAchievementRate =
+                calculateAchievementRate(
+                        row.getMonthlySavedAmount(),
+                        monthlySavingTargetAmount
+                );
+
+        List<AssetReportDetailResponse.GoalSummary>
+                goalSummary = goalSnapshots.stream()
+                .map(this::toGoalSummary)
+                .toList();
+
+        List<AssetReportDetailResponse.InsightItem>
+                insightItems = insightSnapshots.stream()
+                .map(this::toInsightItem)
+                .toList();
+
+        LocalDate periodStart = row.getReportMonth();
+
+        LocalDate periodEnd = periodStart
+                .plusMonths(1)
+                .minusDays(1);
+
+        return new AssetReportDetailResponse(
+                row.getAssetReportId(),
+                row.getChildId(),
+                row.getReportMonth().getYear(),
+                row.getReportMonth().getMonthValue(),
+                new AssetReportDetailResponse.Period(
+                        periodStart,
+                        periodEnd
+                ),
+                new AssetReportDetailResponse.Summary(
+                        zeroIfNull(
+                                row.getTotalAssetAmount()
+                        ),
+                        zeroIfNull(
+                                row.getTotalAssetChangeAmount()
+                        ),
+                        zeroIfNull(
+                                row.getTotalGoalTargetAmount()
+                        ),
+                        zeroIfNull(
+                                row.getTotalGoalSavedAmount()
+                        ),
+                        zeroIfNull(
+                                row.getGoalAchievementRate()
+                        ),
+                        zeroIfNull(
+                                row.getMonthlySavedAmount()
+                        ),
+                        monthlySavingTargetAmount,
+                        monthlySavingAchievementRate
+                ),
+                goalSummary,
+                insightItems,
+                row.getCreatedAt().toInstant(
+                        ZoneOffset.UTC
+                ),
+                row.getUpdatedAt().toInstant(
+                        ZoneOffset.UTC
+                )
+        );
+    }
+
+    private void validateDetailRequest(
+            Long childId,
+            Integer year,
+            Integer month
+    ) {
+        if (childId == null
+                || childId <= 0
+                || year == null
+                || year < MIN_YEAR
+                || year > MAX_YEAR
+                || month == null
+                || month < 1
+                || month > 12) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_QUERY_PARAMETER
+            );
+        }
+    }
+
+    private List<AssetReportGoalSnapshot>
+    parseGoalSnapshots(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+
+        try {
+            List<AssetReportGoalSnapshot> snapshots =
+                    objectMapper.readValue(
+                            json,
+                            new TypeReference<
+                                    List<AssetReportGoalSnapshot>
+                                    >() {
+                            }
+                    );
+
+            return snapshots == null
+                    ? List.of()
+                    : snapshots;
+        } catch (Exception exception) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    private List<AssetReportInsightSnapshot>
+    parseInsightSnapshots(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+
+        try {
+            List<AssetReportInsightSnapshot> snapshots =
+                    objectMapper.readValue(
+                            json,
+                            new TypeReference<
+                                    List<AssetReportInsightSnapshot>
+                                    >() {
+                            }
+                    );
+
+            return snapshots == null
+                    ? List.of()
+                    : snapshots;
+        } catch (Exception exception) {
+            throw new BusinessException(
+                    ErrorCode.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    private AssetReportDetailResponse.GoalSummary
+    toGoalSummary(
+            AssetReportGoalSnapshot snapshot
+    ) {
+        List<AssetReportAccountSnapshot> accountSnapshots =
+                snapshot.getLinkedAccounts() == null
+                        ? List.of()
+                        : snapshot.getLinkedAccounts();
+
+        List<AssetReportDetailResponse.LinkedAccount>
+                linkedAccounts = accountSnapshots.stream()
+                .map(this::toLinkedAccount)
+                .toList();
+
+        return new AssetReportDetailResponse.GoalSummary(
+                snapshot.getFinancialGoalId(),
+                snapshot.getTitle(),
+                zeroIfNull(snapshot.getCurrentAmount()),
+                zeroIfNull(snapshot.getTargetAmount()),
+                zeroIfNull(snapshot.getAchievementRate()),
+                zeroIfNull(snapshot.getMonthlySavedAmount()),
+                linkedAccounts.size(),
+                linkedAccounts
+        );
+    }
+
+    private AssetReportDetailResponse.LinkedAccount
+    toLinkedAccount(
+            AssetReportAccountSnapshot snapshot
+    ) {
+        return new AssetReportDetailResponse.LinkedAccount(
+                snapshot.getAccountId(),
+                snapshot.getAccountName(),
+                snapshot.getBankName(),
+                snapshot.getAccountNumberMasked(),
+                zeroIfNull(snapshot.getBalance())
+        );
+    }
+
+    private AssetReportDetailResponse.InsightItem
+    toInsightItem(
+            AssetReportInsightSnapshot snapshot
+    ) {
+        return new AssetReportDetailResponse.InsightItem(
+                snapshot.getType(),
+                snapshot.getTitle(),
+                snapshot.getDescription()
+        );
+    }
+
+    private BigDecimal calculateAchievementRate(
+            BigDecimal currentAmount,
+            BigDecimal targetAmount
+    ) {
+        BigDecimal current = zeroIfNull(currentAmount);
+        BigDecimal target = zeroIfNull(targetAmount);
+
+        if (target.signum() <= 0) {
+            return BigDecimal.ZERO.setScale(1);
+        }
+
+        return current
+                .multiply(BigDecimal.valueOf(100))
+                .divide(
+                        target,
+                        1,
+                        RoundingMode.HALF_UP
+                )
+                .min(
+                        BigDecimal.valueOf(100)
+                                .setScale(1)
+                );
+    }
+
+    private BigDecimal zeroIfNull(BigDecimal amount) {
+        return amount == null
+                ? BigDecimal.ZERO
+                : amount;
     }
 }

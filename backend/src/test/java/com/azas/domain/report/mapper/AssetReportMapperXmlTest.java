@@ -54,5 +54,10 @@ class AssetReportMapperXmlTest {
                         NAMESPACE + "findAssetReports"
                 )
         );
+        assertTrue(
+                configuration.hasStatement(
+                        NAMESPACE + "findAssetReportDetail"
+                )
+        );
     }
 }

@@ -97,4 +97,72 @@
         LIMIT #{limit}
     </select>
 
+    <resultMap id="assetReportDetailRowMap"
+               type="com.azas.domain.report.dto.AssetReportDetailRow">
+
+        <id property="assetReportId"
+            column="asset_report_id"/>
+
+        <result property="childId"
+                column="child_id"/>
+
+        <result property="reportMonth"
+                column="report_month"/>
+
+        <result property="totalAssetAmount"
+                column="total_asset_amount"/>
+
+        <result property="totalAssetChangeAmount"
+                column="total_asset_change_amount"/>
+
+        <result property="monthlySavedAmount"
+                column="monthly_saved_amount"/>
+
+        <result property="totalGoalTargetAmount"
+                column="total_goal_target_amount"/>
+
+        <result property="totalGoalSavedAmount"
+                column="total_goal_saved_amount"/>
+
+        <result property="goalAchievementRate"
+                column="goal_achievement_rate"/>
+
+        <result property="savingsGoalSummaryJson"
+                column="savings_goal_summary_json"/>
+
+        <result property="insightItemsJson"
+                column="insight_items_json"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+
+        <result property="updatedAt"
+                column="updated_at"/>
+
+    </resultMap>
+
+    <select id="findAssetReportDetail"
+            resultMap="assetReportDetailRowMap">
+
+        SELECT
+            ar.asset_report_id,
+            ar.child_id,
+            ar.report_month,
+            ar.total_asset_amount,
+            ar.total_asset_change_amount,
+            ar.monthly_saved_amount,
+            ar.total_goal_target_amount,
+            ar.total_goal_saved_amount,
+            ar.goal_achievement_rate,
+            ar.savings_goal_summary_json,
+            ar.insight_items_json,
+            ar.created_at,
+            ar.updated_at
+        FROM asset_report ar
+        WHERE ar.child_id = #{childId}
+          AND ar.report_month = #{reportMonth}
+            LIMIT 1
+
+    </select>
+
 </mapper>
