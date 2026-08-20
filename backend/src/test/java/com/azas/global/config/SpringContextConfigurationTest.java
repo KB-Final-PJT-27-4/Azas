@@ -203,6 +203,10 @@ class SpringContextConfigurationTest {
 
             mockMvc.perform(get("/swagger-ui/index.html"))
                     .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/v1/health"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("UP"));
         }
     }
 
