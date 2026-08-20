@@ -1,15 +1,26 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import childHomePigUrl from '@/assets/images/child/child-home-pig.png'
 import { childAllowanceRequests } from '@/mocks/childFinanceFlow'
 import { childAccountSummary } from '@/mocks/childHome'
+import { isChildQuizCompletedToday } from '@/utils/childQuizProgress'
 
 const pendingAllowanceCount = computed(
   () => childAllowanceRequests.filter((request) => request.status === 'pending').length,
 )
+const hasCompletedTodayQuiz = ref(isChildQuizCompletedToday())
+const showQuizCompletedModal = ref(false)
+
+const openQuizCompletedModal = () => {
+  showQuizCompletedModal.value = true
+}
+
+const closeQuizCompletedModal = () => {
+  showQuizCompletedModal.value = false
+}
 
 const quickActions = computed(() => [
   {
@@ -207,16 +218,61 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
       <div>
         <h2 class="m-0 text-[18px] font-bold text-[var(--color-text-primary)]">오늘의 퀴즈</h2>
         <p class="mt-1 mb-0 text-[15px] text-[var(--color-text-secondary)]">
-          돈을 불리려면 무엇이 필요할까요?
+          {{
+            hasCompletedTodayQuiz
+              ? '오늘의 퀴즈를 풀었어요'
+              : '짧은 금융 퀴즈로 습관을 배워봐요'
+          }}
         </p>
       </div>
+      <button
+        v-if="hasCompletedTodayQuiz"
+        class="grid h-11 shrink-0 place-items-center rounded-[13px] border border-[#d8e7f0] bg-white px-4 text-[14px] font-bold text-[var(--color-brand-primary)] active:bg-[#fffdf4]"
+        type="button"
+        @click="openQuizCompletedModal"
+      >
+        완료 확인
+      </button>
       <RouterLink
+        v-else
         class="grid h-11 shrink-0 place-items-center rounded-[13px] border border-[#f0dfa1] bg-white px-4 text-[14px] font-bold text-[#9e7812] no-underline active:bg-[#fffdf4]"
         to="/child/quiz"
       >
         퀴즈 풀러 가기
       </RouterLink>
     </section>
+
+    <Transition name="home-quiz-modal">
+      <div
+        v-if="showQuizCompletedModal"
+        class="fixed inset-0 z-[60] grid place-items-center bg-black/35 px-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="home-quiz-completed-modal-title"
+        @click.self="closeQuizCompletedModal"
+      >
+        <section
+          class="home-quiz-modal-panel w-full max-w-[320px] rounded-[22px] bg-white px-6 py-7 text-center shadow-[0_18px_48px_rgba(22,45,61,0.18)]"
+        >
+          <h2
+            id="home-quiz-completed-modal-title"
+            class="m-0 text-[21px] font-extrabold text-[var(--color-text-primary)]"
+          >
+            오늘의 퀴즈를 다 풀었어요
+          </h2>
+          <p class="mt-3 mb-6 text-[15px] leading-[1.6] text-[var(--color-text-secondary)]">
+            내일 다시 새로운 금융 퀴즈를 풀 수 있어요.
+          </p>
+          <button
+            class="grid h-12 w-full place-items-center rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[16px] font-bold !text-white"
+            type="button"
+            @click="closeQuizCompletedModal"
+          >
+            확인
+          </button>
+        </section>
+      </div>
+    </Transition>
 
     <ChildBottomNavigation />
   </main>
@@ -266,5 +322,51 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
   border-color: #e5e9ed;
   background: #f5f7f8;
   opacity: 0.78;
+}
+
+.home-quiz-modal-enter-active,
+.home-quiz-modal-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.home-quiz-modal-enter-active .home-quiz-modal-panel {
+  animation: home-quiz-modal-wiggle 360ms cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+
+.home-quiz-modal-leave-active .home-quiz-modal-panel {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.home-quiz-modal-enter-from,
+.home-quiz-modal-leave-to {
+  opacity: 0;
+}
+
+.home-quiz-modal-leave-to .home-quiz-modal-panel {
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+}
+
+@keyframes home-quiz-modal-wiggle {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96) rotate(0deg);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(0) scale(1.01) rotate(-1.1deg);
+  }
+  65% {
+    transform: translateY(0) scale(1) rotate(0.9deg);
+  }
+  82% {
+    transform: translateY(0) scale(1) rotate(-0.45deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
 }
 </style>
