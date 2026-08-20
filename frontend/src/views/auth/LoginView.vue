@@ -24,6 +24,7 @@ const sheetTouchStartY = ref(0)
 const sheetDragY = ref(0)
 const isSheetDragging = ref(false)
 const activeSlide = computed(() => slides[currentSlide.value] ?? slides[0]!)
+const canStart = computed(() => currentSlide.value === slides.length - 1)
 
 const setSlide = (index: number) => { currentSlide.value = Math.max(0, Math.min(index, slides.length - 1)) }
 const openLogin = () => { errorMessage.value = ''; isLoginOpen.value = true }
@@ -91,7 +92,7 @@ const login = (provider: OAuthProvider) => {
             >
               <img
                 class="relative z-1 object-contain drop-shadow-[0_14px_18px_rgba(84,101,128,0.06)] transition-all duration-500"
-                :class="currentSlide === 0 ? 'onboarding-first-image' : 'h-full w-[min(76vw,360px)]'"
+                :class="currentSlide === 0 ? 'onboarding-first-image' : 'h-[88%] w-[min(68vw,320px)]'"
                 :style="currentSlide === 0 ? { width: '200px', height: '180px', maxWidth: '215px', maxHeight: '205px' } : undefined"
                 :src="activeSlide.image"
                 :alt="`${activeSlide.kicker} 일러스트`"
@@ -109,7 +110,14 @@ const login = (provider: OAuthProvider) => {
       </div>
 
       <div class="onboarding-footer relative z-3 min-h-0">
-        <button type="button" class="h-14 w-full shrink-0 rounded-[18px] border-0 bg-[var(--color-brand-primary)] text-[17px] font-extrabold text-white transition-transform active:scale-[0.985]" @click="openLogin">시작하기</button>
+        <button
+          type="button"
+          class="h-14 w-full shrink-0 rounded-[18px] border-0 bg-[var(--color-brand-primary)] text-[17px] font-extrabold text-white transition-[background-color,color,transform] active:scale-[0.985] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)] disabled:active:scale-100"
+          :disabled="!canStart"
+          @click="openLogin"
+        >
+          시작하기
+        </button>
       </div>
     </section>
 
@@ -157,7 +165,7 @@ const login = (provider: OAuthProvider) => {
   grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100dvh;
   min-height: 0;
-  padding-top: max(30px, env(safe-area-inset-top));
+  padding-top: max(16px, env(safe-area-inset-top));
   padding-bottom: max(44px, env(safe-area-inset-bottom));
 }
 .onboarding-content {
@@ -170,7 +178,7 @@ const login = (provider: OAuthProvider) => {
 }
 .onboarding-stage {
   width: 100%;
-  height: min(52vh, 500px);
+  height: min(60vh, 580px);
   min-height: 0;
 }
 .onboarding-footer {
@@ -218,7 +226,7 @@ const login = (provider: OAuthProvider) => {
     padding-bottom: max(30px, env(safe-area-inset-bottom));
   }
   .onboarding-stage {
-    height: min(50vh, 430px);
+    height: min(55vh, 470px);
   }
 }
 </style>

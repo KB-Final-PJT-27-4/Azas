@@ -141,8 +141,8 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="home-asset-card" aria-label="미래자산 요약">
-      <RouterLink class="home-asset-overview" :to="{ name: 'Assets' }">
-        <div class="home-asset-copy">
+      <div class="home-asset-overview">
+        <RouterLink class="home-asset-copy" :to="{ name: 'Assets' }">
           <span class="text-[13px] font-extrabold">현재</span>
           <strong class="mt-2 block text-[26px] leading-none tracking-[-0.045em]">
             {{ formatCurrency(currentAssetAmount) }}
@@ -151,13 +151,17 @@ onBeforeUnmount(() => {
             지난달보다
             <strong class="text-[var(--color-selected-text)]">+350,000원</strong>
           </p>
-        </div>
+        </RouterLink>
 
-        <span class="home-asset-more">
+        <RouterLink class="home-asset-more" :to="{ name: 'Reports' }">
           자산 리포트 보기 <ChevronRight :size="11" :stroke-width="2.5" />
-        </span>
+        </RouterLink>
 
-        <span class="home-mini-chart-wrap" aria-hidden="true">
+        <RouterLink
+          class="home-mini-chart-wrap"
+          :to="{ name: 'Reports' }"
+          aria-label="자산 변화 리포트 보기"
+        >
           <svg class="home-mini-chart" width="148" height="91" viewBox="0 0 148 91">
             <defs>
               <linearGradient id="home-chart-bar" x1="0" x2="0" y1="0" y2="1">
@@ -181,8 +185,8 @@ onBeforeUnmount(() => {
               />
             </g>
           </svg>
-        </span>
-      </RouterLink>
+        </RouterLink>
+      </div>
 
       <div
         v-if="goalSlides.length"
@@ -429,7 +433,9 @@ onBeforeUnmount(() => {
 .home-asset-copy {
   position: relative;
   z-index: 2;
+  display: block;
   max-width: 60%;
+  color: var(--color-text-primary) !important;
 }
 
 .home-asset-more {
