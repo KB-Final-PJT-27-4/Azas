@@ -91,7 +91,7 @@ const login = (provider: OAuthProvider) => {
               :class="currentSlide === 0 ? 'h-[225px]' : 'h-[min(30vh,255px)] max-[380px]:h-[min(27vh,215px)]'"
             >
               <img
-                class="relative z-1 object-contain drop-shadow-[0_14px_18px_rgba(84,101,128,0.06)] transition-all duration-500"
+                class="relative z-1 object-contain drop-shadow-[0_14px_18px_rgba(84,101,128,0.06)] transition-all duration-200"
                 :class="currentSlide === 0 ? 'onboarding-first-image' : 'h-[88%] w-[min(68vw,320px)]'"
                 :style="currentSlide === 0 ? { width: '200px', height: '180px', maxWidth: '215px', maxHeight: '205px' } : undefined"
                 :src="activeSlide.image"
