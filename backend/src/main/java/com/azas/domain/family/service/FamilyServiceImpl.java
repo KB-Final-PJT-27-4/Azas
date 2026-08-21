@@ -111,22 +111,6 @@ public class FamilyServiceImpl implements FamilyService {
 
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
-        familyMapper.expirePendingFamilyInvitations(
-                childId,
-                request.getInviteeType(),
-                now
-        );
-
-        if (familyMapper.countUsableFamilyInvitations(
-                childId,
-                request.getInviteeType(),
-                now
-        ) > 0) {
-            throw new BusinessException(
-                    ErrorCode.FAMILY_INVITATION_ALREADY_EXISTS
-            );
-        }
-
         if (request.getInviteeType() == FamilyInviteeType.CHILD) {
             ChildMemberLinkResponse memberLink =
                     familyMapper.findChildMemberLinkByChildId(childId);
@@ -137,6 +121,21 @@ public class FamilyServiceImpl implements FamilyService {
                 );
             }
         }
+
+        familyMapper.expirePendingFamilyInvitations(
+                childId,
+                request.getInviteeType(),
+                now
+        );
+
+        // Invite tokens are stored only as hashes, so an existing raw URL cannot
+        // be recovered safely. Reissuing invalidates any usable prior link and
+        // gives the requester a fresh URL that can be displayed immediately.
+        familyMapper.expireUsableFamilyInvitations(
+                childId,
+                request.getInviteeType(),
+                now
+        );
 
         int expirationHours = request.getExpiresInHours() == null
                 ? defaultExpirationHours

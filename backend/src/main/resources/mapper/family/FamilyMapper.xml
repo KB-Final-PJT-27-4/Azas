@@ -77,14 +77,15 @@
           AND expires_at &lt;= #{now}
     </update>
 
-    <select id="countUsableFamilyInvitations" resultType="int">
-        SELECT COUNT(*)
-        FROM family_invitation
+    <update id="expireUsableFamilyInvitations">
+        UPDATE family_invitation
+        SET status = 'EXPIRED',
+            updated_at = CURRENT_TIMESTAMP(6)
         WHERE child_id = #{childId}
           AND invitee_type = #{inviteeType}
           AND status = 'PENDING'
           AND expires_at &gt; #{now}
-    </select>
+    </update>
 
     <insert id="insertFamilyInvitation"
             parameterType="com.azas.domain.family.dto.FamilyInvitationInsertCommand"

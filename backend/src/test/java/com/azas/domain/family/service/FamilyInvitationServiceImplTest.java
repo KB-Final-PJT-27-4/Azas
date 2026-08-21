@@ -73,9 +73,6 @@ class FamilyInvitationServiceImplTest {
     void createsParentInvitationAfterExpiringOldPendingInvitation() {
         when(familyMapper.lockActiveChild(10L)).thenReturn(10L);
         when(familyMapper.countChildAccess(10L, 7L)).thenReturn(1);
-        when(familyMapper.countUsableFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.PARENT), any()
-        )).thenReturn(0);
         when(tokenHashEncoder.encode(any())).thenReturn("token-hash");
         assignInvitationIdOnInsert(30L);
 
@@ -98,15 +95,15 @@ class FamilyInvitationServiceImplTest {
         verify(familyMapper).expirePendingFamilyInvitations(
                 eq(10L), eq(FamilyInviteeType.PARENT), any()
         );
+        verify(familyMapper).expireUsableFamilyInvitations(
+                eq(10L), eq(FamilyInviteeType.PARENT), any()
+        );
     }
 
     @Test
     void allowsChildInvitationWhenParentInvitationExists() {
         when(familyMapper.lockActiveChild(10L)).thenReturn(10L);
         when(familyMapper.countChildAccess(10L, 7L)).thenReturn(1);
-        when(familyMapper.countUsableFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.CHILD), any()
-        )).thenReturn(0);
         when(familyMapper.findChildMemberLinkByChildId(10L))
                 .thenReturn(childMemberLink(false));
         when(tokenHashEncoder.encode(any())).thenReturn("token-hash");
@@ -159,36 +156,31 @@ class FamilyInvitationServiceImplTest {
     }
 
     @Test
-    void rejectsDuplicateUsableInvitationOfSameType() {
+    void reissuesInvitationWhenUsableInvitationOfSameTypeExists() {
         when(familyMapper.lockActiveChild(10L)).thenReturn(10L);
         when(familyMapper.countChildAccess(10L, 7L)).thenReturn(1);
-        when(familyMapper.countUsableFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.PARENT), any()
-        )).thenReturn(1);
+        when(tokenHashEncoder.encode(any())).thenReturn("new-token-hash");
+        assignInvitationIdOnInsert(32L);
 
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> familyService.createFamilyInvitation(
+        FamilyInvitationCreateResponse response =
+                familyService.createFamilyInvitation(
                         7L,
                         10L,
                         createRequest(FamilyInviteeType.PARENT, 24)
-                )
-        );
+                );
 
-        assertEquals(
-                ErrorCode.FAMILY_INVITATION_ALREADY_EXISTS,
-                exception.getErrorCode()
+        assertEquals(32L, response.getFamilyInvitationId());
+        assertEquals(FamilyInvitationStatus.PENDING, response.getStatus());
+        verify(familyMapper).expireUsableFamilyInvitations(
+                eq(10L), eq(FamilyInviteeType.PARENT), any()
         );
-        verify(familyMapper, never()).insertFamilyInvitation(any());
+        verify(familyMapper).insertFamilyInvitation(any());
     }
 
     @Test
     void rejectsChildInvitationWhenChildMemberAlreadyLinked() {
         when(familyMapper.lockActiveChild(10L)).thenReturn(10L);
         when(familyMapper.countChildAccess(10L, 7L)).thenReturn(1);
-        when(familyMapper.countUsableFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.CHILD), any()
-        )).thenReturn(0);
         when(familyMapper.findChildMemberLinkByChildId(10L))
                 .thenReturn(childMemberLink(true));
 
@@ -206,6 +198,12 @@ class FamilyInvitationServiceImplTest {
                 exception.getErrorCode()
         );
         verify(familyMapper, never()).insertFamilyInvitation(any());
+        verify(familyMapper, never()).expirePendingFamilyInvitations(
+                eq(10L), eq(FamilyInviteeType.CHILD), any()
+        );
+        verify(familyMapper, never()).expireUsableFamilyInvitations(
+                eq(10L), eq(FamilyInviteeType.CHILD), any()
+        );
     }
 
     @Test
