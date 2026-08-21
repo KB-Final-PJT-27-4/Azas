@@ -34,15 +34,6 @@
           AND status = 'PENDING'
     </update>
 
-    <update id="revokeActiveFinancialConnections">
-        UPDATE financial_connection
-        SET consent_status = 'REVOKED',
-            revoked_at = #{withdrawnAt},
-            updated_at = #{withdrawnAt}
-        WHERE connected_by_member_id = #{memberId}
-          AND consent_status = 'ACTIVE'
-    </update>
-
     <update id="unlinkChildMember">
         UPDATE child
         SET member_id = NULL,

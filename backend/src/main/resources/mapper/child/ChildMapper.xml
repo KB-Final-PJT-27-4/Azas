@@ -153,6 +153,11 @@
                            FROM time_capsule
                            WHERE child_id = #{childId}
                        )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM mission
+                           WHERE child_id = #{childId}
+                       )
                        THEN 1
                    ELSE 0
                    END

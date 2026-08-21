@@ -164,8 +164,10 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-14 타임캡슐 엔트리 상세 조회",
-            notes = "부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다."
+            value = "TIMECAPSULE-14 공개된 타임캡슐 엔트리 상세 조회",
+            notes = "공개일이 도래한 타임캡슐의 봉인된 엔트리를 연결된 보호자 또는 "
+                    + "자녀 본인이 조회합니다. 편지, 기여 정보, 엔트리 순번과 "
+                    + "화면 표시용 단일 이미지 임시 조회 URL을 반환합니다."
     )
     @GetMapping("/time-capsule-entries/{entry_id}")
     public ResponseEntity<TimeCapsuleEntryDetailResponse>
@@ -189,8 +191,9 @@ public class TimeCapsuleController {
     }
 
     @ApiOperation(
-            value = "TC-13 타임캡슐 엔트리 삭제",
-            notes = "작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다."
+            value = "TIMECAPSULE-13 타임캡슐 엔트리 삭제",
+            notes = "작성자 본인의 공개 전 DRAFT 또는 SEALED 엔트리를 삭제합니다. "
+                    + "DB 엔트리와 미디어는 삭제 상태로 변경하고 S3 원본 객체를 제거합니다."
     )
     @DeleteMapping("/time-capsule-entries/{entry_id}")
     public ResponseEntity<Void> deleteTimeCapsuleEntry(

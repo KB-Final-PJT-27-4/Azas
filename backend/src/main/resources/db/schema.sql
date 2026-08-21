@@ -12,6 +12,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS notification;
 DROP TABLE IF EXISTS notification_preference;
+DROP TABLE IF EXISTS push_device;
 DROP TABLE IF EXISTS asset_report;
 DROP TABLE IF EXISTS time_capsule_export;
 DROP TABLE IF EXISTS time_capsule_media;
@@ -19,6 +20,7 @@ DROP TABLE IF EXISTS time_capsule_entry;
 DROP TABLE IF EXISTS time_capsule;
 DROP TABLE IF EXISTS auto_transfer_schedule;
 DROP TABLE IF EXISTS financial_transfer;
+DROP TABLE IF EXISTS mission;
 DROP TABLE IF EXISTS account_transaction;
 DROP TABLE IF EXISTS account_balance_snapshot;
 DROP TABLE IF EXISTS financial_sync_job;
@@ -30,11 +32,14 @@ DROP TABLE IF EXISTS financial_goal_account;
 DROP TABLE IF EXISTS financial_goal;
 DROP TABLE IF EXISTS financial_product;
 DROP TABLE IF EXISTS child_checklist_item;
+DROP TABLE IF EXISTS checklist_item_detail;
 DROP TABLE IF EXISTS checklist_item_template;
 DROP TABLE IF EXISTS allowance_request;
 DROP TABLE IF EXISTS family_invitation;
 DROP TABLE IF EXISTS child_parent;
 DROP TABLE IF EXISTS child;
+DROP TABLE IF EXISTS financial_goal_amount_recommendation;
+DROP TABLE IF EXISTS financial_goal_recommendation_basis;
 DROP TABLE IF EXISTS financial_goal_template;
 DROP TABLE IF EXISTS refresh_token;
 DROP TABLE IF EXISTS social_account;
@@ -146,6 +151,60 @@ CREATE TABLE financial_goal_template
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='적금 목표 템플릿';
 
+CREATE TABLE financial_goal_recommendation_basis
+(
+    financial_goal_recommendation_basis_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '추천 기준 ID',
+    financial_goal_template_id             BIGINT UNSIGNED NOT NULL COMMENT '목표 템플릿 ID',
+    recommendation_method                  VARCHAR(30)     NOT NULL COMMENT 'STATISTICS_REFERENCE, SERVICE_SCENARIO',
+    organization                           VARCHAR(200)    NULL COMMENT '통계 제공 기관',
+    dataset_name                           VARCHAR(300)    NULL COMMENT '참고 데이터셋명',
+    reference_year                         SMALLINT UNSIGNED NULL COMMENT '통계 기준연도',
+    metric_name                            VARCHAR(200)    NULL COMMENT '참고 지표명',
+    metric_value                           DECIMAL(19, 2)  NULL COMMENT '참고 지표값',
+    metric_unit                            VARCHAR(50)     NULL COMMENT '참고 지표 단위',
+    source_url                             VARCHAR(1000)   NULL COMMENT '공식 출처 URL',
+    description                            VARCHAR(1000)   NOT NULL COMMENT '추천 산정 기준 설명',
+    disclaimer                             VARCHAR(1000)   NOT NULL COMMENT '추천 금액 유의사항',
+    created_at                             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    PRIMARY KEY (financial_goal_recommendation_basis_id),
+    UNIQUE KEY uk_goal_recommendation_basis_template (financial_goal_template_id),
+    CONSTRAINT fk_goal_recommendation_basis_template
+        FOREIGN KEY (financial_goal_template_id)
+            REFERENCES financial_goal_template (financial_goal_template_id),
+    CONSTRAINT ck_goal_recommendation_method CHECK (
+        recommendation_method IN ('STATISTICS_REFERENCE', 'SERVICE_SCENARIO')
+    )
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='목표별 추천 금액 통계·서비스 기준';
+
+CREATE TABLE financial_goal_amount_recommendation
+(
+    financial_goal_amount_recommendation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '추천 금액 ID',
+    financial_goal_template_id              BIGINT UNSIGNED NOT NULL COMMENT '목표 템플릿 ID',
+    recommendation_code                     VARCHAR(30)     NOT NULL COMMENT 'STARTER, BALANCED, SECURE, LIFECYCLE',
+    title                                   VARCHAR(100)    NOT NULL COMMENT '추천안 표시명',
+    target_amount                           DECIMAL(19, 2)  NOT NULL COMMENT '추천 목표 금액',
+    coverage_items                          VARCHAR(1000)   NOT NULL COMMENT '포함 범위, | 구분',
+    display_order                           INT             NOT NULL COMMENT '표시 순서',
+    is_active                               TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '노출 여부',
+    created_at                              DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                              DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    PRIMARY KEY (financial_goal_amount_recommendation_id),
+    UNIQUE KEY uk_goal_amount_recommendation_code (financial_goal_template_id, recommendation_code),
+    KEY idx_goal_amount_recommendation_display (financial_goal_template_id, is_active, display_order),
+    CONSTRAINT fk_goal_amount_recommendation_template
+        FOREIGN KEY (financial_goal_template_id)
+            REFERENCES financial_goal_template (financial_goal_template_id),
+    CONSTRAINT ck_goal_amount_recommendation_amount CHECK (target_amount > 0),
+    CONSTRAINT ck_goal_amount_recommendation_code CHECK (
+        recommendation_code IN ('STARTER', 'BALANCED', 'SECURE', 'LIFECYCLE')
+    )
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='목표별 4단계 생애주기 추천 금액';
+
 CREATE TABLE child
 (
     child_id                     BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '자녀 ID',
@@ -156,8 +215,6 @@ CREATE TABLE child
     birth_date                   DATE            NULL COMMENT '실제 생년월일',
     gender                       VARCHAR(20)     NULL COMMENT 'MALE, FEMALE, UNKNOWN',
     profile_image_url            VARCHAR(1000)   NULL COMMENT '자녀 프로필 이미지',
-    last_allowance_request_month DATE            NULL COMMENT '마지막 용돈 요청 기준 월 1일',
-    last_allowance_requested_at  DATETIME(6)     NULL COMMENT '최근 용돈 요청 시각',
     created_at                   DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
     updated_at                   DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     status                       VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, DELETED',
@@ -257,42 +314,161 @@ CREATE TABLE family_invitation
 CREATE TABLE checklist_item_template
 (
     checklist_item_template_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '체크리스트 템플릿 ID',
-    title                      VARCHAR(150)    NOT NULL COMMENT '공통 항목명',
-    description                TEXT            NULL COMMENT '항목 설명',
-    item_order                 INT             NOT NULL COMMENT '표시 순서',
-    is_active                  TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '노출 여부',
-    created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    lifecycle_stage             VARCHAR(30)     NOT NULL COMMENT '생애주기 단계',
+    title                       VARCHAR(150)    NOT NULL COMMENT '체크리스트 항목명',
+    description                 TEXT            NULL COMMENT '목록 화면 설명',
+    detail_content              TEXT            NULL COMMENT '상세 화면 기본 안내 문구',
+    item_order                  INT             NOT NULL COMMENT '단계 내 표시 순서',
+    is_active                   TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '노출 여부',
+    template_key  VARCHAR(100) NOT NULL COMMENT '템플릿 고유 식별 키',
+    category      VARCHAR(20)  NOT NULL COMMENT '분류 카테고리',
+    action_type   VARCHAR(20)  NOT NULL COMMENT '액션 유형 (링크 이동, 팝업 등)',
+    action_url    VARCHAR(2048) NULL      COMMENT '액션 실행 시 연결될 URL',
+    info_title    VARCHAR(150) NULL      COMMENT '안내 정보 제목',
+    info_notice   VARCHAR(500) NULL      COMMENT '안내 공지 사항 내용',
+    created_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                  DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+
     PRIMARY KEY (checklist_item_template_id),
-    KEY idx_checklist_template_active_order (is_active, item_order)
+
+    UNIQUE KEY uk_checklist_template_stage_order (
+                                                  lifecycle_stage,
+                                                  item_order
+        ),
+
+    KEY idx_checklist_template_stage_active_order (
+                                                   lifecycle_stage,
+                                                   is_active,
+                                                   item_order
+        ),
+
+    CONSTRAINT ck_checklist_template_lifecycle_stage
+        CHECK (
+            lifecycle_stage IN (
+                                'PREGNANCY',
+                                'AGE_0_TO_1',
+                                'AGE_2_TO_4',
+                                'AGE_5_TO_7',
+                                'AGE_8_TO_10',
+                                'AGE_11_TO_13',
+                                'AGE_14_TO_16',
+                                'AGE_17_TO_19'
+                )
+            ),
+
+    CONSTRAINT ck_checklist_template_item_order
+        CHECK (item_order > 0)
+
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT ='체크리스트 기본 항목';
+  COLLATE = utf8mb4_unicode_ci
+    COMMENT = '생애주기 체크리스트 템플릿';
+
+
+CREATE TABLE checklist_item_detail
+(
+    checklist_item_detail_id   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '체크리스트 상세 정보 ID',
+    checklist_item_template_id BIGINT UNSIGNED NOT NULL COMMENT '체크리스트 템플릿 ID',
+    title                      VARCHAR(150)    NOT NULL COMMENT '상세 안내 항목명',
+    description                VARCHAR(500)    NULL COMMENT '상세 안내 설명',
+    item_order                 INT             NOT NULL COMMENT '상세 안내 표시 순서',
+    action_label VARCHAR(100)  NULL COMMENT '상세 항목 버튼 문구',
+    external_url VARCHAR(2048) NULL COMMENT '외부 이동 URL',
+    detail_content TEXT        NULL COMMENT '이동하지 않을 때 표시할 상세 내용',
+    created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+
+    PRIMARY KEY (checklist_item_detail_id),
+
+    UNIQUE KEY uk_checklist_detail_template_order (
+                                                   checklist_item_template_id,
+                                                   item_order
+        ),
+
+    CONSTRAINT fk_checklist_detail_template
+        FOREIGN KEY (checklist_item_template_id)
+            REFERENCES checklist_item_template (checklist_item_template_id)
+            ON DELETE CASCADE,
+
+    CONSTRAINT ck_checklist_detail_item_order
+        CHECK (item_order > 0)
+
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+    COMMENT = '체크리스트 상세 안내 항목';
+
 
 CREATE TABLE child_checklist_item
 (
-    child_checklist_item_id    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '자녀 체크리스트 ID',
-    child_id                   BIGINT UNSIGNED NOT NULL COMMENT '자녀 ID',
-    checklist_item_template_id BIGINT UNSIGNED NOT NULL COMMENT '체크리스트 템플릿 ID',
+    child_checklist_item_id    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '자녀별 체크리스트 진행 ID',
+    child_id                   BIGINT UNSIGNED NOT NULL COMMENT '체크리스트 대상 자녀 ID',
+    checklist_item_template_id BIGINT UNSIGNED NOT NULL COMMENT '공통 체크리스트 템플릿 ID',
     status                     VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, COMPLETED',
-    completed_by_member_id     BIGINT UNSIGNED NULL COMMENT '완료 회원 ID',
+    completed_by_member_id     BIGINT UNSIGNED NULL COMMENT '완료 처리 보호자 회원 ID',
     completed_at               DATETIME(6)     NULL COMMENT '완료 시각',
     created_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
-    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    updated_at                 DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+
     PRIMARY KEY (child_checklist_item_id),
-    UNIQUE KEY uk_child_checklist_child_template (child_id, checklist_item_template_id),
-    KEY idx_child_checklist_template_id (checklist_item_template_id),
-    KEY idx_child_checklist_completed_by_member_id (completed_by_member_id),
+
+    UNIQUE KEY uk_child_checklist_child_template (
+                                                  child_id,
+                                                  checklist_item_template_id
+        ),
+
+    KEY idx_child_checklist_child_status (
+                                          child_id,
+                                          status
+        ),
+
+    KEY idx_child_checklist_template (
+                                      checklist_item_template_id
+        ),
+
+    KEY idx_child_checklist_completed_member (
+                                              completed_by_member_id
+        ),
+
     CONSTRAINT fk_child_checklist_child
-        FOREIGN KEY (child_id) REFERENCES child (child_id),
+        FOREIGN KEY (child_id)
+            REFERENCES child (child_id)
+            ON DELETE CASCADE,
+
     CONSTRAINT fk_child_checklist_template
-        FOREIGN KEY (checklist_item_template_id) REFERENCES checklist_item_template (checklist_item_template_id),
-    CONSTRAINT fk_child_checklist_completed_by_member
-        FOREIGN KEY (completed_by_member_id) REFERENCES member (member_id),
-    CONSTRAINT ck_child_checklist_status CHECK (status IN ('PENDING', 'COMPLETED'))
+        FOREIGN KEY (checklist_item_template_id)
+            REFERENCES checklist_item_template (checklist_item_template_id)
+            ON DELETE CASCADE,
+
+    CONSTRAINT fk_child_checklist_completed_member
+        FOREIGN KEY (completed_by_member_id)
+            REFERENCES member (member_id),
+
+    CONSTRAINT ck_child_checklist_status
+        CHECK (status IN ('PENDING', 'COMPLETED')),
+
+    CONSTRAINT ck_child_checklist_completion
+        CHECK (
+            (
+                status = 'PENDING'
+                    AND completed_by_member_id IS NULL
+                    AND completed_at IS NULL
+                )
+                OR
+            (
+                status = 'COMPLETED'
+                    AND completed_by_member_id IS NOT NULL
+                    AND completed_at IS NOT NULL
+                )
+            )
+
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT ='자녀별 체크리스트 진행 상태';
+  COLLATE = utf8mb4_unicode_ci
+    COMMENT = '보호자가 관리하는 자녀별 생애주기 체크리스트 진행 상태';
 
 CREATE TABLE financial_product
 (
@@ -378,7 +554,6 @@ CREATE TABLE financial_account
     owner_member_id             BIGINT UNSIGNED NULL COMMENT '계좌 소유 회원 ID. 자녀 가입 전 자녀 계좌는 NULL 가능',
     child_id                    BIGINT UNSIGNED NULL COMMENT '자녀 계좌 소유 범위 및 조회용 자녀 ID',
     financial_product_id        BIGINT UNSIGNED NULL COMMENT 'Mock 개설에 사용한 KB 금융상품 ID',
-    financial_goal_template_id  BIGINT UNSIGNED NULL COMMENT '선택 목표 템플릿 ID',
     organization_code           VARCHAR(20)     NOT NULL COMMENT '금융기관 코드',
     bank_name                   VARCHAR(50)     NOT NULL COMMENT '은행명',
     account_number_ciphertext   VARBINARY(1000) NOT NULL COMMENT '계좌번호 암호문',
@@ -392,9 +567,6 @@ CREATE TABLE financial_account
     child_available_amount      DECIMAL(19, 2)  NULL COMMENT '월간 사용 관리 기준 금액. 실제 금융기관 제한 금액이 아님',
     access_updated_by_member_id BIGINT UNSIGNED NULL COMMENT '자녀 사용 관리 정책 변경 회원 ID',
     access_updated_at           DATETIME(6)     NULL COMMENT '자녀 사용 관리 정책 변경 시각',
-    goal_name_snapshot          VARCHAR(100)    NULL COMMENT '목표명 스냅샷',
-    goal_target_amount          DECIMAL(19, 2)  NULL COMMENT '목표 금액',
-    goal_target_date            DATE            NULL COMMENT '목표 달성 예정일',
     is_primary                  TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '대표 계좌 여부',
     opened_at                   DATETIME(6)     NULL COMMENT '계좌 개설 시각',
     maturity_date               DATE            NULL COMMENT '적금 만기일',
@@ -410,7 +582,6 @@ CREATE TABLE financial_account
     KEY idx_financial_account_child_type (child_id, account_product_type),
     KEY idx_financial_account_product_id (financial_product_id),
     KEY idx_financial_account_access_updated_by (access_updated_by_member_id),
-    KEY idx_financial_account_goal_template_id (financial_goal_template_id),
     CONSTRAINT fk_financial_account_owner_member
         FOREIGN KEY (owner_member_id) REFERENCES member (member_id),
     CONSTRAINT fk_financial_account_child
@@ -419,8 +590,6 @@ CREATE TABLE financial_account
         FOREIGN KEY (financial_product_id) REFERENCES financial_product (financial_product_id),
     CONSTRAINT fk_financial_account_access_updated_by
         FOREIGN KEY (access_updated_by_member_id) REFERENCES member (member_id),
-    CONSTRAINT fk_financial_account_goal_template
-        FOREIGN KEY (financial_goal_template_id) REFERENCES financial_goal_template (financial_goal_template_id),
     CONSTRAINT ck_financial_account_product_type
         CHECK (account_product_type IN ('DEMAND_DEPOSIT', 'SAVINGS', 'SUBSCRIPTION')),
     CONSTRAINT ck_financial_account_owner
@@ -606,8 +775,8 @@ CREATE TABLE account_transaction
     description             VARCHAR(500)    NULL COMMENT '거래 설명',
     counterparty_name       VARCHAR(150)    NULL COMMENT '상대방명',
     transaction_type        VARCHAR(50)     NULL COMMENT '거래 유형',
-    source_type             VARCHAR(30)     NOT NULL DEFAULT 'IMPORTED' COMMENT 'IMPORTED, TRANSFER, AUTO_TRANSFER',
-    synced_at               DATETIME(6)     NOT NULL COMMENT '동기화 시각',
+    source_type             VARCHAR(30)     NOT NULL DEFAULT 'MOCK' COMMENT 'MOCK, TRANSFER, AUTO_TRANSFER',
+    recorded_at             DATETIME(6)     NOT NULL COMMENT '서비스 내부 거래 기록 시각',
     created_at              DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '최초 저장일',
     updated_at              DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     PRIMARY KEY (account_transaction_id),
@@ -621,10 +790,64 @@ CREATE TABLE account_transaction
         FOREIGN KEY (counterparty_account_id) REFERENCES financial_account (financial_account_id),
     CONSTRAINT fk_account_transaction_child
         FOREIGN KEY (child_id) REFERENCES child (child_id),
-    CONSTRAINT ck_account_transaction_direction CHECK (direction IN ('CREDIT', 'DEBIT'))
+    CONSTRAINT ck_account_transaction_direction CHECK (direction IN ('CREDIT', 'DEBIT')),
+    CONSTRAINT ck_account_transaction_source_type CHECK (source_type IN ('MOCK', 'TRANSFER', 'AUTO_TRANSFER'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='계좌 거래내역';
+
+CREATE TABLE mission
+(
+    mission_id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '미션 ID',
+    child_id              BIGINT UNSIGNED NOT NULL COMMENT '미션 대상 자녀',
+    created_by_member_id  BIGINT UNSIGNED NOT NULL COMMENT '미션 생성 부모 회원',
+    title                 VARCHAR(100)    NOT NULL COMMENT '미션 이름',
+    description           VARCHAR(1000)   NOT NULL COMMENT '미션 내용',
+    reward_amount         DECIMAL(19, 2)  NOT NULL COMMENT '승인 시 지급할 보상 금액',
+    status                VARCHAR(20)     NOT NULL DEFAULT 'ASSIGNED'
+        COMMENT 'ASSIGNED, SUBMITTED, APPROVED, REJECTED, CANCELED',
+    created_at            DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at            DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6),
+
+    PRIMARY KEY (mission_id),
+
+    KEY idx_mission_child_status_id (
+        child_id,
+        status,
+        mission_id
+    ),
+
+    KEY idx_mission_creator_id (
+        created_by_member_id,
+        mission_id
+    ),
+
+    CONSTRAINT fk_mission_child
+        FOREIGN KEY (child_id)
+            REFERENCES child (child_id),
+
+    CONSTRAINT fk_mission_creator
+        FOREIGN KEY (created_by_member_id)
+            REFERENCES member (member_id),
+
+    CONSTRAINT ck_mission_reward_amount
+        CHECK (reward_amount > 0),
+
+    CONSTRAINT ck_mission_status
+        CHECK (
+            status IN (
+                       'ASSIGNED',
+                       'SUBMITTED',
+                       'APPROVED',
+                       'REJECTED',
+                       'CANCELED'
+                )
+            )
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = '자녀 보상형 용돈 미션';
 
 CREATE TABLE financial_transfer
 (
@@ -802,8 +1025,8 @@ CREATE TABLE time_capsule_entry
     message                TEXT            NULL COMMENT '부모 메시지',
     contribution_amount    DECIMAL(19, 2)  NOT NULL COMMENT '기록 금액 스냅샷',
     contributed_at         DATETIME(6)     NOT NULL COMMENT '기록 발생 시각 스냅샷',
-    media_mode             VARCHAR(20)     NOT NULL DEFAULT 'NONE' COMMENT 'NONE, IMAGE, VIDEO',
-    thumbnail_object_key   VARCHAR(1000)   NULL COMMENT '대표 썸네일 객체 키',
+    media_mode             VARCHAR(20)     NOT NULL DEFAULT 'NONE' COMMENT 'NONE, IMAGE',
+    thumbnail_object_key   VARCHAR(1000)   NULL COMMENT '목록·캘린더용 대표 이미지 원본 객체 키(별도 썸네일 없음)',
     status                 VARCHAR(20)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT, SEALED, DELETED',
     sealed_at              DATETIME(6)     NULL COMMENT '봉인 시각',
     created_at             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
@@ -818,7 +1041,7 @@ CREATE TABLE time_capsule_entry
         FOREIGN KEY (author_member_id) REFERENCES member (member_id),
     CONSTRAINT fk_capsule_entry_transaction
         FOREIGN KEY (account_transaction_id) REFERENCES account_transaction (account_transaction_id),
-    CONSTRAINT ck_capsule_entry_media_mode CHECK (media_mode IN ('NONE', 'IMAGE', 'VIDEO')),
+    CONSTRAINT ck_capsule_entry_media_mode CHECK (media_mode IN ('NONE', 'IMAGE')),
     CONSTRAINT ck_capsule_entry_status CHECK (status IN ('DRAFT', 'SEALED', 'DELETED'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -828,11 +1051,11 @@ CREATE TABLE time_capsule_media
 (
     time_capsule_media_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '타임캡슐 미디어 ID',
     time_capsule_entry_id BIGINT UNSIGNED NOT NULL COMMENT '타임캡슐 기록 ID',
-    media_type            VARCHAR(20)     NOT NULL COMMENT 'IMAGE, VIDEO',
+    media_type            VARCHAR(20)     NOT NULL COMMENT 'IMAGE',
     object_key            VARCHAR(1000)   NOT NULL COMMENT 'S3 객체 키',
     mime_type             VARCHAR(100)    NOT NULL COMMENT 'MIME 타입',
     file_size             BIGINT UNSIGNED NOT NULL COMMENT '파일 크기',
-    slot_no               TINYINT         NOT NULL COMMENT '사진 1~3, 영상 1',
+    slot_no               TINYINT         NOT NULL DEFAULT 1 COMMENT '대표 이미지 슬롯(항상 1)',
     status                VARCHAR(20)     NOT NULL DEFAULT 'PENDING_UPLOAD' COMMENT 'PENDING_UPLOAD, ACTIVE, DELETED',
     created_at            DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '업로드일',
     updated_at            DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
@@ -840,7 +1063,8 @@ CREATE TABLE time_capsule_media
     UNIQUE KEY uk_capsule_media_entry_slot (time_capsule_entry_id, slot_no),
     CONSTRAINT fk_capsule_media_entry
         FOREIGN KEY (time_capsule_entry_id) REFERENCES time_capsule_entry (time_capsule_entry_id),
-    CONSTRAINT ck_capsule_media_type CHECK (media_type IN ('IMAGE', 'VIDEO')),
+    CONSTRAINT ck_capsule_media_type CHECK (media_type = 'IMAGE'),
+    CONSTRAINT ck_capsule_media_slot CHECK (slot_no = 1),
     CONSTRAINT ck_capsule_media_status CHECK (status IN ('PENDING_UPLOAD', 'ACTIVE', 'DELETED'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -869,6 +1093,38 @@ CREATE TABLE asset_report
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='월간 자산 리포트';
+
+CREATE TABLE push_device
+(
+    push_device_id  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '푸시 기기 ID',
+    member_id       BIGINT UNSIGNED NOT NULL COMMENT '회원 ID',
+    device_key      VARCHAR(100)    NOT NULL COMMENT '앱 설치 단위의 안정적인 기기 식별자',
+    platform        VARCHAR(20)     NOT NULL COMMENT 'WEB, ANDROID, IOS',
+    provider        VARCHAR(20)     NOT NULL DEFAULT 'FCM' COMMENT '푸시 제공자',
+    device_name     VARCHAR(100)    NULL COMMENT '사용자에게 표시할 기기명',
+    token_ciphertext VARBINARY(8192) NOT NULL COMMENT 'AES-GCM으로 암호화한 푸시 토큰',
+    token_hash      CHAR(64)        NOT NULL COMMENT '토큰 검색용 SHA-256 해시',
+    is_active       TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '푸시 발송 대상 여부',
+    last_seen_at    DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '마지막 등록·갱신 시각',
+    created_at      DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '최초 등록 시각',
+    updated_at      DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 시각',
+
+    PRIMARY KEY (push_device_id),
+    UNIQUE KEY uk_push_device_member_device_key (member_id, device_key),
+    KEY idx_push_device_token_hash (token_hash),
+    KEY idx_push_device_member_active (member_id, is_active),
+
+    CONSTRAINT fk_push_device_member
+        FOREIGN KEY (member_id) REFERENCES member (member_id)
+        ON DELETE CASCADE,
+    CONSTRAINT ck_push_device_platform
+        CHECK (platform IN ('WEB', 'ANDROID', 'IOS')),
+    CONSTRAINT ck_push_device_provider
+        CHECK (provider IN ('FCM'))
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+    COMMENT = '회원별 FCM 푸시 기기';
 
 CREATE TABLE notification_preference
 (

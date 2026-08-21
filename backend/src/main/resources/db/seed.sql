@@ -8,6 +8,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 TRUNCATE TABLE notification;
 TRUNCATE TABLE notification_preference;
+TRUNCATE TABLE push_device;
 TRUNCATE TABLE asset_report;
 TRUNCATE TABLE time_capsule_media;
 TRUNCATE TABLE time_capsule_entry;
@@ -23,11 +24,14 @@ TRUNCATE TABLE financial_account;
 TRUNCATE TABLE financial_product_bookmark;
 TRUNCATE TABLE financial_product;
 TRUNCATE TABLE child_checklist_item;
+TRUNCATE TABLE checklist_item_detail;
 TRUNCATE TABLE checklist_item_template;
 TRUNCATE TABLE allowance_request;
 TRUNCATE TABLE family_invitation;
 TRUNCATE TABLE child_parent;
 TRUNCATE TABLE child;
+TRUNCATE TABLE financial_goal_amount_recommendation;
+TRUNCATE TABLE financial_goal_recommendation_basis;
 TRUNCATE TABLE financial_goal_template;
 TRUNCATE TABLE refresh_token;
 TRUNCATE TABLE social_account;
@@ -74,6 +78,87 @@ INSERT INTO financial_goal_template (
   (4, '결혼자금', '미래 자녀의 결혼을 위한 자금', 'hearts', 3, 1, 1, NULL),
   (3, '목돈 마련', '아이의 미래를 위한 든든한 목돈', 'coins', 4, 1, 1, NULL);
 
+INSERT INTO financial_goal_recommendation_basis (
+  financial_goal_recommendation_basis_id,
+  financial_goal_template_id,
+  recommendation_method,
+  organization,
+  dataset_name,
+  reference_year,
+  metric_name,
+  metric_value,
+  metric_unit,
+  source_url,
+  description,
+  disclaimer
+) VALUES
+  (1, 1, 'STATISTICS_REFERENCE',
+   '교육부·한국대학교육협의회',
+   '2025년 4월 대학정보공시 분석 결과',
+   2025,
+   '4년제 일반·교육대학 1인당 연평균 등록금',
+   7106500,
+   '원/년',
+   'https://www.moe.go.kr/boardCnts/viewRenew.do?boardID=294&boardSeq=103257&lev=0&m=020402&opType=N',
+   '연평균 등록금 7,106,500원의 4년치 28,426,000원을 기본 근거로 교육·생활·사회초년 비용을 단계별로 구성했습니다.',
+   '공공 통계를 참고한 서비스 추천금액이며 실제 대학과 생활 방식에 따른 비용 또는 목표 달성을 보장하지 않습니다.'),
+  (2, 2, 'STATISTICS_REFERENCE',
+   '국가데이터처',
+   '2024년 주택소유통계',
+   2024,
+   '주택 소유 가구 평균 주택 자산가액',
+   333000000,
+   '원',
+   'https://www.kostat.go.kr/board.es?act=view&bid=11471&list_no=439298&mid=a10301100400',
+   '평균 주택 자산가액 333,000,000원은 지역 편차가 커 직접 목표로 쓰지 않고 계약금·보증금·주택 구입 종잣돈 단계의 참고값으로 사용했습니다.',
+   '주택 전체 구매가격이 아닌 초기 주거 종잣돈 참고값이며 실제 지역과 주택 유형에 따라 크게 달라질 수 있습니다.'),
+  (3, 4, 'STATISTICS_REFERENCE',
+   '한국소비자원',
+   '2025년 4월 결혼서비스 가격조사',
+   2025,
+   '전국 결혼서비스 평균 계약금액',
+   21010000,
+   '원',
+   'https://www.kca.go.kr/webzine/board/view?div=kca_2507&linkId=868&menuId=MENU00307',
+   '결혼식장과 스드메 평균 계약금액 21,010,000원을 시작 근거로 신혼여행·가전·초기 생활비를 단계별로 더했습니다.',
+   '주거비가 제외된 결혼서비스 조사에 서비스 시나리오를 더한 참고값이며 실제 결혼 비용을 보장하지 않습니다.'),
+  (4, 3, 'STATISTICS_REFERENCE',
+   '통계청',
+   '2024년 가계금융복지조사',
+   2024,
+   '가구주 39세 이하 가구 평균 금융자산',
+   130790000,
+   '원',
+   'https://www.kostat.go.kr/board.es?act=view&bid=215&list_no=434107&mid=a10301010000',
+   '39세 이하 가구 평균 금융자산 130,790,000원은 자녀 개인 평균이 아니므로 규모 검토에만 참고해 장기 종잣돈을 단계별로 구성했습니다.',
+   '가구 단위 금융자산을 참고한 서비스 추천금액이며 자녀 개인의 미래 자산 또는 수익을 보장하지 않습니다.');
+
+INSERT INTO financial_goal_amount_recommendation (
+  financial_goal_amount_recommendation_id,
+  financial_goal_template_id,
+  recommendation_code,
+  title,
+  target_amount,
+  coverage_items,
+  display_order
+) VALUES
+  (1, 1, 'STARTER', '시작 준비안', 30000000, '4년 등록금 중심|교재 및 학습비 일부', 1),
+  (2, 1, 'BALANCED', '균형 준비안', 50000000, '등록금|생활비|취업 준비비', 2),
+  (3, 1, 'SECURE', '든든 준비안', 70000000, '등록금|생활비|교환학생 또는 추가 교육비', 3),
+  (4, 1, 'LIFECYCLE', '생애주기 준비안', 100000000, '등록금|생활비|주거비|사회초년 자금', 4),
+  (5, 2, 'STARTER', '시작 준비안', 50000000, '청약 계약금|초기 보증금', 1),
+  (6, 2, 'BALANCED', '균형 준비안', 100000000, '전월세 보증금|주택 구입 종잣돈', 2),
+  (7, 2, 'SECURE', '든든 준비안', 200000000, '주택 구입 종잣돈|이사 및 정착 비용', 3),
+  (8, 2, 'LIFECYCLE', '생애주기 준비안', 300000000, '주택 구입 종잣돈|장기 주거 안정 자금', 4),
+  (9, 4, 'STARTER', '시작 준비안', 20000000, '예식|신혼여행', 1),
+  (10, 4, 'BALANCED', '균형 준비안', 30000000, '예식|신혼여행|가전', 2),
+  (11, 4, 'SECURE', '든든 준비안', 50000000, '예식|가전|신혼생활', 3),
+  (12, 4, 'LIFECYCLE', '생애주기 준비안', 80000000, '예식|가전|신혼생활|주거 종잣돈', 4),
+  (13, 3, 'STARTER', '시작 준비안', 30000000, '비상금|첫 종잣돈', 1),
+  (14, 3, 'BALANCED', '균형 준비안', 50000000, '교육|취업 준비|독립 준비', 2),
+  (15, 3, 'SECURE', '든든 준비안', 100000000, '교육|독립 준비|장기 자산 기반', 3),
+  (16, 3, 'LIFECYCLE', '생애주기 준비안', 200000000, '교육|독립|주거 종잣돈|장기 자산', 4);
+
 INSERT INTO child (
   child_id,
   member_id,
@@ -108,28 +193,79 @@ INSERT INTO family_invitation (
   (1, 1, 1, 'CHILD', NULL, SHA2('accepted-child-invite-token', 256), 'ACCEPTED', DATE_ADD(NOW(6), INTERVAL 7 DAY), 2, NOW(6)),
   (2, 1, 1, 'PARENT', 'FATHER', SHA2('pending-parent-invite-token', 256), 'PENDING', DATE_ADD(NOW(6), INTERVAL 7 DAY), NULL, NULL);
 
-INSERT INTO checklist_item_template (
-  checklist_item_template_id,
-  title,
-  description,
-  item_order,
-  is_active
-) VALUES
-  (1, '아이 입출금 계좌 연결하기', '아이 명의 입출금 계좌를 서비스에 연결해요.', 1, 1),
-  (2, '아이 적금 계좌 연결하기', '아이 명의 적금 계좌를 연결하고 목표를 설정해요.', 2, 1),
-  (3, '첫 자동이체 설정하기', '매월 정해진 금액을 자동으로 저축하도록 설정해요.', 3, 1);
+INSERT INTO checklist_item_template
+(
+    checklist_item_template_id,
+    lifecycle_stage,
+    title,
+    description,
+    detail_content,
+    item_order,
+    is_active
+)
+VALUES
+    (
+        1,
+        'AGE_5_TO_7',
+        '아이 입출금 계좌 연결하기',
+        '아이 명의 입출금 계좌를 서비스에 연결해요.',
+        '아이 명의 계좌를 연결하기 전에 계좌 명의와 보호자 관계를 확인해 주세요.',
+        1,
+        1
+    ),
+    (
+        2,
+        'AGE_5_TO_7',
+        '아이 적금 계좌 연결하기',
+        '아이 명의 적금 계좌를 연결하고 목표를 설정해요.',
+        '아이와 함께 저축 목적과 목표 금액을 정한 뒤 적금 계좌를 연결해 보세요.',
+        2,
+        1
+    ),
+    (
+        3,
+        'AGE_5_TO_7',
+        '첫 자동이체 설정하기',
+        '매월 정해진 금액을 자동으로 저축하도록 설정해요.',
+        '가계 상황을 고려하여 매월 지속할 수 있는 이체 금액과 날짜를 정해 보세요.',
+        3,
+        1
+    );
 
-INSERT INTO child_checklist_item (
-  child_checklist_item_id,
-  child_id,
-  checklist_item_template_id,
-  status,
-  completed_by_member_id,
-  completed_at
-) VALUES
-  (1, 1, 1, 'COMPLETED', 1, NOW(6)),
-  (2, 1, 2, 'COMPLETED', 1, NOW(6)),
-  (3, 1, 3, 'PENDING', NULL, NULL);
+INSERT INTO child_checklist_item
+(
+    child_checklist_item_id,
+    child_id,
+    checklist_item_template_id,
+    status,
+    completed_by_member_id,
+    completed_at
+)
+VALUES
+    (
+        1,
+        1,
+        1,
+        'COMPLETED',
+        1,
+        NOW(6)
+    ),
+    (
+        2,
+        1,
+        2,
+        'COMPLETED',
+        1,
+        NOW(6)
+    ),
+    (
+        3,
+        1,
+        3,
+        'PENDING',
+        NULL,
+        NULL
+    );
 
 INSERT INTO financial_product (
   financial_product_id,
@@ -356,7 +492,6 @@ INSERT INTO financial_account (
   owner_member_id,
   child_id,
   financial_product_id,
-  financial_goal_template_id,
   organization_code,
   bank_name,
   account_number_ciphertext,
@@ -370,9 +505,6 @@ INSERT INTO financial_account (
   child_available_amount,
   access_updated_by_member_id,
   access_updated_at,
-  goal_name_snapshot,
-  goal_target_amount,
-  goal_target_date,
   is_primary,
   opened_at,
   maturity_date,
@@ -385,7 +517,6 @@ INSERT INTO financial_account (
     1,
     NULL,
     NULL,
-    NULL,
     '004',
     'KB국민은행',
     FROM_BASE64('AS+1XqOuK/oansezNOWbzLlkSFQzXa+pjB2IqT+tWq9Ibya/JE7ldK82'),
@@ -395,9 +526,6 @@ INSERT INTO financial_account (
     2000000,
     NOW(6),
     'ACTIVE',
-    NULL,
-    NULL,
-    NULL,
     NULL,
     NULL,
     NULL,
@@ -414,7 +542,6 @@ INSERT INTO financial_account (
     2,
     1,
     NULL,
-    NULL,
     '004',
     'KB국민은행',
     FROM_BASE64('AY+uroBtCF2CkEZpvz0aq8HxWzX+axeE89gB8rgwKmUP8B6J7Wi9vlH2'),
@@ -428,9 +555,6 @@ INSERT INTO financial_account (
     50000,
     1,
     NOW(6),
-    NULL,
-    NULL,
-    NULL,
     1,
     '2024-01-12 09:00:00.000000',
     NULL,
@@ -441,7 +565,6 @@ INSERT INTO financial_account (
     3,
     'CHILD',
     2,
-    1,
     1,
     1,
     '004',
@@ -457,9 +580,6 @@ INSERT INTO financial_account (
     NULL,
     NULL,
     NULL,
-    '대학자금 마련',
-    30000000,
-    '2038-01-12',
     0,
     '2024-01-12 09:00:00.000000',
     '2038-01-12',
@@ -524,10 +644,10 @@ INSERT INTO account_transaction (
   counterparty_name,
   transaction_type,
   source_type,
-  synced_at
+  recorded_at
 ) VALUES
   (1, 3, 1, SHA2('saving-2026-07-20-100000', 256), '2026-07-20 09:00:00.000000', 'CREDIT', 100000, 14600000, '7월 저축', '김하나', '이체', 'TRANSFER', NOW(6)),
-  (2, 2, 1, SHA2('demand-2026-07-25-15000', 256), '2026-07-25 12:00:00.000000', 'DEBIT', 15000, 105000, '편의점', 'CU', '카드출금', 'IMPORTED', NOW(6));
+  (2, 2, 1, SHA2('demand-2026-07-25-15000', 256), '2026-07-25 12:00:00.000000', 'DEBIT', 15000, 105000, '편의점', 'CU', '카드출금', 'MOCK', NOW(6));
 
 INSERT INTO financial_transfer (
   financial_transfer_id,
@@ -593,7 +713,7 @@ INSERT INTO time_capsule (
   entry_count,
   latest_entry_at
 ) VALUES
-  (1, 1, 3, '깨비의 KB Young Youth 적금 타임캡슐', 'COLLECTING', '2038-01-12 00:00:00.000000', 1, '2026-07-20 09:00:00.000000');
+  (1, 1, 3, '깨비의 KB Young Youth 적금 타임캡슐', 'COLLECTING', '2038-01-12 00:00:00.000000', 0, NULL);
 
 INSERT INTO time_capsule_entry (
   time_capsule_entry_id,
@@ -608,54 +728,82 @@ INSERT INTO time_capsule_entry (
   status,
   sealed_at
 ) VALUES
-  (1, 1, 1, 1, '7월 저축 기록', '이번 달에도 깨비를 위해 10만 원을 넣었어.', 100000, '2026-07-20 09:00:00.000000', 'NONE', 'SEALED', '2026-07-20 09:05:00.000000');
+  (1, 1, 1, 1, '7월 저축 기록', '이번 달에도 깨비를 위해 10만 원을 넣었어.', 100000, '2026-07-20 09:00:00.000000', 'NONE', 'DRAFT', NULL);
 
 INSERT INTO asset_report (
-  asset_report_id,
-  child_id,
-  report_month,
-  total_asset_amount,
-  total_asset_change_amount,
-  monthly_saved_amount,
-  total_goal_target_amount,
-  total_goal_saved_amount,
-  goal_achievement_rate,
-  six_month_flow_json,
-  savings_goal_summary_json,
-  insight_items_json
-) VALUES
-  (
-    1,
-    1,
-    '2026-07-01',
-    16750000,
-    250000,
-    250000,
-    30000000,
-    14600000,
-    48.6667,
-    JSON_ARRAY(
-      JSON_OBJECT('month', '2026-02', 'saved_amount', 310000),
-      JSON_OBJECT('month', '2026-03', 'saved_amount', 420000),
-      JSON_OBJECT('month', '2026-04', 'saved_amount', 560000),
-      JSON_OBJECT('month', '2026-05', 'saved_amount', 730000),
-      JSON_OBJECT('month', '2026-06', 'saved_amount', 810000),
-      JSON_OBJECT('month', '2026-07', 'saved_amount', 900000)
-    ),
-    JSON_ARRAY(
-      JSON_OBJECT(
-        'account_id', 3,
-        'goal_name', '대학자금 마련',
-        'current_amount', 14600000,
-        'target_amount', 30000000,
-        'achievement_rate', 48.7,
-        'monthly_saved_amount', 150000
-      )
-    ),
-    JSON_ARRAY(
-      JSON_OBJECT('type', 'SAVED_MORE_THAN_LAST_MONTH', 'title', '지난달보다 9만원 더 저축했어요.')
-    )
-  );
+    child_id,
+    report_month,
+    total_asset_amount,
+    total_asset_change_amount,
+    monthly_saved_amount,
+    total_goal_target_amount,
+    total_goal_saved_amount,
+    goal_achievement_rate,
+    savings_goal_summary_json,
+    insight_items_json
+) VALUES (
+             6,
+             '2026-07-01',
+             20750000,
+             350000,
+             1250000,
+             50000000,
+             20750000,
+             41.5,
+
+             JSON_ARRAY(
+                     JSON_OBJECT(
+                             'financial_goal_id', 100,
+                             'title', '대학자금',
+                             'current_amount', 14600000,
+                             'target_amount', 30000000,
+                             'achievement_rate', 48.67,
+                             'monthly_saved_amount', 750000,
+                             'monthly_saving_target_amount', 3000000,
+                             'linked_accounts', JSON_ARRAY(
+                                     JSON_OBJECT(
+                                             'account_id', 3,
+                                             'account_name', 'KB 아이사랑적금 1',
+                                             'bank_name', 'KB국민은행',
+                                             'account_number_masked', '952-****-**43',
+                                             'balance', 9600000
+                                     ),
+                                     JSON_OBJECT(
+                                             'account_id', 4,
+                                             'account_name', 'KB 아이사랑적금 2',
+                                             'bank_name', 'KB국민은행',
+                                             'account_number_masked', '952-****-**57',
+                                             'balance', 5000000
+                                     )
+                                                )
+                     )
+             ),
+
+             JSON_ARRAY(
+                     JSON_OBJECT(
+                             'type', 'MONTHLY_SAVING_COMPARISON',
+                             'title', '지난달보다 90,000원을 더 저축했어요.',
+                             'description', '꾸준한 저축 흐름이 아주 좋아요.'
+                     ),
+                     JSON_OBJECT(
+                             'type', 'GOAL_PROGRESS',
+                             'title', '대학자금 목표의 절반에 가까워졌어요.',
+                             'description', '현재 속도라면 계획대로 달성할 수 있어요.'
+                     ),
+                     JSON_OBJECT(
+                             'type', 'EXPECTED_EARLY_ACHIEVEMENT',
+                             'title', '목표 달성 시기를 4개월 앞당길 수 있어요.',
+                             'description', '지금처럼 저축을 이어가 보세요.',
+                             'metadata', JSON_OBJECT(
+                                     'target_date', '2030-12-31',
+                                     'planned_monthly_saving_amount', 300000,
+                                     'recent_average_monthly_saving_amount', 420000,
+                                     'expected_achievement_date', '2030-08-31',
+                                     'months_accelerated', 4
+                                         )
+                     )
+             )
+         );
 
 INSERT INTO notification_preference (
     notification_preference_id,
@@ -723,4 +871,3 @@ INSERT INTO notification (
           'TIME_CAPSULE_RELEASE_SOON:1:3',
           0
       );
-

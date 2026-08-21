@@ -2,6 +2,7 @@ package com.azas.domain.finance.goal.dto;
 
 import com.azas.domain.finance.goal.entity.FinancialGoalTemplate;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 
 import java.util.List;
@@ -27,6 +28,7 @@ public class FinancialGoalTemplateListResponse {
     }
 
     @Getter
+    @ApiModel(value = "FinancialGoalTemplateListItemResponse")
     public static class Item {
         @JsonProperty("financial_goal_template_id")
         private final Long financialGoalTemplateId;

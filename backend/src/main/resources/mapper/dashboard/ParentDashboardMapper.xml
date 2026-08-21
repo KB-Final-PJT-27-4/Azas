@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.dashboard.mapper.ParentDashboardMapper">
+
+    <select id="countActiveChild" resultType="int">
+        SELECT COUNT(*)
+        FROM child
+        WHERE child_id = #{childId}
+        AND status = 'ACTIVE'
+    </select>
+
+    <select id="countActiveParentAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+        INNER JOIN child c
+        ON c.child_id = cp.child_id
+        INNER JOIN member m
+        ON m.member_id = cp.member_id
+        WHERE cp.member_id = #{memberId}
+        AND cp.child_id = #{childId}
+        AND c.status = 'ACTIVE'
+        AND m.status = 'ACTIVE'
+        AND m.member_type = 'PARENT'
+    </select>
+
+    <select id="findDashboardSummary"
+            resultType="com.azas.domain.dashboard.dto.ParentDashboardSummaryRow">
+        WITH latest_report AS (
+        SELECT
+        asset_report_id,
+        child_id,
+        total_asset_amount,
+        total_asset_change_amount,
+        ROW_NUMBER() OVER (
+        PARTITION BY child_id
+        ORDER BY report_month DESC, asset_report_id DESC
+        ) AS row_seq
+        FROM asset_report
+        WHERE child_id = #{childId}
+        ),
+        primary_goal AS (
+        SELECT
+        fg.financial_goal_id,
+        fg.child_id,
+        fg.title,
+        fg.target_amount,
+        COALESCE(SUM(
+        CASE
+        WHEN fa.account_status = 'ACTIVE'
+        AND fa.link_status = 'ACTIVE'
+        THEN fa.balance
+        ELSE 0
+        END
+        ), 0) AS saved_amount,
+        ROW_NUMBER() OVER (
+        PARTITION BY fg.child_id
+        ORDER BY
+        CASE WHEN fg.status = 'ACTIVE' THEN 0 ELSE 1 END,
+        fg.target_date,
+        fg.financial_goal_id
+        ) AS row_seq
+        FROM financial_goal fg
+        LEFT JOIN financial_goal_account fga
+        ON fga.financial_goal_id = fg.financial_goal_id
+        LEFT JOIN financial_account fa
+        ON fa.financial_account_id = fga.financial_account_id
+        WHERE fg.child_id = #{childId}
+        AND fg.status IN ('ACTIVE', 'ACHIEVED')
+        GROUP BY
+        fg.financial_goal_id,
+        fg.child_id,
+        fg.title,
+        fg.target_amount,
+        fg.status,
+        fg.target_date
+        ),
+        nearest_capsule AS (
+        SELECT
+        time_capsule_id,
+        child_id,
+        title,
+        DATEDIFF(expected_release_at, UTC_TIMESTAMP(6)) AS d_day,
+        ROW_NUMBER() OVER (
+        PARTITION BY child_id
+        ORDER BY expected_release_at, time_capsule_id
+        ) AS row_seq
+        FROM time_capsule
+        WHERE child_id = #{childId}
+        AND status = 'COLLECTING'
+        AND expected_release_at IS NOT NULL
+        AND expected_release_at >= UTC_TIMESTAMP(6)
+        )
+        SELECT
+        c.child_id AS childId,
+        c.name AS childName,
+        c.profile_image_url AS profileImageUrl,
+
+        COALESCE(
+        lr.total_asset_amount,
+        (
+        SELECT COALESCE(SUM(fa.balance), 0)
+        FROM financial_account fa
+        WHERE fa.child_id = c.child_id
+        AND fa.account_status = 'ACTIVE'
+        AND fa.link_status = 'ACTIVE'
+        )
+        ) AS totalAssetAmount,
+
+        COALESCE(lr.total_asset_change_amount, 0)
+        AS totalAssetChangeAmount,
+
+        pg.financial_goal_id AS primaryGoalId,
+        pg.title AS primaryGoalTitle,
+        pg.saved_amount AS primaryGoalSavedAmount,
+        pg.target_amount AS primaryGoalTargetAmount,
+
+        (
+        SELECT COUNT(*)
+        FROM financial_goal fg
+        WHERE fg.child_id = c.child_id
+        AND fg.status = 'ACTIVE'
+        ) AS activeGoalCount,
+
+        nc.time_capsule_id AS nearestTimeCapsuleId,
+        nc.title AS nearestTimeCapsuleTitle,
+        nc.d_day AS nearestTimeCapsuleDDay,
+
+        (
+        SELECT COUNT(*)
+        FROM child_checklist_item cci
+        WHERE cci.child_id = c.child_id
+        ) AS checklistTotalCount,
+
+        (
+        SELECT COUNT(*)
+        FROM child_checklist_item cci
+        WHERE cci.child_id = c.child_id
+        AND cci.status = 'COMPLETED'
+        ) AS checklistCompletedCount,
+
+        (
+        SELECT COUNT(*)
+        FROM notification n
+        WHERE n.member_id = #{memberId}
+        AND n.is_read = 0
+        ) AS unreadNotificationCount
+
+        FROM child c
+        LEFT JOIN latest_report lr
+        ON lr.child_id = c.child_id
+        AND lr.row_seq = 1
+        LEFT JOIN primary_goal pg
+        ON pg.child_id = c.child_id
+        AND pg.row_seq = 1
+        LEFT JOIN nearest_capsule nc
+        ON nc.child_id = c.child_id
+        AND nc.row_seq = 1
+        WHERE c.child_id = #{childId}
+        AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="findSixMonthFlow"
+            resultType="com.azas.domain.dashboard.dto.ParentDashboardFlowRow">
+        SELECT
+        DATE_FORMAT(report_month, '%Y-%m') AS reportMonth,
+        total_asset_amount AS totalAssetAmount
+        FROM asset_report
+        WHERE child_id = #{childId}
+        ORDER BY report_month DESC, asset_report_id DESC
+        LIMIT 6
+    </select>
+
+    <select id="findChecklistPreview"
+            resultType="com.azas.domain.dashboard.dto.ParentDashboardChecklistRow">
+        SELECT
+        cci.child_checklist_item_id AS checklistItemId,
+        cit.title AS title,
+        cci.status AS status
+        FROM child_checklist_item cci
+        JOIN checklist_item_template cit
+        ON cit.checklist_item_template_id =
+        cci.checklist_item_template_id
+        WHERE cci.child_id = #{childId}
+        AND cit.is_active = 1
+        ORDER BY
+        CASE WHEN cci.status = 'PENDING' THEN 0 ELSE 1 END,
+        cit.item_order,
+        cci.child_checklist_item_id
+        LIMIT #{limit}
+    </select>
+
+</mapper>

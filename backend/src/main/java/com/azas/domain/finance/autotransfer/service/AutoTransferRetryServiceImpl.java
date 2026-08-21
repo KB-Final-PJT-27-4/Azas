@@ -6,6 +6,8 @@ import com.azas.domain.finance.autotransfer.mapper.AutoTransferRetryMapper;
 import com.azas.domain.finance.autotransfer.mapper.AutoTransferScheduleMapper;
 import com.azas.domain.finance.transfer.dto.TransferTransactionInsertCommand;
 import com.azas.domain.finance.transfer.entity.TransferStatus;
+import com.azas.domain.notification.service.PushMessage;
+import com.azas.domain.notification.service.PushNotificationPublisher;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -25,27 +29,32 @@ public class AutoTransferRetryServiceImpl
     private final AutoTransferScheduleMapper scheduleMapper;
     private final AutoTransferRetryMapper retryMapper;
     private final Clock clock;
+    private final PushNotificationPublisher pushNotificationPublisher;
 
     @Autowired
     public AutoTransferRetryServiceImpl(
             AutoTransferScheduleMapper scheduleMapper,
-            AutoTransferRetryMapper retryMapper
+            AutoTransferRetryMapper retryMapper,
+            PushNotificationPublisher pushNotificationPublisher
     ) {
         this(
                 scheduleMapper,
                 retryMapper,
-                Clock.systemUTC()
+                Clock.systemUTC(),
+                pushNotificationPublisher
         );
     }
 
     AutoTransferRetryServiceImpl(
             AutoTransferScheduleMapper scheduleMapper,
             AutoTransferRetryMapper retryMapper,
-            Clock clock
+            Clock clock,
+            PushNotificationPublisher pushNotificationPublisher
     ) {
         this.scheduleMapper = scheduleMapper;
         this.retryMapper = retryMapper;
         this.clock = clock;
+        this.pushNotificationPublisher = pushNotificationPublisher;
     }
 
     @Override
@@ -324,16 +333,58 @@ public class AutoTransferRetryServiceImpl
             String failureMessage,
             LocalDateTime createdAt
     ) {
-        retryMapper.insertResultNotification(
+        int insertedNotificationCount =
+                retryMapper.insertResultNotification(
+                        schedule.getMemberId(),
+                        schedule.getChildId(),
+                        schedule.getAutoTransferScheduleId(),
+                        transferId,
+                        status.name(),
+                        schedule.getAmount(),
+                        failureCode,
+                        failureMessage,
+                        createdAt
+                );
+
+        if (insertedNotificationCount <= 0) {
+            return;
+        }
+
+        boolean succeeded = status == TransferStatus.SUCCEEDED;
+        String title = succeeded
+                ? "자동이체가 완료되었어요"
+                : "자동이체에 실패했어요";
+        String content = succeeded
+                ? String.format(
+                        Locale.KOREA,
+                        "%,.0f원이 정상적으로 이체되었습니다.",
+                        schedule.getAmount()
+                )
+                : failureMessage != null
+                ? failureMessage
+                : "자동이체 처리에 실패했습니다.";
+
+        pushNotificationPublisher.publish(
                 schedule.getMemberId(),
-                schedule.getChildId(),
-                schedule.getAutoTransferScheduleId(),
-                transferId,
-                status.name(),
-                schedule.getAmount(),
-                failureCode,
-                failureMessage,
-                createdAt
+                new PushMessage(
+                        title,
+                        content,
+                        "/assets",
+                        Map.of(
+                                "notification_type",
+                                succeeded
+                                        ? "AUTO_TRANSFER_SUCCEEDED"
+                                        : "AUTO_TRANSFER_FAILED",
+                                "reference_type",
+                                "AUTO_TRANSFER_SCHEDULE",
+                                "reference_id",
+                                String.valueOf(
+                                        schedule.getAutoTransferScheduleId()
+                                ),
+                                "financial_transfer_id",
+                                String.valueOf(transferId)
+                        )
+                )
         );
     }
 

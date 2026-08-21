@@ -25,6 +25,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -247,25 +248,26 @@ class TimeCapsuleServiceTest {
     @Test
     // [JMG] CAPSULE-2 카드 목록은 다음 페이지가 있으면 keyset cursor를 반환한다.
     void getTimeCapsulesReturnsScreenSummaries() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         TimeCapsule first = createTimeCapsule(
                 3L,
                 10L,
                 "첫 번째",
-                LocalDate.now().plusDays(23).atStartOfDay(),
+                today.plusDays(23).atStartOfDay(),
                 LocalDateTime.of(2026, 8, 4, 12, 0)
         );
         TimeCapsule second = createTimeCapsule(
                 2L,
                 10L,
                 "두 번째",
-                LocalDate.now().minusDays(1).atStartOfDay(),
+                today.minusDays(1).atStartOfDay(),
                 LocalDateTime.of(2026, 8, 3, 12, 0)
         );
         TimeCapsule third = createTimeCapsule(
                 1L,
                 10L,
                 "세 번째",
-                LocalDate.now().plusMonths(2).atStartOfDay(),
+                today.plusMonths(2).atStartOfDay(),
                 LocalDateTime.of(2026, 8, 2, 12, 0)
         );
 

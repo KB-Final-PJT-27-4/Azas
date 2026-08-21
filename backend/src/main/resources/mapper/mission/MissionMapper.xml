@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.mission.mapper.MissionMapper">
+
+    <select id="findActiveChildId"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="countParentAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                                AND c.status = 'ACTIVE'
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+    </select>
+
+    <insert id="insertMission"
+            useGeneratedKeys="true"
+            keyProperty="missionId"
+            keyColumn="mission_id">
+        INSERT INTO mission (
+            child_id,
+            created_by_member_id,
+            title,
+            description,
+            reward_amount,
+            status,
+            created_at,
+            updated_at
+        ) VALUES (
+                     #{childId},
+                     #{createdByMemberId},
+                     #{title},
+                     #{description},
+                     #{rewardAmount},
+                     'ASSIGNED',
+                     #{createdAt},
+                     #{createdAt}
+                 )
+    </insert>
+
+    <insert id="insertMissionAssignedNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            c.member_id,
+            c.child_id,
+            'MISSION',
+            'MISSION_ASSIGNED',
+            '새 용돈 미션이 도착했어요',
+            CONCAT(
+                    #{missionTitle},
+                    ' 미션을 확인해 보세요. 완료 보상은 ',
+                    FORMAT(#{rewardAmount}, 0),
+                    '원이에요.'
+            ),
+            'MISSION',
+            #{missionId},
+            JSON_OBJECT(
+                    'mission_id', #{missionId},
+                    'reward_amount', #{rewardAmount}
+            ),
+            CONCAT('MISSION_ASSIGNED:', #{missionId}),
+            0,
+            #{createdAt}
+        FROM child c
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND c.member_id IS NOT NULL
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = c.member_id
+                            AND np.notification_category = 'MISSION'
+                      ),
+                      1
+              ) = 1
+    </insert>
+
+    <select id="findChildNotificationRecipient"
+            resultType="long">
+        SELECT c.member_id
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'CHILD'
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = c.member_id
+                            AND np.notification_category = 'MISSION'
+                      ),
+                      1
+              ) = 1
+    </select>
+
+    <select id="findParentNotificationRecipients"
+            resultType="long">
+        SELECT cp.member_id
+        FROM child_parent cp
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = cp.member_id
+                            AND np.notification_category = 'MISSION'
+                      ),
+                      1
+              ) = 1
+        ORDER BY cp.member_id ASC
+    </select>
+
+    <resultMap id="missionListRowMap"
+               type="com.azas.domain.mission.dto.MissionListRow">
+        <id property="missionId"
+            column="mission_id"/>
+
+        <result property="childId"
+                column="child_id"/>
+
+        <result property="title"
+                column="title"/>
+
+        <result property="description"
+                column="description"/>
+
+        <result property="rewardAmount"
+                column="reward_amount"/>
+
+        <result property="status"
+                column="status"
+                javaType="com.azas.domain.mission.entity.MissionStatus"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+    </resultMap>
+
+    <select id="countMissionAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN member requester
+                            ON requester.member_id = #{memberId}
+                                AND requester.status = 'ACTIVE'
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND (
+            (
+                requester.member_type = 'CHILD'
+                    AND c.member_id = requester.member_id
+                )
+                OR
+            (
+                requester.member_type = 'PARENT'
+                    AND EXISTS (
+                    SELECT 1
+                    FROM child_parent cp
+                    WHERE cp.child_id = c.child_id
+                      AND cp.member_id = requester.member_id
+                )
+                )
+            )
+    </select>
+
+    <select id="findMissions"
+            parameterType=
+                    "com.azas.domain.mission.dto.MissionListQuery"
+            resultMap="missionListRowMap">
+        SELECT
+        m.mission_id,
+        m.child_id,
+        m.title,
+        m.description,
+        m.reward_amount,
+        m.status,
+        m.created_at
+        FROM mission m
+        WHERE m.child_id = #{childId}
+
+        <choose>
+            <when test="filter.name() == 'ALL'">
+                AND m.status != 'CANCELED'
+            </when>
+
+            <when test="filter.name() == 'IN_PROGRESS'">
+                AND m.status IN ('ASSIGNED', 'REJECTED')
+            </when>
+
+            <when test="filter.name() == 'NEEDS_REVIEW'">
+                AND m.status = 'SUBMITTED'
+            </when>
+
+            <when test="filter.name() == 'COMPLETED'">
+                AND m.status = 'APPROVED'
+            </when>
+
+            <when test="filter.name() == 'CANCELED'">
+                AND m.status = 'CANCELED'
+            </when>
+        </choose>
+
+        <if test="cursorId != null">
+            AND m.mission_id <![CDATA[<]]> #{cursorId}
+        </if>
+
+        ORDER BY m.mission_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findMissionSummary"
+            resultType=
+                    "com.azas.domain.mission.dto.MissionSummaryRow">
+        SELECT
+            SUM(
+                    CASE
+                        WHEN status != 'CANCELED'
+                THEN 1
+                        ELSE 0
+                        END
+            ) AS total_count,
+
+            SUM(
+                    CASE
+                        WHEN status IN ('ASSIGNED', 'REJECTED')
+                            THEN 1
+                        ELSE 0
+                        END
+            ) AS in_progress_count,
+
+            SUM(
+                    CASE
+                        WHEN status = 'SUBMITTED'
+                            THEN 1
+                        ELSE 0
+                        END
+            ) AS needs_review_count,
+
+            SUM(
+                    CASE
+                        WHEN status = 'APPROVED'
+                            THEN 1
+                        ELSE 0
+                        END
+            ) AS completed_count
+        FROM mission
+        WHERE child_id = #{childId}
+    </select>
+    <resultMap id="missionDetailRowMap"
+               type="com.azas.domain.mission.dto.MissionDetailRow">
+
+        <id property="missionId"
+            column="mission_id"/>
+
+        <result property="childId"
+                column="child_id"/>
+
+        <result property="title"
+                column="title"/>
+
+        <result property="description"
+                column="description"/>
+
+        <result property="rewardAmount"
+                column="reward_amount"/>
+
+        <result property="status"
+                column="status"
+                javaType="com.azas.domain.mission.entity.MissionStatus"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+
+        <result property="updatedAt"
+                column="updated_at"/>
+    </resultMap>
+
+    <select id="findMissionDetail"
+            resultMap="missionDetailRowMap">
+        SELECT
+            mission_id,
+            child_id,
+            title,
+            description,
+            reward_amount,
+            status,
+            created_at,
+            updated_at
+        FROM mission
+        WHERE mission_id = #{missionId}
+    </select>
+
+    <select id="findMissionDetailForUpdate"
+            resultMap="missionDetailRowMap">
+        SELECT
+            mission_id,
+            child_id,
+            title,
+            description,
+            reward_amount,
+            status,
+            created_at,
+            updated_at
+        FROM mission
+        WHERE mission_id = #{missionId}
+            FOR UPDATE
+    </select>
+
+    <select id="countChildSelfAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = #{memberId}
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'CHILD'
+        WHERE c.child_id = #{childId}
+          AND c.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <update id="updateMissionStatus">
+        UPDATE mission
+        SET status = #{status},
+            updated_at = #{updatedAt}
+        WHERE mission_id = #{missionId}
+    </update>
+
+    <update id="linkRewardTransfer">
+        UPDATE financial_transfer
+        SET origin_type = 'MISSION',
+            origin_id = #{missionId}
+        WHERE financial_transfer_id = #{transferId}
+          AND requested_by_member_id = #{memberId}
+          AND status = 'SUCCEEDED'
+    </update>
+
+    <insert id="insertMissionSubmittedNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            cp.member_id,
+            cp.child_id,
+            'MISSION',
+            'MISSION_SUBMITTED',
+            '자녀가 미션 완료를 요청했어요',
+            CONCAT(
+                    #{missionTitle},
+                    ' 미션을 확인하고 보상해 주세요.'
+            ),
+            'MISSION',
+            #{missionId},
+            JSON_OBJECT(
+                    'mission_id', #{missionId}
+            ),
+            CONCAT(
+                    'MISSION_SUBMITTED:',
+                    #{missionId},
+                    ':',
+                    cp.member_id,
+                    ':',
+                    DATE_FORMAT(
+                            #{createdAt},
+                            '%Y%m%d%H%i%s%f'
+                    )
+            ),
+            0,
+            #{createdAt}
+        FROM child_parent cp
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = cp.member_id
+                            AND np.notification_category = 'MISSION'
+                      ),
+                      1
+              ) = 1
+    </insert>
+
+    <insert id="insertChildMissionStatusNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            c.member_id,
+            c.child_id,
+            'MISSION',
+            #{notificationType},
+            #{title},
+            #{content},
+            'MISSION',
+            #{missionId},
+            JSON_OBJECT(
+                    'mission_id', #{missionId}
+            ),
+            CONCAT(
+                    #{notificationType},
+                    ':',
+                    #{missionId},
+                    ':',
+                    c.member_id,
+                    ':',
+                    DATE_FORMAT(
+                            #{createdAt},
+                            '%Y%m%d%H%i%s%f'
+                    )
+            ),
+            0,
+            #{createdAt}
+        FROM child c
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND c.member_id IS NOT NULL
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = c.member_id
+                            AND np.notification_category = 'MISSION'
+                      ),
+                      1
+              ) = 1
+    </insert>
+
+</mapper>
