@@ -9,7 +9,7 @@ import {
   CircleHelp,
   Plus,
 } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import defaultProfileImageUrl from '@/assets/images/home/home-profile-baby.png'
 import { useToast } from '@/composables/useToast'
@@ -21,6 +21,7 @@ import {
 } from '@/api/context'
 
 const router = useRouter()
+const route = useRoute()
 const { showToast } = useToast()
 
 const props = withDefaults(
@@ -68,6 +69,7 @@ const selectedProfileId = ref<number | null>(null)
 const isProfileLoading = ref(true)
 const isProfileSheetOpen = ref(false)
 const isScrolled = ref(false)
+const isChildRoute = computed(() => route.path === '/child' || route.path.startsWith('/child/'))
 const useTopAppearance = computed(() => !props.changeOnScroll || !isScrolled.value)
 const appliedHeaderBackgroundColor = computed(() =>
   useTopAppearance.value ? props.backgroundColor : '',
@@ -93,6 +95,7 @@ const clearProfilePress = () => {
 }
 
 const startProfilePress = (event: PointerEvent) => {
+  if (isChildRoute.value) return
   if (event.button !== 0) return
   clearProfilePress()
   profilePressTimer = window.setTimeout(() => {
@@ -102,6 +105,7 @@ const startProfilePress = (event: PointerEvent) => {
 }
 
 const openProfileSheet = () => {
+  if (isChildRoute.value) return
   clearProfilePress()
   isProfileSheetOpen.value = true
 }
@@ -224,14 +228,20 @@ onBeforeUnmount(() => {
           aria-hidden="true"
         ></span>
         <span class="header-skeleton h-5 w-[72px] rounded-md" aria-hidden="true"></span>
-        <span class="header-skeleton size-4 shrink-0 rounded" aria-hidden="true"></span>
+        <span
+          v-if="!isChildRoute"
+          class="header-skeleton size-4 shrink-0 rounded"
+          aria-hidden="true"
+        ></span>
       </div>
 
       <button
         v-else-if="!showBack"
         class="flex min-w-0 select-none items-center gap-[var(--space-3)] rounded-xl border-0 bg-transparent p-0 pr-2 text-left active:bg-[var(--color-unselected-background)]"
         type="button"
-        aria-label="프로필 전환 메뉴 열기"
+        :class="isChildRoute ? 'pointer-events-none' : ''"
+        :disabled="isChildRoute"
+        :aria-label="isChildRoute ? undefined : '프로필 전환 메뉴 열기'"
         @pointerdown="startProfilePress"
         @pointerup="clearProfilePress"
         @pointercancel="clearProfilePress"
@@ -262,6 +272,7 @@ onBeforeUnmount(() => {
           {{ activeProfile.name }}
         </strong>
         <ChevronDown
+          v-if="!isChildRoute"
           :size="18"
           :stroke-width="2.5"
           class="-ml-1 shrink-0 text-[var(--color-unselected-text)]"
@@ -302,7 +313,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <Transition name="profile-sheet">
       <div
-        v-if="isProfileSheetOpen"
+        v-if="isProfileSheetOpen && !isChildRoute"
         class="fixed inset-y-0 left-1/2 z-[var(--z-index-overlay)] w-full max-w-[var(--app-max-width)] -translate-x-1/2"
       >
         <button
