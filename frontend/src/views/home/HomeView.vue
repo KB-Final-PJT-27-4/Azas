@@ -58,6 +58,7 @@ let guidePositionFrame: number | null = null
 let previousBodyOverflow = ''
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
+
 const guideSteps = computed<HomeGuideStep[]>(() => [
   {
     eyebrow: '타임캡슐',

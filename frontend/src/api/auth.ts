@@ -2,11 +2,15 @@ import axios from 'axios'
 
 import type { ApiErrorResponse, OAuthLoginMemberResponse, OAuthLoginResponse } from '@/api/generated'
 import { api } from '@/api'
-import { clearTokenPair, getRefreshToken, saveTokenPair } from '@/api/http'
+import {
+  AUTH_MEMBER_STORAGE_KEY,
+  clearAuthSessionStorage,
+  getRefreshToken,
+  saveTokenPair,
+} from '@/api/http'
 
 export type OAuthProvider = 'google' | 'kakao'
 
-const AUTH_MEMBER_STORAGE_KEY = 'azas_auth_member'
 export { getRefreshToken }
 
 export const loginWithOAuthCode = async (
@@ -32,8 +36,7 @@ export const saveAuthSession = (response: OAuthLoginResponse) => {
 }
 
 export const clearAuthSession = () => {
-  clearTokenPair()
-  sessionStorage.removeItem(AUTH_MEMBER_STORAGE_KEY)
+  clearAuthSessionStorage()
 }
 
 export const getAuthMember = (): OAuthLoginMemberResponse | null => {
