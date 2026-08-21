@@ -317,7 +317,7 @@ const navigateForward = async (to: RouteLocationRaw) => {
   }
 }
 
-const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean }) => {
+const openCapsule = (capsule: CapsuleAccount, event: MouseEvent) => {
   if (!capsule.isFree) {
     if (isCapsuleReleased(capsule)) {
       startUnlockFlow(capsule, event)
