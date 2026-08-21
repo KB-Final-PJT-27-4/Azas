@@ -32,6 +32,10 @@ public interface TimeCapsuleMapper {
 
     int insert(TimeCapsule timeCapsule);
 
+    TimeCapsule findById(
+            @Param("timeCapsuleId") long timeCapsuleId
+    );
+
     TimeCapsule findAccessibleById(
             @Param("timeCapsuleId") long timeCapsuleId,
             @Param("memberId") long memberId

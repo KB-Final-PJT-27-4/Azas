@@ -64,7 +64,7 @@ public class S3TimeCapsuleObjectStorage
     }
 
     @Override
-    public PresignedUrl createDownloadUrl(
+    public PresignedUrl createViewUrl(
             String objectKey,
             Duration validFor
     ) {

@@ -15,6 +15,10 @@ Thumbs.db
 # Logs
 *.log
 
+# Firebase Admin service-account private keys
+*firebase-adminsdk*.json
+firebase-service-account*.json
+
 # Frontend
 frontend/node_modules/
 frontend/dist/

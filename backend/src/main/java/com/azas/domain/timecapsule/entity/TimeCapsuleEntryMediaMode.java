@@ -7,8 +7,7 @@ import java.util.Locale;
 
 public enum TimeCapsuleEntryMediaMode {
     NONE,
-    IMAGE,
-    VIDEO;
+    IMAGE;
 
     public static TimeCapsuleEntryMediaMode from(String value) {
         if (value == null || value.isBlank()) {

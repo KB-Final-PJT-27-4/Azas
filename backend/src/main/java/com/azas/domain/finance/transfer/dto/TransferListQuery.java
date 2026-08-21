@@ -13,7 +13,7 @@ public class TransferListQuery {
 
     private final Long memberId;
     private final Long childId;
-    private final Long financialGoalTemplateId;
+    private final Long financialGoalId;
     private final TransferStatus status;
     private final TransferType transferType;
     private final LocalDate startDate;

@@ -400,7 +400,7 @@ class TransferServiceImplTest {
 
         ReflectionTestUtils.setField(
                 account,
-                "financialGoalTemplateId",
+                "financialGoalId",
                 goalTemplateId
         );
 

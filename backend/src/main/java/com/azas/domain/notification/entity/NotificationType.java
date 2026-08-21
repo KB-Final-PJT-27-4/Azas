@@ -43,7 +43,9 @@ public enum NotificationType {
     // 미션 승인 알림
     MISSION_APPROVED(NotificationCategory.MISSION),
     // 미션 거절 알림
-    MISSION_REJECTED(NotificationCategory.MISSION);
+    MISSION_REJECTED(NotificationCategory.MISSION),
+    // 미션 취소 알림
+    MISSION_CANCELED(NotificationCategory.MISSION);
 
     private final NotificationCategory category;
 }

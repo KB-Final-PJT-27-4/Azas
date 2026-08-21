@@ -12,6 +12,7 @@ import com.azas.domain.finance.autotransfer.mapper.AutoTransferRetryMapper;
 import com.azas.domain.finance.autotransfer.mapper.AutoTransferScheduleMapper;
 import com.azas.domain.finance.transfer.dto.TransferTransactionInsertCommand;
 import com.azas.domain.finance.transfer.entity.TransferStatus;
+import com.azas.domain.notification.service.PushNotificationPublisher;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -42,6 +44,7 @@ public class AutoTransferRetryServiceImplTest {
     private AutoTransferScheduleMapper scheduleMapper;
     private AutoTransferRetryMapper retryMapper;
     private AutoTransferRetryServiceImpl service;
+    private PushNotificationPublisher pushNotificationPublisher;
 
     @BeforeEach
     void setUp() {
@@ -50,6 +53,8 @@ public class AutoTransferRetryServiceImplTest {
 
         retryMapper =
                 mock(AutoTransferRetryMapper.class);
+        pushNotificationPublisher =
+                mock(PushNotificationPublisher.class);
 
         Clock clock = Clock.fixed(
                 Instant.parse("2026-08-18T01:30:00Z"),
@@ -59,7 +64,8 @@ public class AutoTransferRetryServiceImplTest {
         service = new AutoTransferRetryServiceImpl(
                 scheduleMapper,
                 retryMapper,
-                clock
+                clock,
+                pushNotificationPublisher
         );
     }
 
@@ -122,6 +128,17 @@ public class AutoTransferRetryServiceImplTest {
                 eq("SUCCEEDED"),
                 any(LocalDateTime.class)
         )).thenReturn(1);
+        when(retryMapper.insertResultNotification(
+                eq(7L),
+                eq(5L),
+                eq(21L),
+                eq(502L),
+                eq("SUCCEEDED"),
+                eq(new BigDecimal("100000")),
+                eq(null),
+                eq(null),
+                any(LocalDateTime.class)
+        )).thenReturn(1);
 
         AutoTransferRetryResponse response =
                 service.retry(7L, 21L, KEY);
@@ -131,6 +148,22 @@ public class AutoTransferRetryServiceImplTest {
         assertEquals(
                 TransferStatus.SUCCEEDED,
                 response.getStatus()
+        );
+        verify(pushNotificationPublisher).publish(
+                eq(7L),
+                argThat(message ->
+                        "자동이체가 완료되었어요".equals(
+                                message.getTitle()
+                        )
+                                && "/assets".equals(
+                                message.getActionUrl()
+                        )
+                                && "AUTO_TRANSFER_SUCCEEDED".equals(
+                                message.getData().get(
+                                        "notification_type"
+                                )
+                        )
+                )
         );
     }
 

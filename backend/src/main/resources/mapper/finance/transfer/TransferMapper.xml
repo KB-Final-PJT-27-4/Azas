@@ -39,17 +39,21 @@
             resultType="com.azas.domain.finance.transfer.entity.TransferAccount">
         SELECT fa.financial_account_id AS financialAccountId,
                fa.child_id AS childId,
-               fa.financial_goal_template_id AS financialGoalTemplateId,
+               fga.financial_goal_id AS financialGoalId,
                fa.bank_name AS bankName,
                fa.account_number_ciphertext AS accountNumberCiphertext,
                fa.account_name AS accountName,
                fa.account_product_type AS accountProductType,
                fa.balance AS balance
         FROM financial_account fa
+        INNER JOIN financial_goal_account fga
+            ON fga.financial_account_id = fa.financial_account_id
+        INNER JOIN financial_goal fg
+            ON fg.financial_goal_id = fga.financial_goal_id
+           AND fg.status IN ('ACTIVE', 'ACHIEVED')
         WHERE fa.financial_account_id = #{accountId}
           AND fa.owner_type = 'CHILD'
           AND fa.child_id IS NOT NULL
-          AND fa.financial_goal_template_id IS NOT NULL
           AND fa.account_product_type = 'SAVINGS'
           AND fa.account_status = 'ACTIVE'
           AND fa.link_status = 'ACTIVE'
@@ -114,7 +118,7 @@
             description,
             counterparty_name,
             source_type,
-            synced_at
+            recorded_at
         ) VALUES (
                      #{financialAccountId},
                      #{counterpartyAccountId},
@@ -143,7 +147,7 @@
     <select id="findTransferDetail"
             resultType="com.azas.domain.finance.transfer.dto.TransferDetailResponse">
         SELECT ft.financial_transfer_id AS financialTransferId,
-               dst.financial_goal_template_id AS financialGoalId,
+               fga.financial_goal_id AS financialGoalId,
                ft.requested_by_member_id AS requestedByMemberId,
                ft.source_account_id AS sourceAccountId,
                ft.destination_account_id AS destinationAccountId,
@@ -162,6 +166,8 @@
                                 AND c.status = 'ACTIVE'
                  INNER JOIN financial_account dst
                             ON dst.financial_account_id = ft.destination_account_id
+                 LEFT JOIN financial_goal_account fga
+                            ON fga.financial_account_id = dst.financial_account_id
         WHERE ft.financial_transfer_id = #{transferId}
           AND (
             ft.requested_by_member_id = #{memberId}
@@ -206,8 +212,8 @@
     <select id="findChildTransfers"
             resultType="com.azas.domain.finance.transfer.dto.ChildTransferListItemResponse">
         SELECT ft.financial_transfer_id AS financialTransferId,
-        dst.financial_goal_template_id AS financialGoalId,
-        dst.goal_name_snapshot AS goalTitle,
+        fg.financial_goal_id AS financialGoalId,
+        fg.title AS goalTitle,
         ft.amount,
         ft.transfer_type AS transferType,
         ft.status,
@@ -216,9 +222,13 @@
         FROM financial_transfer ft
         INNER JOIN financial_account dst
         ON dst.financial_account_id = ft.destination_account_id
+        LEFT JOIN financial_goal_account fga
+        ON fga.financial_account_id = dst.financial_account_id
+        LEFT JOIN financial_goal fg
+        ON fg.financial_goal_id = fga.financial_goal_id
         WHERE ft.child_id = #{childId}
-        <if test="financialGoalTemplateId != null">
-            AND dst.financial_goal_template_id = #{financialGoalTemplateId}
+        <if test="financialGoalId != null">
+            AND fg.financial_goal_id = #{financialGoalId}
         </if>
         <if test="status != null">
             AND ft.status = #{status}

@@ -25,7 +25,6 @@ public interface TimeCapsuleMediaMapper {
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId
     );
 
-    // [JMG] CAPSULE-13 S3 삭제 대상인 활성·대기 미디어를 행 잠금과 함께 조회한다.
     List<TimeCapsuleMedia> findNotDeletedByEntryIdForUpdate(
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId
     );

@@ -135,7 +135,7 @@ public class TransferServiceImpl implements TransferService {
 
         return new TransferCreateResponse(
                 command.getFinancialTransferId(),
-                destination.getFinancialGoalTemplateId(),
+                destination.getFinancialGoalId(),
                 toAccountResponse(source),
                 toAccountResponse(destination),
                 request.getAmount(),
@@ -248,9 +248,9 @@ public class TransferServiceImpl implements TransferService {
             throw new BusinessException(ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND);
         }
 
-        // 입금 계좌는 존재하지만 자녀 ID나 목표 템플릿 ID가 없는 경우 (422 처리)
+        // 입금 계좌는 존재하지만 자녀 또는 실제 목표와 연결되지 않은 경우
         if (destination.getChildId() == null
-                || destination.getFinancialGoalTemplateId() == null) {
+                || destination.getFinancialGoalId() == null) {
             throw new BusinessException(ErrorCode.INVALID_TRANSFER_REQUEST);
         }
 
