@@ -1,15 +1,16 @@
 package com.azas.domain.timecapsule.dto;
 
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
-import com.azas.domain.timecapsule.entity.TimeCapsuleMedia;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
+@ApiModel(value = "TimeCapsuleEntryDetailResponse")
 public class TimeCapsuleEntryDetailResponse {
 
     @JsonProperty("time_capsule_entry_id")
@@ -18,14 +19,17 @@ public class TimeCapsuleEntryDetailResponse {
     @JsonProperty("time_capsule_id")
     private final Long timeCapsuleId;
 
-    @JsonProperty("author_member_id")
-    private final Long authorMemberId;
+    @JsonProperty("entry_number")
+    private final int entryNumber;
 
-    @JsonProperty("account_transaction_id")
-    private final Long accountTransactionId;
+    @JsonProperty("total_entry_count")
+    private final int totalEntryCount;
 
     private final String title;
     private final String message;
+
+    @JsonProperty("account_transaction_id")
+    private final Long accountTransactionId;
 
     @JsonProperty("contribution_amount")
     private final BigDecimal contributionAmount;
@@ -33,71 +37,49 @@ public class TimeCapsuleEntryDetailResponse {
     @JsonProperty("contributed_at")
     private final LocalDateTime contributedAt;
 
-    @JsonProperty("media_mode")
-    private final String mediaMode;
-    private final String status;
-
-    @JsonProperty("sealed_at")
-    private final LocalDateTime sealedAt;
-    private final List<MediaResponse> media;
-
-    @JsonProperty("created_at")
-    private final LocalDateTime createdAt;
+    @ApiModelProperty(required = true)
+    private final ImageResponse image;
 
     public TimeCapsuleEntryDetailResponse(
             TimeCapsuleEntry entry,
-            List<MediaResponse> media
+            int entryNumber,
+            int totalEntryCount,
+            ImageResponse image
     ) {
         this.timeCapsuleEntryId = entry.getTimeCapsuleEntryId();
         this.timeCapsuleId = entry.getTimeCapsuleId();
-        this.authorMemberId = entry.getAuthorMemberId();
-        this.accountTransactionId = entry.getAccountTransactionId();
+        this.entryNumber = entryNumber;
+        this.totalEntryCount = totalEntryCount;
         this.title = entry.getTitle();
         this.message = entry.getMessage();
+        this.accountTransactionId = entry.getAccountTransactionId();
         this.contributionAmount = entry.getContributionAmount();
         this.contributedAt = entry.getContributedAt();
-        this.mediaMode = entry.getMediaMode().name();
-        this.status = entry.getStatus().name();
-        this.sealedAt = entry.getSealedAt();
-        this.media = List.copyOf(media);
-        this.createdAt = entry.getCreatedAt();
+        this.image = image;
     }
 
     @Getter
-    public static class MediaResponse {
+    @ApiModel(value = "TimeCapsuleEntryDetailImageResponse")
+    public static class ImageResponse {
 
-        @JsonProperty("time_capsule_media_id")
-        private final Long timeCapsuleMediaId;
+        @ApiModelProperty(
+                value = "화면 표시용 이미지 임시 조회 URL",
+                required = true
+        )
+        private final String url;
 
-        @JsonProperty("media_type")
-        private final String mediaType;
-
-        @JsonProperty("mime_type")
-        private final String mimeType;
-
-        @JsonProperty("file_size")
-        private final long fileSize;
-
-        @JsonProperty("slot_no")
-        private final int slotNo;
-
-        @JsonProperty("download_url")
-        private final String downloadUrl;
-
+        @ApiModelProperty(
+                value = "이미지 조회 URL 만료 시각",
+                required = true
+        )
         @JsonProperty("expires_at")
         private final LocalDateTime expiresAt;
 
-        public MediaResponse(
-                TimeCapsuleMedia media,
-                String downloadUrl,
+        public ImageResponse(
+                String url,
                 LocalDateTime expiresAt
         ) {
-            this.timeCapsuleMediaId = media.getTimeCapsuleMediaId();
-            this.mediaType = media.getMediaType().name();
-            this.mimeType = media.getMimeType();
-            this.fileSize = media.getFileSize();
-            this.slotNo = media.getSlotNo();
-            this.downloadUrl = downloadUrl;
+            this.url = url;
             this.expiresAt = expiresAt;
         }
     }

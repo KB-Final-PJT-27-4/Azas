@@ -10,7 +10,7 @@ public interface TimeCapsuleObjectStorage {
             Duration validFor
     );
 
-    PresignedUrl createDownloadUrl(String objectKey, Duration validFor);
+    PresignedUrl createViewUrl(String objectKey, Duration validFor);
 
     StoredObjectMetadata getObjectMetadata(String objectKey);
 

@@ -2,6 +2,7 @@ package com.azas.domain.finance.product.dto;
 
 import com.azas.domain.finance.product.entity.FinancialProduct;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -46,6 +47,7 @@ public class FinancialProductBookmarkListResponse {
     }
 
     @Getter
+    @ApiModel(value = "FinancialProductBookmarkListItemResponse")
     public static class Item {
 
         @JsonProperty("financial_product_bookmark_id")

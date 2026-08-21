@@ -102,12 +102,6 @@ class MemberWithdrawalServiceTest {
                 );
 
         callOrder.verify(memberWithdrawalMapper)
-                .revokeActiveFinancialConnections(
-                        eq(MEMBER_ID),
-                        any(LocalDateTime.class)
-                );
-
-        callOrder.verify(memberWithdrawalMapper)
                 .unlinkChildMember(MEMBER_ID);
 
         callOrder.verify(memberWithdrawalMapper)

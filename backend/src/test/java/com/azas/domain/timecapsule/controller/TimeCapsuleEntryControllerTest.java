@@ -3,6 +3,7 @@ package com.azas.domain.timecapsule.controller;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleEntryResponse;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySummaryResponse;
@@ -42,6 +43,8 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -113,6 +116,77 @@ class TimeCapsuleEntryControllerTest {
                 .andExpect(jsonPath("$.total_count").value(1))
                 .andExpect(jsonPath("$.entries[0].time_capsule_entry_id")
                         .value(1000));
+    }
+
+    @Test
+    void getTimeCapsuleEntryReturnsReleasedEntryDetail() throws Exception {
+        TimeCapsuleEntry entry = createEntry(1000L);
+        ReflectionTestUtils.setField(entry, "status",
+                TimeCapsuleEntryStatus.SEALED);
+        ReflectionTestUtils.setField(entry, "sealedAt",
+                LocalDateTime.of(2026, 8, 5, 11, 40));
+        ReflectionTestUtils.setField(entry, "createdAt",
+                LocalDateTime.of(2026, 8, 5, 10, 35));
+        TimeCapsuleEntryDetailResponse response =
+                new TimeCapsuleEntryDetailResponse(
+                        entry,
+                        1,
+                        36,
+                        new TimeCapsuleEntryDetailResponse.ImageResponse(
+                                "https://storage.example/presigned-get",
+                                LocalDateTime.of(2026, 8, 5, 12, 40)
+                        )
+                );
+
+        given(accessTokenMemberResolver.resolveMemberId("Bearer access-token"))
+                .willReturn(7L);
+        given(timeCapsuleEntryService.getTimeCapsuleEntry(7L, 1000L))
+                .willReturn(response);
+
+        mockMvc.perform(
+                        get("/api/v1/time-capsule-entries/{entryId}", 1000L)
+                                .header("Authorization", "Bearer access-token")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.time_capsule_entry_id").value(1000))
+                .andExpect(jsonPath("$.entry_number").value(1))
+                .andExpect(jsonPath("$.total_entry_count").value(36))
+                .andExpect(jsonPath("$.title").value("첫 용돈을 받은 날"))
+                .andExpect(jsonPath("$.message")
+                        .value("남은 돈은 꼭 저축하자."))
+                .andExpect(jsonPath("$.contribution_amount").value(150000))
+                .andExpect(jsonPath("$.image.url")
+                        .value("https://storage.example/presigned-get"))
+                .andExpect(jsonPath("$.image.download_url").doesNotExist())
+                .andExpect(jsonPath("$.image.length()").value(2))
+                .andExpect(jsonPath("$.author_member_id").doesNotExist())
+                .andExpect(jsonPath("$.status").doesNotExist())
+                .andExpect(jsonPath("$.sealed_at").doesNotExist())
+                .andExpect(jsonPath("$.created_at").doesNotExist())
+                .andExpect(jsonPath("$.media").doesNotExist())
+                .andExpect(jsonPath("$.media_mode").doesNotExist())
+                .andExpect(jsonPath("$.image.slot_no").doesNotExist());
+    }
+
+    @Test
+    void deleteTimeCapsuleEntryReturnsNoContent() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        mockMvc.perform(
+                        delete(
+                                "/api/v1/time-capsule-entries/{entryId}",
+                                1000L
+                        ).header(
+                                "Authorization",
+                                "Bearer access-token"
+                        )
+                )
+                .andExpect(status().isNoContent());
+
+        verify(timeCapsuleEntryService)
+                .deleteTimeCapsuleEntry(7L, 1000L);
     }
 
     @Test

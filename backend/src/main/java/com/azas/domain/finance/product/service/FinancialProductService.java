@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.math.BigDecimal;
 
@@ -32,6 +33,10 @@ public class FinancialProductService {
     private static final int MAX_PAGE_SIZE = 50;
     private static final Set<String> PRODUCT_TYPES = Set.of(
             "SAVING", "DEPOSIT", "ACCOUNT", "CARD", "SUBSCRIPTION"
+    );
+    private static final Map<String, String> PRODUCT_TYPE_ALIASES = Map.of(
+            "DEMAND_DEPOSIT", "ACCOUNT",
+            "SAVINGS", "SAVING"
     );
 
     private final FinancialProductMapper financialProductMapper;
@@ -298,7 +303,11 @@ public class FinancialProductService {
         if (productType == null || productType.isBlank()) {
             return null;
         }
-        String normalized = productType.trim().toUpperCase(Locale.ROOT);
+        String requestedType = productType.trim().toUpperCase(Locale.ROOT);
+        String normalized = PRODUCT_TYPE_ALIASES.getOrDefault(
+                requestedType,
+                requestedType
+        );
         if (!PRODUCT_TYPES.contains(normalized)) {
             throw new BusinessException(ErrorCode.INVALID_QUERY_PARAMETER);
         }

@@ -100,14 +100,22 @@
         FROM time_capsule_entry tce
         INNER JOIN time_capsule tc
             ON tc.time_capsule_id = tce.time_capsule_id
-        INNER JOIN child_parent cp
+           AND tc.status != 'ARCHIVED'
+        INNER JOIN child c
+            ON c.child_id = tc.child_id
+           AND c.status = 'ACTIVE'
+        INNER JOIN member m
+            ON m.member_id = #{memberId}
+           AND m.status = 'ACTIVE'
+        LEFT JOIN child_parent cp
             ON cp.child_id = tc.child_id
            AND cp.member_id = #{memberId}
-        INNER JOIN member m
-            ON m.member_id = cp.member_id
-           AND m.status = 'ACTIVE'
         WHERE tce.time_capsule_entry_id = #{timeCapsuleEntryId}
           AND tce.status != 'DELETED'
+          AND (
+              c.member_id = #{memberId}
+              OR cp.child_parent_id IS NOT NULL
+          )
     </select>
 
     <select id="findOwnedById"
@@ -144,6 +152,7 @@
            AND m.status = 'ACTIVE'
         WHERE tce.time_capsule_entry_id = #{timeCapsuleEntryId}
           AND tce.author_member_id = #{memberId}
+          AND tce.status != 'DELETED'
     </select>
 
     <select id="findOwnedByIdForUpdate"
@@ -180,6 +189,7 @@
            AND m.status = 'ACTIVE'
         WHERE tce.time_capsule_entry_id = #{timeCapsuleEntryId}
           AND tce.author_member_id = #{memberId}
+          AND tce.status != 'DELETED'
         FOR UPDATE
     </select>
 
@@ -262,11 +272,35 @@
           AND status = 'DRAFT'
     </update>
 
-    <update id="markDraftEntryAsDeleted">
+    <update id="markEntryAsDeleted">
         UPDATE time_capsule_entry
         SET status = 'DELETED'
         WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
-          AND status = 'DRAFT'
+          AND status IN ('DRAFT', 'SEALED')
+    </update>
+
+    <update id="recalculateTimeCapsuleAggregates">
+        UPDATE time_capsule
+        SET entry_count = (
+                SELECT COUNT(*)
+                FROM time_capsule_entry
+                WHERE time_capsule_id = #{timeCapsuleId}
+                  AND status = 'SEALED'
+            ),
+            total_contribution_amount = COALESCE((
+                SELECT SUM(contribution_amount)
+                FROM time_capsule_entry
+                WHERE time_capsule_id = #{timeCapsuleId}
+                  AND status = 'SEALED'
+            ), 0),
+            latest_entry_at = (
+                SELECT MAX(contributed_at)
+                FROM time_capsule_entry
+                WHERE time_capsule_id = #{timeCapsuleId}
+                  AND status = 'SEALED'
+            )
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND status = 'COLLECTING'
     </update>
 
     <select id="lockByTimeCapsuleId"
@@ -288,6 +322,21 @@
         FROM time_capsule_entry
         WHERE time_capsule_id = #{timeCapsuleId}
           AND status = 'SEALED'
+    </select>
+
+    <select id="countSealedUpToEntry"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM time_capsule_entry
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND status = 'SEALED'
+          AND (
+              contributed_at &lt; #{contributedAt}
+              OR (
+                  contributed_at = #{contributedAt}
+                  AND time_capsule_entry_id &lt;= #{timeCapsuleEntryId}
+              )
+          )
     </select>
 
     <select id="countPendingMediaByEntryId"

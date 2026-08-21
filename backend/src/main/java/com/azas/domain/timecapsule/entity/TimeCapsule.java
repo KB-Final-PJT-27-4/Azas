@@ -24,11 +24,6 @@ public class TimeCapsule {
     private LocalDateTime latestEntryAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Long financialGoalTemplateId;
-    private String goalName;
-    private BigDecimal goalTargetAmount;
-    private LocalDate goalTargetDate;
-
     public static TimeCapsule create(
             long childId,
             long financialAccountId,

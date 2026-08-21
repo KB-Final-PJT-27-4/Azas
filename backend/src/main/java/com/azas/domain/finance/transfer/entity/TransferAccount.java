@@ -11,7 +11,7 @@ public class TransferAccount {
 
     private Long financialAccountId;
     private Long childId;
-    private Long financialGoalTemplateId;
+    private Long financialGoalId;
     private String bankName;
 
     // 테스트나 Mock 응답에서 사용할 평문 계좌번호
