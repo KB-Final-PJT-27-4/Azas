@@ -1,6 +1,7 @@
 package com.azas.domain.finance.account.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -10,6 +11,7 @@ import java.time.ZoneOffset;
 
 @Getter
 @RequiredArgsConstructor
+@ApiModel(value = "FinancialAccountLinkedAccountResponse")
 public class LinkedAccountResponse {
     @JsonProperty("account_id") private final Long accountId;
     @JsonProperty("owner_type") private final String ownerType;

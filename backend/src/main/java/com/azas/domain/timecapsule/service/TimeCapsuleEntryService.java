@@ -14,6 +14,7 @@ import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
+import com.azas.domain.timecapsule.entity.TimeCapsuleEntryStatus;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMediaType;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMedia;
@@ -47,7 +48,7 @@ public class TimeCapsuleEntryService {
 
     private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
     private static final Duration UPLOAD_URL_VALIDITY = Duration.ofMinutes(15);
-    private static final Duration DOWNLOAD_URL_VALIDITY = Duration.ofMinutes(10);
+    private static final Duration IMAGE_VIEW_URL_VALIDITY = Duration.ofMinutes(10);
     private static final long MAX_IMAGE_FILE_SIZE = 10L * 1024 * 1024;
     private static final int REPRESENTATIVE_IMAGE_SLOT_NO = 1;
 
@@ -91,25 +92,49 @@ public class TimeCapsuleEntryService {
             long requesterMemberId,
             long timeCapsuleEntryId
     ) {
+        if (timeCapsuleEntryId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
         TimeCapsuleEntry entry = getAccessibleTimeCapsuleEntryOrThrow(
                 requesterMemberId,
                 timeCapsuleEntryId
         );
-        LocalDateTime expiresAt = LocalDateTime.now()
-                .plus(DOWNLOAD_URL_VALIDITY);
-        List<TimeCapsuleEntryDetailResponse.MediaResponse> media =
+        TimeCapsule timeCapsule = timeCapsuleMapper.findById(
+                entry.getTimeCapsuleId()
+        );
+        assertReleasedSealedEntry(timeCapsule, entry);
+
+        int entryNumber = timeCapsuleEntryMapper.countSealedUpToEntry(
+                entry.getTimeCapsuleId(),
+                entry.getContributedAt(),
+                entry.getTimeCapsuleEntryId()
+        );
+        int totalEntryCount = timeCapsuleEntryMapper
+                .countSealedByTimeCapsuleId(entry.getTimeCapsuleId());
+        LocalDateTime expiresAt = LocalDateTime.now(SERVICE_ZONE)
+                .plus(IMAGE_VIEW_URL_VALIDITY);
+        TimeCapsuleEntryDetailResponse.ImageResponse image =
                 timeCapsuleMediaMapper
                         .findActiveByEntryId(timeCapsuleEntryId)
                         .stream()
+                        .findFirst()
                         .map(currentMedia ->
-                                toEntryDetailMediaResponse(
+                                toEntryDetailImageResponse(
                                         currentMedia,
                                         expiresAt
                                 )
                         )
-                        .collect(Collectors.toList());
+                        .orElseThrow(() -> new BusinessException(
+                                ErrorCode.TIME_CAPSULE_MEDIA_NOT_FOUND
+                        ));
 
-        return new TimeCapsuleEntryDetailResponse(entry, media);
+        return new TimeCapsuleEntryDetailResponse(
+                entry,
+                entryNumber,
+                totalEntryCount,
+                image
+        );
     }
 
     @Transactional
@@ -117,11 +142,19 @@ public class TimeCapsuleEntryService {
             long requesterMemberId,
             long timeCapsuleEntryId
     ) {
+        if (timeCapsuleEntryId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
         TimeCapsuleEntry entry = getOwnedTimeCapsuleEntryForUpdateOrThrow(
                 requesterMemberId,
                 timeCapsuleEntryId
         );
-        assertDraftEntry(entry);
+        TimeCapsule timeCapsule = getAccessibleTimeCapsuleForUpdateOrThrow(
+                requesterMemberId,
+                entry.getTimeCapsuleId()
+        );
+        assertEntryDeletionAllowed(timeCapsule);
 
         List<TimeCapsuleMedia> media =
                 timeCapsuleMediaMapper.findNotDeletedByEntryIdForUpdate(
@@ -136,9 +169,19 @@ public class TimeCapsuleEntryService {
         if (timeCapsuleMediaMapper.markNotDeletedMediaAsDeleted(
                 timeCapsuleEntryId
         ) != media.size()
-                || timeCapsuleEntryMapper.markDraftEntryAsDeleted(
+                || timeCapsuleEntryMapper.markEntryAsDeleted(
                 timeCapsuleEntryId
         ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
+            );
+        }
+
+        if (entry.getStatus() == TimeCapsuleEntryStatus.SEALED
+                && timeCapsuleEntryMapper
+                .recalculateTimeCapsuleAggregates(
+                        entry.getTimeCapsuleId()
+                ) != 1) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
             );
@@ -316,8 +359,7 @@ public class TimeCapsuleEntryService {
             throw new BusinessException(ErrorCode.TIME_CAPSULE_MEDIA_NOT_FOUND);
         }
 
-        if (entry.getMediaMode() != TimeCapsuleEntryMediaMode.IMAGE
-                || media.getMediaType() != TimeCapsuleMediaType.IMAGE) {
+        if (entry.getMediaMode() != TimeCapsuleEntryMediaMode.IMAGE) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED
             );
@@ -369,6 +411,22 @@ public class TimeCapsuleEntryService {
                 requesterMemberId
         );
 
+        if (timeCapsule == null) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_FOUND);
+        }
+
+        return timeCapsule;
+    }
+
+    private TimeCapsule getAccessibleTimeCapsuleForUpdateOrThrow(
+            long requesterMemberId,
+            long timeCapsuleId
+    ) {
+        TimeCapsule timeCapsule = timeCapsuleMapper
+                .findAccessibleByIdForUpdate(
+                        timeCapsuleId,
+                        requesterMemberId
+                );
         if (timeCapsule == null) {
             throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_FOUND);
         }
@@ -463,6 +521,17 @@ public class TimeCapsuleEntryService {
         }
     }
 
+    private void assertEntryDeletionAllowed(TimeCapsule timeCapsule) {
+        LocalDateTime releaseAt = timeCapsule.getExpectedReleaseAt();
+        if (timeCapsule.getStatus() != TimeCapsuleStatus.COLLECTING
+                || (releaseAt != null
+                && !releaseAt.isAfter(LocalDateTime.now(SERVICE_ZONE)))) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
+            );
+        }
+    }
+
     private TimeCapsuleEntrySummaryResponse toEntrySummaryResponse(
             TimeCapsuleEntry entry
     ) {
@@ -471,32 +540,47 @@ public class TimeCapsuleEntryService {
         }
 
         TimeCapsuleObjectStorage.PresignedUrl presignedUrl =
-                timeCapsuleObjectStorage.createDownloadUrl(
+                timeCapsuleObjectStorage.createViewUrl(
                         entry.getThumbnailObjectKey(),
-                        DOWNLOAD_URL_VALIDITY
+                        IMAGE_VIEW_URL_VALIDITY
                 );
         return TimeCapsuleEntrySummaryResponse.from(
                 entry,
                 presignedUrl.url(),
-                LocalDateTime.now().plus(DOWNLOAD_URL_VALIDITY)
+                LocalDateTime.now().plus(IMAGE_VIEW_URL_VALIDITY)
         );
     }
 
-    private TimeCapsuleEntryDetailResponse.MediaResponse
-    toEntryDetailMediaResponse(
+    private TimeCapsuleEntryDetailResponse.ImageResponse
+    toEntryDetailImageResponse(
             TimeCapsuleMedia media,
             LocalDateTime expiresAt
     ) {
         TimeCapsuleObjectStorage.PresignedUrl presignedUrl =
-                timeCapsuleObjectStorage.createDownloadUrl(
+                timeCapsuleObjectStorage.createViewUrl(
                         media.getObjectKey(),
-                        DOWNLOAD_URL_VALIDITY
+                        IMAGE_VIEW_URL_VALIDITY
                 );
-        return new TimeCapsuleEntryDetailResponse.MediaResponse(
-                media,
+        return new TimeCapsuleEntryDetailResponse.ImageResponse(
                 presignedUrl.url(),
                 expiresAt
         );
+    }
+
+    private void assertReleasedSealedEntry(
+            TimeCapsule timeCapsule,
+            TimeCapsuleEntry entry
+    ) {
+        boolean released = timeCapsule != null
+                && timeCapsule.getStatus() != TimeCapsuleStatus.ARCHIVED
+                && timeCapsule.getExpectedReleaseAt() != null
+                && !timeCapsule.getExpectedReleaseAt()
+                .toLocalDate()
+                .isAfter(LocalDate.now(SERVICE_ZONE));
+
+        if (!released || entry.getStatus() != TimeCapsuleEntryStatus.SEALED) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_RELEASED);
+        }
     }
 
     private void assertDraftEntry(TimeCapsuleEntry entry) {
@@ -521,12 +605,6 @@ public class TimeCapsuleEntryService {
                         entry.getTimeCapsuleEntryId(),
                         TimeCapsuleMediaType.IMAGE
                 );
-        int activeVideoCount =
-                timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
-                        entry.getTimeCapsuleEntryId(),
-                        TimeCapsuleMediaType.VIDEO
-                );
-
         boolean hasRepresentativeImage =
                 entry.getThumbnailObjectKey() != null
                         && !entry.getThumbnailObjectKey().isBlank();
@@ -534,7 +612,6 @@ public class TimeCapsuleEntryService {
         boolean isValid =
                 entry.getMediaMode() == TimeCapsuleEntryMediaMode.IMAGE
                         && activeImageCount == 1
-                        && activeVideoCount == 0
                         && hasRepresentativeImage;
 
         if (!isValid) {

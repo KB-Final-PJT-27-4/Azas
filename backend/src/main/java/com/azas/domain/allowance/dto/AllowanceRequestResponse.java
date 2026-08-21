@@ -2,6 +2,7 @@ package com.azas.domain.allowance.dto;
 
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @AllArgsConstructor
+@ApiModel(value = "AllowancePlanRequestResponse")
 public class AllowanceRequestResponse {
 
     @JsonProperty("allowance_request_id")

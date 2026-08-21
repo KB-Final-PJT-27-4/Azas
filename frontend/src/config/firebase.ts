@@ -1,4 +1,4 @@
-import { getApp, getApps, initializeApp } from 'firebase/app'
+import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app'
 import { getMessaging, isSupported, type Messaging } from 'firebase/messaging'
 
 const firebaseConfig = {
@@ -10,14 +10,37 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig)
+// pushNotifications.ts에서 사용하는 VAPID Key
+export const firebaseVapidKey =
+  import.meta.env.VITE_FIREBASE_VAPID_KEY ?? ''
 
-export const getFirebaseMessaging = async (): Promise<Messaging | null> => {
-  const supported = await isSupported()
+// Firebase 푸시 설정 여부
+export const isFirebaseMessagingConfigured = Boolean(
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId &&
+  firebaseConfig.messagingSenderId &&
+  firebaseConfig.appId &&
+  firebaseVapidKey,
+)
 
-  if (!supported) {
-    return null
-  }
-
-  return getMessaging(firebaseApp)
+// Firebase 앱을 반환하는 함수
+export const getFirebaseApp = (): FirebaseApp => {
+  return getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 }
+
+// 기존 코드에서 이 함수를 사용한다면 유지
+export const getFirebaseMessaging =
+  async (): Promise<Messaging | null> => {
+    if (!isFirebaseMessagingConfigured) {
+      return null
+    }
+
+    const supported = await isSupported()
+
+    if (!supported) {
+      return null
+    }
+
+    return getMessaging(getFirebaseApp())
+  }

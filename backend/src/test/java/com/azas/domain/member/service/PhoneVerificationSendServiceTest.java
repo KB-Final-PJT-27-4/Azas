@@ -10,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -23,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -64,6 +67,9 @@ class PhoneVerificationSendServiceTest {
     @Mock
     private SmsSender smsSender;
 
+    @Mock
+    private Environment environment;
+
     private PhoneVerificationSendService service;
 
     @BeforeEach
@@ -74,7 +80,82 @@ class PhoneVerificationSendServiceTest {
                 phoneNumberProtector,
                 phoneVerificationHasher,
                 verificationCodeGenerator,
-                smsSender
+                smsSender,
+                environment
+        );
+    }
+
+    @Test
+    void usesConfiguredCodeForDemoPhoneNumberInDemoProfile() {
+        configureDemoVerification(
+                NORMALIZED_PHONE_NUMBER,
+                "000000"
+        );
+
+        when(
+                environment.acceptsProfiles(
+                        any(Profiles.class)
+                )
+        ).thenReturn(true);
+
+        assertEquals(
+                "000000",
+                service.resolveVerificationCode(
+                        NORMALIZED_PHONE_NUMBER
+                )
+        );
+
+        verify(verificationCodeGenerator, never())
+                .generate();
+    }
+
+    @Test
+    void generatesRandomCodeForOtherPhoneNumberInDemoProfile() {
+        configureDemoVerification(
+                "01099998888",
+                "000000"
+        );
+
+        when(
+                environment.acceptsProfiles(
+                        any(Profiles.class)
+                )
+        ).thenReturn(true);
+
+        when(
+                verificationCodeGenerator.generate()
+        ).thenReturn(VERIFICATION_CODE);
+
+        assertEquals(
+                VERIFICATION_CODE,
+                service.resolveVerificationCode(
+                        NORMALIZED_PHONE_NUMBER
+                )
+        );
+    }
+
+    @Test
+    void generatesRandomCodeOutsideDemoProfile() {
+        configureDemoVerification(
+                NORMALIZED_PHONE_NUMBER,
+                "000000"
+        );
+
+        when(
+                environment.acceptsProfiles(
+                        any(Profiles.class)
+                )
+        ).thenReturn(false);
+
+        when(
+                verificationCodeGenerator.generate()
+        ).thenReturn(VERIFICATION_CODE);
+
+        assertEquals(
+                VERIFICATION_CODE,
+                service.resolveVerificationCode(
+                        NORMALIZED_PHONE_NUMBER
+                )
         );
     }
 
@@ -368,6 +449,23 @@ class PhoneVerificationSendServiceTest {
                 VERIFICATION_CODE_HASH,
                 now.plusMinutes(3),
                 now
+        );
+    }
+
+    private void configureDemoVerification(
+            String phoneNumber,
+            String code
+    ) {
+        ReflectionTestUtils.setField(
+                service,
+                "demoPhoneNumber",
+                phoneNumber
+        );
+
+        ReflectionTestUtils.setField(
+                service,
+                "demoCode",
+                code
         );
     }
 }

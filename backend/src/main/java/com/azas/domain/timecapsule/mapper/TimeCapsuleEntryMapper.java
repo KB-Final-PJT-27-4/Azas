@@ -31,8 +31,12 @@ public interface TimeCapsuleEntryMapper {
             @Param("memberId") long memberId
     );
 
-    int markDraftEntryAsDeleted(
+    int markEntryAsDeleted(
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId
+    );
+
+    int recalculateTimeCapsuleAggregates(
+            @Param("timeCapsuleId") long timeCapsuleId
     );
 
     List<Long> lockByTimeCapsuleId(
@@ -43,6 +47,12 @@ public interface TimeCapsuleEntryMapper {
 
     int countSealedByTimeCapsuleId(
             @Param("timeCapsuleId") long timeCapsuleId
+    );
+
+    int countSealedUpToEntry(
+            @Param("timeCapsuleId") long timeCapsuleId,
+            @Param("contributedAt") java.time.LocalDateTime contributedAt,
+            @Param("timeCapsuleEntryId") long timeCapsuleEntryId
     );
 
     TimeCapsuleEntry findByTimeCapsuleAndTransactionId(
