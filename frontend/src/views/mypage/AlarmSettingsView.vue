@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { BellRing } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
+import {
+  enablePushNotifications,
+  getPushNotificationStatus,
+  type PushNotificationStatus,
+} from '@/services/pushNotifications'
 
 type AlarmSetting = {
   id: string
@@ -17,6 +23,53 @@ type AlarmGroup = {
 }
 
 const { showToast } = useToast()
+const pushStatus = ref<PushNotificationStatus>('default')
+const isEnablingPush = ref(false)
+
+const pushStatusMessage = computed(() => {
+  switch (pushStatus.value) {
+    case 'enabled':
+      return '이 브라우저에서 푸시 알림을 받고 있어요.'
+    case 'denied':
+      return '브라우저 설정에서 알림 권한을 허용해주세요.'
+    case 'unsupported':
+      return '이 브라우저에서는 푸시 알림을 지원하지 않아요.'
+    case 'not_configured':
+      return 'Firebase Web Push 환경설정이 필요해요.'
+    default:
+      return '알림을 놓치지 않도록 브라우저 알림을 켜보세요.'
+  }
+})
+
+const canEnablePush = computed(
+  () => !['enabled', 'denied', 'unsupported', 'not_configured'].includes(pushStatus.value),
+)
+
+const refreshPushStatus = async () => {
+  pushStatus.value = await getPushNotificationStatus()
+}
+
+const enablePush = async () => {
+  if (!canEnablePush.value || isEnablingPush.value) return
+
+  isEnablingPush.value = true
+  try {
+    await enablePushNotifications()
+    await refreshPushStatus()
+    showToast('푸시 알림이 설정되었습니다.', 'success')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '푸시 알림 설정에 실패했습니다.'
+    showToast(message, 'error')
+    await refreshPushStatus()
+  } finally {
+    isEnablingPush.value = false
+  }
+}
+
+onMounted(() => {
+  void refreshPushStatus()
+})
+
 const alarmGroups = ref<AlarmGroup[]>([
   {
     id: 'finance',
@@ -80,6 +133,35 @@ const saveSettings = () => {
     class="h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] overflow-hidden px-5 pb-20"
   >
     <form class="mt-4" @submit.prevent="saveSettings">
+      <section class="mb-6 rounded-[20px] border border-[#cfe8f3] bg-[#eefaff] p-4">
+        <div class="flex items-center gap-3">
+          <span class="grid size-11 shrink-0 place-items-center rounded-full bg-white text-[var(--color-brand-primary)]">
+            <BellRing :size="22" aria-hidden="true" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <h2 class="text-[15px] font-extrabold">브라우저 푸시 알림</h2>
+            <p class="mt-1 text-[11px] leading-[1.5] text-[var(--color-text-secondary)]">
+              {{ pushStatusMessage }}
+            </p>
+          </div>
+          <button
+            v-if="pushStatus !== 'enabled'"
+            class="h-9 shrink-0 rounded-xl bg-[var(--color-brand-primary)] px-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-[#cbd9df]"
+            type="button"
+            :disabled="!canEnablePush || isEnablingPush"
+            @click="enablePush"
+          >
+            {{ isEnablingPush ? '설정 중' : '알림 켜기' }}
+          </button>
+          <span
+            v-else
+            class="shrink-0 rounded-full bg-white px-3 py-2 text-xs font-bold text-[var(--color-selected-text)]"
+          >
+            사용 중
+          </span>
+        </div>
+      </section>
+
       <section
         v-for="(group, groupIndex) in alarmGroups"
         :key="group.id"

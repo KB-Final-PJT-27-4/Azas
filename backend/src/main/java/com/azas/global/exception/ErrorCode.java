@@ -387,6 +387,14 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "알림 수신 설정이 올바르지 않습니다."
     ),
+    INVALID_PUSH_DEVICE_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "푸시 기기 요청이 올바르지 않습니다."
+    ),
+    PUSH_DEVICE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "등록된 푸시 기기를 찾을 수 없습니다."
+    ),
     PREGNANCY_STATUS_NOT_AVAILABLE(
             HttpStatus.CONFLICT,
             "출산 예정 상태인 자녀만 임신 주차를 조회할 수 있습니다."
