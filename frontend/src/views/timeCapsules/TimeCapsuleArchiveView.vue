@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Check, Plus, X } from 'lucide-vue-next'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
 import lockImage from '@/assets/images/timeCapsules/archive/lock.png'
 import archiveBackgroundImage from '@/assets/images/timeCapsules/archive/new-bg.png'
-import openImage from '@/assets/images/timeCapsules/archive/open.png'
 import bornBabyPigImage from '@/assets/images/timeCapsules/archive/born-baby-pig.png'
+import unlockClosedShackleImage from '@/assets/images/timeCapsules/unlock/closed-shackle.png'
+import unlockLockBodyImage from '@/assets/images/timeCapsules/unlock/lock-body.png'
+import unlockOpenShackleImage from '@/assets/images/timeCapsules/unlock/open-shackle.png'
+import unlockPigQuestionImage from '@/assets/images/timeCapsules/unlock/pig-question.png'
+import unlockPigSurprisedImage from '@/assets/images/timeCapsules/unlock/pig-surprised.png'
 import avocadoImage from '@/assets/images/pregnancy/avocado.png'
 import bananaImage from '@/assets/images/pregnancy/banana.png'
 import blueberryImage from '@/assets/images/pregnancy/blueberry.png'
@@ -26,6 +30,37 @@ import { resolveCurrentChildId } from '@/api/context'
 
 const router = useRouter()
 const { showToast } = useToast()
+
+type CapsuleAccount = {
+  id: number
+  name: string
+  createdAt: string
+  savedAmount: number
+  dDay?: number
+  isFree?: boolean
+}
+
+type UnlockPhase =
+  | 'idle'
+  | 'centering'
+  | 'emerging'
+  | 'flashing'
+  | 'revealing'
+  | 'ready'
+  | 'unlocked'
+  | 'glow'
+  | 'leaving'
+
+type UnlockCardRect = {
+  left: number
+  top: number
+  width: number
+  height: number
+  dx: number
+  dy: number
+  scale: number
+}
+
 const isPageLeaving = ref(false)
 const isLoading = ref(true)
 const isFreeCapsuleSheetOpen = ref(false)
@@ -38,8 +73,17 @@ const isFreeCapsuleCreated = ref(false)
 const registration = ref<{ birthDate: string; childName: string } | null>(null)
 const childId = ref<number | null>(null)
 const demandAccountId = ref<number | null>(null)
-const capsuleAccounts = ref<Array<{ id: number; name: string; createdAt: string; savedAmount: number; dDay?: number; isFree?: boolean }>>([])
+const capsuleAccounts = ref<CapsuleAccount[]>([])
 const archiveChildName = computed(() => registration.value?.childName.trim() || '아이')
+const unlockPhase = ref<UnlockPhase>('idle')
+const unlockSelectedCapsule = ref<CapsuleAccount | null>(null)
+const unlockCardRect = ref<UnlockCardRect | null>(null)
+const isUnlockCardCentered = ref(false)
+const unlockTimers: number[] = []
+const UNLOCK_CARD_CENTER_MS = 900
+const UNLOCK_LOCK_EMERGE_MS = 1000
+const UNLOCK_WHITE_FLASH_MS = 700
+const UNLOCK_REVEAL_FADE_MS = 800
 
 const pregnancyStages = [
   { week: 7, fruit: '블루베리', image: blueberryImage, color: '#777bdc' },
@@ -155,6 +199,47 @@ const formattedFreeOpenDate = computed(() => {
   const [year, month, day] = freeCapsuleOpenDate.value.split('-')
   return `${year}.${month}.${day}`
 })
+
+const isUnlockOverlayOpen = computed(() => unlockPhase.value !== 'idle')
+const unlockStatusText = computed(() => {
+  return '자물쇠를 눌러보세요'
+})
+const unlockCardStyle = computed(() => {
+  if (!unlockCardRect.value) return undefined
+
+  return {
+    left: `${unlockCardRect.value.left}px`,
+    top: `${unlockCardRect.value.top}px`,
+    width: `${unlockCardRect.value.width}px`,
+    height: `${unlockCardRect.value.height}px`,
+    '--unlock-card-x': `${unlockCardRect.value.dx}px`,
+    '--unlock-card-y': `${unlockCardRect.value.dy}px`,
+    '--unlock-card-scale': String(unlockCardRect.value.scale),
+  }
+})
+
+const scheduleUnlockTimer = (callback: () => void, delay: number) => {
+  const timer = window.setTimeout(() => {
+    const index = unlockTimers.indexOf(timer)
+    if (index >= 0) unlockTimers.splice(index, 1)
+    callback()
+  }, delay)
+  unlockTimers.push(timer)
+  return timer
+}
+
+const waitUnlock = (delay: number) =>
+  new Promise<void>((resolve) => {
+    scheduleUnlockTimer(resolve, delay)
+  })
+
+const resetUnlockFlow = () => {
+  unlockTimers.splice(0).forEach((timer) => window.clearTimeout(timer))
+  unlockPhase.value = 'idle'
+  unlockSelectedCapsule.value = null
+  unlockCardRect.value = null
+  isUnlockCardCentered.value = false
+}
 const closeFreeCapsuleSheet = () => {
   freeCapsuleSheetOffset.value = 0
   isFreeCapsuleSheetDragging.value = false
@@ -240,13 +325,14 @@ const openFreeCapsuleList = () => {
   })
 }
 
-const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean }) => {
+const openCapsule = (capsule: CapsuleAccount, event: MouseEvent) => {
   if (!capsule.isFree) {
-    navigateForward(
-      isCapsuleReleased(capsule)
-        ? `/time-capsules/${capsule.id}/open`
-        : `/time-capsules/${capsule.id}`,
-    )
+    if (isCapsuleReleased(capsule)) {
+      startUnlockFlow(capsule, event)
+      return
+    }
+
+    navigateForward(`/time-capsules/${capsule.id}`)
     return
   }
   if (!isFreeCapsuleCreated.value) {
@@ -261,6 +347,75 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
     ? isFreeCapsuleCreated.value && isReleased(capsule.createdAt)
     : isReleased(capsule.createdAt)
 
+const startUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
+  if (isUnlockOverlayOpen.value) return
+
+  const currentTarget = event.currentTarget as HTMLElement
+  const sourceElement = currentTarget.closest('article') ?? currentTarget
+  const rect = sourceElement.getBoundingClientRect()
+  const targetCardWidth = Math.min(window.innerWidth * 0.88, window.innerHeight * 0.48, 420)
+  const targetCardScale = Math.max(1.22, targetCardWidth / rect.width)
+
+  unlockSelectedCapsule.value = capsule
+  unlockPhase.value = 'centering'
+  unlockCardRect.value = {
+    left: rect.left,
+    top: rect.top,
+    width: rect.width,
+    height: rect.height,
+    dx: window.innerWidth / 2 - rect.left - rect.width / 2,
+    dy: window.innerHeight / 2 - rect.top - rect.height / 2,
+    scale: targetCardScale,
+  }
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      isUnlockCardCentered.value = true
+    })
+  })
+
+  scheduleUnlockTimer(() => {
+    if (unlockPhase.value === 'centering') unlockPhase.value = 'emerging'
+  }, UNLOCK_CARD_CENTER_MS)
+
+  scheduleUnlockTimer(() => {
+    if (unlockPhase.value === 'emerging') unlockPhase.value = 'flashing'
+  }, UNLOCK_CARD_CENTER_MS + UNLOCK_LOCK_EMERGE_MS)
+
+  scheduleUnlockTimer(
+    () => {
+      if (unlockPhase.value === 'flashing') unlockPhase.value = 'revealing'
+    },
+    UNLOCK_CARD_CENTER_MS + UNLOCK_LOCK_EMERGE_MS + UNLOCK_WHITE_FLASH_MS,
+  )
+
+  scheduleUnlockTimer(
+    () => {
+      if (unlockPhase.value === 'revealing') unlockPhase.value = 'ready'
+    },
+    UNLOCK_CARD_CENTER_MS + UNLOCK_LOCK_EMERGE_MS + UNLOCK_WHITE_FLASH_MS + UNLOCK_REVEAL_FADE_MS,
+  )
+}
+
+const completeUnlockFlow = async () => {
+  if (unlockPhase.value !== 'ready') return
+
+  unlockPhase.value = 'unlocked'
+  await waitUnlock(980)
+  unlockPhase.value = 'glow'
+  await waitUnlock(620)
+  unlockPhase.value = 'leaving'
+  await waitUnlock(760)
+
+  const capsule = unlockSelectedCapsule.value
+  resetUnlockFlow()
+  if (capsule) await navigateForward(`/time-capsules/${capsule.id}/open`)
+}
+
+onBeforeUnmount(() => {
+  resetUnlockFlow()
+})
+
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
@@ -273,7 +428,10 @@ onMounted(async () => {
       birthDate: child.birth_date ?? child.expected_birth_date ?? '',
       childName: child.name ?? '아이',
     }
-    demandAccountId.value = accounts.accounts.find(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')?.account_id ?? null
+    demandAccountId.value =
+      accounts.accounts.find(
+        ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
+      )?.account_id ?? null
     capsuleAccounts.value = (capsules.time_capsules ?? []).map((capsule) => ({
       id: capsule.time_capsule_id ?? 0,
       name: capsule.title ?? '타임캡슐',
@@ -365,9 +523,7 @@ onMounted(async () => {
             :aria-label="`${bornBabyGrowth.childName}가 태어난 지 ${bornBabyGrowth.daysSinceBirth}일째`"
           >
             <div class="absolute right-[116px] bottom-14 z-10 whitespace-nowrap text-right">
-              <span
-                class="block text-[10px] font-semibold text-[var(--color-text-secondary)]"
-              >
+              <span class="block text-[10px] font-semibold text-[var(--color-text-secondary)]">
                 태어난 지
               </span>
               <strong
@@ -481,7 +637,7 @@ onMounted(async () => {
         <button
           class="block w-full text-left transition-transform active:scale-[0.98]"
           type="button"
-          @click="openCapsule(capsule)"
+          @click="openCapsule(capsule, $event)"
         >
           <span
             class="relative grid aspect-[4/3] place-items-center rounded-xl"
@@ -496,8 +652,8 @@ onMounted(async () => {
             </span>
             <img
               class="h-16 w-20 object-contain"
-              :src="isCapsuleReleased(capsule) ? openImage : lockImage"
-              :alt="isCapsuleReleased(capsule) ? '열린 타임캡슐' : '잠긴 타임캡슐'"
+              :src="lockImage"
+              :alt="isCapsuleReleased(capsule) ? '열 수 있는 잠긴 타임캡슐' : '잠긴 타임캡슐'"
             />
           </span>
           <strong class="mt-4 block truncate text-base text-[var(--color-text-primary)]">
@@ -536,6 +692,178 @@ onMounted(async () => {
     </Teleport>
 
     <Teleport to="body">
+      <Transition name="unlock-overlay">
+        <div
+          v-if="isUnlockOverlayOpen"
+          class="time-capsule-unlock fixed inset-0 z-[var(--z-index-overlay)] overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="unlock-title"
+        >
+          <div
+            class="time-capsule-unlock__backdrop absolute inset-0"
+            :class="isUnlockCardCentered ? 'time-capsule-unlock__backdrop--active' : ''"
+          ></div>
+          <div
+            v-if="unlockPhase === 'flashing' || unlockPhase === 'revealing'"
+            class="unlock-white-flash absolute inset-0"
+            :class="unlockPhase === 'revealing' ? 'unlock-white-flash--leaving' : ''"
+            aria-hidden="true"
+          ></div>
+
+          <article
+            v-if="unlockSelectedCapsule && unlockCardStyle"
+            class="unlock-card-copy"
+            :class="[
+              isUnlockCardCentered ? 'unlock-card-copy--centered' : '',
+              unlockPhase === 'emerging' ||
+              unlockPhase === 'flashing' ||
+              unlockPhase === 'revealing'
+                ? 'unlock-card-copy--expanded'
+                : '',
+              unlockPhase !== 'centering' && unlockPhase !== 'emerging'
+                ? 'unlock-card-copy--soft-hidden'
+                : '',
+            ]"
+            :style="unlockCardStyle"
+            aria-hidden="true"
+          >
+            <span
+              class="relative grid aspect-[4/3] place-items-center rounded-xl"
+              :class="isCapsuleReleased(unlockSelectedCapsule) ? 'bg-[#ecfaff]' : 'bg-[#f0f3f5]'"
+            >
+              <img
+                class="unlock-card-copy__lock h-16 w-20 object-contain"
+                :src="lockImage"
+                alt=""
+              />
+            </span>
+            <strong class="mt-4 block truncate text-base text-[var(--color-text-primary)]">
+              {{ unlockSelectedCapsule.name }}
+            </strong>
+            <time class="mt-1 block text-xs text-[var(--color-text-secondary)]">
+              {{ unlockSelectedCapsule.createdAt }}
+            </time>
+            <p class="mt-3 text-xs font-bold text-[var(--color-selected-text)]">
+              저축 금액 {{ unlockSelectedCapsule.savedAmount.toLocaleString('ko-KR') }}원
+            </p>
+          </article>
+
+          <Transition name="unlock-lock">
+            <section
+              v-if="
+                unlockPhase !== 'centering' &&
+                unlockPhase !== 'emerging' &&
+                unlockPhase !== 'flashing'
+              "
+              class="unlock-panel absolute inset-0 px-5"
+              :class="[
+                unlockPhase === 'revealing' ? 'unlock-panel--revealing' : '',
+                unlockPhase === 'ready' ? 'unlock-panel--tap-ready' : '',
+                unlockPhase === 'glow' || unlockPhase === 'leaving' ? 'unlock-panel--glow' : '',
+                unlockPhase === 'leaving' ? 'unlock-panel--leaving' : '',
+              ]"
+            >
+              <div
+                class="unlock-light"
+                :class="
+                  unlockPhase === 'unlocked' || unlockPhase === 'glow' || unlockPhase === 'leaving'
+                    ? 'unlock-light--warm'
+                    : ''
+                "
+                aria-hidden="true"
+              ></div>
+
+              <button
+                class="unlock-lock-stack"
+                :class="[
+                  unlockPhase === 'revealing' ? 'unlock-lock-stack--revealing' : '',
+                  unlockPhase === 'ready' ? 'unlock-lock-stack--ready' : '',
+                  unlockPhase === 'unlocked' ? 'unlock-lock-stack--opening' : '',
+                ]"
+                type="button"
+                aria-label="타임캡슐 자물쇠 열기"
+                @pointerdown="completeUnlockFlow"
+                @click="completeUnlockFlow"
+                @keydown.enter.prevent="completeUnlockFlow"
+                @keydown.space.prevent="completeUnlockFlow"
+              >
+                <img
+                  class="unlock-layer unlock-shackle unlock-shackle--closed"
+                  :class="
+                    unlockPhase === 'unlocked' ||
+                    unlockPhase === 'glow' ||
+                    unlockPhase === 'leaving'
+                      ? 'unlock-shackle--hidden'
+                      : ''
+                  "
+                  :src="unlockClosedShackleImage"
+                  alt=""
+                />
+                <img
+                  class="unlock-layer unlock-shackle unlock-shackle--open"
+                  :class="
+                    unlockPhase === 'unlocked' ||
+                    unlockPhase === 'glow' ||
+                    unlockPhase === 'leaving'
+                      ? 'unlock-shackle--visible'
+                      : ''
+                  "
+                  :src="unlockOpenShackleImage"
+                  alt=""
+                />
+                <img
+                  class="unlock-layer unlock-lock-body"
+                  :src="unlockLockBodyImage"
+                  alt="닫힌 자물쇠"
+                />
+                <img
+                  class="unlock-layer unlock-pig unlock-pig--question"
+                  :class="[
+                    unlockPhase === 'unlocked' ||
+                    unlockPhase === 'glow' ||
+                    unlockPhase === 'leaving'
+                      ? 'unlock-pig--hidden'
+                      : '',
+                  ]"
+                  :src="unlockPigQuestionImage"
+                  alt=""
+                />
+                <img
+                  class="unlock-layer unlock-pig unlock-pig--surprised"
+                  :class="[
+                    unlockPhase === 'unlocked' ||
+                    unlockPhase === 'glow' ||
+                    unlockPhase === 'leaving'
+                      ? 'unlock-pig--visible'
+                      : '',
+                  ]"
+                  :src="unlockPigSurprisedImage"
+                  alt=""
+                />
+              </button>
+
+              <div class="unlock-copy text-center">
+                <h2
+                  id="unlock-title"
+                  class="text-[22px] leading-7 font-bold tracking-[-0.03em] text-[var(--color-text-primary)]"
+                >
+                  타임캡슐을 열어볼까요?
+                </h2>
+                <p
+                  v-if="unlockPhase === 'ready'"
+                  class="mt-2 min-h-[40px] text-sm leading-5 text-[var(--color-text-secondary)]"
+                >
+                  {{ unlockStatusText }}
+                </p>
+              </div>
+            </section>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
       <Transition name="free-capsule-sheet">
         <div
           v-if="isFreeCapsuleSheetOpen"
@@ -545,7 +873,11 @@ onMounted(async () => {
           <section
             class="free-capsule-panel w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]"
             :class="isFreeCapsuleSheetDragging ? 'free-capsule-panel--dragging' : ''"
-            :style="freeCapsuleSheetOffset ? { transform: `translateY(${freeCapsuleSheetOffset}px)` } : undefined"
+            :style="
+              freeCapsuleSheetOffset
+                ? { transform: `translateY(${freeCapsuleSheetOffset}px)` }
+                : undefined
+            "
             role="dialog"
             aria-modal="true"
             aria-labelledby="free-capsule-title"
@@ -783,6 +1115,362 @@ onMounted(async () => {
   }
 }
 
+.time-capsule-unlock {
+  touch-action: none;
+}
+
+.time-capsule-unlock__backdrop {
+  background:
+    linear-gradient(180deg, rgb(230 247 255 / 96%) 0%, rgb(249 253 255 / 98%) 52%, #ffffff 100%),
+    #f3fbff;
+  transition: opacity 360ms ease;
+}
+
+.time-capsule-unlock__backdrop--active {
+  opacity: 1;
+}
+
+.unlock-white-flash {
+  z-index: 4;
+  pointer-events: none;
+  background: #fff;
+  opacity: 0;
+  animation: unlock-white-flash-in 800ms ease-out both;
+}
+
+.unlock-white-flash--leaving {
+  animation: unlock-white-flash-out 800ms ease-in both;
+}
+
+.unlock-card-copy {
+  position: fixed;
+  z-index: 1;
+  padding: 12px;
+  overflow: hidden;
+  pointer-events: none;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: center;
+  transition:
+    transform 860ms cubic-bezier(0.2, 0.86, 0.2, 1),
+    opacity 1200ms ease;
+}
+
+.unlock-card-copy--centered {
+  transform: translate3d(var(--unlock-card-x), var(--unlock-card-y), 0) scale(1.04);
+}
+
+.unlock-card-copy--expanded {
+  transform: translate3d(var(--unlock-card-x), var(--unlock-card-y), 0)
+    scale(var(--unlock-card-scale));
+  transition:
+    transform 2500ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1200ms ease;
+}
+
+.unlock-card-copy--soft-hidden {
+  opacity: 0;
+}
+
+.unlock-panel {
+  --unlock-size: min(94vw, 58dvh, 520px);
+  --unlock-x: -60%;
+
+  z-index: 2;
+  cursor: default;
+  transition:
+    opacity 520ms ease,
+    transform 520ms cubic-bezier(0.2, 0.86, 0.2, 1);
+}
+
+.unlock-panel--tap-ready {
+  cursor: pointer;
+}
+
+.unlock-panel--revealing .unlock-copy {
+  opacity: 0;
+}
+
+.unlock-panel--glow .unlock-lock-stack {
+  animation: unlock-lock-warm-pop 620ms ease-out both;
+}
+
+.unlock-copy {
+  position: absolute;
+  top: calc(50% + (var(--unlock-size) * 0.36) + 34px);
+  right: 20px;
+  left: 20px;
+  z-index: 2;
+}
+
+.unlock-light {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 0;
+  width: max(142vw, 142dvh);
+  aspect-ratio: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgb(255 246 216 / 92%) 0%,
+    rgb(255 236 184 / 72%) 34%,
+    rgb(255 248 226 / 44%) 58%,
+    rgb(255 255 255 / 0%) 78%
+  );
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.48);
+}
+
+.unlock-light--warm {
+  animation: unlock-warm-light 2.15s ease-out both;
+}
+
+.unlock-panel--leaving {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.unlock-lock-stack {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: block;
+  width: var(--unlock-size);
+  padding: 0;
+  aspect-ratio: 1;
+  background: transparent;
+  border: 0;
+  cursor: default;
+  transform: translate(var(--unlock-x), -50%);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 260ms ease;
+}
+
+.unlock-lock-stack--ready {
+  cursor: pointer;
+  animation: unlock-lock-settle 420ms cubic-bezier(0.2, 0.86, 0.2, 1) both;
+}
+
+.unlock-lock-stack--ready:active {
+  transform: translate(var(--unlock-x), -50%) scale(0.992);
+  animation: unlock-press-shake 520ms ease-in-out;
+}
+
+.unlock-lock-stack--revealing {
+  animation: unlock-lock-reveal 800ms ease-out both;
+}
+
+.unlock-lock-stack--revealing .unlock-shackle--closed,
+.unlock-lock-stack--revealing .unlock-lock-body,
+.unlock-lock-stack--revealing .unlock-pig--question {
+  animation: unlock-layer-fade-in 800ms ease-out both;
+}
+
+.unlock-lock-stack--opening {
+  animation: unlock-press-shake 620ms ease-in-out;
+}
+
+.unlock-lock-stack:focus-visible {
+  border-radius: 28px;
+  outline: 3px solid rgb(147 201 245 / 82%);
+  outline-offset: 6px;
+}
+
+.unlock-layer {
+  position: absolute;
+  display: block;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  transition:
+    opacity 260ms ease,
+    transform 560ms cubic-bezier(0.2, 0.86, 0.2, 1);
+}
+
+.unlock-lock-body {
+  z-index: 2;
+  top: 35.65%;
+  left: 36.76%;
+  width: 45.3%;
+}
+
+.unlock-shackle {
+  z-index: 1;
+}
+
+.unlock-shackle--closed {
+  top: 12.52%;
+  left: 42.19%;
+  width: 34.61%;
+  opacity: 1;
+}
+
+.unlock-shackle--open {
+  top: 10.61%;
+  left: 45.61%;
+  width: 38.52%;
+  opacity: 0;
+  transform: translate(-10%, 7%) rotate(-12deg) scale(0.96);
+  transform-origin: 18% 78%;
+}
+
+.unlock-shackle--hidden {
+  opacity: 0;
+  transform: translate(-5%, 4%) rotate(-4deg) scale(0.98);
+}
+
+.unlock-shackle--visible {
+  opacity: 1;
+  transform: translate(0, 0) rotate(0) scale(1);
+}
+
+.unlock-pig {
+  z-index: 3;
+}
+
+.unlock-pig--question {
+  top: 27.35%;
+  left: 25.52%;
+  width: 26.08%;
+  opacity: 1;
+}
+
+.unlock-pig--surprised {
+  top: 27.11%;
+  left: 26.95%;
+  width: 26.08%;
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+.unlock-pig--hidden {
+  opacity: 0;
+}
+
+.unlock-pig--visible {
+  opacity: 1;
+  transform: translateY(-2%) scale(1.04);
+}
+
+.unlock-overlay-enter-active,
+.unlock-overlay-leave-active {
+  transition: opacity 260ms ease;
+}
+
+.unlock-overlay-enter-from,
+.unlock-overlay-leave-to {
+  opacity: 0;
+}
+
+.unlock-lock-enter-active {
+  transition:
+    opacity 480ms ease,
+    transform 560ms cubic-bezier(0.2, 0.86, 0.2, 1);
+}
+
+.unlock-lock-enter-from {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+@keyframes unlock-lock-warm-pop {
+  0%,
+  100% {
+    transform: translate(var(--unlock-x), -50%) scale(1);
+  }
+  44% {
+    transform: translate(var(--unlock-x), -50%) scale(1.018);
+  }
+}
+
+@keyframes unlock-lock-reveal {
+  0%,
+  100% {
+    transform: translate(var(--unlock-x), -50%) scale(1);
+  }
+}
+
+@keyframes unlock-white-flash-in {
+  0% {
+    opacity: 0;
+  }
+  72%,
+  100% {
+    opacity: 0.98;
+  }
+}
+
+@keyframes unlock-white-flash-out {
+  0% {
+    opacity: 0.98;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes unlock-layer-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes unlock-lock-settle {
+  0% {
+    transform: translate(var(--unlock-x), -50%) scale(0.98);
+  }
+  100% {
+    transform: translate(var(--unlock-x), -50%) scale(1);
+  }
+}
+
+@keyframes unlock-press-shake {
+  0%,
+  100% {
+    transform: translate(var(--unlock-x), -50%) rotate(0) scale(1);
+  }
+  14% {
+    transform: translate(calc(var(--unlock-x) - 3px), -50%) rotate(-0.8deg) scale(0.998);
+  }
+  28% {
+    transform: translate(calc(var(--unlock-x) + 3px), -50%) rotate(0.8deg) scale(1.004);
+  }
+  42% {
+    transform: translate(calc(var(--unlock-x) - 2px), -50%) rotate(-0.45deg) scale(1.006);
+  }
+  60% {
+    transform: translate(calc(var(--unlock-x) + 1px), -50%) rotate(0.25deg) scale(1.01);
+  }
+}
+
+@keyframes unlock-warm-light {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.38);
+  }
+  22% {
+    opacity: 0.98;
+    transform: translate(-50%, -50%) scale(0.84);
+  }
+  54% {
+    opacity: 0.78;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.24);
+  }
+}
+
 .free-capsule-date-picker :deep(> button) {
   height: 52px;
   font-size: 14px;
@@ -837,6 +1525,27 @@ onMounted(async () => {
   .free-capsule-sheet-enter-active .free-capsule-panel,
   .free-capsule-sheet-leave-active .free-capsule-panel {
     transition-duration: 1ms;
+  }
+  .time-capsule-unlock__backdrop,
+  .unlock-white-flash,
+  .unlock-card-copy,
+  .unlock-panel,
+  .unlock-layer,
+  .unlock-overlay-enter-active,
+  .unlock-overlay-leave-active,
+  .unlock-lock-enter-active {
+    transition-duration: 1ms;
+  }
+  .unlock-panel--glow .unlock-lock-stack,
+  .unlock-lock-stack--ready,
+  .unlock-lock-stack--revealing,
+  .unlock-lock-stack--opening,
+  .unlock-lock-stack--revealing .unlock-shackle--closed,
+  .unlock-lock-stack--revealing .unlock-lock-body,
+  .unlock-lock-stack--revealing .unlock-pig--question,
+  .unlock-white-flash,
+  .unlock-light--warm {
+    animation-duration: 1ms;
   }
 }
 </style>
