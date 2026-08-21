@@ -424,19 +424,16 @@ public class AutoTransferRetryServiceImpl
                         memberId
                 )
                         && "ACTIVE".equals(source.getAccountStatus())
+                        && "DEMAND_DEPOSIT".equals(
+                        source.getAccountProductType()
+                )
                         && "ACTIVE".equals(source.getLinkStatus());
 
         if (!validSource) {
             return "출금 계좌가 비활성화되었거나 연결이 해제되었습니다.";
         }
 
-        boolean validDestination =
-                "CHILD".equals(destination.getOwnerType())
-                        && Objects.equals(
-                        destination.getChildId(),
-                        schedule.getChildId()
-                )
-                        && "SAVINGS".equals(
+        boolean validDestination = "SAVINGS".equals(
                         destination.getAccountProductType()
                 )
                         && "ACTIVE".equals(
@@ -446,7 +443,18 @@ public class AutoTransferRetryServiceImpl
                         destination.getLinkStatus()
                 );
 
-        if (!validDestination) {
+        boolean destinationAccessAllowed =
+                ("PARENT".equals(destination.getOwnerType())
+                        && Objects.equals(
+                        destination.getOwnerMemberId(), memberId
+                )
+                        && schedule.getChildId() == null)
+                        || ("CHILD".equals(destination.getOwnerType())
+                        && Objects.equals(
+                        destination.getChildId(), schedule.getChildId()
+                ));
+
+        if (!validDestination || !destinationAccessAllowed) {
             return "입금 계좌가 비활성화되었거나 연결이 해제되었습니다.";
         }
 
@@ -457,7 +465,8 @@ public class AutoTransferRetryServiceImpl
             Long memberId,
             AutoTransferScheduleRow schedule
     ) {
-        if (scheduleMapper.countChildAccess(
+        if (schedule.getChildId() != null
+                && scheduleMapper.countChildAccess(
                 schedule.getChildId(),
                 memberId
         ) <= 0) {

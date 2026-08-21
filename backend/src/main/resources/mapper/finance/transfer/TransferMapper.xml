@@ -22,15 +22,20 @@
     <select id="findSourceAccountForUpdate"
             resultType="com.azas.domain.finance.transfer.entity.TransferAccount">
         SELECT fa.financial_account_id AS financialAccountId,
+               fa.owner_type AS ownerType,
+               fa.owner_member_id AS ownerMemberId,
                fa.bank_name AS bankName,
                fa.account_number_ciphertext AS accountNumberCiphertext,
                fa.account_name AS accountName,
                fa.account_product_type AS accountProductType,
+               fa.account_status AS accountStatus,
+               fa.link_status AS linkStatus,
                fa.balance AS balance
         FROM financial_account fa
         WHERE fa.financial_account_id = #{accountId}
           AND fa.owner_member_id = #{memberId}
           AND fa.owner_type = 'PARENT'
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
           AND fa.account_status = 'ACTIVE'
           AND fa.link_status = 'ACTIVE'
             FOR UPDATE
@@ -39,24 +44,17 @@
             resultType="com.azas.domain.finance.transfer.entity.TransferAccount">
         SELECT fa.financial_account_id AS financialAccountId,
                fa.child_id AS childId,
-               fga.financial_goal_id AS financialGoalId,
+               fa.owner_type AS ownerType,
+               fa.owner_member_id AS ownerMemberId,
                fa.bank_name AS bankName,
                fa.account_number_ciphertext AS accountNumberCiphertext,
                fa.account_name AS accountName,
                fa.account_product_type AS accountProductType,
+               fa.account_status AS accountStatus,
+               fa.link_status AS linkStatus,
                fa.balance AS balance
         FROM financial_account fa
-        INNER JOIN financial_goal_account fga
-            ON fga.financial_account_id = fa.financial_account_id
-        INNER JOIN financial_goal fg
-            ON fg.financial_goal_id = fga.financial_goal_id
-           AND fg.status IN ('ACTIVE', 'ACHIEVED')
         WHERE fa.financial_account_id = #{accountId}
-          AND fa.owner_type = 'CHILD'
-          AND fa.child_id IS NOT NULL
-          AND fa.account_product_type = 'SAVINGS'
-          AND fa.account_status = 'ACTIVE'
-          AND fa.link_status = 'ACTIVE'
             FOR UPDATE
     </select>
 
@@ -161,9 +159,6 @@
                ft.requested_at AS requestedAt,
                ft.completed_at AS completedAt
         FROM financial_transfer ft
-                 INNER JOIN child c
-                            ON c.child_id = ft.child_id
-                                AND c.status = 'ACTIVE'
                  INNER JOIN financial_account dst
                             ON dst.financial_account_id = ft.destination_account_id
                  LEFT JOIN financial_goal_account fga
@@ -271,9 +266,6 @@
         dst.account_name AS destinationAccountName,
         dst.account_number_ciphertext AS destinationAccountNumberCiphertext
         FROM financial_transfer ft
-        INNER JOIN child c
-        ON c.child_id = ft.child_id
-        AND c.status = 'ACTIVE'
         INNER JOIN financial_account src
         ON src.financial_account_id = ft.source_account_id
         INNER JOIN financial_account dst
