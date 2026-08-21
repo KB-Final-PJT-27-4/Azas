@@ -43,6 +43,8 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -165,6 +167,27 @@ class TimeCapsuleEntryControllerTest {
                 .andExpect(jsonPath("$.media_mode").doesNotExist())
                 .andExpect(jsonPath("$.media.slot_no").doesNotExist())
                 .andExpect(jsonPath("$.media[0]").doesNotExist());
+    }
+
+    @Test
+    void deleteTimeCapsuleEntryReturnsNoContent() throws Exception {
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+
+        mockMvc.perform(
+                        delete(
+                                "/api/v1/time-capsule-entries/{entryId}",
+                                1000L
+                        ).header(
+                                "Authorization",
+                                "Bearer access-token"
+                        )
+                )
+                .andExpect(status().isNoContent());
+
+        verify(timeCapsuleEntryService)
+                .deleteTimeCapsuleEntry(7L, 1000L);
     }
 
     @Test

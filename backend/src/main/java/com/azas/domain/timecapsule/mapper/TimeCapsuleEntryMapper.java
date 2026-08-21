@@ -31,8 +31,12 @@ public interface TimeCapsuleEntryMapper {
             @Param("memberId") long memberId
     );
 
-    int markDraftEntryAsDeleted(
+    int markEntryAsDeleted(
             @Param("timeCapsuleEntryId") long timeCapsuleEntryId
+    );
+
+    int recalculateTimeCapsuleAggregates(
+            @Param("timeCapsuleId") long timeCapsuleId
     );
 
     List<Long> lockByTimeCapsuleId(
