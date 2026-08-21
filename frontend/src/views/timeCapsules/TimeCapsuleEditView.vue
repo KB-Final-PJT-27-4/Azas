@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AlertTriangle, Check, ChevronDown, ImagePlus, Landmark, Trash2, X } from 'lucide-vue-next'
-import {
-  findTimeCapsuleRecord,
-  timeCapsuleAccounts,
-  type TimeCapsulePhoto,
-} from '@/data/timeCapsuleDummyData'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+
+type TimeCapsulePhoto = { src: string; orientation: 'landscape' | 'portrait'; type?: 'image' | 'video' }
+type EditRecord = { id: number; title: string; date: string; amount: number; transferName: string; letter: string; photos: TimeCapsulePhoto[]; thumbnail: string; remainingEdits: number }
+type EditAccount = { id: number; accountId: number; name: string; bankName: string; accountNumber: string; records: EditRecord[] }
 
 type EditMedia = TimeCapsulePhoto & {
   isNew?: boolean
@@ -17,27 +18,30 @@ const route = useRoute()
 const router = useRouter()
 const { showToast } = useToast()
 const recordId = String(route.params.capsuleId)
-const initialData = findTimeCapsuleRecord(recordId)
+const initialData = reactive<{ account: EditAccount; record: EditRecord }>({
+  account: { id: Number(route.params.capsuleListId) || 0, accountId: 0, name: '타임캡슐', bankName: '', accountNumber: '', records: [] },
+  record: { id: Number(recordId) || 0, title: '', date: '', amount: 0, transferName: '', letter: '', photos: [], thumbnail: '', remainingEdits: 0 },
+})
 
 const selectedAccountId = ref(String(initialData.account.id))
-const selectedTransferId = ref(initialData.record.id)
-const title = ref(initialData.record.title)
-const letter = ref(initialData.record.letter)
-const initialPhoto = initialData.record.photos.find(({ type }) => type === 'image')
-const mediaItems = ref<EditMedia[]>(initialPhoto ? [{ ...initialPhoto }] : [])
+const selectedTransferId = ref(0)
+const title = ref('')
+const letter = ref('')
+const mediaItems = ref<EditMedia[]>([])
 const hasSaved = ref(false)
 const isAccountMenuOpen = ref(false)
 const isTransferMenuOpen = ref(false)
 const isDeleteDialogOpen = ref(false)
 const isDeleting = ref(false)
 
-const accounts = Object.values(timeCapsuleAccounts)
-const selectedAccount = computed(() => timeCapsuleAccounts[selectedAccountId.value] ?? initialData.account)
+const accounts = ref<EditAccount[]>([])
+const selectedAccount = computed(() => accounts.value.find(({ id }) => String(id) === selectedAccountId.value) ?? initialData.account)
 const transferOptions = computed(() => selectedAccount.value.records)
 const selectedTransfer = computed(
-  () => transferOptions.value.find(({ id }) => id === selectedTransferId.value) ?? transferOptions.value[0]!,
+  () => transferOptions.value.find(({ id }) => id === selectedTransferId.value) ?? transferOptions.value[0] ?? initialData.record,
 )
 const hasChanges = computed(() => {
+  const initialPhoto = initialData.record.photos.find(({ type }) => type === 'image')
   const initialPhotos = initialPhoto ? [initialPhoto] : []
   const photosChanged =
     mediaItems.value.length !== initialPhotos.length ||
@@ -74,7 +78,7 @@ const accountDisplayName = (bankName: string, accountName: string) =>
 
 watch(selectedAccountId, () => {
   if (!transferOptions.value.some(({ id }) => id === selectedTransferId.value)) {
-    selectedTransferId.value = transferOptions.value[0]!.id
+    selectedTransferId.value = transferOptions.value[0]?.id ?? 0
   }
 })
 
@@ -159,16 +163,12 @@ const deleteRecord = async () => {
   isDeleting.value = true
 
   try {
-    const sourceAccount = initialData.account
-    const sourceIndex = sourceAccount.records.findIndex(({ id }) => id === initialData.record.id)
-    if (sourceIndex < 0) throw new Error('Time capsule record not found')
-
-    sourceAccount.records.splice(sourceIndex, 1)
+    await api.deleteTimeCapsuleEntryUsingDELETE(Number(recordId))
     isDeleteDialogOpen.value = false
-    await router.replace(`/time-capsules/${sourceAccount.id}`)
+    await router.replace(`/time-capsules/${initialData.account.id}`)
     showToast('타임캡슐을 삭제했습니다.', 'success')
-  } catch {
-    showToast('삭제에 실패했습니다. 다시 시도해주세요.', 'error')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '삭제에 실패했습니다.'), 'error')
   } finally {
     isDeleting.value = false
   }
@@ -180,45 +180,59 @@ const saveEdit = async () => {
     return
   }
 
-  if (initialData.record.remainingEdits <= 0) {
-    showToast('수정 가능 횟수를 모두 사용했습니다.', 'error')
-    return
-  }
-
-  const sourceAccount = initialData.account
-  const targetAccount = selectedAccount.value
-  const sourceIndex = sourceAccount.records.findIndex(({ id }) => id === initialData.record.id)
-
-  try {
-    if (sourceIndex < 0) throw new Error('Time capsule record not found')
-
-    const updatedRecord = {
-      ...initialData.record,
-      title: title.value.trim(),
-      date: selectedTransfer.value.date,
-      amount: selectedTransfer.value.amount,
-      transferName: selectedTransfer.value.transferName,
-      letter: letter.value.trim(),
-      photos: mediaItems.value.map(({ src, orientation, type }) => ({ src, orientation, type })),
-      thumbnail: mediaItems.value[0]?.src ?? initialData.record.thumbnail,
-      remainingEdits: Math.max(initialData.record.remainingEdits - 1, 0),
-    }
-
-    if (sourceAccount.id === targetAccount.id) {
-      sourceAccount.records.splice(sourceIndex, 1, updatedRecord)
-    } else {
-      sourceAccount.records.splice(sourceIndex, 1)
-      targetAccount.records.push(updatedRecord)
-    }
-
-    hasSaved.value = true
-    await router.replace(`/time-capsules/${targetAccount.id}/${updatedRecord.id}`)
-    showToast('수정되었습니다.', 'success')
-  } catch {
-    hasSaved.value = false
-    showToast('수정에 실패했습니다. 다시 시도해주세요.', 'error')
-  }
+  showToast('현재 서버 API는 봉인된 타임캡슐 수정 기능을 제공하지 않습니다.', 'error')
 }
+
+onMounted(async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const [{ data: detail }, { data: capsules }, { data: childAccounts }] = await Promise.all([
+      api.getTimeCapsuleEntryUsingGET(Number(recordId)),
+      api.getTimeCapsulesUsingGET(childId),
+      api.getChildAccountsUsingGET(childId),
+    ])
+    accounts.value = await Promise.all((capsules.time_capsules ?? []).map(async (capsule) => {
+      const linked = childAccounts.accounts.find(({ account_id }) => account_id === capsule.account_id)
+      const { data: transactionList } = await api.getTransactionsUsingGET(capsule.account_id ?? 0, undefined, undefined, 50)
+      return {
+        id: capsule.time_capsule_id ?? 0,
+        accountId: capsule.account_id ?? 0,
+        name: capsule.title ?? linked?.account_name ?? '타임캡슐',
+        bankName: '',
+        accountNumber: linked?.account_number ?? '',
+        records: transactionList.transactions.map((transaction) => ({
+          id: transaction.account_transaction_id,
+          title: transaction.counterparty_name ?? '계좌 거래',
+          date: transaction.occurred_at.slice(0, 10),
+          amount: transaction.amount,
+          transferName: transaction.counterparty_name ?? '계좌 거래',
+          letter: '', photos: [], thumbnail: '', remainingEdits: 0,
+        })),
+      }
+    }))
+    const account = accounts.value.find(({ id }) => id === Number(route.params.capsuleListId)) ?? accounts.value[0]
+    if (account) Object.assign(initialData.account, account)
+    const photo = detail.media?.download_url ? { src: detail.media.download_url, type: 'image' as const, orientation: 'portrait' as const } : undefined
+    Object.assign(initialData.record, {
+      id: detail.time_capsule_entry_id ?? Number(recordId),
+      title: detail.title ?? '',
+      date: detail.contributed_at?.slice(0, 10) ?? detail.created_at?.slice(0, 10) ?? '',
+      amount: detail.contribution_amount ?? 0,
+      transferName: '연결 거래',
+      letter: detail.message ?? '',
+      photos: photo ? [photo] : [],
+      thumbnail: photo?.src ?? '',
+      remainingEdits: 0,
+    })
+    selectedAccountId.value = String(initialData.account.id)
+    selectedTransferId.value = detail.account_transaction_id ?? 0
+    title.value = initialData.record.title
+    letter.value = initialData.record.letter
+    mediaItems.value = photo ? [photo] : []
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐 정보를 불러오지 못했습니다.'), 'error')
+  }
+})
 
 onBeforeUnmount(() => {
   if (hasSaved.value) return

@@ -1,34 +1,21 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Baby, Check, ChevronRight, Copy, Link2, UserRound, X } from 'lucide-vue-next'
 
-import childProfileUrl from '@/assets/images/home/home-profile-baby.png'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 
 type InviteType = 'guardian' | 'child'
 
 const { showToast } = useToast()
 const inviteType = ref<InviteType | null>(null)
 const copied = ref(false)
+const isLoading = ref(true)
 
-const familyMembers = [
-  {
-    id: 1,
-    name: '김하나',
-    relation: '모',
-    initials: '하',
-    isMe: true,
-    color: 'bg-[#e8f8ff] text-[#339dcc]',
-  },
-  {
-    id: 2,
-    name: '김민수',
-    relation: '부',
-    initials: '민',
-    isMe: false,
-    color: 'bg-[#fff5dc] text-[#b58a2d]',
-  },
-]
+const childId = ref<number | null>(null)
+const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; isMe: boolean; color: string }>>([])
+const createdInvitationLink = ref('')
 
 const invitationTitle = computed(() =>
   inviteType.value === 'guardian' ? '보호자 초대 링크' : '자녀 초대 링크',
@@ -39,22 +26,50 @@ const invitationDescription = computed(() =>
     : '자녀가 링크로 가입하면 이 가족 계정에 안전하게 연결돼요.',
 )
 const invitationLink = computed(() => {
-  if (!inviteType.value) return ''
-  if (inviteType.value === 'guardian') {
-    return `${window.location.origin}/register?invited=true&role=guardian`
-  }
-  return `${window.location.origin}/register/child?invited=true`
+  return createdInvitationLink.value
 })
 
-const openInvitation = (type: InviteType) => {
+const openInvitation = async (type: InviteType) => {
   inviteType.value = type
   copied.value = false
+  createdInvitationLink.value = ''
+  if (!childId.value) return
+  try {
+    const { data } = await api.createFamilyInvitationUsingPOST(childId.value, {
+      invitee_type: type === 'guardian' ? 'PARENT' : 'CHILD',
+      expires_in_hours: 24,
+    })
+    createdInvitationLink.value = data.invite_url
+      ?? `${window.location.origin}/family-invitations/${data.invite_token ?? ''}`
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '초대 링크를 만들지 못했습니다.'), 'error')
+    closeInvitation()
+  }
 }
 
 const closeInvitation = () => {
   inviteType.value = null
   copied.value = false
 }
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const { data } = await api.getFamilyMembersUsingGET(childId.value)
+    familyMembers.value = (data.items ?? []).map((member, index) => ({
+      id: member.member_id ?? index,
+      name: member.name ?? '보호자',
+      relation: member.relation_type === 'FATHER' ? '부' : member.relation_type === 'MOTHER' ? '모' : '보호자',
+      initials: (member.name ?? '보').slice(-1),
+      isMe: member.is_me ?? false,
+      color: index % 2 === 0 ? 'bg-[#e8f8ff] text-[#339dcc]' : 'bg-[#fff5dc] text-[#b58a2d]',
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '가족 정보를 불러오지 못했습니다.'), 'error')
+  } finally {
+    isLoading.value = false
+  }
+})
 
 const copyInvitationLink = async () => {
   try {
@@ -78,27 +93,38 @@ const copyInvitationLink = async () => {
       </p>
     </header>
 
-    <section class="mt-4 flex items-center gap-4 rounded-[24px] border border-[#cfe8f3] bg-[#eaf8fe] p-4">
-      <span class="size-16 shrink-0 overflow-hidden rounded-full bg-white">
-        <img class="size-full object-cover" :src="childProfileUrl" alt="깨비 프로필" />
-      </span>
-      <div class="min-w-0 flex-1">
-        <span class="text-xs font-semibold text-[var(--color-selected-text)]">깨비네 가족</span>
-        <strong class="mt-1 block text-xl">함께 모으는 중이에요</strong>
-        <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
-          보호자 {{ familyMembers.length }}명이 연결되어 있어요.
-        </p>
-      </div>
-    </section>
-
     <section class="mt-5" aria-labelledby="family-members-title">
       <div class="flex items-center justify-between px-0.5">
         <h2 id="family-members-title" class="m-0 text-[18px] font-extrabold">함께 관리하는 가족</h2>
-        <span class="text-xs font-semibold text-[var(--color-text-secondary)]">{{ familyMembers.length }}명</span>
+        <span
+          v-if="isLoading"
+          class="h-3 w-8 animate-pulse rounded-full bg-[#e4ecef]"
+          aria-hidden="true"
+        ></span>
+        <span v-else class="text-xs font-semibold text-[var(--color-text-secondary)]">
+          {{ familyMembers.length }}명
+        </span>
       </div>
 
       <ul class="mt-2.5 m-0 list-none overflow-hidden rounded-[20px] border border-[#d9e2e7] bg-white px-4 p-0">
+        <template v-if="isLoading">
+          <li
+            v-for="index in 2"
+            :key="`family-member-skeleton-${index}`"
+            class="flex min-h-[68px] items-center gap-3.5"
+            :class="index > 1 ? 'border-t border-[#edf1f3]' : ''"
+            aria-hidden="true"
+          >
+            <span class="size-11 shrink-0 animate-pulse rounded-full bg-[#edf3f6]"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block h-4 w-20 animate-pulse rounded-md bg-[#e5ecef]"></span>
+              <span class="mt-2 block h-3 w-24 animate-pulse rounded-full bg-[#edf2f4]"></span>
+            </span>
+            <span class="h-5 w-10 shrink-0 animate-pulse rounded-full bg-[#edf2f4]"></span>
+          </li>
+        </template>
         <li
+          v-else
           v-for="(member, index) in familyMembers"
           :key="member.id"
           class="flex min-h-[68px] items-center gap-3.5"

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AlertTriangle, Trash2, X } from 'lucide-vue-next'
-import { getTimeCapsuleAccount, getTimeCapsuleRecord } from '@/data/timeCapsuleDummyData'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,7 +19,7 @@ let deleteSheetDragStartTime = 0
 
 const accountId = computed(() => String(route.params.capsuleListId))
 const recordId = computed(() => String(route.params.capsuleId))
-const record = computed(() => getTimeCapsuleRecord(accountId.value, recordId.value))
+const record = ref({ title: '타임캡슐', date: '', amount: 0, letter: '', photos: [] as Array<{ src: string; type: 'image' | 'video'; orientation: 'portrait' | 'landscape' }> })
 
 const updateActivePhoto = (event: Event) => {
   const target = event.currentTarget as HTMLElement
@@ -76,20 +76,35 @@ const deleteRecord = async () => {
   isDeleting.value = true
 
   try {
-    const account = getTimeCapsuleAccount(accountId.value)
-    const recordIndex = account.records.findIndex(({ id }) => String(id) === recordId.value)
-    if (recordIndex < 0) throw new Error('Time capsule record not found')
-
-    account.records.splice(recordIndex, 1)
+    await api.deleteTimeCapsuleEntryUsingDELETE(Number(recordId.value))
     isDeleteDialogOpen.value = false
     await router.replace(`/time-capsules/${accountId.value}`)
     showToast('타임캡슐을 삭제했습니다.', 'success')
-  } catch {
-    showToast('삭제에 실패했습니다. 다시 시도해주세요.', 'error')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '삭제에 실패했습니다.'), 'error')
   } finally {
     isDeleting.value = false
   }
 }
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getTimeCapsuleEntryUsingGET(Number(recordId.value))
+    record.value = {
+      title: data.title ?? '타임캡슐',
+      date: data.contributed_at?.slice(0, 10) ?? data.created_at?.slice(0, 10) ?? '',
+      amount: data.contribution_amount ?? 0,
+      letter: data.message ?? '',
+      photos: data.media?.download_url ? [{
+        src: data.media.download_url,
+        type: data.media.media_type === 'VIDEO' ? 'video' : 'image',
+        orientation: 'portrait',
+      }] : [],
+    }
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐 기록을 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>

@@ -46,3 +46,25 @@ npm run build
 ```sh
 npm run lint
 ```
+
+### Generate API Client from Backend
+
+`.env.development`의 `OPENAPI_SCHEMA_URL`에 지정된 Swagger 문서에서 API 타입과 Axios 클라이언트를 다시 생성합니다.
+
+```sh
+npm run generate:api
+```
+
+일회성으로 다른 주소를 사용할 때는 명령 뒤에 Swagger/OpenAPI JSON 주소를 전달합니다.
+
+```sh
+npm run generate:api -- http://localhost:8080/api/v2/api-docs
+```
+
+환경변수로 고정할 수도 있습니다.
+
+```sh
+OPENAPI_SCHEMA_URL=http://localhost:8080/api/v2/api-docs npm run generate:api
+```
+
+명령을 실행하면 `openapi/openapi.json`과 `src/api/generated`가 함께 갱신됩니다.

@@ -1,12 +1,7 @@
-import {
-  getApp,
-  getApps,
-  initializeApp,
-  type FirebaseApp,
-  type FirebaseOptions,
-} from 'firebase/app'
+import { getApp, getApps, initializeApp } from 'firebase/app'
+import { getMessaging, isSupported, type Messaging } from 'firebase/messaging'
 
-const firebaseConfig: FirebaseOptions = {
+const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
@@ -15,25 +10,14 @@ const firebaseConfig: FirebaseOptions = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const requiredConfigValues = [
-  firebaseConfig.apiKey,
-  firebaseConfig.authDomain,
-  firebaseConfig.projectId,
-  firebaseConfig.messagingSenderId,
-  firebaseConfig.appId,
-  import.meta.env.VITE_FIREBASE_VAPID_KEY,
-]
+const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig)
 
-export const isFirebaseMessagingConfigured = requiredConfigValues.every(
-  (value) => typeof value === 'string' && value.trim().length > 0,
-)
+export const getFirebaseMessaging = async (): Promise<Messaging | null> => {
+  const supported = await isSupported()
 
-export const firebaseVapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY ?? ''
-
-export const getFirebaseApp = (): FirebaseApp => {
-  if (!isFirebaseMessagingConfigured) {
-    throw new Error('Firebase Web Push 환경변수가 설정되지 않았습니다.')
+  if (!supported) {
+    return null
   }
 
-  return getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+  return getMessaging(firebaseApp)
 }

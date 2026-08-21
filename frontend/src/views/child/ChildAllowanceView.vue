@@ -1,11 +1,13 @@
 ﻿<script setup lang="ts">
 import { computed, ref } from 'vue'
+import { WalletCards } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
-import allowancePageBgUrl from '@/assets/images/child/child-allowance-page-bg.png'
-import allowanceRequestPigUrl from '@/assets/images/child/child-allowance-request-pig.png'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const { showToast } = useToast()
 const allowanceAmount = ref('')
 const reason = ref('')
 const maxMoneyDigits = 8
@@ -38,36 +40,41 @@ const updateReason = (event: Event) => {
   if (textarea.value !== reason.value) textarea.value = reason.value
 }
 
-const submitRequest = () => {
+const isSubmitting = ref(false)
+const submitRequest = async () => {
   if (!canSubmit.value) return
-  router.push('/child/allowance-done')
+  isSubmitting.value = true
+  try {
+    await api.createAllowanceRequestUsingPOST({
+      requested_amount: allowanceAmountValue.value,
+      message: reason.value.trim(),
+    })
+    await router.push('/child/allowance-done')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '용돈 요청을 보내지 못했습니다.'), 'error')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef8ff] bg-cover bg-top bg-no-repeat px-5 pt-7 pb-8"
-    :style="{ backgroundImage: `url(${allowancePageBgUrl})` }"
+    class="min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top)-env(safe-area-inset-bottom))] bg-[#eef9ff] px-[18px] pt-5 pb-8 text-[var(--color-text-primary)]"
   >
-    <section class="text-center">
-      <img
-        class="mx-auto w-[168px] select-none object-contain"
-        :src="allowanceRequestPigUrl"
-        alt=""
-        aria-hidden="true"
-      />
-      <h1 class="mt-4 mb-3 text-[24px] leading-[1.35] font-bold text-[var(--color-text-primary)]">
-        부모님께<br />
-        용돈을 요청해볼까요?
-      </h1>
-      <p class="m-0 text-[length:var(--font-size-sm)] leading-[1.5] text-[var(--color-text-secondary)]">
-        하고 싶은 게 있다면<br />
-        부모님께 용돈을 요청해보세요!
-      </p>
+    <section class="flex items-start justify-between gap-4 px-1">
+      <div class="min-w-0">
+        <h1 class="mt-2 text-[25px] leading-[1.28] font-extrabold tracking-[-0.035em]">
+          필요한 용돈을<br />부모님께 요청해요
+        </h1>
+        <p class="mt-2 text-[13px] leading-5 text-[var(--color-text-secondary)]">
+          필요한 금액과 이유를 솔직하게 알려주세요.
+        </p>
+      </div>
     </section>
 
     <section
-      class="mt-6 rounded-[22px] bg-white px-5 py-5 shadow-[0_14px_32px_rgb(110_122_138_/_10%)]"
+      class="mt-6 rounded-[22px] border border-[#dce8ee] bg-white px-5 py-5 shadow-[0_8px_24px_rgba(54,112,139,0.06)]"
     >
       <div class="mb-5">
         <div>
@@ -113,7 +120,7 @@ const submitRequest = () => {
         </div>
       </label>
 
-      <div class="mt-3 rounded-[12px] bg-[#f0fbff] px-4 py-4 text-[length:var(--font-size-xs)] leading-[1.65] text-[var(--color-text-secondary)]">
+      <div class="mt-3 rounded-[14px] border border-[#dceef6] bg-[#f2fbff] px-4 py-4 text-[length:var(--font-size-xs)] leading-[1.65] text-[var(--color-text-secondary)]">
         <strong class="mb-2 block text-[var(--color-text-primary)]">
           이렇게 쓰면 용돈 받을 확률이 올라가요 ✨
         </strong>

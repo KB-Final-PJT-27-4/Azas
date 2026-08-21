@@ -7,11 +7,13 @@ withDefaults(
     variant?: 'success' | 'error' | 'info'
     withBottomNavigation?: boolean
     aboveActions?: boolean
+    placement?: 'default' | 'slightly-above' | 'above-actions'
   }>(),
   {
     variant: 'info',
     withBottomNavigation: true,
     aboveActions: false,
+    placement: 'default',
   },
 )
 </script>
@@ -24,6 +26,7 @@ withDefaults(
       {
         'base-toast--without-bottom-navigation': !withBottomNavigation,
         'base-toast--above-actions': aboveActions,
+        'base-toast--slightly-above': placement === 'slightly-above',
       },
     ]"
     role="status"
@@ -67,6 +70,10 @@ withDefaults(
 
 .base-toast--above-actions {
   bottom: calc(var(--app-bottom-nav-height) + 130px + env(safe-area-inset-bottom));
+}
+
+.base-toast--slightly-above {
+  bottom: calc(var(--app-bottom-nav-height) + 68px + env(safe-area-inset-bottom));
 }
 
 .base-toast--without-bottom-navigation.base-toast--above-actions {

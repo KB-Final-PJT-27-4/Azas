@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Check, Plus, X } from 'lucide-vue-next'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
 import lockImage from '@/assets/images/timeCapsules/archive/lock.png'
 import archiveBackgroundImage from '@/assets/images/timeCapsules/archive/new-bg.png'
 import openImage from '@/assets/images/timeCapsules/archive/open.png'
+import bornBabyPigImage from '@/assets/images/timeCapsules/archive/born-baby-pig.png'
 import avocadoImage from '@/assets/images/pregnancy/avocado.png'
 import bananaImage from '@/assets/images/pregnancy/banana.png'
 import blueberryImage from '@/assets/images/pregnancy/blueberry.png'
@@ -20,11 +21,13 @@ import strawberryImage from '@/assets/images/pregnancy/strawberry.png'
 import watermelonImage from '@/assets/images/pregnancy/watermelon.png'
 import BaseDatePicker from '@/components/common/BaseDatePicker.vue'
 import { useToast } from '@/composables/useToast'
-import { loadRegistrationDraft } from '@/utils/registrationDraft'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 
 const router = useRouter()
 const { showToast } = useToast()
 const isPageLeaving = ref(false)
+const isLoading = ref(true)
 const isFreeCapsuleSheetOpen = ref(false)
 const freeCapsuleSheetOffset = ref(0)
 const isFreeCapsuleSheetDragging = ref(false)
@@ -32,7 +35,11 @@ let freeCapsuleDragStartY = 0
 let freeCapsuleDragStartTime = 0
 const freeCapsuleOpenDate = ref('')
 const isFreeCapsuleCreated = ref(false)
-const registration = loadRegistrationDraft()
+const registration = ref<{ birthDate: string; childName: string } | null>(null)
+const childId = ref<number | null>(null)
+const demandAccountId = ref<number | null>(null)
+const capsuleAccounts = ref<Array<{ id: number; name: string; createdAt: string; savedAmount: number; dDay?: number; isFree?: boolean }>>([])
+const archiveChildName = computed(() => registration.value?.childName.trim() || '아이')
 
 const pregnancyStages = [
   { week: 7, fruit: '블루베리', image: blueberryImage, color: '#777bdc' },
@@ -53,9 +60,9 @@ const today = new Date()
 today.setHours(0, 0, 0, 0)
 
 const pregnancyGrowth = computed(() => {
-  if (!registration?.birthDate) return null
+  if (!registration.value?.birthDate) return null
 
-  const [year, month, day] = registration.birthDate.split('-').map(Number)
+  const [year, month, day] = registration.value.birthDate.split('-').map(Number)
   if (!year || !month || !day) return null
 
   const dueDate = new Date(year, month - 1, day)
@@ -73,9 +80,26 @@ const pregnancyGrowth = computed(() => {
   const stage =
     nearestStages.length === 1
       ? nearestStages[0]!
-      : nearestStages[(registration.childName.codePointAt(0) ?? 0) % nearestStages.length]!
+      : nearestStages[(registration.value.childName.codePointAt(0) ?? 0) % nearestStages.length]!
 
   return { ...stage, currentWeek }
+})
+
+const bornBabyGrowth = computed(() => {
+  if (!registration.value?.birthDate) return null
+
+  const [year, month, day] = registration.value.birthDate.split('-').map(Number)
+  if (!year || !month || !day) return null
+
+  const birthDate = new Date(year, month - 1, day)
+  birthDate.setHours(0, 0, 0, 0)
+  if (birthDate > today) return null
+
+  const daysSinceBirth = Math.floor((today.getTime() - birthDate.getTime()) / 86_400_000) + 1
+  return {
+    daysSinceBirth,
+    childName: registration.value.childName || '아이',
+  }
 })
 const todayKey = [
   today.getFullYear(),
@@ -84,6 +108,37 @@ const todayKey = [
 ].join('.')
 
 const isReleased = (releaseDate: string) => releaseDate <= todayKey
+
+const calculateDday = (releaseDate: string) => {
+  const [year, month, day] = releaseDate.replaceAll('.', '-').split('-').map(Number)
+  if (!year || !month || !day) return null
+
+  const releaseDay = new Date(year, month - 1, day)
+  releaseDay.setHours(0, 0, 0, 0)
+  return Math.ceil((releaseDay.getTime() - today.getTime()) / 86_400_000)
+}
+
+const nearestCapsule = computed(() => {
+  const upcomingCapsules = capsuleAccounts.value
+    .map((capsule) => ({
+      ...capsule,
+      resolvedDday: capsule.dDay ?? calculateDday(capsule.createdAt),
+    }))
+    .filter(
+      (capsule): capsule is typeof capsule & { resolvedDday: number } =>
+        capsule.resolvedDday !== null && capsule.resolvedDday >= 0,
+    )
+    .sort((a, b) => a.resolvedDday - b.resolvedDday)
+
+  return upcomingCapsules[0] ?? null
+})
+
+const nearestCapsuleDdayLabel = computed(() => {
+  if (!nearestCapsule.value) return ''
+  return nearestCapsule.value.resolvedDday === 0
+    ? 'D-Day'
+    : `D-${nearestCapsule.value.resolvedDday}`
+})
 
 const toDateValue = (date: Date) => {
   const year = date.getFullYear()
@@ -135,14 +190,34 @@ const endFreeCapsuleSheetDrag = (event: PointerEvent) => {
   if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
 }
 
-const confirmFreeCapsule = () => {
+const confirmFreeCapsule = async () => {
   if (!freeCapsuleOpenDate.value) {
     showToast('오픈 날짜를 선택해주세요.', 'error')
     return
   }
-  isFreeCapsuleCreated.value = true
-  closeFreeCapsuleSheet()
-  showToast('입출금계좌의 오픈 날짜를 설정했습니다.', 'success')
+  if (!childId.value || !demandAccountId.value) {
+    showToast('연결된 입출금계좌가 필요합니다.', 'error')
+    return
+  }
+  try {
+    const { data } = await api.createTimeCapsuleUsingPOST(childId.value, {
+      financial_account_id: demandAccountId.value,
+      release_date: freeCapsuleOpenDate.value,
+    })
+    capsuleAccounts.value.push({
+      id: data.time_capsule_id ?? 0,
+      name: data.title ?? '입출금계좌 타임캡슐',
+      createdAt: data.release_date?.replaceAll('-', '.') ?? formattedFreeOpenDate.value,
+      savedAmount: data.total_saved_amount ?? 0,
+      dDay: calculateDday(data.release_date ?? freeCapsuleOpenDate.value) ?? undefined,
+      isFree: true,
+    })
+    isFreeCapsuleCreated.value = true
+    closeFreeCapsuleSheet()
+    showToast('입출금계좌의 오픈 날짜를 설정했습니다.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐을 만들지 못했습니다.'), 'error')
+  }
 }
 
 const navigateForward = async (to: RouteLocationRaw) => {
@@ -181,32 +256,39 @@ const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean 
   openFreeCapsuleList()
 }
 
-const capsuleAccounts = computed(() => [
-  {
-    id: 1,
-    name: '아이사랑적금',
-    createdAt: '2026.08.06',
-    savedAmount: 200000,
-  },
-  {
-    id: 2,
-    name: '우리사랑적금',
-    createdAt: '2027.07.18',
-    savedAmount: 200000,
-  },
-  {
-    id: 3,
-    name: '입출금계좌',
-    createdAt: isFreeCapsuleCreated.value ? formattedFreeOpenDate.value : '오픈 날짜 설정',
-    savedAmount: 0,
-    isFree: true,
-  },
-])
-
 const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
   capsule.isFree
     ? isFreeCapsuleCreated.value && isReleased(capsule.createdAt)
     : isReleased(capsule.createdAt)
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const [{ data: child }, { data: capsules }, { data: accounts }] = await Promise.all([
+      api.getChildUsingGET(childId.value),
+      api.getTimeCapsulesUsingGET(childId.value),
+      api.getChildAccountsUsingGET(childId.value),
+    ])
+    registration.value = {
+      birthDate: child.birth_date ?? child.expected_birth_date ?? '',
+      childName: child.name ?? '아이',
+    }
+    demandAccountId.value = accounts.accounts.find(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')?.account_id ?? null
+    capsuleAccounts.value = (capsules.time_capsules ?? []).map((capsule) => ({
+      id: capsule.time_capsule_id ?? 0,
+      name: capsule.title ?? '타임캡슐',
+      createdAt: capsule.release_date?.replaceAll('-', '.') ?? '오픈 날짜 설정',
+      savedAmount: capsule.total_saved_amount ?? 0,
+      dDay: capsule.d_day,
+      isFree: capsule.account_id === demandAccountId.value,
+    }))
+    isFreeCapsuleCreated.value = capsuleAccounts.value.some(({ isFree }) => isFree)
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐을 불러오지 못했습니다.'), 'error')
+  } finally {
+    isLoading.value = false
+  }
+})
 </script>
 
 <template>
@@ -226,7 +308,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
             타임캡슐 보관함
           </h1>
           <p class="relative z-10 mt-2 text-sm leading-5 text-[var(--color-text-secondary)]">
-            깨비의 성장 순간과<br />금융 기록을 모아보세요.
+            {{ archiveChildName }}의 성장 순간과<br />금융 기록을 모아보세요.
           </p>
 
           <aside
@@ -253,36 +335,126 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
               :alt="`${pregnancyGrowth.fruit} 깨비`"
             />
           </aside>
+
+          <aside
+            v-else-if="bornBabyGrowth"
+            class="absolute top-1 right-0 h-[156px] w-[184px] translate-y-3"
+            :aria-label="`${bornBabyGrowth.childName}가 태어난 지 ${bornBabyGrowth.daysSinceBirth}일째`"
+          >
+            <div class="absolute right-[116px] bottom-14 z-10 whitespace-nowrap text-right">
+              <span
+                class="block text-[10px] font-semibold text-[var(--color-text-secondary)]"
+              >
+                태어난 지
+              </span>
+              <strong
+                class="mt-1.5 block text-[20px] leading-none font-extrabold tracking-[-0.03em] text-[#f07f9d]"
+              >
+                {{ bornBabyGrowth.daysSinceBirth }}일째
+              </strong>
+              <span
+                class="mt-1.5 block text-[10px] font-semibold text-[var(--color-text-secondary)]"
+              >
+                함께 자라고 있어요
+              </span>
+            </div>
+            <img
+              class="absolute right-0 bottom-7 h-[142px] w-[116px] object-contain object-bottom"
+              :src="bornBabyPigImage"
+              :alt="`${bornBabyGrowth.childName}의 성장 이미지`"
+            />
+          </aside>
         </div>
 
         <article
           class="relative z-10 mt-2 flex min-h-20 translate-y-7 items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 shadow-[0_8px_24px_rgba(67,139,179,0.08)]"
         >
           <img class="size-14 shrink-0 object-contain" :src="calendarImage" alt="공개 예정일" />
-          <div class="ml-3 min-w-0 flex-1">
-            <p class="truncate text-sm font-bold text-[var(--color-text-primary)]">아이사랑적금</p>
-            <time class="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]"
-              >2026.08.08</time
+          <div v-if="nearestCapsule" class="ml-3 min-w-0 flex-1">
+            <p class="truncate text-sm font-bold text-[var(--color-text-primary)]">
+              {{ nearestCapsule.name }}
+            </p>
+            <time
+              class="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]"
+              :datetime="nearestCapsule.createdAt.replaceAll('.', '-')"
             >
+              {{ nearestCapsule.createdAt }}
+            </time>
           </div>
-          <strong class="ml-3 shrink-0 text-[30px] font-bold tracking-[-0.04em] text-[#27a9eb]">
-            D-23
+          <div v-else class="ml-3 min-w-0 flex-1">
+            <p class="truncate text-sm font-bold text-[var(--color-text-primary)]">
+              새 타임캡슐을 기다리고 있어요
+            </p>
+            <p class="mt-1 text-xs font-medium text-[var(--color-text-secondary)]">
+              캡슐을 만들면 디데이를 알려드려요
+            </p>
+          </div>
+          <strong
+            v-if="nearestCapsule"
+            class="ml-3 shrink-0 text-[30px] font-bold tracking-[-0.04em] text-[#27a9eb]"
+          >
+            {{ nearestCapsuleDdayLabel }}
+          </strong>
+          <strong v-else class="ml-3 shrink-0 text-sm font-bold text-[#27a9eb]">
+            등록 전
           </strong>
         </article>
       </div>
     </section>
 
     <section class="grid grid-cols-2 gap-3 px-5 pt-7 pb-5" aria-label="타임캡슐 계좌 목록">
+      <template v-if="isLoading">
+        <article
+          v-for="index in 2"
+          :key="`capsule-skeleton-${index}`"
+          class="rounded-2xl border border-[var(--color-border)] bg-white p-3"
+          aria-hidden="true"
+        >
+          <span class="block aspect-[4/3] animate-pulse rounded-xl bg-[#edf2f4]"></span>
+          <span class="mt-4 block h-4 w-24 max-w-full animate-pulse rounded-md bg-[#e5ecef]"></span>
+          <span class="mt-2 block h-3 w-20 animate-pulse rounded-full bg-[#edf2f4]"></span>
+          <span class="mt-3 block h-3 w-28 max-w-full animate-pulse rounded-full bg-[#e5eef2]"></span>
+        </article>
+      </template>
+
       <article
-        v-for="capsule in capsuleAccounts"
-        :key="capsule.id"
-        class="overflow-hidden rounded-2xl border p-3 transition-colors"
-        :class="
-          isCapsuleReleased(capsule)
-            ? 'capsule-card--released border-transparent bg-white'
-            : 'border-[var(--color-border)] bg-white'
-        "
+        v-else-if="!capsuleAccounts.length"
+        class="col-span-2 rounded-[22px] border border-dashed border-[#cfe3ed] bg-[#f7fcff] px-5 py-8 text-center"
       >
+        <span class="mx-auto grid size-16 place-items-center rounded-full bg-[#e8f7fe]">
+          <img class="h-10 w-12 object-contain" :src="lockImage" alt="" aria-hidden="true" />
+        </span>
+        <h2 class="mt-4 text-[17px] font-extrabold">아직 만들어진 타임캡슐이 없어요</h2>
+        <p class="mt-2 text-[12px] leading-5 text-[var(--color-text-secondary)]">
+          적금이나 아이 명의 입출금계좌를 만들면<br />해당 계좌의 타임캡슐이 자동으로 생성돼요.
+        </p>
+        <div class="mt-5 grid grid-cols-2 gap-2.5">
+          <RouterLink
+            :to="{ name: 'SavingsRecommendation' }"
+            class="flex min-h-11 items-center justify-center rounded-[13px] border border-[#cdebf9] bg-white text-[12px] font-bold !text-[var(--color-selected-text)] active:bg-[#edf9ff]"
+          >
+            적금 알아보기
+          </RouterLink>
+          <RouterLink
+            :to="{ name: 'ChildAccountCreate' }"
+            class="flex min-h-11 items-center justify-center rounded-[13px] bg-[var(--color-brand-primary)] text-[12px] font-bold !text-white active:bg-[var(--color-brand-primary-pressed)]"
+          >
+            아이 계좌 만들기
+          </RouterLink>
+        </div>
+      </article>
+
+      <template v-else>
+      <article
+          v-for="capsule in capsuleAccounts"
+          :key="capsule.id"
+          class="overflow-hidden rounded-2xl border p-3 transition-colors"
+          :class="
+            isCapsuleReleased(capsule)
+              ? 'capsule-card--released border-transparent bg-white'
+              : 'border-[var(--color-border)] bg-white'
+          "
+        >
         <button
           class="block w-full text-left transition-transform active:scale-[0.98]"
           type="button"
@@ -323,18 +495,22 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
           </p>
         </button>
       </article>
+      </template>
     </section>
 
-    <button
-      class="time-capsule-create-button fixed z-[60]"
-      type="button"
-      aria-label="타임캡슐 생성하기"
-      @click="navigateForward('/time-capsules/new')"
-    >
-      <span class="time-capsule-create-button__surface">
-        <Plus :size="23" :stroke-width="3" aria-hidden="true" />
-      </span>
-    </button>
+    <Teleport to="body">
+      <button
+        v-if="!isLoading && capsuleAccounts.length"
+        class="time-capsule-create-button fixed z-[40]"
+        type="button"
+        aria-label="타임캡슐 생성하기"
+        @click="navigateForward('/time-capsules/new')"
+      >
+        <span class="time-capsule-create-button__surface">
+          <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
+        </span>
+      </button>
+    </Teleport>
 
     <Teleport to="body">
       <Transition name="free-capsule-sheet">
@@ -439,7 +615,7 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 }
 
 .time-capsule-create-button {
-  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 1px);
+  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) - 7px);
   left: 50%;
   width: 88px;
   height: 47px;
