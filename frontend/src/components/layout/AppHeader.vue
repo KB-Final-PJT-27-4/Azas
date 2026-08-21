@@ -8,12 +8,17 @@ import {
   ChevronRight,
   CircleHelp,
   Plus,
-  UserRound,
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import defaultProfileImageUrl from '@/assets/images/home/home-profile-baby.png'
 import { useToast } from '@/composables/useToast'
+import { api } from '@/api'
+import {
+  getStoredCurrentChildId,
+  requireAuthorizationHeader,
+  setCurrentChildId,
+} from '@/api/context'
 
 const router = useRouter()
 const { showToast } = useToast()
@@ -51,12 +56,16 @@ const props = withDefaults(
   },
 )
 
-const profiles = computed(() => [
-  { id: 1, name: props.profileName || props.title, detail: '12세 · 초등학생' },
-  { id: 2, name: '아이 2', detail: '10세 · 초등학생' },
-  { id: 3, name: '아이 3', detail: '7세 · 초등학생' },
-])
-const selectedProfileId = ref(1)
+type HeaderChildProfile = {
+  id: number
+  name: string
+  detail: string
+  image: string
+}
+
+const profiles = ref<HeaderChildProfile[]>([])
+const selectedProfileId = ref<number | null>(null)
+const isProfileLoading = ref(true)
 const isProfileSheetOpen = ref(false)
 const isScrolled = ref(false)
 const useTopAppearance = computed(() => !props.changeOnScroll || !isScrolled.value)
@@ -68,7 +77,12 @@ const appliedProfileBackgroundColor = computed(() =>
 )
 const hideAppliedDivider = computed(() => props.hideDivider && useTopAppearance.value)
 const activeProfile = computed(
-  () => profiles.value.find(({ id }) => id === selectedProfileId.value) ?? profiles.value[0]!,
+  () => profiles.value.find(({ id }) => id === selectedProfileId.value) ?? profiles.value[0] ?? {
+    id: 0,
+    name: props.profileName || props.title,
+    detail: '',
+    image: props.profileImage || defaultProfileImageUrl,
+  },
 )
 let profilePressTimer: ReturnType<typeof window.setTimeout> | null = null
 
@@ -97,23 +111,25 @@ const closeProfileSheet = () => {
 }
 
 const selectProfile = (profileId: number) => {
+  if (profileId === selectedProfileId.value) {
+    closeProfileSheet()
+    return
+  }
+
   selectedProfileId.value = profileId
+  setCurrentChildId(profileId)
   closeProfileSheet()
   showToast(`${activeProfile.value.name} 프로필로 전환했습니다.`, 'success')
+  window.location.reload()
 }
 
 const goToAlarm = () => router.push('/alarm')
 
 const openGuide = () => window.dispatchEvent(new CustomEvent('azas:open-home-guide'))
 
-const goToMypage = () => {
-  closeProfileSheet()
-  router.push('/mypage')
-}
-
 const goToAddChild = () => {
   closeProfileSheet()
-  router.push('/mypage/family')
+  router.push({ name: 'ChildAdd' })
 }
 
 const goBack = () => {
@@ -124,9 +140,50 @@ const updateScrollState = () => {
   isScrolled.value = window.scrollY > props.scrollThreshold
 }
 
-onMounted(() => {
+onMounted(async () => {
   updateScrollState()
   window.addEventListener('scroll', updateScrollState, { passive: true })
+
+  try {
+    const authorization = requireAuthorizationHeader()
+    const { data } = await api.getChildrenUsingGET(authorization)
+    const childrenByAge = [...(data.items ?? [])].sort((firstChild, secondChild) => {
+      const firstAge =
+        firstChild.birth_status === 'EXPECTED' || typeof firstChild.age !== 'number'
+          ? -1
+          : firstChild.age
+      const secondAge =
+        secondChild.birth_status === 'EXPECTED' || typeof secondChild.age !== 'number'
+          ? -1
+          : secondChild.age
+
+      return secondAge - firstAge
+    })
+
+    profiles.value = childrenByAge.flatMap((child) => {
+      if (!child.child_id) return []
+
+      return [{
+        id: child.child_id,
+        name: child.name?.trim() || '아이',
+        detail:
+          child.birth_status === 'EXPECTED'
+            ? '출산 예정'
+            : typeof child.age === 'number'
+              ? `${child.age}세`
+              : '나이 정보 없음',
+        image: child.profile_image_url || defaultProfileImageUrl,
+      }]
+    })
+    const storedChildId = getStoredCurrentChildId()
+    selectedProfileId.value = profiles.value.some(({ id }) => id === storedChildId)
+      ? storedChildId
+      : profiles.value[0]?.id ?? null
+  } catch {
+    profiles.value = []
+  } finally {
+    isProfileLoading.value = false
+  }
 })
 
 onBeforeUnmount(() => {
@@ -156,8 +213,22 @@ onBeforeUnmount(() => {
         <ChevronLeft :size="28" :stroke-width="2.5" />
       </button>
 
+      <div
+        v-if="!showBack && isProfileLoading"
+        class="flex min-w-0 items-center gap-[var(--space-3)]"
+        aria-label="아이 프로필 불러오는 중"
+        aria-busy="true"
+      >
+        <span
+          class="header-skeleton size-[38px] flex-[0_0_38px] rounded-full"
+          aria-hidden="true"
+        ></span>
+        <span class="header-skeleton h-5 w-[72px] rounded-md" aria-hidden="true"></span>
+        <span class="header-skeleton size-4 shrink-0 rounded" aria-hidden="true"></span>
+      </div>
+
       <button
-        v-else
+        v-else-if="!showBack"
         class="flex min-w-0 select-none items-center gap-[var(--space-3)] rounded-xl border-0 bg-transparent p-0 pr-2 text-left active:bg-[var(--color-unselected-background)]"
         type="button"
         aria-label="프로필 전환 메뉴 열기"
@@ -180,9 +251,9 @@ onBeforeUnmount(() => {
           aria-hidden="true"
         >
           <img
-            v-if="props.profileImage"
+            v-if="activeProfile.image"
             class="size-full object-cover"
-            :src="props.profileImage"
+            :src="activeProfile.image"
             alt=""
           />
           <span v-else>{{ props.profileEmoji }}</span>
@@ -266,9 +337,9 @@ onBeforeUnmount(() => {
                   aria-hidden="true"
                 >
                   <img
-                    v-if="props.profileImage"
+                    v-if="profile.image"
                     class="size-full object-cover"
-                    :src="props.profileImage"
+                    :src="profile.image"
                     alt=""
                   />
                   <span v-else>{{ props.profileEmoji }}</span>
@@ -307,20 +378,6 @@ onBeforeUnmount(() => {
             <ChevronRight :size="18" class="text-[var(--color-text-secondary)]" />
           </button>
 
-          <button
-            class="mt-2 flex min-h-13 w-full items-center gap-3 rounded-xl border border-[var(--color-border)] bg-white px-4 text-left active:bg-[var(--color-unselected-background)]"
-            type="button"
-            @click="goToMypage"
-          >
-            <span
-              class="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--color-selected-background)] text-[var(--color-selected-text)]"
-              aria-hidden="true"
-            >
-              <UserRound :size="19" />
-            </span>
-            <strong class="min-w-0 flex-1 text-sm font-bold">마이페이지로 이동</strong>
-            <ChevronRight :size="18" class="text-[var(--color-text-secondary)]" />
-          </button>
         </section>
       </div>
     </Transition>
@@ -328,6 +385,28 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.header-skeleton {
+  background: linear-gradient(90deg, #e9eef1 25%, #f7f9fa 50%, #e9eef1 75%);
+  background-size: 200% 100%;
+  animation: header-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes header-skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-skeleton {
+    animation: none;
+  }
+}
+
 .profile-sheet-enter-active,
 .profile-sheet-leave-active {
   transition: opacity 200ms ease;

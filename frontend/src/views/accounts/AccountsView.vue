@@ -59,7 +59,7 @@ const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[
 
 const createKbAccount = async () => {
   try {
-    const products = await api.getProductsUsingGET(undefined, undefined, 'SAVINGS', 1)
+    const products = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 1)
     const product = (products.data.items?.[0] ?? {}) as unknown as { financial_product_id?: number }
     if (!product.financial_product_id) throw new Error('개설 가능한 상품을 찾을 수 없어요.')
     const { data } = await api.openUsingPOST(undefined, {

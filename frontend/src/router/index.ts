@@ -204,6 +204,19 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/mypage/child-add',
+    name: 'ChildAdd',
+    component: () => import('@/views/mypage/ChildAddView.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['PARENT'],
+      headerTitle: '아이 추가',
+      showHeaderBack: true,
+      showHeaderNotification: false,
+      hideBottomNavigation: true,
+    },
+  },
+  {
     path: '/mypage/family',
     name: 'FamilyManagement',
     component: () => import('@/views/mypage/FamilyManagementView.vue'),
