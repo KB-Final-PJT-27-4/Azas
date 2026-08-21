@@ -7,6 +7,13 @@ export interface ChildTransaction {
   amount: number
   type: 'income' | 'expense'
   icon: string
+  accountLabel?: string
+  memo?: string
+  depositName?: string
+  depositAccountNumber?: string
+  withdrawalName?: string
+  withdrawalAccountNumber?: string
+  balanceAfterTransaction?: number
 }
 
 interface TransferRecordPayload {
@@ -31,6 +38,13 @@ export const childTransactions = reactive<ChildTransaction[]>([
     amount: 30_000,
     type: 'income',
     icon: '💰',
+    accountLabel: '엄마 국민은행',
+    memo: '이번 주 용돈이야. 계획해서 써봐',
+    depositName: '깨비 돈',
+    depositAccountNumber: '952-17362605-47',
+    withdrawalName: '엄마 국민은행',
+    withdrawalAccountNumber: '123-456-789',
+    balanceAfterTransaction: 96_000,
   },
   {
     id: 'stationery-1',
@@ -39,6 +53,13 @@ export const childTransactions = reactive<ChildTransaction[]>([
     amount: -4_000,
     type: 'expense',
     icon: '🛍️',
+    accountLabel: '깨비 돈',
+    memo: '문구점에서 준비물 구매',
+    depositName: '문구점',
+    depositAccountNumber: '가맹점 결제',
+    withdrawalName: '깨비 돈',
+    withdrawalAccountNumber: '952-17362605-47',
+    balanceAfterTransaction: 66_000,
   },
   {
     id: 'icecream',
@@ -47,6 +68,13 @@ export const childTransactions = reactive<ChildTransaction[]>([
     amount: -2_500,
     type: 'expense',
     icon: '🍦',
+    accountLabel: '깨비 돈',
+    memo: '아이스크림 간식',
+    depositName: '아이스크림 가게',
+    depositAccountNumber: '가맹점 결제',
+    withdrawalName: '깨비 돈',
+    withdrawalAccountNumber: '952-17362605-47',
+    balanceAfterTransaction: 70_000,
   },
   {
     id: 'convenience',
@@ -55,8 +83,95 @@ export const childTransactions = reactive<ChildTransaction[]>([
     amount: -2_000,
     type: 'expense',
     icon: '🧃',
+    accountLabel: '깨비 돈',
+    memo: '편의점 간식',
+    depositName: '편의점',
+    depositAccountNumber: '가맹점 결제',
+    withdrawalName: '깨비 돈',
+    withdrawalAccountNumber: '952-17362605-47',
+    balanceAfterTransaction: 72_500,
   },
 ])
+
+export const childFallbackTransactions: ChildTransaction[] = [
+  {
+    id: 'asset-stationery-1',
+    title: '문구점',
+    time: '2026.07.21 11:01',
+    amount: -10_000,
+    type: 'expense',
+    icon: '₩',
+    accountLabel: '깨비 돈',
+    memo: '준비물 구매',
+    depositName: '문구점',
+    depositAccountNumber: '가맹점 결제',
+    withdrawalName: '깨비 돈',
+    withdrawalAccountNumber: '952-17362605-47',
+    balanceAfterTransaction: 50_000,
+  },
+  {
+    id: 'asset-icecream',
+    title: '아이스크림 가게',
+    time: '2026.07.21 11:01',
+    amount: -1_000,
+    type: 'expense',
+    icon: '₩',
+    accountLabel: '깨비 돈',
+    memo: '아이스크림 구매',
+    depositName: '아이스크림 가게',
+    depositAccountNumber: '가맹점 결제',
+    withdrawalName: '깨비 돈',
+    withdrawalAccountNumber: '952-17362605-47',
+    balanceAfterTransaction: 60_000,
+  },
+  {
+    id: 'asset-convenience',
+    title: '편의점',
+    time: '2026.07.21 11:01',
+    amount: -3_000,
+    type: 'expense',
+    icon: '₩',
+    accountLabel: '깨비 돈',
+    memo: '편의점 구매',
+    depositName: '편의점',
+    depositAccountNumber: '가맹점 결제',
+    withdrawalName: '깨비 돈',
+    withdrawalAccountNumber: '952-17362605-47',
+    balanceAfterTransaction: 61_000,
+  },
+  {
+    id: 'asset-stationery-2',
+    title: '문구점',
+    time: '2026.07.21 11:01',
+    amount: -5_000,
+    type: 'expense',
+    icon: '₩',
+    accountLabel: '깨비 돈',
+    memo: '필기구 구매',
+    depositName: '문구점',
+    depositAccountNumber: '가맹점 결제',
+    withdrawalName: '깨비 돈',
+    withdrawalAccountNumber: '952-17362605-47',
+    balanceAfterTransaction: 64_000,
+  },
+  {
+    id: 'asset-allowance',
+    title: '엄마 용돈',
+    time: '2026.07.21 11:01',
+    amount: 100_000,
+    type: 'income',
+    icon: '₩',
+    accountLabel: '엄마 국민은행',
+    memo: '필요한 곳에 잘 써',
+    depositName: '깨비 돈',
+    depositAccountNumber: '952-17362605-47',
+    withdrawalName: '엄마 국민은행',
+    withdrawalAccountNumber: '123-456-789',
+    balanceAfterTransaction: 100_000,
+  },
+]
+
+export const childAssetTransactions = [...childTransactions, ...childFallbackTransactions]
 
 export const transferDefaults = {
   get balance() {
@@ -90,3 +205,7 @@ export const recordChildTransfer = ({ amount, receiverName = '국민은행' }: T
     icon: '🎒',
   })
 }
+
+export const getChildTransaction = (transactionId: string) =>
+  childAssetTransactions.find((transaction) => transaction.id === transactionId) ??
+  childAssetTransactions[0]!

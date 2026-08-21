@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { allowanceRequests } from '@/mocks/allowanceRequests'
+import { api, getApiErrorMessage } from '@/api'
 
 type AlarmItem = {
   id: number
@@ -12,79 +12,70 @@ type AlarmItem = {
   message: string
   receivedAt: string
   isRead: boolean
-  requestId?: string
+  requestId?: number
 }
 
 const router = useRouter()
-const pendingAllowanceRequest = allowanceRequests.find(({ status }) => status === 'pending')
-
-const alarms = ref<AlarmItem[]>([
-  ...(pendingAllowanceRequest
-    ? [
-        {
-          id: 5,
-          group: '오늘' as const,
-          category: '아이 활동',
-          title: `${pendingAllowanceRequest.childName}가 용돈을 요청했어요`,
-          message: `${pendingAllowanceRequest.amount.toLocaleString('ko-KR')}원이 필요한 이유를 확인해 주세요.`,
-          receivedAt: '방금 전',
-          isRead: false,
-          requestId: pendingAllowanceRequest.id,
-        },
-      ]
-    : []),
-  {
-    id: 1,
-    group: '오늘',
-    category: '저축 예정',
-    title: '오늘은 아이사랑적금 저축일이에요',
-    message: '목표를 향한 작은 한 걸음을 이어가 볼까요?',
-    receivedAt: '오전 11:01',
-    isRead: false,
-  },
-  {
-    id: 2,
-    group: '오늘',
-    category: '목표 달성',
-    title: '저축 목표의 80%를 달성했어요',
-    message: '조금만 더 모으면 기다리던 목표를 이룰 수 있어요.',
-    receivedAt: '오전 9:20',
-    isRead: false,
-  },
-  {
-    id: 3,
-    group: '이전 알림',
-    category: '타임캡슐',
-    title: '타임캡슐 공개일이 다가오고 있어요',
-    message: '소중한 추억을 만나는 날까지 이제 3일 남았어요.',
-    receivedAt: '8월 5일',
-    isRead: true,
-  },
-  {
-    id: 4,
-    group: '이전 알림',
-    category: '아이 성장',
-    title: '깨비의 특별한 날을 확인해 보세요',
-    message: '다가오는 기념일에 따뜻한 추억을 남겨보세요.',
-    receivedAt: '8월 3일',
-    isRead: true,
-  },
-])
+const alarms = ref<AlarmItem[]>([])
+const errorMessage = ref('')
 
 const unreadCount = computed(() => alarms.value.filter(({ isRead }) => !isRead).length)
 
-const readAlarm = (alarm: AlarmItem) => {
-  alarm.isRead = true
+const formatReceivedAt = (value?: string) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const today = new Date()
+  return date.toDateString() === today.toDateString()
+    ? date.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })
+    : date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+}
+
+const loadAlarms = async () => {
+  try {
+    const { data } = await api.getNotificationsUsingGET(undefined, undefined, undefined, undefined, undefined, undefined, undefined, '50')
+    alarms.value = (data.items ?? []).map((item) => ({
+      id: item.notification_id ?? 0,
+      group: item.created_at && new Date(item.created_at).toDateString() === new Date().toDateString()
+        ? '오늘'
+        : '이전 알림',
+      category: item.notification_category ?? '',
+      title: item.title ?? '새 알림',
+      message: item.content ?? '',
+      receivedAt: formatReceivedAt(item.created_at),
+      isRead: item.is_read ?? false,
+      requestId: item.reference_type === 'ALLOWANCE_REQUEST' ? item.reference_id : undefined,
+    }))
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '알림을 불러오지 못했어요.')
+  }
+}
+
+const readAlarm = async (alarm: AlarmItem) => {
+  if (!alarm.isRead) {
+    try {
+      await api.readNotificationUsingPATCH(alarm.id)
+      alarm.isRead = true
+    } catch (error) {
+      errorMessage.value = getApiErrorMessage(error, '알림을 읽음 처리하지 못했어요.')
+      return
+    }
+  }
   if (alarm.requestId) {
     router.push({ name: 'AllowanceRequest', params: { requestId: alarm.requestId } })
   }
 }
 
-const readAllAlarms = () => {
-  alarms.value.forEach((alarm) => {
-    alarm.isRead = true
-  })
+const readAllAlarms = async () => {
+  try {
+    await api.readAllNotificationsUsingPATCH()
+    alarms.value.forEach((alarm) => { alarm.isRead = true })
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '알림을 모두 읽음 처리하지 못했어요.')
+  }
 }
+
+onMounted(loadAlarms)
 </script>
 
 <template>

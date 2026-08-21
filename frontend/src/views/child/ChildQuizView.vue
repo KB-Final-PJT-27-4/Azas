@@ -1,50 +1,96 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Check, X } from 'lucide-vue-next'
+import { Check, Lightbulb, Trophy, X } from 'lucide-vue-next'
 
-import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import completeStarUrl from '@/assets/images/accounts/complete-star.png'
 import childQuizCorrectPigUrl from '@/assets/images/child/child-quiz-correct-pig.png'
 import childQuizThinkingPigUrl from '@/assets/images/child/child-quiz-thinking-pig.png'
 import childQuizWrongPigUrl from '@/assets/images/child/child-quiz-wrong-pig.png'
 import childQuizCompletePigUrl from '@/assets/images/child/child-quiz-complete-pig.png'
 import { childQuizQuestions } from '@/mocks/childFinanceFlow'
+import { markChildQuizCompletedToday } from '@/utils/childQuizProgress'
 
+const QUIZ_ROUND_SIZE = 5
+
+const shuffleItems = <T,>(items: T[]) => {
+  const shuffledItems = [...items]
+
+  for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    const currentItem = shuffledItems[index]!
+    shuffledItems[index] = shuffledItems[swapIndex]!
+    shuffledItems[swapIndex] = currentItem
+  }
+
+  return shuffledItems
+}
+
+const createQuizRound = () =>
+  shuffleItems(childQuizQuestions)
+    .slice(0, QUIZ_ROUND_SIZE)
+    .map((question) => {
+      const shuffledOptions = shuffleItems(
+        question.options.map((option, optionIndex) => ({ option, optionIndex })),
+      )
+
+      return {
+        ...question,
+        options: shuffledOptions.map(({ option }) => option),
+        answerIndex: shuffledOptions.findIndex(
+          ({ optionIndex }) => optionIndex === question.answerIndex,
+        ),
+      }
+    })
+
+const quizQuestions = ref(createQuizRound())
 const quizIndex = ref(0)
 const selectedAnswerIndex = ref<number | null>(null)
 const isQuizComplete = ref(false)
+const nextButtonRef = ref<HTMLButtonElement | null>(null)
 const answerResults = ref<Array<'correct' | 'wrong' | null>>(
-  Array.from({ length: childQuizQuestions.length }, () => null),
+  Array.from({ length: quizQuestions.value.length }, () => null),
 )
 
-const quiz = computed(() => childQuizQuestions[quizIndex.value] ?? childQuizQuestions[0]!)
+const quiz = computed(() => quizQuestions.value[quizIndex.value] ?? quizQuestions.value[0]!)
 const hasAnsweredQuiz = computed(() => selectedAnswerIndex.value !== null)
 const currentAnswerResult = computed(() => answerResults.value[quizIndex.value])
+const correctAnswerCount = computed(
+  () => answerResults.value.filter((result) => result === 'correct').length,
+)
 const quizReactionImage = computed(() => {
   if (currentAnswerResult.value === 'correct') return childQuizCorrectPigUrl
   if (currentAnswerResult.value === 'wrong') return childQuizWrongPigUrl
   return childQuizThinkingPigUrl
 })
 
-const selectQuizAnswer = (optionIndex: number) => {
+const selectQuizAnswer = async (optionIndex: number) => {
   if (hasAnsweredQuiz.value) return
 
   selectedAnswerIndex.value = optionIndex
   answerResults.value[quizIndex.value] =
     optionIndex === quiz.value.answerIndex ? 'correct' : 'wrong'
+
+  await nextTick()
+  nextButtonRef.value?.scrollIntoView({ behavior: 'smooth', block: 'end' })
 }
 
-const goNextQuiz = () => {
+const goNextQuiz = async () => {
   if (!hasAnsweredQuiz.value) return
 
-  if (quizIndex.value + 1 >= childQuizQuestions.length) {
+  if (quizIndex.value + 1 >= quizQuestions.value.length) {
+    markChildQuizCompletedToday()
     isQuizComplete.value = true
+    await nextTick()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
     return
   }
 
   quizIndex.value += 1
   selectedAnswerIndex.value = null
+
+  await nextTick()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const getOptionClass = (optionIndex: number) => {
@@ -86,13 +132,20 @@ const getStepClass = (stepIndex: number) => {
 </script>
 
 <template>
-  <main class="min-h-[calc(100dvh-var(--app-header-height))] bg-white px-5 pt-0 pb-[168px]">
+  <main
+    class="px-[18px]"
+    :class="
+      isQuizComplete
+        ? 'h-[calc(100dvh-var(--app-header-height))] overflow-hidden bg-white pb-[var(--app-bottom-nav-height)]'
+        : 'min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef9ff] pt-4 pb-[calc(var(--app-bottom-nav-height)+24px)]'
+    "
+  >
     <section
       v-if="isQuizComplete"
-      class="grid min-h-[calc(100dvh-var(--app-header-height)-104px)] content-center justify-items-center text-center"
+      class="grid h-full content-center justify-items-center bg-white px-5 py-4 text-center"
       aria-label="오늘의 퀴즈 완료"
     >
-      <div class="quiz-complete-scene mb-8" aria-hidden="true">
+      <div class="quiz-complete-scene mb-5" aria-hidden="true">
         <img
           class="quiz-complete-star quiz-complete-star--left"
           :src="completeStarUrl"
@@ -109,15 +162,24 @@ const getStepClass = (stepIndex: number) => {
           alt=""
         />
       </div>
-      <h1 class="m-0 text-[26px] font-bold text-[var(--color-text-primary)]">
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-[#fff7d8] px-3 py-1.5 text-[12px] font-bold text-[#b98916]">
+        <Trophy :size="15" :stroke-width="2.4" /> 오늘의 금융 습관
+      </span>
+      <h1 class="mt-4 text-[26px] font-extrabold text-[var(--color-text-primary)]">
         오늘의 퀴즈 완료!
       </h1>
-      <p class="mt-4 mb-10 text-[16px] leading-[1.6] text-[var(--color-text-secondary)]">
-        정답을 모두 맞혔어요!<br />
-        정말 대단해요.
+      <p class="mt-3 text-[14px] leading-[1.6] text-[var(--color-text-secondary)]">
+        오늘도 금융 습관을 하나 배웠어요.<br />
+        내일 또 새로운 퀴즈를 풀어봐요.
       </p>
+      <div class="mt-5 flex w-full items-center justify-between rounded-[16px] bg-[#f3faff] px-4 py-3.5">
+        <span class="text-[13px] font-semibold text-[var(--color-text-secondary)]">맞힌 문제</span>
+        <strong class="text-[18px] text-[var(--color-selected-text)]">
+          {{ correctAnswerCount }} / {{ quizQuestions.length }}
+        </strong>
+      </div>
       <RouterLink
-        class="grid h-14 w-full place-items-center rounded-[14px] bg-[var(--color-brand-primary)] text-[18px] font-bold !text-white no-underline"
+        class="mt-5 grid h-14 w-full place-items-center rounded-[14px] bg-[var(--color-brand-primary)] text-[16px] font-bold !text-white no-underline"
         to="/child/home"
       >
         확인
@@ -129,13 +191,19 @@ const getStepClass = (stepIndex: number) => {
       class="min-h-[calc(100dvh-var(--app-header-height)-168px)]"
       aria-label="오늘의 금융 퀴즈"
     >
-      <div class="pt-7 pb-7 px-1" aria-label="퀴즈 진행 상태">
+      <div class="rounded-[20px] border border-[#dce8ee] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(54,112,139,0.05)]" aria-label="퀴즈 진행 상태">
+        <div class="mb-4 flex items-center justify-between">
+          <strong class="text-[14px] font-extrabold">오늘의 금융 퀴즈</strong>
+          <span class="rounded-full bg-[#eaf8ff] px-2.5 py-1 text-[11px] font-bold text-[var(--color-selected-text)]">
+            {{ quizIndex + 1 }} / {{ quizQuestions.length }}
+          </span>
+        </div>
         <ol
           class="quiz-steps m-0 grid list-none p-0"
-          :style="{ gridTemplateColumns: `repeat(${childQuizQuestions.length}, minmax(0, 1fr))` }"
+          :style="{ gridTemplateColumns: `repeat(${quizQuestions.length}, minmax(0, 1fr))` }"
         >
           <li
-            v-for="(_, stepIndex) in childQuizQuestions"
+            v-for="(_, stepIndex) in quizQuestions"
             :key="stepIndex"
             class="quiz-step"
           >
@@ -162,8 +230,8 @@ const getStepClass = (stepIndex: number) => {
       </div>
 
       <Transition name="quiz-slide" mode="out-in">
-        <div :key="quizIndex" class="quiz-question-panel">
-          <div class="mb-3 grid justify-items-center">
+        <div :key="quizIndex" class="quiz-question-panel mt-4 rounded-[22px] border border-[#dce8ee] bg-white p-5 shadow-[0_10px_28px_rgba(54,112,139,0.06)]">
+          <div class="mb-2 grid justify-items-center rounded-[18px] bg-[#f5fbfe] py-2">
             <img
               class="quiz-reaction-image select-none object-contain"
               :class="hasAnsweredQuiz ? 'quiz-reaction-image--answered' : 'quiz-reaction-image--idle'"
@@ -173,9 +241,10 @@ const getStepClass = (stepIndex: number) => {
             />
           </div>
 
-          <h2
-            class="mb-6 text-center text-[24px] leading-[1.45] font-bold text-[var(--color-text-primary)]"
-          >
+          <span class="mt-4 block text-[12px] font-extrabold text-[var(--color-selected-text)]">
+            Q{{ quizIndex + 1 }}
+          </span>
+          <h2 class="mt-2 mb-5 text-[21px] leading-[1.45] font-extrabold tracking-[-0.025em] text-[var(--color-text-primary)]">
             {{ quiz.question }}
           </h2>
 
@@ -183,12 +252,17 @@ const getStepClass = (stepIndex: number) => {
             <button
               v-for="(option, optionIndex) in quiz.options"
               :key="option"
-              class="flex min-h-12 items-center justify-between rounded-[10px] border px-4 py-3 text-left text-[16px] font-bold transition duration-200 active:scale-[0.99]"
+              class="flex min-h-14 items-center justify-between gap-3 rounded-[14px] border px-3.5 py-3 text-left text-[14px] font-bold transition duration-200 active:scale-[0.99]"
               :class="getOptionClass(optionIndex)"
               type="button"
               @click="selectQuizAnswer(optionIndex)"
             >
-              <span>{{ optionIndex + 1 }}. {{ option }}</span>
+              <span class="flex min-w-0 items-center gap-3">
+                <span class="grid size-7 shrink-0 place-items-center rounded-full bg-[#f0f4f6] text-[12px] font-extrabold">
+                  {{ optionIndex + 1 }}
+                </span>
+                <span>{{ option }}</span>
+              </span>
               <Check
                 v-if="hasAnsweredQuiz && optionIndex === quiz.answerIndex"
                 :size="18"
@@ -197,14 +271,15 @@ const getStepClass = (stepIndex: number) => {
             </button>
           </div>
 
-          <div class="mt-6 min-h-[132px]">
+          <div class="mt-4 min-h-[112px]">
             <Transition name="quiz-feedback">
               <div
                 v-if="hasAnsweredQuiz"
-                class="min-h-[132px] rounded-[12px] px-4 py-4 text-[16px] leading-[1.65] text-[var(--color-text-primary)]"
-                :class="currentAnswerResult === 'correct' ? 'bg-[#e8f8ef]' : 'bg-[#fff1f2]'"
+                class="min-h-[112px] rounded-[14px] border px-4 py-4 text-[13px] leading-[1.65] text-[var(--color-text-primary)]"
+                :class="currentAnswerResult === 'correct' ? 'border-[#ccebdd] bg-[#edf9f3]' : 'border-[#f8d4d4] bg-[#fff4f4]'"
               >
-                <strong class="mb-1 block">
+                <strong class="mb-1.5 flex items-center gap-1.5 text-[14px]">
+                  <Lightbulb :size="16" :stroke-width="2.4" />
                   {{ currentAnswerResult === 'correct' ? '정답이에요' : '다시 기억해봐요' }}
                 </strong>
                 {{ quiz.explanation }}
@@ -215,16 +290,16 @@ const getStepClass = (stepIndex: number) => {
       </Transition>
 
       <button
-        class="fixed bottom-[96px] left-1/2 h-14 w-[calc(100%-40px)] max-w-[calc(var(--app-max-width)-40px)] -translate-x-1/2 rounded-[14px] border-0 bg-[var(--color-brand-primary)] text-[18px] font-bold !text-white disabled:bg-[#cbd8df]"
+        ref="nextButtonRef"
+        class="mt-4 h-14 w-full scroll-mb-[calc(var(--app-bottom-nav-height)+24px)] rounded-[15px] border-0 bg-[var(--color-brand-primary)] text-[16px] font-bold !text-white shadow-[0_6px_18px_rgba(39,169,235,0.2)] disabled:bg-[#cbd8df] disabled:shadow-none"
         type="button"
         :disabled="!hasAnsweredQuiz"
         @click="goNextQuiz"
       >
-        {{ quizIndex + 1 === childQuizQuestions.length ? '완료하기' : '다음 문제' }}
+        {{ quizIndex + 1 === quizQuestions.length ? '완료하기' : '다음 문제' }}
       </button>
     </section>
 
-    <ChildBottomNavigation />
   </main>
 </template>
 
@@ -353,16 +428,16 @@ const getStepClass = (stepIndex: number) => {
 }
 
 .quiz-step--correct {
-  border-color: #22c55e;
-  background: #22c55e;
-  color: white;
+  border-color: #bfe9d8;
+  background: #e8f8ef;
+  color: #189f63;
   animation: quiz-step-pop 260ms cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
 .quiz-step--wrong {
-  border-color: #ef4444;
-  background: #ef4444;
-  color: white;
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #ef4444;
   animation: quiz-step-shake 300ms ease;
 }
 

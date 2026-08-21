@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import ChildcareCategoryAnalysisContent from '@/components/reports/ChildcareCategoryAnalysisContent.vue'
-import {
-  childcareReportSummary,
-  formatReportWon,
-  monthlyChildcareExpenses,
-} from '@/data/childcareReportData'
+import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
+
+const { childcareReportSummary, monthlyChildcareExpenses, load } = useChildcareReport()
 
 type Period = '6months' | 'year'
 type ChartPoint = { x: number; y: number }
@@ -58,6 +56,7 @@ const selectPeriod = (nextPeriod: Period) => {
   period.value = nextPeriod
   activePointIndex.value = null
 }
+onMounted(load)
 </script>
 
 <template>
@@ -270,16 +269,6 @@ const selectPeriod = (nextPeriod: Period) => {
           )
         }}</strong>
       </div>
-    </section>
-
-    <section
-      class="mt-5 rounded-[22px] border border-[var(--color-border)] bg-white p-5 shadow-[0_4px_14px_rgb(45_76_92_/_3%)]"
-      aria-labelledby="category-analysis-title"
-    >
-      <h2 id="category-analysis-title" class="m-0 text-[21px] font-extrabold tracking-[-0.03em]">
-        항목별 소비 분석
-      </h2>
-      <ChildcareCategoryAnalysisContent :key="`category-analysis-${period}`" />
     </section>
   </main>
 </template>

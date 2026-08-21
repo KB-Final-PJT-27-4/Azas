@@ -1,37 +1,81 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useToast } from '@/composables/useToast'
-import { getAllowanceRequest } from '@/mocks/allowanceRequests'
+import { api, getApiErrorMessage } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
 const { showToast } = useToast()
 
-const request = computed(() => getAllowanceRequest(String(route.params.requestId)))
+const request = ref<null | {
+  id: number
+  amount: number
+  childName: string
+  targetAccountName: string
+  targetAccountNumber: string
+  requestedAt: string
+  reason: string
+  status: string
+}>(null)
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
-const rejectRequest = () => {
+onMounted(async () => {
+  try {
+    const requestId = Number(route.params.requestId)
+    const { data } = await api.getAllowanceRequestDetailUsingGET(requestId)
+    const childId = data.child_id ?? 0
+    const [childResult, accountResult] = await Promise.all([
+      api.getChildUsingGET(childId),
+      api.getChildAccountsUsingGET(childId),
+    ])
+    const targetAccount = accountResult.data.accounts?.[0]
+    request.value = {
+      id: data.allowance_request_id ?? requestId,
+      amount: data.requested_amount ?? 0,
+      childName: childResult.data.name ?? '아이',
+      targetAccountName: targetAccount?.account_name ?? '자녀 계좌',
+      targetAccountNumber: targetAccount?.account_number ?? '',
+      requestedAt: data.requested_at ? new Date(data.requested_at).toLocaleString('ko-KR') : '',
+      reason: data.message ?? '',
+      status: data.status ?? 'PENDING',
+    }
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '용돈 요청을 불러오지 못했습니다.'), 'error')
+  }
+})
+
+const rejectRequest = async () => {
   if (!request.value) return
-  request.value.status = 'rejected'
-  showToast('용돈 요청을 거절했습니다.', 'info')
-  window.setTimeout(() => router.push({ name: 'Alarm' }), 500)
+  try {
+    await api.updateAllowanceRequestStatusUsingPATCH(request.value.id, { action: 'REJECT' })
+    request.value.status = 'REJECTED'
+    showToast('용돈 요청을 거절했습니다.', 'info')
+    await router.push({ name: 'Alarm' })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '용돈 요청을 거절하지 못했습니다.'), 'error')
+  }
 }
 
-const approveRequest = () => {
+const approveRequest = async () => {
   if (!request.value) return
-  request.value.status = 'approved'
-  router.push({
-    name: 'Assets',
-    query: {
-      allowanceRequest: request.value.id,
-      amount: String(request.value.amount),
-      memo: `${request.value.childName} 용돈`,
-      targetName: request.value.targetAccountName,
-      targetNumber: request.value.targetAccountNumber,
-    },
-  })
+  try {
+    await api.updateAllowanceRequestStatusUsingPATCH(request.value.id, { action: 'APPROVE' })
+    request.value.status = 'APPROVED'
+    await router.push({
+      name: 'Assets',
+      query: {
+        allowanceRequest: request.value.id,
+        amount: String(request.value.amount),
+        memo: `${request.value.childName} 용돈`,
+        targetName: request.value.targetAccountName,
+        targetNumber: request.value.targetAccountNumber,
+      },
+    })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '용돈 요청을 승인하지 못했습니다.'), 'error')
+  }
 }
 </script>
 

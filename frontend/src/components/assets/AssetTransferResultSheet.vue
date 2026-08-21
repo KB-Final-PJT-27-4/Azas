@@ -71,8 +71,13 @@ const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
         @click.self="closeSheet"
       >
       <section
-        class="relative flex h-[min(655px,calc(100dvh-120px))] w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[20px] bg-white px-6 pt-2 pb-[calc(var(--app-bottom-nav-height)+18px)] text-[var(--color-text-primary)]"
-        :class="isSheetDragging ? 'asset-result-sheet-panel--dragging' : ''"
+        class="relative flex w-full max-w-[var(--app-max-width)] flex-col overflow-hidden rounded-t-[20px] bg-white px-6 pt-2 pb-[calc(var(--app-bottom-nav-height)+18px)] text-[var(--color-text-primary)]"
+        :class="[
+          status === 'success'
+            ? 'h-[min(655px,calc(100dvh-120px))]'
+            : 'h-[min(520px,calc(100dvh-72px))]',
+          isSheetDragging ? 'asset-result-sheet-panel--dragging' : '',
+        ]"
         :style="sheetOffset ? { transform: `translateY(${sheetOffset}px)` } : undefined"
         role="dialog"
         aria-modal="true"
@@ -145,7 +150,7 @@ const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
               출금 계좌의 잔액과 이체 금액을 다시 확인해 주세요.
             </p>
             <img
-              class="mt-4 h-[300px] w-full object-contain"
+              class="mt-4 h-[150px] w-full object-contain"
               :src="failPigImage"
               alt="이체 실패를 알리는 돼지 캐릭터"
             />

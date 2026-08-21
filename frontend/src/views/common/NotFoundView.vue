@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ArrowLeft, Home } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import notFoundPigUrl from '@/assets/images/common/404-pig.png'

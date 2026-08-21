@@ -26,6 +26,7 @@ export type TimeCapsuleAccount = {
   bankName: string
   accountNumber: string
   description: string
+  totalSavedAmount: number
   records: TimeCapsuleRecord[]
 }
 
@@ -66,6 +67,7 @@ export const timeCapsuleAccounts: Record<string, TimeCapsuleAccount> = {
     bankName: 'KB국민은행',
     accountNumber: '123-456-789',
     description: '깨비의 성장 순간과 금융 기록을 모아보세요.',
+    totalSavedAmount: 1_090_000,
     records: [
       createRecord(101, '첫 생일 축하', '2026-05-04', 150000, '우리 깨비의 첫 생일을 진심으로 축하해!\n하루하루 건강하게 자라는 모습을 볼 수 있어서 정말 행복해.\n\n앞으로도 지금처럼 밝고 씩씩하게 자라렴. 언제나 사랑해!', photosA),
       createRecord(102, '가족 여행', '2026-05-09', 80000, '우리 가족이 함께한 소중한 여행을 기억해두려고 해.\n새로운 풍경을 보며 활짝 웃던 깨비의 얼굴이 아직도 눈앞에 선해.\n\n다음에도 다 같이 즐거운 추억을 많이 만들자.', photosB),
@@ -86,6 +88,7 @@ export const timeCapsuleAccounts: Record<string, TimeCapsuleAccount> = {
     bankName: '우리은행',
     accountNumber: '1002-345-678901',
     description: '우리 가족의 행복한 추억과 저축 기록이에요.',
+    totalSavedAmount: 660_000,
     records: [
       createRecord(201, '가족 캠핑', '2026-05-03', 120000, '별이 가득한 하늘 아래에서 우리 가족이 함께한 첫 캠핑이야.\n오늘의 웃음과 이야기를 오래 기억하자.', photosB),
       createRecord(202, '엄마와 쿠키 만들기', '2026-05-17', 50000, '조그만 손으로 반죽을 꾹꾹 누르던 모습이 정말 사랑스러웠어.\n다음에는 더 맛있는 쿠키를 함께 만들자.', photosA),
@@ -102,6 +105,7 @@ export const timeCapsuleAccounts: Record<string, TimeCapsuleAccount> = {
     bankName: 'KB국민은행',
     accountNumber: '987-654-321',
     description: '특별한 날을 자유롭게 골라 추억을 담는 캡슐이에요.',
+    totalSavedAmount: 0,
     records: [],
   },
 }

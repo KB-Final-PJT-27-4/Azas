@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch, type CSSProperties } from 'vue'
+import { computed, onMounted, ref, watch, type CSSProperties } from 'vue'
 import { Send, Wallet, X } from 'lucide-vue-next'
 
 import AssetAccountSelect from '@/components/assets/AssetAccountSelect.vue'
 import allowanceCompletePigUrl from '@/assets/images/child/child-allowance-complete-pig-v2.png'
 import transferCompletePigUrl from '@/assets/images/child/child-transfer-complete-pig-v2.png'
-import { childAccountSummary, recordChildTransfer, transferDefaults } from '@/mocks/childHome'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 type SheetMode = 'menu' | 'transfer' | 'allowance' | 'transferDone' | 'allowanceDone'
 
@@ -16,11 +18,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+const { showToast } = useToast()
 
 const mode = ref<SheetMode>('menu')
-const firstContact = transferDefaults.contacts[0]!
-const sourceAccountId = ref('child-main')
-const selectedContactId = ref(firstContact.id)
+const sourceAccountId = ref('')
+const selectedContactId = ref('')
 const transferAmount = ref('0')
 const transferMessage = ref('')
 const allowanceAmount = ref('0')
@@ -32,30 +34,15 @@ const maxMoneyDigits = 8
 const maxReasonLength = 200
 const maxTransferMemoLength = 50
 
-const sourceAccounts = computed(() => [
-  {
-    id: 'child-main',
-    name: childAccountSummary.accountName,
-    number: '952-17362605-47',
-    balance: transferDefaults.balance,
-  },
-])
-const targetAccounts = computed(() =>
-  transferDefaults.contacts.map((contact) => ({
-    id: contact.id,
-    name: `${contact.name} ${contact.bankName}`,
-    number: contact.accountNumber,
-  })),
-)
-const selectedContact = computed(
-  () => transferDefaults.contacts.find((contact) => contact.id === selectedContactId.value) ?? firstContact,
-)
+const allAccounts = ref<Array<{ id: string; name: string; number: string; balance: number }>>([])
+const sourceAccounts = computed(() => allAccounts.value)
+const targetAccounts = computed(() => allAccounts.value.filter((account) => account.id !== sourceAccountId.value))
 const transferAmountValue = computed(() => Number(transferAmount.value.replace(/\D/g, '')) || 0)
 const canSubmitTransfer = computed(
   () =>
     Boolean(selectedContactId.value) &&
     transferAmountValue.value > 0 &&
-    transferAmountValue.value <= transferDefaults.balance,
+    transferAmountValue.value <= (sourceAccounts.value.find(({ id }) => id === sourceAccountId.value)?.balance ?? 0),
 )
 
 const allowanceAmountValue = computed(() => Number(allowanceAmount.value.replace(/\D/g, '')) || 0)
@@ -69,7 +56,6 @@ const sheetTitle = computed(() => {
   if (mode.value === 'allowanceDone') return '요청 완료'
   return '무엇을 할까요?'
 })
-const canGoBack = computed(() => mode.value === 'transfer' || mode.value === 'allowance')
 const isDoneMode = computed(() => mode.value === 'transferDone' || mode.value === 'allowanceDone')
 const panelDragStyle = computed<CSSProperties | undefined>(() => {
   if (dragOffset.value <= 0) return undefined
@@ -88,10 +74,6 @@ const closeSheet = () => {
   emit('close')
 }
 
-const showMenu = () => {
-  mode.value = 'menu'
-}
-
 const showTransfer = () => {
   mode.value = 'transfer'
 }
@@ -102,8 +84,8 @@ const showAllowance = () => {
 
 const resetSheet = () => {
   mode.value = 'menu'
-  sourceAccountId.value = 'child-main'
-  selectedContactId.value = firstContact.id
+  sourceAccountId.value = allAccounts.value[0]?.id ?? ''
+  selectedContactId.value = targetAccounts.value[0]?.id ?? ''
   transferAmount.value = '0'
   transferMessage.value = ''
   allowanceAmount.value = '0'
@@ -142,14 +124,19 @@ const clearTransferAmount = () => {
   transferAmount.value = '0'
 }
 
-const submitTransfer = () => {
+const submitTransfer = async () => {
   if (!canSubmitTransfer.value) return
-
-  recordChildTransfer({
-    amount: transferAmountValue.value,
-    receiverName: selectedContact.value.bankName,
-  })
-  mode.value = 'transferDone'
+  try {
+    await api.createTransferUsingPOST(crypto.randomUUID(), {
+      source_account_id: Number(sourceAccountId.value),
+      destination_account_id: Number(selectedContactId.value),
+      amount: transferAmountValue.value,
+      memo: transferMessage.value.trim() || undefined,
+    })
+    mode.value = 'transferDone'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '이체하지 못했습니다.'), 'error')
+  }
 }
 
 const updateAllowanceAmount = (event: Event) => {
@@ -182,17 +169,23 @@ const updateReason = (event: Event) => {
 }
 
 const startHandleDrag = (event: PointerEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
   isDragging.value = true
   dragStartY.value = event.clientY - dragOffset.value
   ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
 }
 
 const moveHandleDrag = (event: PointerEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
   if (!isDragging.value) return
   dragOffset.value = Math.max(event.clientY - dragStartY.value, 0)
 }
 
 const endHandleDrag = (event: PointerEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
   if (!isDragging.value) return
 
   const handle = event.currentTarget as HTMLElement
@@ -209,11 +202,37 @@ const endHandleDrag = (event: PointerEvent) => {
   dragOffset.value = 0
 }
 
-const submitAllowance = () => {
+const submitAllowance = async () => {
   if (!canSubmitAllowance.value) return
-
-  mode.value = 'allowanceDone'
+  try {
+    await api.createAllowanceRequestUsingPOST({
+      requested_amount: allowanceAmountValue.value,
+      message: reason.value.trim(),
+    })
+    mode.value = 'allowanceDone'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '용돈 요청을 보내지 못했습니다.'), 'error')
+  }
 }
+
+const loadAccounts = async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const { data } = await api.getChildAccountsUsingGET(childId)
+    allAccounts.value = data.accounts.map((account) => ({
+      id: String(account.account_id),
+      name: account.account_name,
+      number: account.account_number,
+      balance: account.balance,
+    }))
+    sourceAccountId.value = allAccounts.value[0]?.id ?? ''
+    selectedContactId.value = targetAccounts.value[0]?.id ?? ''
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌를 불러오지 못했습니다.'), 'error')
+  }
+}
+
+onMounted(loadAccounts)
 
 watch(
   () => props.open,
@@ -234,14 +253,14 @@ watch(
         @click.self="closeSheet"
       >
         <section
-          class="quick-sheet-panel fixed right-0 bottom-0 left-0 mx-auto max-h-[min(680px,calc(100dvh-24px))] w-full max-w-[var(--app-max-width)] overflow-hidden rounded-t-[20px] bg-white text-[var(--color-text-primary)] shadow-[0_-14px_36px_rgb(51_51_51_/_18%)]"
+          class="quick-sheet-panel fixed right-0 bottom-0 left-0 mx-auto max-h-[min(680px,calc(100dvh-24px))] w-full max-w-[var(--app-max-width)] overflow-hidden rounded-t-[32px] bg-white text-[var(--color-text-primary)] shadow-[0_-14px_36px_rgb(51_51_51_/_18%)]"
           :style="panelDragStyle"
           role="dialog"
           aria-modal="true"
           :aria-label="sheetTitle"
         >
           <button
-            class="mx-auto mt-3 mb-4 grid h-5 w-20 place-items-start border-0 bg-transparent p-0"
+            class="quick-sheet-handle mx-auto mt-3 mb-4 grid h-5 w-20 place-items-start border-0 bg-transparent p-0"
             type="button"
             aria-label="바텀시트 아래로 내려 닫기"
             @pointerdown="startHandleDrag"
@@ -255,26 +274,13 @@ watch(
           <div
             class="max-h-[calc(100dvh-88px)] overflow-y-auto overflow-x-hidden px-5 pb-[calc(20px+env(safe-area-inset-bottom))]"
           >
-            <header
-              v-if="!isDoneMode"
-              class="mb-5 grid grid-cols-[44px_1fr_44px] items-center"
-            >
-              <button
-                v-if="canGoBack"
-                class="justify-self-start border-0 bg-transparent p-0 text-[14px] font-bold text-[var(--color-text-secondary)]"
-                type="button"
-                @click="showMenu"
-              >
-                이전
-              </button>
-              <span v-else />
+            <header v-if="!isDoneMode" class="mb-5">
               <h2 class="m-0 text-center text-[20px] font-bold text-[var(--color-text-primary)]">
                 {{ sheetTitle }}
               </h2>
-              <span />
             </header>
 
-            <Transition name="quick-action-slide" mode="out-in">
+            <div>
               <div v-if="mode === 'menu'" key="menu" class="grid gap-3">
                 <button
                   class="grid min-h-[76px] grid-cols-[44px_1fr] items-center gap-3 rounded-[16px] border border-[var(--color-border)] bg-white px-4 text-left transition active:scale-[0.99] active:bg-[#f7fbfd]"
@@ -440,14 +446,16 @@ watch(
                   </div>
                 </div>
 
-                <label class="block text-[16px] font-bold">
+                <label class="block text-[12px] font-semibold">
                   부모님께 하고 싶은 말
                   <div class="relative mt-3">
                     <textarea
                       :value="reason"
                       class="block min-h-[132px] w-full resize-none rounded-[12px] border border-[var(--color-border)] px-4 py-4 pb-8 text-[14px] font-normal outline-none transition focus:border-[var(--color-brand-primary)]"
                       :maxlength="maxReasonLength"
-                      placeholder="용돈이 왜 필요한지 적어보세요 :)"
+                      placeholder="용돈이 왜 필요한지 적어보세요 :)
+누가? 언제? 어디서? 무엇을? 왜? 얼마만큼?
+예) 친구 생일 선물을 사려고 해요."
                       @input="updateReason"
                       @compositionend="updateReason"
                     />
@@ -458,16 +466,6 @@ watch(
                     </span>
                   </div>
                 </label>
-
-                <div
-                  class="rounded-[12px] bg-[#f0fbff] px-4 py-4 text-[12px] leading-[1.65] text-[var(--color-text-secondary)]"
-                >
-                  <strong class="mb-2 block text-[var(--color-text-primary)]">
-                    이렇게 쓰면 용돈 받을 확률이 올라가요
-                  </strong>
-                  누가? 언제? 어디서? 무엇을? 왜? 얼마만큼?<br />
-                  예) 친구 생일 선물을 사려고 해요.
-                </div>
 
                 <button
                   class="h-14 w-full rounded-[14px] border-0 text-[16px] font-bold text-white transition active:scale-[0.99] disabled:bg-[#cbd8df]"
@@ -551,7 +549,7 @@ watch(
                   확인
                 </button>
               </section>
-            </Transition>
+            </div>
           </div>
         </section>
       </div>
@@ -560,16 +558,22 @@ watch(
 </template>
 
 <style scoped>
-.quick-sheet-enter-active,
-.quick-sheet-leave-active {
-  transition: background-color 180ms ease;
+.quick-sheet-enter-active {
+  transition: background-color 260ms ease-out;
 }
 
-.quick-sheet-enter-active .quick-sheet-panel,
+.quick-sheet-leave-active {
+  transition: background-color 200ms ease-in;
+}
+
+.quick-sheet-enter-active .quick-sheet-panel {
+  will-change: transform;
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .quick-sheet-leave-active .quick-sheet-panel {
-  transition:
-    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 180ms ease;
+  will-change: transform;
+  transition: transform 240ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .quick-sheet-enter-from,
@@ -579,25 +583,12 @@ watch(
 
 .quick-sheet-enter-from .quick-sheet-panel,
 .quick-sheet-leave-to .quick-sheet-panel {
-  opacity: 0;
-  transform: translateY(100%);
+  transform: translate3d(0, 100%, 0);
 }
 
-.quick-action-slide-enter-active,
-.quick-action-slide-leave-active {
-  transition:
-    opacity 180ms ease,
-    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.quick-action-slide-enter-from {
-  opacity: 0;
-  transform: translateY(12px);
-}
-
-.quick-action-slide-leave-to {
-  opacity: 0;
-  transform: translateY(8px);
+.quick-sheet-handle {
+  touch-action: none;
+  user-select: none;
 }
 
 .quick-done-panel {

@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { CheckCircle2, ChevronDown, Gift, Heart, ShieldCheck, Sparkles } from 'lucide-vue-next'
 
-import { recommendedProducts } from '@/data/productDummyData'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   productId: string
 }>()
+const router = useRouter()
+const { showToast } = useToast()
+const productName = ref('금융 상품')
+const bankName = ref('')
+const summary = ref('')
+const maxRate = ref<number | undefined>()
+const baseRate = ref<number | undefined>()
+const periodMonths = ref(12)
+const monthlyMax = ref<number | undefined>()
 
 const isFavorite = ref(false)
 const isBasicInfoOpen = ref(true)
@@ -16,9 +28,8 @@ const isMaturityOpen = ref(true)
 const isNoticeOpen = ref(true)
 const monthlySavingAmount = ref(300000)
 
-const productType = computed(
-  () => recommendedProducts.find((product) => product.id === props.productId)?.type ?? '적금',
-)
+const productTypeValue = ref('SAVINGS')
+const productType = computed(() => productTypeValue.value === 'DEMAND_DEPOSIT' ? '입출금계좌' : '적금')
 
 const basicInformation = [
   { label: '가입 대상', value: '만 19세 미만 실명의 개인, 1인 1계좌' },
@@ -80,15 +91,80 @@ const benefits = [
   },
 ]
 
-const principalAmount = computed(() => monthlySavingAmount.value * 12)
-const expectedInterest = computed(() => Math.round(principalAmount.value * 0.034 * (6.5 / 12)))
-const expectedMaturityAmount = computed(() => principalAmount.value + expectedInterest.value)
+const principalAmount = ref(0)
+const expectedInterest = ref(0)
+const expectedMaturityAmount = ref(0)
 
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const updateMonthlyAmount = (event: Event) => {
   const input = event.target as HTMLInputElement
   monthlySavingAmount.value = Number(input.value.replace(/\D/g, '')) || 0
 }
+
+const toggleFavorite = async () => {
+  try {
+    const next = !isFavorite.value
+    const childId = await resolveCurrentChildId()
+    await api.updateBookmarkUsingPUT(childId, Number(props.productId), { is_bookmarked: next })
+    isFavorite.value = next
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '관심상품을 변경하지 못했습니다.'), 'error')
+  }
+}
+
+const estimateMaturity = async () => {
+  if (!monthlySavingAmount.value) return
+  try {
+    const { data } = await api.estimateMaturityUsingPOST(Number(props.productId), {
+      monthly_amount: monthlySavingAmount.value,
+      period_months: periodMonths.value,
+    })
+    principalAmount.value = data.principal_amount ?? 0
+    expectedInterest.value = data.estimated_interest_after_tax ?? data.estimated_interest_before_tax ?? 0
+    expectedMaturityAmount.value = data.estimated_maturity_amount ?? 0
+  } catch {
+    principalAmount.value = monthlySavingAmount.value * periodMonths.value
+  }
+}
+
+const openProduct = async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    await api.openUsingPOST(undefined, {
+      child_id: childId,
+      financial_product_id: Number(props.productId),
+      initial_deposit_amount: 0,
+      owner_type: 'CHILD',
+    })
+    await router.push({ name: 'SavingsOpenComplete', query: { product: productName.value } })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '상품에 가입하지 못했습니다.'), 'error')
+  }
+}
+
+let estimateTimer: number | undefined
+watch(monthlySavingAmount, () => {
+  window.clearTimeout(estimateTimer)
+  estimateTimer = window.setTimeout(estimateMaturity, 300)
+})
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getProductDetailUsingGET(Number(props.productId))
+    productName.value = data.name ?? '금융 상품'
+    bankName.value = data.bank_name ?? ''
+    summary.value = data.summary ?? data.curation_reason ?? ''
+    productTypeValue.value = data.product_type ?? 'SAVINGS'
+    maxRate.value = data.interest_rate?.max_rate
+    baseRate.value = data.interest_rate?.base_rate
+    periodMonths.value = data.contract_period?.max_months ?? 12
+    monthlyMax.value = data.monthly_deposit?.max_amount
+    isFavorite.value = data.is_bookmarked ?? false
+    await estimateMaturity()
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '상품 정보를 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>
@@ -116,11 +192,10 @@ const updateMonthlyAmount = (event: Event) => {
         >
       </div>
 
-      <h1 class="mt-4 mb-0 text-[22px] font-bold tracking-[-0.025em]">KB Young Youth 적금</h1>
-      <p class="mt-1.5 mb-0 text-[12px] text-[var(--color-text-secondary)]">KB국민은행</p>
+      <h1 class="mt-4 mb-0 text-[22px] font-bold tracking-[-0.025em]">{{ productName }}</h1>
+      <p class="mt-1.5 mb-0 text-[12px] text-[var(--color-text-secondary)]">{{ bankName }}</p>
       <p class="mt-3 mb-0 text-[12px] leading-[1.65] text-[var(--color-text-secondary)]">
-        자녀가 성인이 될 때까지 장기 거래가 가능하고, 어린이·청소년을 위한 무료 보험가입 서비스를
-        제공하는 적금이에요.
+        {{ summary }}
       </p>
 
       <dl class="mt-4 grid grid-cols-2 gap-2">
@@ -129,32 +204,33 @@ const updateMonthlyAmount = (event: Event) => {
         >
           <dt class="text-[10px] text-[var(--color-text-secondary)]">최고 금리</dt>
           <dd class="mt-1 mb-0 text-[15px] font-semibold text-[var(--color-selected-text)]">
-            연 3.40%
+            {{ maxRate === undefined ? '-' : `연 ${maxRate}%` }}
           </dd>
         </div>
         <div
           class="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3"
         >
           <dt class="text-[10px] text-[var(--color-text-secondary)]">기본 금리</dt>
-          <dd class="mt-1 mb-0 text-[15px] font-semibold">연 2.10%</dd>
+          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ baseRate === undefined ? '-' : `연 ${baseRate}%` }}</dd>
         </div>
         <div
           class="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3"
         >
           <dt class="text-[10px] text-[var(--color-text-secondary)]">계약 기간</dt>
-          <dd class="mt-1 mb-0 text-[15px] font-semibold">12개월</dd>
+          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ periodMonths }}개월</dd>
         </div>
         <div
           class="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3"
         >
           <dt class="text-[10px] text-[var(--color-text-secondary)]">월 저축 한도</dt>
-          <dd class="mt-1 mb-0 text-[15px] font-semibold">최대 300만원</dd>
+          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ monthlyMax === undefined ? '-' : `최대 ${formatWon(monthlyMax)}` }}</dd>
         </div>
       </dl>
 
       <button
         class="mt-3 h-11 w-full rounded-[11px] bg-[var(--color-brand-primary)] text-[14px] font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
         type="button"
+        @click="openProduct"
       >
         가입하기
       </button>
@@ -162,7 +238,7 @@ const updateMonthlyAmount = (event: Event) => {
         class="mt-2 flex h-10 w-full items-center justify-center gap-1 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
         type="button"
         :aria-pressed="isFavorite"
-        @click="isFavorite = !isFavorite"
+        @click="toggleFavorite"
       >
         <Heart :size="15" :class="isFavorite ? 'fill-[#ff001b] text-[#ff001b]' : ''" />
         {{ isFavorite ? '관심상품 저장됨' : '관심상품 저장' }}
