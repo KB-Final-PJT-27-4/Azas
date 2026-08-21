@@ -11,6 +11,7 @@ import GoalSetupSummaryStep from '@/components/goals/GoalSetupSummaryStep.vue'
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
+import { toFinancialGoalApiDate } from '@/utils/financialGoalDate'
 
 type GoalSetting = { amount: number; targetDate: string }
 
@@ -104,19 +105,6 @@ const goToSavingsRecommendation = () => {
   router.push({ name: 'SavingsRecommendation' })
 }
 
-const toGoalTargetDate = (targetMonth: string) => {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(targetMonth)) return targetMonth
-
-  const match = /^(\d{4})-(\d{2})$/.exec(targetMonth)
-  if (!match) return targetMonth
-
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const lastDay = new Date(year, month, 0).getDate()
-
-  return `${targetMonth}-${String(lastDay).padStart(2, '0')}`
-}
-
 const goNext = async () => {
   if (currentStep.value === 'summary') {
     if (!childId.value || !canComplete.value) return
@@ -124,7 +112,7 @@ const goNext = async () => {
       await api.createGoalUsingPOST(childId.value, {
         title: currentGoalName.value,
         target_amount: setting.amount,
-        target_date: toGoalTargetDate(setting.targetDate),
+        target_date: toFinancialGoalApiDate(setting.targetDate),
         account_ids: (linkedSavings[currentGoalId.value] ?? []).map(Number).filter(Number.isFinite),
       })
       showToast('목표를 만들었어요.', 'success')
@@ -142,9 +130,8 @@ const goNext = async () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const [{ data: childAccounts }, { data: parentAccounts }, { data: goals }] = await Promise.all([
+    const [{ data: childAccounts }, { data: goals }] = await Promise.all([
       api.getChildAccountsUsingGET(childId.value),
-      api.getMyAccountsUsingGET(),
       api.getGoalsUsingGET(childId.value),
     ])
     unavailableSavingsIds.value = [
@@ -157,7 +144,7 @@ onMounted(async () => {
         ),
       ),
     ]
-    savingsAccounts.value = [...childAccounts.accounts, ...parentAccounts.accounts]
+    savingsAccounts.value = childAccounts.accounts
       .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
       .map((account) => ({
         id: String(account.account_id),

@@ -233,10 +233,13 @@ const navigateForward = async (to: RouteLocationRaw) => {
 }
 
 const openFreeCapsuleList = () => {
+  const freeCapsule = capsuleAccounts.value.find(({ isFree }) => isFree)
+  if (!freeCapsule) return
+
   navigateForward({
     name: 'TimeCapsuleList',
-    params: { capsuleListId: '3' },
-    query: { openDate: freeCapsuleOpenDate.value },
+    params: { capsuleListId: String(freeCapsule.id) },
+    query: { openDate: freeCapsule.createdAt.replaceAll('.', '-') },
   })
 }
 
@@ -264,48 +267,19 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const [
-      { data: child },
-      { data: initialCapsules },
-      { data: childAccounts },
-      { data: parentAccounts },
-    ] = await Promise.all([
+    const [{ data: child }, { data: capsules }, { data: accounts }] = await Promise.all([
       api.getChildUsingGET(childId.value),
       api.getTimeCapsulesUsingGET(childId.value),
       api.getChildAccountsUsingGET(childId.value),
-      api.getMyAccountsUsingGET(),
     ])
-
-    const allAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
-    let timeCapsules = initialCapsules.time_capsules ?? []
-    const capsuleAccountIds = new Set(
-      timeCapsules.map(({ account_id }) => account_id).filter((accountId) => accountId != null),
-    )
-    const savingsWithoutCapsule = allAccounts.filter(
-      ({ account_id, account_product_type }) =>
-        account_product_type === 'SAVINGS' && !capsuleAccountIds.has(account_id),
-    )
-
-    if (savingsWithoutCapsule.length > 0) {
-      await Promise.allSettled(
-        savingsWithoutCapsule.map(({ account_id }) =>
-          api.createTimeCapsuleUsingPOST(childId.value!, {
-            financial_account_id: account_id,
-          }),
-        ),
-      )
-      const { data: refreshedCapsules } = await api.getTimeCapsulesUsingGET(childId.value)
-      timeCapsules = refreshedCapsules.time_capsules ?? []
-    }
-
     registration.value = {
       birthDate: child.birth_date ?? child.expected_birth_date ?? '',
       childName: child.name ?? '아이',
     }
-    demandAccountId.value = childAccounts.accounts.find(
+    demandAccountId.value = accounts.accounts.find(
       ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
     )?.account_id ?? null
-    capsuleAccounts.value = timeCapsules.map((capsule) => ({
+    capsuleAccounts.value = (capsules.time_capsules ?? []).map((capsule) => ({
       id: capsule.time_capsule_id ?? 0,
       name: capsule.title ?? '타임캡슐',
       createdAt: capsule.release_date?.replaceAll('-', '.') ?? '오픈 날짜 설정',

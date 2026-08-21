@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { CheckCircle2, ChevronDown, Gift, Heart, ShieldCheck, Sparkles } from 'lucide-vue-next'
 
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
+import { hasParentDemandDepositAccount, resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
 
@@ -129,6 +129,11 @@ const estimateMaturity = async () => {
 
 const openProduct = async () => {
   try {
+    if (!await hasParentDemandDepositAccount()) {
+      showToast('자녀 상품 가입 전에 부모 입출금계좌를 먼저 등록해 주세요.', 'error')
+      await router.push({ name: 'Accounts', query: { next: router.currentRoute.value.fullPath } })
+      return
+    }
     const childId = await resolveCurrentChildId()
     await api.openUsingPOST(undefined, {
       child_id: childId,
@@ -150,7 +155,8 @@ watch(monthlySavingAmount, () => {
 
 onMounted(async () => {
   try {
-    const { data } = await api.getProductDetailUsingGET(Number(props.productId))
+    const childId = await resolveCurrentChildId()
+    const { data } = await api.getProductDetailUsingGET(Number(props.productId), undefined, childId)
     productName.value = data.name ?? '금융 상품'
     bankName.value = data.bank_name ?? ''
     summary.value = data.summary ?? data.curation_reason ?? ''

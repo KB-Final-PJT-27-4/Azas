@@ -3,7 +3,7 @@ import { ArrowUpRight, LoaderCircle, PiggyBank, RotateCw } from 'lucide-vue-next
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
+import { hasParentDemandDepositAccount, resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
@@ -57,18 +57,20 @@ const openSelectedProduct = async () => {
   if (selectedProductId.value === null || !selectedProductName.value || isOpening.value) return
   isOpening.value = true
   try {
-    const selectedProduct = savingsProducts.value.find(
-      ({ id }) => id === selectedProductId.value,
-    )
-    if (!selectedProduct) return
-
-    const childId =
-      selectedProduct.ownerType === 'CHILD' ? await resolveCurrentChildId() : undefined
+    if (!(await hasParentDemandDepositAccount())) {
+      showToast('자녀 적금 가입 전에 부모 입출금계좌를 먼저 등록해 주세요.', 'error')
+      await router.push({
+        name: 'Accounts',
+        query: { next: router.currentRoute.value.fullPath },
+      })
+      return
+    }
+    const childId = await resolveCurrentChildId()
     await api.openUsingPOST(undefined, {
       child_id: childId,
       financial_product_id: selectedProductId.value,
       initial_deposit_amount: 0,
-      owner_type: selectedProduct.ownerType,
+      owner_type: 'CHILD',
     })
     await router.push({ name: 'SavingsOpenComplete', query: { product: selectedProductName.value } })
   } catch (error) {

@@ -15,6 +15,7 @@ const today = new Date()
 const currentYear = today.getFullYear()
 const currentMonth = today.getMonth() + 1
 const selectedYear = ref(currentYear)
+const isCapsuleReleased = ref(false)
 
 const accountId = computed(() => String(route.params.capsuleListId ?? '1'))
 const account = ref({ name: '타임캡슐', description: '아이의 성장 순간과 금융 기록을 모아보세요.', totalSavedAmount: 0, records: [] as Array<{ id: number; title: string; date: string; amount: number; thumbnail: string; photos: Array<{ src: string; orientation: 'portrait'; type: 'image' }> }> })
@@ -56,6 +57,10 @@ onMounted(async () => {
         photos: entry.thumbnail_url ? [{ src: entry.thumbnail_url, orientation: 'portrait', type: 'image' }] : [],
       })),
     }
+    const releaseDate = data.time_capsule?.release_date
+    isCapsuleReleased.value = data.time_capsule?.d_day !== undefined
+      ? data.time_capsule.d_day <= 0
+      : Boolean(releaseDate && releaseDate <= today.toISOString().slice(0, 10))
   } catch (error) {
     showToast(getApiErrorMessage(error, '타임캡슐 기록을 불러오지 못했습니다.'), 'error')
   }
@@ -83,8 +88,13 @@ const navigateForward = async (to: RouteLocationRaw) => {
   }
 }
 
-const openRecord = (recordId: number) =>
-  navigateForward(`/time-capsules/${accountId.value}/${recordId}`)
+const openRecord = (recordId: number) => {
+  if (!isCapsuleReleased.value) {
+    showToast('타임캡슐 기록은 공개일 이후에 확인할 수 있어요.', 'error')
+    return
+  }
+  return navigateForward(`/time-capsules/${accountId.value}/${recordId}`)
+}
 
 const createFirstRecord = () =>
   navigateForward({
