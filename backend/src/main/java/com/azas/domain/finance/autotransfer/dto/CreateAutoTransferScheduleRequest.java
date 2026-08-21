@@ -14,7 +14,6 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class CreateAutoTransferScheduleRequest {
 
-    @NotNull
     @Positive
     @JsonProperty("child_id")
     private Long childId;

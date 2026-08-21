@@ -46,7 +46,7 @@ class TransferServiceImplTest {
         String key = givenNewIdempotencyKey();
 
         givenSourceAccount(301L, 100_000L);
-        givenDestinationAccount(300L, 10L, 3L);
+        givenDestinationAccount(300L, 10L, null);
 
         when(transferMapper.countChildAccess(10L, 1L))
                 .thenReturn(1);
@@ -100,7 +100,7 @@ class TransferServiceImplTest {
         );
 
         assertEquals(
-                3L,
+                null,
                 response.getFinancialGoalId()
         );
 
@@ -177,11 +177,18 @@ class TransferServiceImplTest {
     }
 
     @Test
-    void 목표가_연결되지_않은_입금계좌를_거절한다() {
+    void 적금_계좌를_입금계좌로_선택하면_거절한다() {
         String key = givenNewIdempotencyKey();
 
         givenSourceAccount(301L, 100_000L);
-        givenDestinationAccount(300L, 10L, null);
+        givenDestinationAccount(
+                300L,
+                10L,
+                null,
+                "SAVINGS",
+                "CHILD",
+                null
+        );
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -290,6 +297,57 @@ class TransferServiceImplTest {
         );
     }
 
+    @Test
+    void 부모_입출금계좌를_입금계좌로_이체할_수_있다() {
+        String key = givenNewIdempotencyKey();
+
+        givenSourceAccount(301L, 100_000L);
+        givenDestinationAccount(
+                302L,
+                null,
+                null,
+                "DEMAND_DEPOSIT",
+                "PARENT",
+                1L
+        );
+        assignTransferId(5002L);
+
+        when(transferMapper.decreaseSourceBalance(
+                301L,
+                new BigDecimal("10000")
+        )).thenReturn(1);
+        when(transferMapper.increaseDestinationBalance(
+                302L,
+                new BigDecimal("10000")
+        )).thenReturn(1);
+        when(transferMapper.insertTransaction(any()))
+                .thenAnswer(invocation -> {
+                    TransferTransactionInsertCommand command =
+                            invocation.getArgument(0);
+                    ReflectionTestUtils.setField(
+                            command,
+                            "accountTransactionId",
+                            7002L
+                    );
+                    return 1;
+                });
+        when(transferMapper.markTransferSucceeded(
+                eq(5002L),
+                eq(7002L),
+                any()
+        )).thenReturn(1);
+
+        var response = transferService.createTransfer(
+                1L,
+                key,
+                createRequest(301L, 302L, 10_000L, null)
+        );
+
+        assertEquals(5002L, response.getFinancialTransferId());
+        verify(transferMapper, org.mockito.Mockito.never())
+                .countChildAccess(anyLong(), anyLong());
+    }
+
     private String givenNewIdempotencyKey() {
         String key = UUID.randomUUID().toString();
 
@@ -347,6 +405,15 @@ class TransferServiceImplTest {
                 "financialAccountId",
                 accountId
         );
+        ReflectionTestUtils.setField(account, "ownerType", "PARENT");
+        ReflectionTestUtils.setField(account, "ownerMemberId", 1L);
+        ReflectionTestUtils.setField(
+                account,
+                "accountProductType",
+                "DEMAND_DEPOSIT"
+        );
+        ReflectionTestUtils.setField(account, "accountStatus", "ACTIVE");
+        ReflectionTestUtils.setField(account, "linkStatus", "ACTIVE");
 
         ReflectionTestUtils.setField(
                 account,
@@ -383,6 +450,24 @@ class TransferServiceImplTest {
             Long childId,
             Long goalTemplateId
     ) {
+        givenDestinationAccount(
+                accountId,
+                childId,
+                goalTemplateId,
+                "DEMAND_DEPOSIT",
+                "CHILD",
+                null
+        );
+    }
+
+    private void givenDestinationAccount(
+            Long accountId,
+            Long childId,
+            Long goalTemplateId,
+            String accountProductType,
+            String ownerType,
+            Long ownerMemberId
+    ) {
         TransferAccount account =
                 new TransferAccount();
 
@@ -402,6 +487,19 @@ class TransferServiceImplTest {
                 account,
                 "financialGoalId",
                 goalTemplateId
+        );
+        ReflectionTestUtils.setField(
+                account,
+                "accountProductType",
+                accountProductType
+        );
+        ReflectionTestUtils.setField(account, "accountStatus", "ACTIVE");
+        ReflectionTestUtils.setField(account, "linkStatus", "ACTIVE");
+        ReflectionTestUtils.setField(account, "ownerType", ownerType);
+        ReflectionTestUtils.setField(
+                account,
+                "ownerMemberId",
+                ownerMemberId
         );
 
         ReflectionTestUtils.setField(

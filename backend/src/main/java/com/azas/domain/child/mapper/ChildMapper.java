@@ -3,6 +3,7 @@ package com.azas.domain.child.mapper;
 import com.azas.domain.child.dto.ChildResponse;
 import com.azas.domain.child.dto.ChildSummaryResponse;
 import com.azas.domain.child.entity.Child;
+import com.azas.domain.child.entity.ChildFeaturePermission;
 import com.azas.domain.child.entity.RelationType;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -36,6 +37,16 @@ public interface ChildMapper {
     int countChildAccess(
             @Param("childId") Long childId,
             @Param("memberId") Long memberId
+    );
+
+    ChildFeaturePermission findFeaturePermissionByChildId(
+            @Param("childId") Long childId
+    );
+
+    int updateFeaturePermission(
+            @Param("childId") Long childId,
+            @Param("allowanceRequestEnabled") boolean allowanceRequestEnabled,
+            @Param("usageLimitViewEnabled") boolean usageLimitViewEnabled
     );
 
     // 자녀에게 연결된 계좌 등 금융 기록이 있는지 확인 - 자녀 삭제 전에 금융 기록 있는지 확인
