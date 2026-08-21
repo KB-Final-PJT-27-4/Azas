@@ -37,7 +37,11 @@ const mediaItems = ref<MediaItem[]>([])
 const hasCreated = ref(false)
 
 const canPreview = computed(() =>
-  Boolean(selectedAccount.value && title.value.trim() && letter.value.trim()),
+  selectedAccountId.value > 0
+    && selectedTransferId.value > 0
+    && mediaItems.value.length === 1
+    && Boolean(title.value.trim())
+    && Boolean(letter.value.trim()),
 )
 const formattedAmount = computed(() => `${(selectedTransfer.value?.amount ?? 0).toLocaleString('ko-KR')}원`)
 
@@ -72,6 +76,11 @@ const selectMedia = (event: Event) => {
   if (!file) return
   if (!file.type.startsWith('image/')) {
     showToast('사진 파일만 선택할 수 있어요.', 'error')
+    input.value = ''
+    return
+  }
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) {
+    showToast('10MB 이하의 JPG, PNG, WEBP 사진을 선택해 주세요.', 'error')
     input.value = ''
     return
   }
@@ -118,28 +127,28 @@ const showForm = () => {
 const createTimeCapsule = async () => {
   if (isPageLeaving.value) return
   if (!canPreview.value) {
-    showToast('필수 내용을 모두 입력해주세요.', 'error')
+    showToast('계좌·입금 거래·사진 1장과 필수 내용을 모두 입력해 주세요.', 'error')
     return
   }
 
   try {
     const { data } = await api.createTimeCapsuleEntryUsingPOST(selectedAccountId.value, {
-      account_transaction_id: selectedTransferId.value || undefined,
+      account_transaction_id: selectedTransferId.value,
       title: title.value.trim(),
       message: letter.value.trim(),
     })
-    const entryId = data.time_capsule_entry_id ?? 0
+    const entryId = data.time_capsule_entry_id
     const media = mediaItems.value[0]
-    if (media) {
-      const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
-        file_size: media.file.size,
-        mime_type: media.file.type,
-      })
-      if (upload.upload_url && upload.time_capsule_media_id) {
-        await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
-        await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
-      }
+    if (!entryId || !media) throw new Error('타임캡슐 기록 또는 사진 정보가 없습니다.')
+    const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
+      file_size: media.file.size,
+      mime_type: media.file.type,
+    })
+    if (!upload.upload_url || !upload.time_capsule_media_id) {
+      throw new Error('사진 업로드 정보를 받지 못했습니다.')
     }
+    await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
+    await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
     await api.sealTimeCapsuleEntryUsingPATCH(entryId)
     hasCreated.value = true
     isPageLeaving.value = true
@@ -156,12 +165,14 @@ const loadTransfers = async () => {
   const account = selectedAccount.value
   if (!account) return
   const { data } = await api.getTransactionsUsingGET(account.accountId, undefined, undefined, 50)
-  transfers.value = data.transactions.map((transaction) => ({
+  transfers.value = data.transactions
+    .filter((transaction) => transaction.direction === 'CREDIT' && transaction.amount > 0)
+    .map((transaction) => ({
     id: transaction.account_transaction_id,
     date: new Date(transaction.occurred_at).toLocaleDateString('ko-KR'),
     name: transaction.counterparty_name ?? '계좌 거래',
     amount: transaction.amount,
-  }))
+    }))
   selectedTransferId.value = transfers.value[0]?.id ?? 0
 }
 

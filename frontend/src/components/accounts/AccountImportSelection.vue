@@ -7,6 +7,7 @@ type ImportedAccount = {
   bank: string
   number: string
   balance: number
+  productType: string
 }
 
 const props = defineProps<{

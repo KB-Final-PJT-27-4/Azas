@@ -7,6 +7,7 @@ import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
 import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import { useToast } from '@/composables/useToast'
 import { api, getApiErrorMessage } from '@/api'
+import { toFinancialGoalApiDate, toFinancialGoalMonth } from '@/utils/financialGoalDate'
 
 const props = defineProps<{
   goalsId: string
@@ -39,7 +40,7 @@ const saveGoal = async () => {
   try {
     await api.updateGoalUsingPATCH(Number(props.goalsId), {
       target_amount: form.amount,
-      target_date: form.targetDate,
+      target_date: toFinancialGoalApiDate(form.targetDate),
     })
     showToast('목표를 수정했어요.', 'success')
     await router.replace({ name: 'MypageGoals' })
@@ -61,7 +62,7 @@ onMounted(async () => {
     const { data } = await api.getGoalUsingGET(Number(props.goalsId))
     form.name = data.title ?? '나의 목표'
     form.amount = data.target_amount ?? 0
-    form.targetDate = data.target_date ?? ''
+    form.targetDate = toFinancialGoalMonth(data.target_date ?? '')
   } catch (error) {
     showToast(getApiErrorMessage(error, '목표 정보를 불러오지 못했습니다.'), 'error')
   }
@@ -93,10 +94,15 @@ onBeforeUnmount(() => {
           <span class="text-sm font-bold">목표명</span>
           <input
             v-model="form.name"
-            class="h-14 rounded-2xl border border-[#d9edf7] bg-white px-4 text-base font-semibold outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-brand-primary)] focus:ring-2 focus:ring-[#dff5ff]"
+            class="h-14 cursor-not-allowed rounded-2xl border border-[#d9edf7] bg-[#f5f7f8] px-4 text-base font-semibold text-[var(--color-text-secondary)] outline-none"
             type="text"
+            readonly
+            aria-describedby="goal-name-help"
             placeholder="목표명을 입력해주세요"
           />
+          <small id="goal-name-help" class="text-xs text-[var(--color-text-secondary)]">
+            현재는 목표 금액과 목표 월만 변경할 수 있어요.
+          </small>
         </label>
 
         <GoalAmountStep

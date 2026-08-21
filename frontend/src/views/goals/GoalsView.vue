@@ -11,6 +11,7 @@ import GoalSetupSummaryStep from '@/components/goals/GoalSetupSummaryStep.vue'
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
+import { toFinancialGoalApiDate } from '@/utils/financialGoalDate'
 
 type GoalSetting = { amount: number; targetDate: string }
 
@@ -110,7 +111,7 @@ const goNext = async () => {
       await api.createGoalUsingPOST(childId.value, {
         title: currentGoalName.value,
         target_amount: setting.amount,
-        target_date: setting.targetDate,
+        target_date: toFinancialGoalApiDate(setting.targetDate),
         account_ids: (linkedSavings[currentGoalId.value] ?? []).map(Number).filter(Number.isFinite),
       })
       showToast('목표를 만들었어요.', 'success')

@@ -196,6 +196,15 @@ const continueAfterAuthentication = async () => {
 
 onMounted(async () => {
   try {
+    const { data: parentAccounts } = await api.getMyAccountsUsingGET()
+    const hasParentDemandDeposit = parentAccounts.accounts.some(
+      ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
+    )
+    if (!hasParentDemandDeposit) {
+      showToast('아이 통장 개설 전에 부모 입출금계좌를 먼저 등록해 주세요.', 'error')
+      await router.replace({ name: 'Accounts', query: { next: '/child/accounts' } })
+      return
+    }
     const { data } = await api.getChildrenUsingGET()
     children.value = (data.items ?? []).map((child) => ({ id: child.child_id ?? 0, name: child.name ?? '아이' }))
   } catch (error) {

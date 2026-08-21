@@ -232,14 +232,6 @@ const navigateForward = async (to: RouteLocationRaw) => {
   }
 }
 
-const openFreeCapsuleList = () => {
-  navigateForward({
-    name: 'TimeCapsuleList',
-    params: { capsuleListId: '3' },
-    query: { openDate: freeCapsuleOpenDate.value },
-  })
-}
-
 const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean }) => {
   if (!capsule.isFree) {
     navigateForward(
@@ -253,7 +245,15 @@ const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean 
     isFreeCapsuleSheetOpen.value = true
     return
   }
-  openFreeCapsuleList()
+  navigateForward(
+    isCapsuleReleased(capsule)
+      ? `/time-capsules/${capsule.id}/open`
+      : {
+          name: 'TimeCapsuleList',
+          params: { capsuleListId: String(capsule.id) },
+          query: { openDate: capsule.createdAt.replaceAll('.', '-') },
+        },
+  )
 }
 
 const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
