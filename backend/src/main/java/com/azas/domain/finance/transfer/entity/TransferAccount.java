@@ -12,6 +12,8 @@ public class TransferAccount {
     private Long financialAccountId;
     private Long childId;
     private Long financialGoalId;
+    private String ownerType;
+    private Long ownerMemberId;
     private String bankName;
 
     // 테스트나 Mock 응답에서 사용할 평문 계좌번호
@@ -22,6 +24,8 @@ public class TransferAccount {
 
     private String accountName;
     private String accountProductType;
+    private String accountStatus;
+    private String linkStatus;
     private BigDecimal balance;
 
 }

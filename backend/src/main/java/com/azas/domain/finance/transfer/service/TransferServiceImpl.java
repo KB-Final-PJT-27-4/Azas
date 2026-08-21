@@ -249,12 +249,25 @@ public class TransferServiceImpl implements TransferService {
         }
 
         // 입금 계좌는 존재하지만 자녀 또는 실제 목표와 연결되지 않은 경우
-        if (destination.getChildId() == null
-                || destination.getFinancialGoalId() == null) {
+        if (!"DEMAND_DEPOSIT".equals(
+                destination.getAccountProductType()
+        ) || !"ACTIVE".equals(destination.getAccountStatus())
+                || !"ACTIVE".equals(destination.getLinkStatus())) {
             throw new BusinessException(ErrorCode.INVALID_TRANSFER_REQUEST);
         }
 
-        validateChildAccess(memberId, destination.getChildId());
+        if ("PARENT".equals(destination.getOwnerType())) {
+            if (!Objects.equals(destination.getOwnerMemberId(), memberId)) {
+                throw new BusinessException(
+                        ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED
+                );
+            }
+        } else if ("CHILD".equals(destination.getOwnerType())
+                && destination.getChildId() != null) {
+            validateChildAccess(memberId, destination.getChildId());
+        } else {
+            throw new BusinessException(ErrorCode.INVALID_TRANSFER_REQUEST);
+        }
 
         if (source.getBalance() == null || source.getBalance().compareTo(amount) < 0) {
             throw new BusinessException(ErrorCode.INSUFFICIENT_ACCOUNT_BALANCE);
