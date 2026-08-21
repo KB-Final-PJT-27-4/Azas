@@ -1,8 +1,13 @@
 ﻿<script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
-import { childAllowanceRequests, type AllowanceRequestStatus } from '@/mocks/childFinanceFlow'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+
+type AllowanceRequestStatus = 'pending' | 'approved' | 'rejected'
+type AllowanceRequest = { id: number; amount: number; purpose: string; requestedAt: string; status: AllowanceRequestStatus }
+const childAllowanceRequests = ref<AllowanceRequest[]>([])
+const errorMessage = ref('')
 
 const selectedStatus = ref<'all' | AllowanceRequestStatus>('all')
 
@@ -21,9 +26,25 @@ const statusMeta = {
 
 const filteredRequests = computed(() =>
   selectedStatus.value === 'all'
-    ? childAllowanceRequests
-    : childAllowanceRequests.filter((request) => request.status === selectedStatus.value),
+    ? childAllowanceRequests.value
+    : childAllowanceRequests.value.filter((request) => request.status === selectedStatus.value),
 )
+
+onMounted(async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const { data } = await api.getAllowanceRequestsUsingGET(childId, undefined, undefined, '50')
+    childAllowanceRequests.value = (data.items ?? []).map((item) => ({
+      id: item.allowance_request_id ?? 0,
+      amount: item.requested_amount ?? 0,
+      purpose: '용돈 요청',
+      requestedAt: item.requested_at ? new Date(item.requested_at).toLocaleString('ko-KR') : '',
+      status: item.status === 'APPROVED' ? 'approved' : item.status === 'REJECTED' || item.status === 'CANCELED' ? 'rejected' : 'pending',
+    }))
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '용돈 요청 내역을 불러오지 못했습니다.')
+  }
+})
 
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 </script>
@@ -77,6 +98,5 @@ const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원
       요청은 제한 없이 할 수 있어요!
     </p>
 
-    <ChildBottomNavigation />
   </main>
 </template>

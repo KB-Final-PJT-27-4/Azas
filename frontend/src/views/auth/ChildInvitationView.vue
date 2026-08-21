@@ -1,28 +1,33 @@
 <script setup lang="ts">
-import { Baby, CalendarDays, ShieldCheck, UserRound } from 'lucide-vue-next'
+import { Baby, UserRound } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import logoPigUrl from '@/assets/images/login/logo-pig.png'
+import type { FamilyInvitationInfoResponse } from '@/api/generated'
+
+const props = defineProps<{
+  invitation: FamilyInvitationInfoResponse
+  inviteToken: string
+}>()
 
 const router = useRouter()
 const isAccepting = ref(false)
 
 const guardian = {
-  name: '김하나',
-  role: '부',
-  phone: '010-1234-5678',
+  name: props.invitation.inviter_name ?? '',
 }
 
 const child = {
-  name: '깨비',
-  gender: '남자',
-  birthDate: '2025.07.15',
+  name: props.invitation.child_name ?? '',
 }
 
 const acceptInvitation = () => {
   if (isAccepting.value) return
   isAccepting.value = true
-  window.setTimeout(() => router.push({ name: 'Login' }), 450)
+  window.setTimeout(() => router.push({
+    name: 'Login',
+    query: { inviteToken: props.inviteToken, inviteeType: 'CHILD' },
+  }), 450)
 }
 
 const declineInvitation = () => {
@@ -46,21 +51,21 @@ const declineInvitation = () => {
       </strong>
     </header>
 
-    <div class="flex flex-1 flex-col px-5 pt-1 pb-[max(24px,env(safe-area-inset-bottom))]">
+    <div class="flex flex-1 flex-col px-5 pt-3 pb-[max(24px,env(safe-area-inset-bottom))]">
       <section aria-labelledby="child-invitation-title">
-        <h1 id="child-invitation-title" class="mt-5 break-keep text-[27px] leading-[1.35] font-extrabold tracking-[-0.04em]">
+        <h1 id="child-invitation-title" class="break-keep text-[30px] leading-[1.35] font-bold tracking-[-0.04em]">
           <span class="text-[var(--color-selected-text)]">{{ guardian.name }}</span>님이<br />당신을 자녀로 초대했어요
         </h1>
-        <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
+        <p class="mt-3 text-base text-[var(--color-text-secondary)]">
           아래 가족 정보를 확인하고 초대를 수락해주세요.
         </p>
       </section>
 
-      <section class="mt-6" aria-labelledby="guardian-info-title">
+      <section class="mt-10" aria-labelledby="guardian-info-title">
         <div class="mb-3 flex items-center justify-between">
           <h2 id="guardian-info-title" class="text-base font-bold">초대한 보호자</h2>
         </div>
-        <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
+        <article class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <div class="flex items-center gap-4">
             <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
               <UserRound :size="27" :stroke-width="2.1" aria-hidden="true" />
@@ -70,26 +75,17 @@ const declineInvitation = () => {
                 <strong class="text-lg">{{ guardian.name }}</strong>
                 <span class="rounded-full bg-[#eaf8ff] px-2 py-1 text-[10px] font-bold text-[var(--color-selected-text)]">보호자</span>
               </div>
-              <dl class="mt-2 grid gap-1.5 text-xs">
-                <div class="grid grid-cols-[56px_1fr] items-center">
-                  <dt class="text-[var(--color-text-secondary)]">관계</dt>
-                  <dd class=" text-[var(--color-text-secondary)]">{{ guardian.role }}</dd>
-                </div>
-                <div class="grid grid-cols-[56px_1fr] items-center">
-                  <dt class="text-[var(--color-text-secondary)]">연락처</dt>
-                  <dd class="text-[var(--color-text-secondary)]">{{ guardian.phone }}</dd>
-                </div>
-              </dl>
+              <p class="mt-2 text-xs text-[var(--color-text-secondary)]">가족 초대를 보냈어요</p>
             </div>
           </div>
         </article>
       </section>
 
-      <section class="mt-5" aria-labelledby="child-info-title">
+      <section class="mt-8" aria-labelledby="child-info-title">
         <div class="mb-3 flex items-center justify-between">
           <h2 id="child-info-title" class="text-base font-bold">내 정보</h2>
         </div>
-        <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
+        <article class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <div class="flex items-center gap-4">
             <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
               <Baby :size="28" :stroke-width="2.1" aria-hidden="true" />
@@ -98,16 +94,7 @@ const declineInvitation = () => {
               <div class="flex items-center gap-2">
                 <strong class="text-lg">{{ child.name }}</strong>
               </div>
-              <dl class="mt-2 grid gap-1.5 text-xs text-[var(--color-text-secondary)]">
-                <div class="grid grid-cols-[56px_1fr] items-center">
-                  <dt>생년월일</dt>
-                  <dd>{{ child.birthDate }}</dd>
-                </div>
-                <div class="grid grid-cols-[56px_1fr] items-center">
-                  <dt>성별</dt>
-                  <dd>{{ child.gender }}</dd>
-                </div>
-              </dl>
+              <p class="mt-2 text-xs text-[var(--color-text-secondary)]">연결할 자녀 계정</p>
             </div>
           </div>
         </article>
@@ -115,7 +102,7 @@ const declineInvitation = () => {
 
       <div class="mt-auto grid grid-cols-2 gap-3 pt-7">
         <button
-          class="h-14 rounded-2xl border border-[var(--color-border)] bg-white text-base font-bold text-[var(--color-text-secondary)] transition-colors active:bg-[var(--color-surface-muted)] disabled:opacity-60"
+          class="h-14 rounded-xl border border-[var(--color-border)] bg-white text-lg font-bold text-[var(--color-text-secondary)] transition-colors active:bg-[var(--color-surface-muted)] disabled:opacity-60"
           type="button"
           :disabled="isAccepting"
           @click="declineInvitation"
@@ -123,7 +110,7 @@ const declineInvitation = () => {
           거절하기
         </button>
         <button
-          class="h-14 rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:opacity-60"
+          class="h-14 rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:opacity-60"
           type="button"
           :disabled="isAccepting"
           @click="acceptInvitation"

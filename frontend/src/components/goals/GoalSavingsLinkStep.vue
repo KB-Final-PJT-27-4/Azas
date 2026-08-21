@@ -28,11 +28,12 @@ withDefaults(
     plan: GoalPlan
     selectedSavingsIds: string[]
     unavailableSavingsIds: string[]
+    savingsAccounts?: SavingsAccount[]
     goalNumber: number
     goalCount: number
     embedded?: boolean
   }>(),
-  { embedded: false },
+  { embedded: false, savingsAccounts: () => [] },
 )
 
 const emit = defineEmits<{
@@ -55,32 +56,6 @@ const goalCardStyles: Record<string, string> = {
   custom: 'border-[#ddd8f5] bg-[#f7f5ff]',
 }
 
-const savingsAccounts: SavingsAccount[] = [
-  {
-    id: 'child-love-1',
-    name: 'KB 아이사랑적금',
-    number: '952-17362605-43',
-    balance: 12_450_000,
-    rate: '연 3.80%',
-    maturity: '2027.08.12',
-  },
-  {
-    id: 'young-youth',
-    name: 'KB Young Youth 적금',
-    number: '952-17362605-57',
-    balance: 3_200_000,
-    rate: '연 3.50%',
-    maturity: '2028.03.20',
-  },
-  {
-    id: 'child-love-2',
-    name: 'KB 아이사랑적금 2',
-    number: '952-17362605-68',
-    balance: 1_520_000,
-    rate: '연 3.40%',
-    maturity: '2027.11.05',
-  },
-]
 </script>
 
 <template>

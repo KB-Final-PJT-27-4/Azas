@@ -6,6 +6,7 @@ import goalCloudBackground from '@/assets/images/home/home-hero-bg.png'
 import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
 import GoalAmountStep from '@/components/goals/GoalAmountStep.vue'
 import { useToast } from '@/composables/useToast'
+import { api, getApiErrorMessage } from '@/api'
 
 const props = defineProps<{
   goalsId: string
@@ -18,15 +19,10 @@ const selectedRecommendationAmount = ref<number>()
 let previousHtmlBackground = ''
 let previousBodyBackground = ''
 
-const goalPresets: Record<string, { name: string; amount: number; targetDate: string }> = {
-  '1': { name: '대학자금', amount: 30_000_000, targetDate: '2045-03' },
-  '2': { name: '독립자금', amount: 10_000_000, targetDate: '2045-03' },
-}
-
-const initialGoal = goalPresets[props.goalsId] ?? {
+const initialGoal = {
   name: '나의 목표',
-  amount: 30_000_000,
-  targetDate: '2045-03',
+  amount: 0,
+  targetDate: '',
 }
 
 const form = reactive({ ...initialGoal })
@@ -37,23 +33,38 @@ const selectRecommendation = (amount: number) => {
   selectedRecommendationAmount.value = amount
 }
 
-const saveGoal = () => {
+const saveGoal = async () => {
   if (isSubmitDisabled.value) return
 
-  // TODO: 목표 수정 API 연결
-  showToast('목표를 수정했어요.', 'success')
-  router.replace({ name: 'MypageGoals' })
+  try {
+    await api.updateGoalUsingPATCH(Number(props.goalsId), {
+      target_amount: form.amount,
+      target_date: form.targetDate,
+    })
+    showToast('목표를 수정했어요.', 'success')
+    await router.replace({ name: 'MypageGoals' })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '목표를 수정하지 못했습니다.'), 'error')
+  }
 }
 
 const cancelEdit = () => {
   router.replace({ name: 'MypageGoals' })
 }
 
-onMounted(() => {
+onMounted(async () => {
   previousHtmlBackground = document.documentElement.style.backgroundColor
   previousBodyBackground = document.body.style.backgroundColor
   document.documentElement.style.backgroundColor = '#eef9fe'
   document.body.style.backgroundColor = '#eef9fe'
+  try {
+    const { data } = await api.getGoalUsingGET(Number(props.goalsId))
+    form.name = data.title ?? '나의 목표'
+    form.amount = data.target_amount ?? 0
+    form.targetDate = data.target_date ?? ''
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '목표 정보를 불러오지 못했습니다.'), 'error')
+  }
 })
 
 onBeforeUnmount(() => {
