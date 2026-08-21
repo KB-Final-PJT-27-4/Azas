@@ -185,6 +185,10 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "금융 목표 템플릿을 찾을 수 없습니다."
     ),
+    FINANCIAL_GOAL_RECOMMENDATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 목표 추천 금액을 찾을 수 없습니다."
+    ),
     FINANCIAL_GOAL_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 목표를 찾을 수 없습니다."
