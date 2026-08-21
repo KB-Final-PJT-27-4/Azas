@@ -18,6 +18,7 @@ const router = useRouter()
 const { showToast } = useToast()
 const childId = ref<number | null>(null)
 const savingsAccounts = ref<Array<{ id: string; name: string; number: string; balance: number; rate: string; maturity: string }>>([])
+const isSavingsLoading = ref(true)
 const currentStep = ref<'setup' | 'summary'>('setup')
 const selectedGoals = ref<string[]>([])
 const customGoal = ref('')
@@ -98,6 +99,10 @@ const goBack = () => {
   router.back()
 }
 
+const goToSavingsRecommendation = () => {
+  router.push({ name: 'SavingsRecommendation' })
+}
+
 const goNext = async () => {
   if (currentStep.value === 'summary') {
     if (!childId.value || !canComplete.value) return
@@ -136,6 +141,8 @@ onMounted(async () => {
       }))
   } catch (error) {
     showToast(getApiErrorMessage(error, '계좌 정보를 불러오지 못했습니다.'), 'error')
+  } finally {
+    isSavingsLoading.value = false
   }
 })
 </script>
@@ -190,8 +197,10 @@ onMounted(async () => {
                   :selected-savings-ids="linkedSavings[currentGoalId] ?? []"
                   :unavailable-savings-ids="[]"
                   :savings-accounts="savingsAccounts"
+                  :loading="isSavingsLoading"
                   embedded
                   @toggle="toggleLinkedSaving"
+                  @recommend="goToSavingsRecommendation"
                 />
               </section>
             </Transition>
