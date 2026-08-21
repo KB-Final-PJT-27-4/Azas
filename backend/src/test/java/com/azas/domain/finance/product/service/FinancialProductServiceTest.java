@@ -81,6 +81,38 @@ class FinancialProductServiceTest {
     }
 
     @Test
+    void mapsDemandDepositAliasToAccountProductType() {
+        when(financialProductMapper.findActiveProducts(
+                "ACCOUNT", null, 21
+        )).thenReturn(Collections.emptyList());
+
+        FinancialProductListResponse response =
+                financialProductService.getProducts(
+                        "DEMAND_DEPOSIT", null, 20
+                );
+
+        assertTrue(response.getItems().isEmpty());
+        verify(financialProductMapper).findActiveProducts(
+                "ACCOUNT", null, 21
+        );
+    }
+
+    @Test
+    void mapsSavingsAliasToSavingProductType() {
+        when(financialProductMapper.findActiveProducts(
+                "SAVING", null, 21
+        )).thenReturn(Collections.emptyList());
+
+        FinancialProductListResponse response =
+                financialProductService.getProducts("SAVINGS", null, 20);
+
+        assertTrue(response.getItems().isEmpty());
+        verify(financialProductMapper).findActiveProducts(
+                "SAVING", null, 21
+        );
+    }
+
+    @Test
     void rejectsUnknownProductType() {
         BusinessException exception = assertThrows(
                 BusinessException.class,
