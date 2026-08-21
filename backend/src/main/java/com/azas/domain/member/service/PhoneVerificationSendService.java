@@ -5,8 +5,12 @@ import com.azas.domain.member.entity.PhoneVerification;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -34,6 +38,13 @@ public class PhoneVerificationSendService {
     private final VerificationCodeGenerator
             verificationCodeGenerator;
     private final SmsSender smsSender;
+    private final Environment environment;
+
+    @Value("${PHONE_VERIFICATION_DEMO_PHONE_NUMBER:}")
+    private String demoPhoneNumber;
+
+    @Value("${PHONE_VERIFICATION_DEMO_CODE:}")
+    private String demoCode;
 
     @Transactional
     public PhoneVerificationSendResult send(
@@ -63,7 +74,9 @@ public class PhoneVerificationSendService {
         );
 
         String verificationCode =
-                verificationCodeGenerator.generate();
+                resolveVerificationCode(
+                        normalizedPhoneNumber
+                );
 
         byte[] phoneNumberCiphertext =
                 phoneNumberProtector.encrypt(
@@ -192,5 +205,31 @@ public class PhoneVerificationSendService {
                     exception
             );
         }
+    }
+
+    String resolveVerificationCode(
+            String normalizedPhoneNumber
+    ) {
+        boolean demoProfileActive =
+                environment.acceptsProfiles(
+                        Profiles.of("demo")
+                );
+
+        boolean usableDemoConfiguration =
+                StringUtils.hasText(demoPhoneNumber)
+                        && StringUtils.hasText(demoCode)
+                        && demoCode.matches("\\d{6}");
+
+        if (
+                demoProfileActive
+                        && usableDemoConfiguration
+                        && demoPhoneNumber.equals(
+                                normalizedPhoneNumber
+                        )
+        ) {
+            return demoCode;
+        }
+
+        return verificationCodeGenerator.generate();
     }
 }

@@ -30,4 +30,16 @@ public class CreateTransferRequest {
 
     @Size(max = 255)
     private String memo;
+
+    public CreateTransferRequest(
+            Long sourceAccountId,
+            Long destinationAccountId,
+            BigDecimal amount,
+            String memo
+    ) {
+        this.sourceAccountId = sourceAccountId;
+        this.destinationAccountId = destinationAccountId;
+        this.amount = amount;
+        this.memo = memo;
+    }
 }

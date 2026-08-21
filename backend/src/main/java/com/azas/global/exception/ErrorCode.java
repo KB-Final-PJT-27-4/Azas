@@ -179,11 +179,19 @@ public enum ErrorCode {
 
     INVALID_FINANCIAL_GOAL_REQUEST(
             HttpStatus.BAD_REQUEST,
-            "금융 목표 생성 요청이 올바르지 않습니다."
+            "금융 목표 요청이 올바르지 않습니다."
     ),
     FINANCIAL_GOAL_TEMPLATE_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 목표 템플릿을 찾을 수 없습니다."
+    ),
+    FINANCIAL_GOAL_RECOMMENDATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 목표 추천 금액을 찾을 수 없습니다."
+    ),
+    FINANCIAL_GOAL_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 목표를 찾을 수 없습니다."
     ),
     FINANCIAL_ACCOUNT_GOAL_ALREADY_ASSIGNED(
             HttpStatus.CONFLICT,
@@ -234,6 +242,10 @@ public enum ErrorCode {
     TIME_CAPSULE_ENTRY_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "타임캡슐 엔트리를 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_NOT_RELEASED(
+            HttpStatus.CONFLICT,
+            "아직 공개되지 않은 타임캡슐입니다."
     ),
     TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED(
             HttpStatus.CONFLICT,
@@ -383,9 +395,65 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "알림 수신 설정이 올바르지 않습니다."
     ),
+    INVALID_PUSH_DEVICE_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "푸시 기기 요청이 올바르지 않습니다."
+    ),
+    PUSH_DEVICE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "등록된 푸시 기기를 찾을 수 없습니다."
+    ),
     PREGNANCY_STATUS_NOT_AVAILABLE(
             HttpStatus.CONFLICT,
             "출산 예정 상태인 자녀만 임신 주차를 조회할 수 있습니다."
+    ),
+
+    // Mission
+    INVALID_MISSION(
+            HttpStatus.BAD_REQUEST,
+        "미션의 이름·내용 또는 보상 금액이 올바르지 않습니다."
+    ),
+    MISSION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+        "미션을 찾을 수 없습니다."
+    ),
+    MISSION_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+        "해당 미션에 접근할 권한이 없습니다."
+    ),
+    INVALID_MISSION_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+        "현재 상태에서는 요청한 미션 처리를 수행할 수 없습니다."
+    ),
+    INVALID_MISSION_ACTION(
+            HttpStatus.BAD_REQUEST,
+        "미션 상태 변경 요청이 올바르지 않습니다."
+    ),
+
+    // Checklist
+    INVALID_CHECKLIST_STAGE(
+            HttpStatus.BAD_REQUEST,
+            "체크리스트 생애주기 단계가 올바르지 않습니다."
+    ),
+
+    CHECKLIST_STAGE_NOT_SUPPORTED(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "지원하는 체크리스트 생애주기 단계를 계산할 수 없습니다."
+    ),
+    CHECKLIST_ITEM_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "체크리스트 항목을 찾을 수 없습니다."
+    ),
+
+    CHECKLIST_ITEM_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 체크리스트 항목에 접근할 권한이 없습니다."
+    ),
+
+    // Report
+    ASSET_REPORT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "해당 월의 자산 리포트를 찾을 수 없습니다."
     );
 
     private final HttpStatus httpStatus;

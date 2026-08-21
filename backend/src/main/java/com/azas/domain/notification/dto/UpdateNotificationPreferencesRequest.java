@@ -2,6 +2,7 @@ package com.azas.domain.notification.dto;
 
 import com.azas.domain.notification.entity.NotificationCategory;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +26,7 @@ public class UpdateNotificationPreferencesRequest {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
+    @ApiModel(value = "NotificationPreferenceUpdateItemRequest")
     public static class Item {
 
         @NotNull

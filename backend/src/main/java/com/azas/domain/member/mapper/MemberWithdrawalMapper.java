@@ -17,11 +17,6 @@ public interface MemberWithdrawalMapper {
             @Param("withdrawnAt") LocalDateTime withdrawnAt
     );
 
-    int revokeActiveFinancialConnections(
-            @Param("memberId") long memberId,
-            @Param("withdrawnAt") LocalDateTime withdrawnAt
-    );
-
     int unlinkChildMember(
             @Param("memberId") long memberId
     );

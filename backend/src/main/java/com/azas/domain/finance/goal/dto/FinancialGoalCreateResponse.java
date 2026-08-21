@@ -1,6 +1,7 @@
 package com.azas.domain.finance.goal.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -75,6 +76,7 @@ public class FinancialGoalCreateResponse {
     }
 
     @Getter
+    @ApiModel(value = "FinancialGoalCreateLinkedAccountResponse")
     public static class LinkedAccountResponse {
 
         @JsonProperty("account_id")
