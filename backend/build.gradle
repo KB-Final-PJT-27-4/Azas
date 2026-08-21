@@ -23,6 +23,7 @@ def jjwtVersion = '0.13.0'
 def lombokVersion = '1.18.46'
 def awsSdkVersion = '2.47.3'
 def firebaseAdminVersion = '9.10.0'
+def googleHttpClientVersion = '2.1.0'
 
 dependencies {
     // Spring Legacy 웹 MVC 및 데이터 접근
@@ -68,6 +69,9 @@ dependencies {
         exclude group: 'com.google.cloud', module: 'google-cloud-storage'
         exclude group: 'com.google.cloud', module: 'google-cloud-firestore'
     }
+    // Firebase 프로필 활성화 시 사용하는 JacksonFactory를 외부 Tomcat이
+    // 아니라 배포 WAR의 WEB-INF/lib에서 제공한다.
+    runtimeOnly "com.google.http-client:google-http-client-jackson2:${googleHttpClientVersion}"
 
     // 타임캡슐 이미지·영상은 비공개 S3 객체로 저장하고 Presigned URL로만 접근
     implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
