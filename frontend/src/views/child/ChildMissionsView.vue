@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { CheckSquare } from 'lucide-vue-next'
 
-import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 
@@ -186,7 +185,6 @@ const activeRewardTotal = computed(() =>
       </div>
     </section>
 
-    <ChildBottomNavigation />
   </main>
 </template>
 

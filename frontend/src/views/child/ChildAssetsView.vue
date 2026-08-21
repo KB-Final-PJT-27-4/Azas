@@ -2,7 +2,6 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 
-import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import childCloudBackgroundUrl from '@/assets/images/home/home-hero-bg.png'
 import { api, getApiErrorMessage } from '@/api'
 
@@ -164,6 +163,5 @@ const formatSignedCurrency = (transaction: ChildTransaction) => {
       </div>
     </section>
 
-    <ChildBottomNavigation />
   </main>
 </template>

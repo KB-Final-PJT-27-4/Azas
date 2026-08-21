@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
@@ -168,6 +167,5 @@ onMounted(async () => {
       이체하기
     </button>
 
-    <ChildBottomNavigation />
   </main>
 </template>

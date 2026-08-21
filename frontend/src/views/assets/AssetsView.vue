@@ -60,6 +60,7 @@ type AutoTransferSheetData = {
 const route = useRoute()
 const { showToast } = useToast()
 const activeAssetsTab = ref<AssetsTab>('accounts')
+const isLoading = ref(true)
 
 const currentChildId = ref<number | null>(null)
 const accountGroups = ref<AccountGroup[]>([])
@@ -338,6 +339,8 @@ const loadAssets = async () => {
     })
   } catch (error) {
     showToast(getApiErrorMessage(error, '자산 정보를 불러오지 못했어요.'), 'error')
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -387,8 +390,41 @@ onMounted(loadAssets)
       </button>
     </div>
 
+    <div v-if="isLoading" class="mt-3 grid gap-4" aria-label="자산 정보를 불러오는 중" aria-busy="true">
+      <section
+        v-for="groupIndex in 2"
+        :key="`asset-group-skeleton-${groupIndex}`"
+        class="overflow-hidden rounded-[22px] border border-[#e2edf2] bg-white shadow-[0_8px_24px_rgba(54,112,139,0.07)]"
+        aria-hidden="true"
+      >
+        <div class="px-5 pt-[18px] pb-4" :class="groupIndex === 1 ? 'bg-[#f7fcff]' : 'bg-[#fffdf5]'">
+          <div class="flex items-center gap-3">
+            <span class="size-10 shrink-0 animate-pulse rounded-[13px] bg-[#e5eef2]"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block h-4 w-20 animate-pulse rounded-md bg-[#e1eaee]"></span>
+              <span class="mt-2 block h-3 w-24 animate-pulse rounded-full bg-[#e8eef1]"></span>
+            </span>
+            <span class="h-8 w-[82px] shrink-0 animate-pulse rounded-[10px] bg-white"></span>
+          </div>
+          <div class="mt-4 border-t border-[#e8f0f4] pt-3.5">
+            <span class="block h-3 w-10 animate-pulse rounded-full bg-[#e5ecef]"></span>
+            <span class="mt-2 block h-7 w-32 animate-pulse rounded-md bg-[#e1e9ed]"></span>
+          </div>
+        </div>
+        <div class="p-3" :class="groupIndex === 1 ? 'bg-[#f8fbfd]' : 'bg-[#fffdf5]'">
+          <div class="flex min-h-[70px] items-center gap-3 rounded-[15px] border border-[#e5edf1] bg-white px-4 py-2.5">
+            <span class="min-w-0 flex-1">
+              <span class="block h-4 w-28 animate-pulse rounded-md bg-[#e5ecef]"></span>
+              <span class="mt-2 block h-3 w-36 animate-pulse rounded-full bg-[#edf2f4]"></span>
+            </span>
+            <span class="h-4 w-20 shrink-0 animate-pulse rounded-md bg-[#e5ecef]"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <div
-      v-if="activeAssetsTab === 'accounts'"
+      v-else-if="activeAssetsTab === 'accounts'"
       id="accounts-panel"
       class="mt-3 grid gap-4"
       role="tabpanel"
@@ -707,16 +743,19 @@ onMounted(loadAssets)
       </Transition>
     </Teleport>
 
-    <button
-      class="asset-transfer-button fixed z-[40]"
-      type="button"
-      aria-label="이체하기"
-      @click="isTransferSheetOpen = true"
-    >
-      <span class="asset-transfer-button__surface">
-        <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
-      </span>
-    </button>
+    <Teleport to="body">
+      <button
+        v-if="!isLoading"
+        class="asset-transfer-button fixed z-[40]"
+        type="button"
+        aria-label="이체하기"
+        @click="isTransferSheetOpen = true"
+      >
+        <span class="asset-transfer-button__surface">
+          <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
+        </span>
+      </button>
+    </Teleport>
 
     <AssetTransferSheet
       :open="isTransferSheetOpen"

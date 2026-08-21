@@ -19,6 +19,7 @@ type AlarmGroup = {
 
 const { showToast } = useToast()
 const alarmGroups = ref<AlarmGroup[]>([])
+const isLoading = ref(true)
 
 const loadSettings = async () => {
   try {
@@ -45,6 +46,8 @@ const loadSettings = async () => {
     ]
   } catch (error) {
     showToast(getApiErrorMessage(error, '알림 설정을 불러오지 못했어요.'), 'error')
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -67,15 +70,43 @@ onMounted(loadSettings)
 
 <template>
   <main
-    class="h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] overflow-hidden px-5 pb-20"
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] px-5 pb-5"
   >
     <form class="mt-4" @submit.prevent="saveSettings">
-      <section
-        v-for="(group, groupIndex) in alarmGroups"
-        :key="group.id"
-        :class="groupIndex ? 'mt-6' : ''"
-        :aria-labelledby="`alarm-group-${group.id}`"
-      >
+      <template v-if="isLoading">
+        <section
+          v-for="groupIndex in 2"
+          :key="`alarm-skeleton-${groupIndex}`"
+          :class="groupIndex > 1 ? 'mt-6' : ''"
+          aria-hidden="true"
+        >
+          <div class="px-1">
+            <span class="block h-[22px] w-36 animate-pulse rounded-md bg-[#e4ecef]"></span>
+          </div>
+          <div class="mt-3 overflow-hidden rounded-[20px] border border-[#e0e9ee] bg-white px-4">
+            <div
+              v-for="itemIndex in 2"
+              :key="itemIndex"
+              class="flex min-h-[74px] items-center gap-4 py-3.5"
+              :class="itemIndex > 1 ? 'border-t border-[#edf1f3]' : ''"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="block h-4 w-28 animate-pulse rounded-md bg-[#e5ecef]"></span>
+                <span class="mt-2 block h-3 w-48 max-w-full animate-pulse rounded-full bg-[#edf2f4]"></span>
+              </span>
+              <span class="h-7 w-[52px] shrink-0 animate-pulse rounded-full bg-[#e3eaee]"></span>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <template v-else>
+        <section
+          v-for="(group, groupIndex) in alarmGroups"
+          :key="group.id"
+          :class="groupIndex ? 'mt-6' : ''"
+          :aria-labelledby="`alarm-group-${group.id}`"
+        >
         <div class="px-1">
           <h2
             :id="`alarm-group-${group.id}`"
@@ -121,18 +152,21 @@ onMounted(loadSettings)
             </label>
           </li>
         </ul>
-      </section>
+        </section>
+      </template>
 
-      <div
-        class="pointer-events-none fixed bottom-[calc(var(--app-bottom-nav-height)+12px+env(safe-area-inset-bottom))] left-1/2 z-20 w-full max-w-[var(--app-max-width)] -translate-x-1/2 px-5"
+      <button
+        class="mt-6 min-h-14 w-full rounded-2xl text-base font-bold transition-colors"
+        :class="
+          isLoading
+            ? 'animate-pulse bg-[#dce8ed] text-transparent'
+            : 'bg-[var(--color-brand-primary)] text-white active:bg-[var(--color-brand-primary-pressed)]'
+        "
+        type="submit"
+        :disabled="isLoading"
       >
-        <button
-          class="pointer-events-auto min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]"
-          type="submit"
-        >
-          알림 설정 저장
-        </button>
-      </div>
+        알림 설정 저장
+      </button>
     </form>
   </main>
 </template>

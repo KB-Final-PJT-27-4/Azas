@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { X } from 'lucide-vue-next'
+import { Landmark, Plus, X } from 'lucide-vue-next'
 
 import AssetAccountSelect from '@/components/assets/AssetAccountSelect.vue'
 import type { AssetAccountSelectOption } from '@/components/assets/AssetAccountSelect.vue'
@@ -39,6 +39,9 @@ const quickAmounts = [10000, 50000, 100000, 500000]
 
 const sourceAccounts = computed(() => props.sourceAccounts)
 const targetAccounts = computed(() => props.targetAccounts)
+const hasTransferAccounts = computed(
+  () => sourceAccounts.value.length > 0 && targetAccounts.value.length > 0,
+)
 const selectedSourceAccount = computed(
   () => sourceAccounts.value.find(({ id }) => id === sourceAccountId.value) ?? sourceAccounts.value[0],
 )
@@ -105,7 +108,34 @@ const submitTransfer = () => {
     close-label="이체 창 닫기"
     @close="emit('close')"
   >
-    <form class="mt-5" @submit.prevent="submitTransfer">
+    <section
+      v-if="!hasTransferAccounts"
+      class="mt-5 rounded-[20px] border border-dashed border-[#cfe3ed] bg-[#f7fcff] px-5 py-8 text-center"
+      aria-labelledby="empty-transfer-accounts-title"
+    >
+      <span
+        class="mx-auto grid size-14 place-items-center rounded-full bg-[#e5f6ff] text-[var(--color-brand-primary)]"
+        aria-hidden="true"
+      >
+        <Landmark :size="28" :stroke-width="2.2" />
+      </span>
+      <h3 id="empty-transfer-accounts-title" class="mt-4 text-[16px] font-extrabold">
+        연결된 계좌가 없어요
+      </h3>
+      <p class="mt-2 text-[12px] leading-5 text-[var(--color-text-secondary)]">
+        이체하려면 먼저 사용할 계좌를 연결해 주세요.<br />연결 후 출금·받는 계좌를 선택할 수 있어요.
+      </p>
+      <RouterLink
+        :to="{ name: 'Accounts' }"
+        class="mx-auto mt-5 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[13px] bg-[var(--color-brand-primary)] px-5 text-[13px] font-bold !text-white active:bg-[var(--color-brand-primary-pressed)]"
+        @click="emit('close')"
+      >
+        <Plus :size="16" :stroke-width="2.6" />
+        계좌 연결하기
+      </RouterLink>
+    </section>
+
+    <form v-else class="mt-5" @submit.prevent="submitTransfer">
       <label class="block text-[12px] font-semibold">
         출금 계좌 <span class="text-[#f04444]">*</span>
       </label>
@@ -189,7 +219,7 @@ const submitTransfer = () => {
       <button
         class="mt-5 h-12 w-full rounded-[13px] bg-[var(--color-brand-primary)] text-[15px] font-semibold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:bg-[#cbd8df]"
         type="submit"
-        :disabled="amount <= 0 || !selectedSourceAccount"
+        :disabled="amount <= 0 || !selectedSourceAccount || !targetAccountId"
       >
         이체하기
       </button>

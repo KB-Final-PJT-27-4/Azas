@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef9fe] bg-cover bg-top bg-no-repeat px-[18px] pt-5 pb-10 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] bg-[#eef9fe] bg-cover bg-top bg-no-repeat px-[18px] pt-5 pb-10 text-[var(--color-text-primary)]"
     :style="{
       backgroundImage: `linear-gradient(rgba(247, 250, 252, 0.28), rgba(247, 250, 252, 0.42)), url(${goalCloudBackground})`,
     }"
