@@ -1,20 +1,22 @@
 ﻿<script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
-import { recordChildTransfer, transferDefaults } from '@/mocks/childHome'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
-const firstContact = transferDefaults.contacts[0]!
-const selectedContactId = ref(firstContact.id)
+const { showToast } = useToast()
+type AccountOption = { id: number; name: string; bankName: string; accountNumber: string; balance: number }
+const sourceAccount = ref<AccountOption | null>(null)
+const contacts = ref<AccountOption[]>([])
+const selectedContactId = ref<number | null>(null)
 const transferAmount = ref('')
 const transferMessage = ref('')
 
 const selectedContact = computed(
-  () =>
-    transferDefaults.contacts.find((contact) => contact.id === selectedContactId.value) ??
-    firstContact,
+  () => contacts.value.find((contact) => contact.id === selectedContactId.value) ?? null,
 )
 const transferAmountValue = computed(() => Number(transferAmount.value.replace(/\D/g, '')) || 0)
 const formattedTransferAmount = computed(() =>
@@ -24,7 +26,8 @@ const canSubmit = computed(
   () =>
     Boolean(selectedContactId.value) &&
     transferAmountValue.value > 0 &&
-    transferAmountValue.value <= transferDefaults.balance,
+    transferAmountValue.value <= (sourceAccount.value?.balance ?? 0) &&
+    Boolean(selectedContact.value),
 )
 
 const updateAmount = (event: Event) => {
@@ -37,17 +40,42 @@ const addAmount = (amount: number) => {
 }
 
 const transferAll = () => {
-  transferAmount.value = String(transferDefaults.balance)
+  transferAmount.value = String(sourceAccount.value?.balance ?? 0)
 }
 
-const submitTransfer = () => {
+const submitTransfer = async () => {
   if (!canSubmit.value) return
-  recordChildTransfer({
-    amount: transferAmountValue.value,
-    receiverName: selectedContact.value.bankName,
-  })
-  router.push('/child/home')
+  try {
+    await api.createTransferUsingPOST(crypto.randomUUID(), {
+      source_account_id: sourceAccount.value!.id,
+      destination_account_id: selectedContact.value!.id,
+      amount: transferAmountValue.value,
+      memo: transferMessage.value.trim() || undefined,
+    })
+    await router.push('/child/home')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '이체하지 못했습니다.'), 'error')
+  }
 }
+
+onMounted(async () => {
+  try {
+    const childId = await resolveCurrentChildId()
+    const { data } = await api.getChildAccountsUsingGET(childId)
+    const accounts = data.accounts.map((account) => ({
+      id: account.account_id,
+      name: account.account_name,
+      bankName: account.account_name,
+      accountNumber: account.account_number,
+      balance: account.balance,
+    }))
+    sourceAccount.value = accounts[0] ?? null
+    contacts.value = accounts.slice(1)
+    selectedContactId.value = contacts.value[0]?.id ?? null
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌를 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>
@@ -59,7 +87,7 @@ const submitTransfer = () => {
           v-model="selectedContactId"
           class="h-12 rounded-[10px] border border-[var(--color-border)] bg-white px-4 text-[length:var(--font-size-sm)] outline-none focus:border-[var(--color-brand-primary)]"
         >
-          <option v-for="contact in transferDefaults.contacts" :key="contact.id" :value="contact.id">
+          <option v-for="contact in contacts" :key="contact.id" :value="contact.id">
             {{ contact.name }} · {{ contact.bankName }}
           </option>
         </select>
@@ -139,6 +167,5 @@ const submitTransfer = () => {
       이체하기
     </button>
 
-    <ChildBottomNavigation />
   </main>
 </template>

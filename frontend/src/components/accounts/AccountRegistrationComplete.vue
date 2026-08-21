@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { Landmark } from 'lucide-vue-next'
 import completePigUrl from '@/assets/images/accounts/complete-pig.png'
-import completeStarUrl from '@/assets/images/accounts/complete-star.png'
-import completeDiamondUrl from '@/assets/images/accounts/complete-diamond.png'
-import completeCircleUrl from '@/assets/images/accounts/complete-circle.png'
 
 defineProps<{
   accounts: {
@@ -28,12 +25,6 @@ const emit = defineEmits<{
         <div class="complete-scene mx-auto" aria-label="계좌 등록 완료">
           <img class="complete-scene__pig" :src="completePigUrl" alt="" />
 
-          <img class="complete-scene__decoration complete-scene__star complete-scene__star--left" :src="completeStarUrl" alt="" />
-          <img class="complete-scene__decoration complete-scene__star complete-scene__star--right" :src="completeStarUrl" alt="" />
-          <img class="complete-scene__decoration complete-scene__diamond complete-scene__diamond--left" :src="completeDiamondUrl" alt="" />
-          <img class="complete-scene__decoration complete-scene__diamond complete-scene__diamond--right" :src="completeDiamondUrl" alt="" />
-          <img class="complete-scene__decoration complete-scene__circle complete-scene__circle--left" :src="completeCircleUrl" alt="" />
-          <img class="complete-scene__decoration complete-scene__circle complete-scene__circle--right" :src="completeCircleUrl" alt="" />
 
           <span class="complete-scene__check" aria-hidden="true">
             <svg width="38" height="38" viewBox="0 0 24 24" fill="none">

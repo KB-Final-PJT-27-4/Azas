@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AccountConnectionMethod from '@/components/accounts/AccountConnectionMethod.vue'
 import AccountImportSelection from '@/components/accounts/AccountImportSelection.vue'
@@ -7,19 +7,20 @@ import AccountRegistrationComplete from '@/components/accounts/AccountRegistrati
 import AccountRegistrationForm from '@/components/accounts/AccountRegistrationForm.vue'
 import AccountRegistrationConfirmation from '@/components/accounts/AccountRegistrationConfirmation.vue'
 import BankSelectionSheet from '@/components/accounts/BankSelectionSheet.vue'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const { showToast } = useToast()
+const currentChildId = ref<number | null>(null)
 const isBankSelectorOpen = ref(false)
 const registrationStep = ref<'method' | 'import' | 'empty' | 'form' | 'confirmation' | 'complete'>('method')
 const selectedBank = ref('')
 const accountNumber = ref('')
 const accountAlias = ref('')
 const slideDirection = ref<'forward' | 'backward'>('forward')
-const importedAccounts = ref([
-  { id: 1, bank: 'KB국민은행', number: '1234-567-890123', balance: 12450000 },
-  { id: 2, bank: 'KB국민은행', number: '9876-543-210987', balance: 3200000 },
-  { id: 3, bank: 'KB국민은행', number: '1111-222-333444', balance: 1520000 },
-])
+const importedAccounts = ref<{ id: number; bank: string; number: string; balance: number }[]>([])
 const registeredAccounts = ref<
   { bank: string; accountNumber: string; accountName: string; balance: number }[]
 >([])
@@ -29,39 +30,55 @@ const startAccountImport = () => {
   registrationStep.value = 'import'
 }
 
-const startManualRegistration = () => {
-  slideDirection.value = 'forward'
-  registrationStep.value = 'form'
-}
-
 const showAccountOpeningGuide = () => {
   slideDirection.value = 'forward'
   registrationStep.value = 'empty'
 }
 
-const connectImportedAccount = (accounts: (typeof importedAccounts.value)[number][]) => {
+const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[number][]) => {
   const [primaryAccount] = accounts
   if (!primaryAccount) return
-
-  registeredAccounts.value = accounts.map((account, index) => ({
-    bank: account.bank,
-    accountNumber: account.number,
-    accountName: accounts.length > 1 ? `${account.bank} 계좌 ${index + 1}` : `${account.bank} 계좌`,
-    balance: account.balance,
-  }))
-  slideDirection.value = 'forward'
-  registrationStep.value = 'complete'
+  try {
+    const { data } = await api.linkUsingPOST(undefined, {
+      account_ids: accounts.map(({ id }) => id),
+      child_id: currentChildId.value ?? undefined,
+      owner_type: 'CHILD',
+    })
+    registeredAccounts.value = (data.accounts ?? []).map((account, index) => ({
+      bank: account.bank_name ?? accounts[index]?.bank ?? '',
+      accountNumber: accounts[index]?.number ?? '',
+      accountName: account.account_name ?? `${account.bank_name ?? '연결'} 계좌`,
+      balance: account.balance ?? 0,
+    }))
+    slideDirection.value = 'forward'
+    registrationStep.value = 'complete'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌를 연결하지 못했어요.'), 'error')
+  }
 }
 
-const createKbAccount = () => {
-  registeredAccounts.value = [{
-    bank: 'KB국민은행',
-    accountNumber: '123-456-789012',
-    accountName: 'KB국민은행 자녀 계좌',
-    balance: 0,
-  }]
-  slideDirection.value = 'forward'
-  registrationStep.value = 'complete'
+const createKbAccount = async () => {
+  try {
+    const products = await api.getProductsUsingGET(undefined, undefined, 'SAVINGS', 1)
+    const product = (products.data.items?.[0] ?? {}) as unknown as { financial_product_id?: number }
+    if (!product.financial_product_id) throw new Error('개설 가능한 상품을 찾을 수 없어요.')
+    const { data } = await api.openUsingPOST(undefined, {
+      child_id: currentChildId.value ?? undefined,
+      financial_product_id: product.financial_product_id,
+      initial_deposit_amount: 0,
+      owner_type: 'CHILD',
+    })
+    registeredAccounts.value = [{
+      bank: data.bank_name ?? 'KB국민은행',
+      accountNumber: data.account_number ?? '',
+      accountName: data.account_name ?? '자녀 계좌',
+      balance: data.balance ?? 0,
+    }]
+    slideDirection.value = 'forward'
+    registrationStep.value = 'complete'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌를 개설하지 못했어요.'), 'error')
+  }
 }
 
 const selectBank = (bank: string) => {
@@ -79,16 +96,38 @@ const goToForm = () => {
   registrationStep.value = 'form'
 }
 
-const completeRegistration = () => {
-  registeredAccounts.value = [{
-    bank: selectedBank.value,
-    accountNumber: accountNumber.value,
-    accountName: accountAlias.value || `${selectedBank.value} 계좌`,
-    balance: 0,
-  }]
-  slideDirection.value = 'forward'
-  registrationStep.value = 'complete'
+const completeRegistration = async () => {
+  const normalizedNumber = accountNumber.value.replace(/\D/g, '')
+  const account = importedAccounts.value.find(
+    ({ number }) => number.replace(/\D/g, '') === normalizedNumber,
+  )
+  if (!account) {
+    showToast('연결 가능한 계좌 목록에서 계좌번호를 확인해 주세요.', 'error')
+    return
+  }
+  await connectImportedAccount([account])
 }
+
+const loadDiscoveredAccounts = async () => {
+  try {
+    currentChildId.value = await resolveCurrentChildId()
+    const { data } = await api.getDiscoveredAccountsUsingGET(
+      'CHILD',
+      undefined,
+      currentChildId.value,
+    )
+    importedAccounts.value = data.accounts.map((account) => ({
+      id: account.account_id,
+      bank: account.bank_name,
+      number: account.account_number,
+      balance: account.balance,
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '연결 가능한 계좌를 불러오지 못했어요.'), 'error')
+  }
+}
+
+onMounted(loadDiscoveredAccounts)
 </script>
 
 <template>

@@ -1,18 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 
-import {
-  childcareCategories,
-  childcareReportSummary,
-  formatReportWon,
-} from '@/data/childcareReportData'
+import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const total = childcareReportSummary.currentMonthAmount
-const percentage = (amount: number) => Math.round((amount / total) * 100)
+const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
+
+const total = computed(() => childcareReportSummary.currentMonthAmount)
+const percentage = (amount: number) => total.value ? Math.round((amount / total.value) * 100) : 0
 const donutSegments = computed(() => {
   let offset = 0
   return childcareCategories.map((category) => {
-    const length = (category.amount / total) * 100
+    const length = total.value ? (category.amount / total.value) * 100 : 0
     const segment = {
       ...category,
       dashArray: `${length} ${100 - length}`,
@@ -22,6 +20,7 @@ const donutSegments = computed(() => {
     return segment
   })
 })
+onMounted(load)
 </script>
 
 <template>
