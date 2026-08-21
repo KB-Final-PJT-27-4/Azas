@@ -313,6 +313,23 @@ CREATE TABLE family_invitation
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='가족 초대링크';
 
+CREATE TABLE family_invitation_child
+(
+    family_invitation_id BIGINT UNSIGNED NOT NULL COMMENT '가족 초대 ID',
+    child_id             BIGINT UNSIGNED NOT NULL COMMENT '초대 대상 자녀 ID',
+    created_at           DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '대상 스냅샷 생성 시각',
+    PRIMARY KEY (family_invitation_id, child_id),
+    KEY idx_family_invitation_child_child_id (child_id),
+    CONSTRAINT fk_family_invitation_child_invitation
+        FOREIGN KEY (family_invitation_id)
+            REFERENCES family_invitation (family_invitation_id),
+    CONSTRAINT fk_family_invitation_child_target
+        FOREIGN KEY (child_id)
+            REFERENCES child (child_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='가족 초대 대상 자녀 스냅샷';
+
 CREATE TABLE checklist_item_template
 (
     checklist_item_template_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '체크리스트 템플릿 ID',
