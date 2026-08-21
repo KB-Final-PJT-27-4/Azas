@@ -41,7 +41,7 @@ public interface FamilyMapper {
             @Param("now") LocalDateTime now
     );
 
-    int countUsableFamilyInvitations(
+    int expireUsableFamilyInvitations(
             @Param("childId") Long childId,
             @Param("inviteeType") FamilyInviteeType inviteeType,
             @Param("now") LocalDateTime now
