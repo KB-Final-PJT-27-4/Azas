@@ -20,13 +20,6 @@
         <result property="childStatus" column="status"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
-        <result
-                property="lastAllowanceRequestMonth"
-                column="last_allowance_request_month"/>
-        <result
-                property="lastAllowanceRequestAt"
-                column="last_allowance_requested_at"/>
-
     </resultMap>
 
     <sql id="childColumns">
@@ -40,9 +33,7 @@
         profile_image_url,
         status,
         created_at,
-        updated_at,
-        last_allowance_request_month,
-        last_allowance_requested_at
+        updated_at
     </sql>
 
     <select

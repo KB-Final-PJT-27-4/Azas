@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.checklist.mapper.ChecklistMapper">
+
+    <select id="findActiveChildLifecycle"
+            resultType="com.azas.domain.checklist.dto.ChecklistChildLifecycleRow">
+        SELECT
+        c.child_id AS childId,
+        c.birth_status AS birthStatus,
+        c.expected_birth_date AS expectedBirthDate,
+        c.birth_date AS birthDate
+        FROM child c
+        WHERE c.child_id = #{childId}
+        AND c.status = 'ACTIVE'
+        LIMIT 1
+    </select>
+
+    <select id="countActiveParentAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+        JOIN child c
+        ON c.child_id = cp.child_id
+        AND c.status = 'ACTIVE'
+        JOIN member m
+        ON m.member_id = cp.member_id
+        AND m.member_type = 'PARENT'
+        AND m.status = 'ACTIVE'
+        WHERE cp.member_id = #{memberId}
+        AND cp.child_id = #{childId}
+    </select>
+
+    <!--
+      신규 자녀처럼 진행 상태 행이 없는 경우,
+      선택한 단계의 활성 템플릿을 PENDING 상태로 생성한다.
+      UNIQUE(child_id, template_id)와 INSERT IGNORE로 중복을 방지한다.
+    -->
+    <insert id="insertMissingItems">
+        INSERT IGNORE INTO child_checklist_item (
+        child_id,
+        checklist_item_template_id,
+        status,
+        completed_by_member_id,
+        completed_at,
+        created_at,
+        updated_at
+        )
+        SELECT
+        #{childId},
+        template.checklist_item_template_id,
+        'PENDING',
+        NULL,
+        NULL,
+        UTC_TIMESTAMP(6),
+        UTC_TIMESTAMP(6)
+        FROM checklist_item_template template
+        WHERE template.lifecycle_stage = #{lifecycleStage}
+        AND template.is_active = 1
+    </insert>
+
+    <select id="findItems"
+            resultMap="checklistItemRowMap">
+
+        SELECT
+        progress.child_checklist_item_id
+        AS checklist_item_id,
+        template.checklist_item_template_id
+        AS checklist_item_template_id,
+        template.template_key,
+        template.category,
+        template.title
+        AS template_title,
+        template.description
+        AS template_description,
+        template.detail_content
+        AS template_content,
+        template.action_type,
+        template.action_url,
+        template.info_title,
+        template.info_notice,
+        progress.status,
+        progress.completed_at,
+        template.item_order
+        AS template_order,
+
+        detail.checklist_item_detail_id,
+        detail.title
+        AS detail_title,
+        detail.description
+        AS detail_description,
+        detail.action_label,
+        detail.external_url,
+        detail.detail_content,
+        detail.item_order
+        AS detail_order
+
+        FROM child_checklist_item progress
+
+        INNER JOIN checklist_item_template template
+        ON template.checklist_item_template_id =
+        progress.checklist_item_template_id
+
+        LEFT JOIN checklist_item_detail detail
+        ON detail.checklist_item_template_id =
+        template.checklist_item_template_id
+
+        WHERE progress.child_id = #{childId}
+        AND template.lifecycle_stage = #{lifecycleStage}
+        AND template.is_active = 1
+
+        ORDER BY
+        CASE
+        WHEN progress.status = 'COMPLETED'
+        THEN 1
+        ELSE 0
+        END,
+        template.item_order,
+        template.checklist_item_template_id,
+        detail.item_order,
+        detail.checklist_item_detail_id
+    </select>
+
+    <select id="findCompletionTargetForUpdate"
+            resultType="com.azas.domain.checklist.dto.ChecklistItemCompletionTargetRow">
+        SELECT
+        cci.child_checklist_item_id AS checklist_item_id,
+        cci.child_id,
+        cci.status,
+        cci.completed_at
+        FROM child_checklist_item cci
+        INNER JOIN child c
+        ON c.child_id = cci.child_id
+        AND c.status = 'ACTIVE'
+        INNER JOIN checklist_item_template cit
+        ON cit.checklist_item_template_id =
+        cci.checklist_item_template_id
+        AND cit.is_active = 1
+        WHERE cci.child_checklist_item_id = #{checklistItemId}
+        FOR UPDATE
+    </select>
+
+    <select id="findCompletionTargetById"
+            resultType="com.azas.domain.checklist.dto.ChecklistItemCompletionTargetRow">
+        SELECT
+        cci.child_checklist_item_id AS checklist_item_id,
+        cci.child_id,
+        cci.status,
+        cci.completed_at
+        FROM child_checklist_item cci
+        INNER JOIN child c
+        ON c.child_id = cci.child_id
+        AND c.status = 'ACTIVE'
+        INNER JOIN checklist_item_template cit
+        ON cit.checklist_item_template_id =
+        cci.checklist_item_template_id
+        AND cit.is_active = 1
+        WHERE cci.child_checklist_item_id = #{checklistItemId}
+    </select>
+
+    <update id="updateCompletion">
+        UPDATE child_checklist_item
+        SET
+        status = #{status},
+        completed_by_member_id =
+        CASE
+        WHEN #{status} = 'COMPLETED'
+        THEN #{completedByMemberId}
+        ELSE NULL
+        END,
+        completed_at =
+        CASE
+        WHEN #{status} = 'COMPLETED'
+        THEN UTC_TIMESTAMP(6)
+        ELSE NULL
+        END,
+        updated_at = UTC_TIMESTAMP(6)
+        WHERE child_checklist_item_id = #{checklistItemId}
+    </update>
+    <resultMap id="checklistItemRowMap"
+               type="com.azas.domain.checklist.dto.ChecklistItemRow">
+
+        <id property="checklistItemId"
+            column="checklist_item_id"/>
+
+        <result property="checklistItemTemplateId"
+                column="checklist_item_template_id"/>
+
+        <result property="templateKey"
+                column="template_key"/>
+
+        <result property="category"
+                column="category"/>
+
+        <result property="title"
+                column="template_title"/>
+
+        <result property="description"
+                column="template_description"/>
+
+        <result property="content"
+                column="template_content"/>
+
+        <result property="actionType"
+                column="action_type"/>
+
+        <result property="url"
+                column="action_url"/>
+
+        <result property="infoTitle"
+                column="info_title"/>
+
+        <result property="infoNotice"
+                column="info_notice"/>
+
+        <result property="status"
+                column="status"/>
+
+        <result property="completedAt"
+                column="completed_at"/>
+
+        <result property="itemOrder"
+                column="template_order"/>
+
+        <collection property="infoItems"
+                    ofType="com.azas.domain.checklist.dto.ChecklistInfoItemRow"
+                    notNullColumn="checklist_item_detail_id">
+
+            <id property="checklistItemDetailId"
+                column="checklist_item_detail_id"/>
+
+            <result property="title"
+                    column="detail_title"/>
+
+            <result property="description"
+                    column="detail_description"/>
+
+            <result property="actionLabel"
+                    column="action_label"/>
+
+            <result property="url"
+                    column="external_url"/>
+
+            <result property="content"
+                    column="detail_content"/>
+
+            <result property="itemOrder"
+                    column="detail_order"/>
+        </collection>
+    </resultMap>
+
+</mapper>

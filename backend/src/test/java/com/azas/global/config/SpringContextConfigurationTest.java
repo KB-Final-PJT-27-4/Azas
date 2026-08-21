@@ -1,12 +1,16 @@
 package com.azas.global.config;
 
+import com.azas.domain.member.service.FakeSmsSender;
 import com.azas.domain.member.service.PhoneNumberProtector;
 import com.azas.domain.member.service.PhoneVerificationHasher;
 import com.azas.domain.member.service.SmsSender;
+import com.azas.domain.notification.service.FakePushMessageSender;
+import com.azas.domain.notification.service.PushMessageSender;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -22,8 +26,11 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,6 +52,25 @@ class SpringContextConfigurationTest {
                     )
             );
             assertNotNull(
+                    rootContext.getBean(SmsSender.class)
+            );
+            assertEquals(
+                    FakePushMessageSender.class,
+                    rootContext.getBean(
+                            PushMessageSender.class
+                    ).getClass()
+            );
+        }
+    }
+
+    @Test
+    void demoProfileUsesFakeSmsSender() {
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext("demo")
+        ) {
+            assertInstanceOf(
+                    FakeSmsSender.class,
                     rootContext.getBean(SmsSender.class)
             );
         }
@@ -151,6 +177,44 @@ class SpringContextConfigurationTest {
                                     "$.definitions.OAuthLoginMemberResponse"
                                             + ".properties.member_type"
                             ).exists()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.FinancialProductListResponse"
+                                            + ".properties.items.items['$ref']"
+                            ).value(
+                                    "#/definitions/FinancialProductListItemResponse"
+                            )
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.ChecklistItemListResponse"
+                                            + ".properties.items.items['$ref']"
+                            ).value(
+                                    "#/definitions/ChecklistItemListItemResponse"
+                            )
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.FinancialProductListItemResponse"
+                                            + ".properties.financial_product_id"
+                            ).exists()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.ChecklistItemListItemResponse"
+                                            + ".properties.checklist_item_id"
+                            ).exists()
+                    )
+                    .andExpect(
+                            jsonPath(
+                                    "$.definitions.NotificationPreferenceUpdateItemRequest"
+                                            + ".properties.notification_category"
+                            ).exists()
+                    )
+                    .andExpect(
+                            jsonPath("$.definitions.Item")
+                                    .doesNotExist()
                     );
 
             mockMvc.perform(get("/v2/api-docs"))
@@ -200,7 +264,119 @@ class SpringContextConfigurationTest {
 
             mockMvc.perform(get("/swagger-ui/index.html"))
                     .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/v1/health"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("UP"));
         }
+    }
+
+    @Test
+    void corsConfigurationHandlesApiPreflightRequests() throws Exception {
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext();
+                XmlWebApplicationContext servletContext =
+                        new XmlWebApplicationContext()
+        ) {
+            servletContext.setParent(rootContext);
+            servletContext.setServletContext(
+                    new MockServletContext()
+            );
+            servletContext.setConfigLocation(
+                    "classpath:spring/servlet-context.xml"
+            );
+            servletContext.refresh();
+
+            MockMvc mockMvc =
+                    MockMvcBuilders
+                            .webAppContextSetup(servletContext)
+                            .build();
+
+            assertAllowedPreflight(
+                    mockMvc,
+                    "https://azas-seven.vercel.app",
+                    "/api/v1/auth/oauth/google",
+                    "POST",
+                    "Content-Type,Authorization"
+            );
+            assertAllowedPreflight(
+                    mockMvc,
+                    "http://localhost:5173",
+                    "/api/v1/members/me",
+                    "GET",
+                    "Authorization,Content-Type"
+            );
+            assertAllowedPreflight(
+                    mockMvc,
+                    "http://127.0.0.1:5173",
+                    "/api/v1/transfers",
+                    "POST",
+                    "Authorization,Content-Type,Idempotency-Key"
+            );
+
+            mockMvc.perform(
+                            options("/api/v1/members/me")
+                                    .header(
+                                            HttpHeaders.ORIGIN,
+                                            "https://untrusted.example.com"
+                                    )
+                                    .header(
+                                            HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD,
+                                            "GET"
+                                    )
+                    )
+                    .andExpect(status().isForbidden())
+                    .andExpect(
+                            header().doesNotExist(
+                                    HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN
+                            )
+                    );
+        }
+    }
+
+    private void assertAllowedPreflight(
+            MockMvc mockMvc,
+            String origin,
+            String requestPath,
+            String requestMethod,
+            String requestHeaders
+    ) throws Exception {
+        mockMvc.perform(
+                        options(requestPath)
+                                .header(HttpHeaders.ORIGIN, origin)
+                                .header(
+                                        HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD,
+                                        requestMethod
+                                )
+                                .header(
+                                        HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS,
+                                        requestHeaders
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        header().string(
+                                HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
+                                origin
+                        )
+                )
+                .andExpect(
+                        header().string(
+                                HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS,
+                                org.hamcrest.Matchers.containsString(
+                                        requestMethod
+                                )
+                        )
+                )
+                .andExpect(
+                        header().string(
+                                HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS,
+                                org.hamcrest.Matchers.containsString(
+                                        requestHeaders.split(",")[0]
+                                )
+                        )
+                );
     }
 
     @Test
@@ -261,8 +437,12 @@ class SpringContextConfigurationTest {
         }
     }
 
-    private ClassPathXmlApplicationContext createRootContext() {
+    private ClassPathXmlApplicationContext createRootContext(
+            String... activeProfiles
+    ) {
         ClassPathXmlApplicationContext rootContext = new ClassPathXmlApplicationContext();
+        rootContext.getEnvironment()
+                .setActiveProfiles(activeProfiles);
         rootContext.getEnvironment().getPropertySources().addFirst(
                 new MapPropertySource("testProperties", Map.of(
                         "DB_URL", "jdbc:mysql://localhost:3306/azas",
@@ -273,6 +453,8 @@ class SpringContextConfigurationTest {
                         "GOOGLE_CLIENT_SECRET", "test-google-client-secret",
                         "JWT_SECRET_BASE64",
                         "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
+                        "ACCOUNT_NUMBER_ENCRYPTION_KEY_BASE64",
+                        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
                         "PHONE_NUMBER_ENCRYPTION_KEY_BASE64",
                         "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
                         "PHONE_VERIFICATION_SECRET_BASE64",

@@ -89,10 +89,7 @@ public class FinancialGoalCreateService {
 
         long goalId = insert.getFinancialGoalId();
         for (FinancialGoalAccountTargetRow account : accounts) {
-            if (goalMapper.insertFinancialGoalAccount(goalId, account.getAccountId()) != 1
-                    || goalMapper.updateAccountGoalSnapshot(
-                    account.getAccountId(), request.templateId(), title,
-                    request.targetAmount(), request.targetDate()) != 1) {
+            if (goalMapper.insertFinancialGoalAccount(goalId, account.getAccountId()) != 1) {
                 throw internalError();
             }
         }
