@@ -208,7 +208,7 @@ onBeforeUnmount(stopVerificationTimer)
 
 <template>
   <main
-    class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top))] flex-col bg-white text-[var(--color-text-primary)]"
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col bg-white text-[var(--color-text-primary)]"
   >
     <section class="flex flex-1 flex-col overflow-x-hidden px-5 pt-5 pb-[max(32px,env(safe-area-inset-bottom))]">
       <div v-if="step !== 3" class="grid grid-cols-2 gap-2" aria-label="아이 계좌 만들기 진행 단계">

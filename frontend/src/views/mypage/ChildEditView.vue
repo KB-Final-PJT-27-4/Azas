@@ -10,6 +10,7 @@ import { resolveCurrentChildId } from '@/api/context'
 
 const router = useRouter()
 const { showToast } = useToast()
+const isLoading = ref(true)
 
 const childId = ref<number | null>(null)
 const name = ref('')
@@ -70,6 +71,8 @@ onMounted(async () => {
     gender.value = data.gender === 'FEMALE' ? '여자' : data.gender === 'UNKNOWN' ? '아직 모름' : '남자'
   } catch (error) {
     showToast(getApiErrorMessage(error, '자녀 정보를 불러오지 못했습니다.'), 'error')
+  } finally {
+    isLoading.value = false
   }
 })
 
@@ -77,7 +80,7 @@ onMounted(async () => {
 
 <template>
   <main
-    class="flex h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] flex-col overflow-hidden px-5 pt-5 pb-3 text-[var(--color-text-primary)]"
+    class="flex min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] flex-col px-5 pt-5 pb-5 text-[var(--color-text-primary)]"
   >
     <header class="px-0.5">
       <h1 class="m-0 text-[26px] leading-tight font-extrabold tracking-[-0.04em]">자녀 정보 수정</h1>
@@ -86,7 +89,44 @@ onMounted(async () => {
       </p>
     </header>
 
-    <form class="mt-3 flex min-h-0 flex-1 flex-col" @submit.prevent="saveChild">
+    <div v-if="isLoading" class="mt-3 flex flex-1 flex-col" aria-label="자녀 정보를 불러오는 중" aria-busy="true">
+      <section class="flex min-h-[104px] items-center gap-4 rounded-[24px] border border-[#cfe8f3] bg-[#eaf8fe] p-4">
+        <span class="size-[70px] shrink-0 animate-pulse rounded-full bg-white/80"></span>
+        <span class="min-w-0 flex-1">
+          <span class="block h-3 w-28 animate-pulse rounded-full bg-[#d6ebf4]"></span>
+          <span class="mt-3 block h-6 w-24 animate-pulse rounded-md bg-[#d6ebf4]"></span>
+          <span class="mt-2 block h-3 w-20 animate-pulse rounded-full bg-[#dceef5]"></span>
+        </span>
+      </section>
+
+      <section class="mt-4 rounded-[22px] border border-[#d9e2e7] bg-white p-4" aria-hidden="true">
+        <span class="block h-[22px] w-20 animate-pulse rounded-md bg-[#e3eaed]"></span>
+        <div class="mt-5">
+          <span class="block h-4 w-12 animate-pulse rounded-md bg-[#e5ecef]"></span>
+          <span class="mt-2 block h-[52px] w-full animate-pulse rounded-xl bg-[#edf2f4]"></span>
+        </div>
+        <div class="mt-4">
+          <span class="block h-4 w-12 animate-pulse rounded-md bg-[#e5ecef]"></span>
+          <span class="mt-2 grid grid-cols-3 gap-2.5">
+            <span v-for="index in 3" :key="index" class="h-13 animate-pulse rounded-xl bg-[#edf2f4]"></span>
+          </span>
+        </div>
+        <div class="mt-4">
+          <div class="flex items-center justify-between">
+            <span class="block h-4 w-20 animate-pulse rounded-md bg-[#e5ecef]"></span>
+            <span class="block h-6 w-14 animate-pulse rounded-full bg-[#edf2f4]"></span>
+          </div>
+          <span class="mt-2 block h-[52px] w-full animate-pulse rounded-xl bg-[#edf2f4]"></span>
+        </div>
+      </section>
+
+      <div class="mt-auto grid grid-cols-2 gap-3 pt-3" aria-hidden="true">
+        <span class="h-14 animate-pulse rounded-2xl bg-[#edf2f4]"></span>
+        <span class="h-14 animate-pulse rounded-2xl bg-[#dce8ed]"></span>
+      </div>
+    </div>
+
+    <form v-else class="mt-3 flex flex-1 flex-col" @submit.prevent="saveChild">
       <section class="flex items-center gap-4 rounded-[24px] border border-[#cfe8f3] bg-[#eaf8fe] p-4" aria-label="자녀 프로필">
         <span class="size-[70px] shrink-0 overflow-hidden rounded-full bg-white">
           <img :src="childProfileUrl" alt="깨비 프로필" class="size-full object-cover" />

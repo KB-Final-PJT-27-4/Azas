@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
+import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import { BaseToast } from '@/components/feedback'
@@ -13,6 +14,17 @@ const router = useRouter()
 const hideNavigation = computed(() => route.meta.hideNavigation === true)
 const hideBottomNavigation = computed(
   () => hideNavigation.value || route.meta.hideBottomNavigation === true,
+)
+const childBottomNavigationRoutes = new Set([
+  'ChildHome',
+  'ChildAssets',
+  'ChildTransfer',
+  'ChildAllowanceRequests',
+  'ChildMissions',
+  'ChildQuiz',
+])
+const showChildBottomNavigation = computed(() =>
+  childBottomNavigationRoutes.has(String(route.name ?? '')),
 )
 const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
 const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
@@ -47,6 +59,7 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
         title="깨비"
         profile-name="깨비"
         :show-notification="showHeaderNotification"
+        :show-guide="isHome"
         :notification-count="notificationCount"
         :background-color="headerBackgroundColor || undefined"
         :profile-background-color="isHome || headerBackgroundColor ? '#ffffff' : undefined"
@@ -64,6 +77,7 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
         <slot />
       </div>
       <AppBottomNavigation v-if="!hideBottomNavigation" />
+      <ChildBottomNavigation v-if="showChildBottomNavigation" />
       <Transition name="global-toast">
         <BaseToast
           v-if="toastMessage"

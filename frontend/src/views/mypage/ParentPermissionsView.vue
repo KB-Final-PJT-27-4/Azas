@@ -19,6 +19,7 @@ type ChildProfile = {
 }
 
 const { showToast } = useToast()
+const isLoading = ref(true)
 const children = ref<ChildProfile[]>([])
 const selectedChildId = ref(0)
 const selectedAccountId = ref<number | null>(null)
@@ -129,6 +130,8 @@ onMounted(async () => {
     if (selectedChildId.value) await loadUsagePolicy(selectedChildId.value)
   } catch (error) {
     showToast(getApiErrorMessage(error, '자녀 목록을 불러오지 못했습니다.'), 'error')
+  } finally {
+    isLoading.value = false
   }
 })
 
@@ -139,8 +142,52 @@ const disconnectChild = () => {
 
 <template>
   <main
-    class="h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] overflow-hidden bg-white px-5 pt-4 pb-20"
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] bg-white px-5 pt-4 pb-5"
   >
+    <div v-if="isLoading" aria-label="아이 이용 권한을 불러오는 중" aria-busy="true">
+      <section class="flex min-h-[74px] items-center gap-3 rounded-[20px] border border-[#cfe8f3] bg-[#eaf8fe] p-3">
+        <span class="size-12 shrink-0 animate-pulse rounded-full bg-white/80"></span>
+        <span class="min-w-0 flex-1">
+          <span class="block h-4 w-20 animate-pulse rounded-md bg-[#d6ebf4]"></span>
+          <span class="mt-2 block h-3 w-10 animate-pulse rounded-full bg-[#dceef5]"></span>
+        </span>
+        <span class="h-8 w-16 shrink-0 animate-pulse rounded-lg bg-white/80"></span>
+      </section>
+
+      <section class="mt-6" aria-hidden="true">
+        <span class="block h-[23px] w-32 animate-pulse rounded-md bg-[#e3eaed]"></span>
+        <span class="mt-2 block h-3 w-48 animate-pulse rounded-full bg-[#edf2f4]"></span>
+        <div class="mt-4 overflow-hidden rounded-[20px] border border-[#d9e2e7] bg-white px-5">
+          <div
+            v-for="index in 2"
+            :key="index"
+            class="flex min-h-16 items-center gap-3 py-2.5"
+            :class="index > 1 ? 'border-t border-[#edf1f3]' : ''"
+          >
+            <span class="min-w-0 flex-1">
+              <span class="block h-4 w-28 animate-pulse rounded-md bg-[#e5ecef]"></span>
+              <span class="mt-2 block h-3 w-52 max-w-full animate-pulse rounded-full bg-[#edf2f4]"></span>
+            </span>
+            <span class="h-[30px] w-[54px] shrink-0 animate-pulse rounded-full bg-[#e1e9ed]"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-7" aria-hidden="true">
+        <span class="block h-[23px] w-32 animate-pulse rounded-md bg-[#e3eaed]"></span>
+        <span class="mt-2 block h-3 w-56 max-w-full animate-pulse rounded-full bg-[#edf2f4]"></span>
+        <div class="mt-4 rounded-[20px] border border-[#d9e2e7] bg-white p-4">
+          <span class="block h-4 w-24 animate-pulse rounded-md bg-[#e5ecef]"></span>
+          <span class="mt-2 block h-12 w-full animate-pulse rounded-xl bg-[#edf2f4]"></span>
+          <span class="mt-3 block h-9 w-full animate-pulse rounded-lg bg-[#edf2f4]"></span>
+          <span class="mt-3 block h-3 w-52 max-w-full animate-pulse rounded-full bg-[#f0f3f5]"></span>
+        </div>
+      </section>
+
+      <div class="mt-14 h-14 w-full animate-pulse rounded-2xl bg-[#dce8ed]" aria-hidden="true"></div>
+    </div>
+
+    <template v-else>
     <section
       class="flex items-center gap-3 rounded-[20px] border border-[#cfe8f3] bg-[#eaf8fe] p-3"
     >
@@ -266,19 +313,15 @@ const disconnectChild = () => {
       >
         아이 계정 연결 해제
       </button>
-    </form>
 
-    <div
-      class="pointer-events-none fixed bottom-[calc(var(--app-bottom-nav-height)+12px+env(safe-area-inset-bottom))] left-1/2 z-20 w-full max-w-[var(--app-max-width)] -translate-x-1/2 px-5"
-    >
       <button
-        class="pointer-events-auto min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-[15px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
-        type="button"
-        @click="savePermissions"
+        class="mt-3 min-h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-[15px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+        type="submit"
       >
         권한 설정 저장
       </button>
-    </div>
+    </form>
+    </template>
 
     <Transition name="child-sheet">
       <div

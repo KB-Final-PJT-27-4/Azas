@@ -2,7 +2,6 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 
-import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import childHomePigUrl from '@/assets/images/child/child-home-pig.png'
 import { api, getApiErrorMessage } from '@/api'
 import { isChildQuizCompletedToday } from '@/utils/childQuizProgress'
@@ -288,7 +287,6 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
       </div>
     </Transition>
 
-    <ChildBottomNavigation />
   </main>
 </template>
 

@@ -253,7 +253,7 @@ watch(
         @click.self="closeSheet"
       >
         <section
-          class="quick-sheet-panel fixed right-0 bottom-0 left-0 mx-auto max-h-[min(680px,calc(100dvh-24px))] w-full max-w-[var(--app-max-width)] overflow-hidden rounded-t-[20px] bg-white text-[var(--color-text-primary)] shadow-[0_-14px_36px_rgb(51_51_51_/_18%)]"
+          class="quick-sheet-panel fixed right-0 bottom-0 left-0 mx-auto max-h-[min(680px,calc(100dvh-24px))] w-full max-w-[var(--app-max-width)] overflow-hidden rounded-t-[32px] bg-white text-[var(--color-text-primary)] shadow-[0_-14px_36px_rgb(51_51_51_/_18%)]"
           :style="panelDragStyle"
           role="dialog"
           aria-modal="true"
@@ -558,16 +558,22 @@ watch(
 </template>
 
 <style scoped>
-.quick-sheet-enter-active,
-.quick-sheet-leave-active {
-  transition: background-color 180ms ease;
+.quick-sheet-enter-active {
+  transition: background-color 260ms ease-out;
 }
 
-.quick-sheet-enter-active .quick-sheet-panel,
+.quick-sheet-leave-active {
+  transition: background-color 200ms ease-in;
+}
+
+.quick-sheet-enter-active .quick-sheet-panel {
+  will-change: transform;
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .quick-sheet-leave-active .quick-sheet-panel {
-  transition:
-    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 180ms ease;
+  will-change: transform;
+  transition: transform 240ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .quick-sheet-enter-from,
@@ -577,8 +583,7 @@ watch(
 
 .quick-sheet-enter-from .quick-sheet-panel,
 .quick-sheet-leave-to .quick-sheet-panel {
-  opacity: 0;
-  transform: translateY(100%);
+  transform: translate3d(0, 100%, 0);
 }
 
 .quick-sheet-handle {

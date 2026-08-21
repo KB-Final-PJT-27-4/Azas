@@ -1,7 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
-import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 
@@ -99,6 +98,5 @@ const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원
       요청은 제한 없이 할 수 있어요!
     </p>
 
-    <ChildBottomNavigation />
   </main>
 </template>
