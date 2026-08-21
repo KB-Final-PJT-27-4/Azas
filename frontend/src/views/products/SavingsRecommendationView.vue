@@ -1,43 +1,59 @@
 <script setup lang="ts">
 import { ArrowUpRight } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const { showToast } = useToast()
 const selectedProductName = ref<string | null>(null)
+const selectedProductId = ref<number | null>(null)
 
-const savingsProducts = [
-  {
-    name: 'KB Young Youth 적금',
-    badge: '자녀 추천',
-    badgeClass: 'bg-[#eaf7ff] text-[#179fdf]',
-    rate: '최고 연 3.65%',
-    period: '12개월',
-    description: '자녀가 성년이 될 때까지 오래 함께할 수 있는 어린이·청소년 적금이에요.',
-    tags: ['#만19세미만', '#자유적립', '#무료보험'],
-    href: 'https://obank.kbstar.com/quics?page=C020702&cc=b061761:b061770&isNew=N&prcode=DP000940#',
-  },
-  {
-    name: 'KB아이사랑적금',
-    badge: '최고 금리',
-    badgeClass: 'bg-[#fff0f2] text-[#ef4d61]',
-    rate: '최고 연 10.00%',
-    period: '12개월',
-    description: '아이 키우는 가정의 목돈 마련을 응원하는 가족 맞춤형 적금이에요.',
-    tags: ['#아이사랑', '#육아응원', '#월30만원'],
-    href: 'https://obank.kbstar.com/quics?page=C016613&cc=b061496:b061645&isNew=Y&prcode=DP01001587',
-  },
-  {
-    name: '내 아이를 위한 280일 적금',
-    badge: '출산 준비',
-    badgeClass: 'bg-[#fff7df] text-[#d99520]',
-    rate: '최고 연 3.55%',
-    period: '6~12개월',
-    description: '아이를 기다리는 280일 동안 즐겁게 저축하는 출산 준비 특화 적금이에요.',
-    tags: ['#임산부추천', '#태명저축', '#출산준비'],
-    href: 'https://obank.kbstar.com/quics?page=C016613&cc=b061496:b061645&isNew=Y&prcode=DP01000944',
-  },
-] as const
+type ProductApiItem = { financial_product_id?: number; name?: string; interest_rate?: { max_rate?: number }; contract_period?: { min_months?: number; max_months?: number }; summary?: string; detail_url?: string; badges?: Array<{ name?: string }>; product_type?: string }
+const savingsProducts = ref<Array<{ id: number; name: string; badge: string; badgeClass: string; rate: string; period: string; description: string; tags: string[]; href: string }>>([])
+
+const selectProduct = (product: { id: number; name: string }) => {
+  selectedProductId.value = product.id
+  selectedProductName.value = product.name
+}
+
+const openSelectedProduct = async () => {
+  if (!selectedProductId.value || !selectedProductName.value) return
+  try {
+    const childId = await resolveCurrentChildId()
+    await api.openUsingPOST(undefined, {
+      child_id: childId,
+      financial_product_id: selectedProductId.value,
+      initial_deposit_amount: 0,
+      owner_type: 'CHILD',
+    })
+    await router.push({ name: 'SavingsOpenComplete', query: { product: selectedProductName.value } })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '적금을 등록하지 못했습니다.'), 'error')
+  }
+}
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getProductsUsingGET(undefined, undefined, 'SAVINGS', 20)
+    const items = (data.items ?? []) as unknown as ProductApiItem[]
+    savingsProducts.value = items.map((product, index) => ({
+      id: product.financial_product_id ?? 0,
+      name: product.name ?? '저축 상품',
+      badge: product.badges?.[0]?.name ?? '자녀 추천',
+      badgeClass: index % 2 ? 'bg-[#fff0f2] text-[#ef4d61]' : 'bg-[#eaf7ff] text-[#179fdf]',
+      rate: product.interest_rate?.max_rate === undefined ? '-' : `최고 연 ${product.interest_rate.max_rate}%`,
+      period: product.contract_period?.max_months ? `${product.contract_period.max_months}개월` : '-',
+      description: product.summary ?? '',
+      tags: [],
+      href: product.detail_url ?? '#',
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '추천 상품을 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>
@@ -70,7 +86,7 @@ const savingsProducts = [
               type="button"
               :aria-label="`${product.name} 선택`"
               :aria-pressed="selectedProductName === product.name"
-              @click="selectedProductName = product.name"
+              @click="selectProduct(product)"
             ></button>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -126,12 +142,7 @@ const savingsProducts = [
         class="min-h-14 w-full rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white shadow-[0_7px_18px_rgba(39,169,235,0.2)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#cbd8df] disabled:shadow-none"
         type="button"
         :disabled="!selectedProductName"
-        @click="
-          router.push({
-            name: 'SavingsOpenComplete',
-            query: { product: selectedProductName },
-          })
-        "
+        @click="openSelectedProduct"
       >
         {{ selectedProductName ? '선택한 적금 등록하기' : '적금을 선택해주세요' }}
       </button>

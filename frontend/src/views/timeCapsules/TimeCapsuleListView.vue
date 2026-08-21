@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { ChevronDown } from 'lucide-vue-next'
 import capsulePigImage from '@/assets/images/timeCapsules/archive/list-capsule-pig.png'
-import { getTimeCapsuleAccount } from '@/data/timeCapsuleDummyData'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
+const { showToast } = useToast()
 const activeTab = ref<'list' | 'calendar'>('list')
 const isOpeningRecord = ref(false)
 const today = new Date()
@@ -15,10 +17,7 @@ const currentMonth = today.getMonth() + 1
 const selectedYear = ref(currentYear)
 
 const accountId = computed(() => String(route.params.capsuleListId ?? '1'))
-const account = computed(() => getTimeCapsuleAccount(accountId.value))
-const totalAmount = computed(() =>
-  account.value.records.reduce((sum, record) => sum + record.amount, 0),
-)
+const account = ref({ name: '타임캡슐', description: '아이의 성장 순간과 금융 기록을 모아보세요.', totalSavedAmount: 0, records: [] as Array<{ id: number; title: string; date: string; amount: number; thumbnail: string; photos: Array<{ src: string; orientation: 'portrait'; type: 'image' }> }> })
 const listRecords = computed(() =>
   [...account.value.records].sort((a, b) => b.date.localeCompare(a.date)),
 )
@@ -40,6 +39,27 @@ const getMonthCells = (year: number, month: number) => {
     ...Array.from({ length: lastDate }, (_, index) => index + 1),
   ]
 }
+
+onMounted(async () => {
+  try {
+    const { data } = await api.getTimeCapsuleEntriesUsingGET(Number(accountId.value))
+    account.value = {
+      name: data.time_capsule?.title ?? '타임캡슐',
+      description: '아이의 성장 순간과 금융 기록을 모아보세요.',
+      totalSavedAmount: data.time_capsule?.total_saved_amount ?? 0,
+      records: (data.entries ?? []).map((entry) => ({
+        id: entry.time_capsule_entry_id ?? 0,
+        title: entry.title ?? '소중한 기록',
+        date: entry.contributed_at?.slice(0, 10) ?? '',
+        amount: entry.contribution_amount ?? 0,
+        thumbnail: entry.thumbnail_url ?? capsulePigImage,
+        photos: entry.thumbnail_url ? [{ src: entry.thumbnail_url, orientation: 'portrait', type: 'image' }] : [],
+      })),
+    }
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐 기록을 불러오지 못했습니다.'), 'error')
+  }
+})
 
 const getRecord = (year: number, month: number, day: number | null) => {
   if (!day) return undefined
@@ -174,7 +194,7 @@ const changeYear = () => {
       >
         <span class="text-sm text-[var(--color-text-secondary)]">총 저축 금액</span>
         <strong class="ml-4 shrink-0 text-base text-[var(--color-selected-text)]">
-          {{ totalAmount.toLocaleString('ko-KR') }}원
+          {{ account.totalSavedAmount.toLocaleString('ko-KR') }}원
         </strong>
       </button>
       <button
@@ -234,14 +254,14 @@ const changeYear = () => {
             <div
               v-for="(day, index) in getMonthCells(month.year, month.month)"
               :key="`${month.month}-${index}`"
-              class="grid aspect-square place-items-center"
+              class="relative flex aspect-square items-center justify-center"
             >
               <button
                 v-if="day && getRecord(month.year, month.month, day)"
                 class="relative grid size-10 place-items-center overflow-hidden rounded-full text-sm font-semibold text-white shadow-sm"
-                :class="
-                  getRecord(month.year, month.month, day)!.photos.length ? '' : 'bg-[#79ccef]'
-                "
+                :class="[
+                  getRecord(month.year, month.month, day)!.photos.length ? '' : 'bg-[#79ccef]',
+                ]"
                 type="button"
                 :aria-label="`${day}일 ${getRecord(month.year, month.month, day)!.title}`"
                 @click="openRecord(getRecord(month.year, month.month, day)!.id)"
@@ -266,13 +286,20 @@ const changeYear = () => {
               <span
                 v-else-if="day"
                 class="grid size-9 place-items-center rounded-full text-sm font-semibold"
-                :class="
+                :class="[
                   isToday(month.year, month.month, day)
                     ? 'bg-[#e85b61] text-white'
-                    : 'text-[#87919e]'
-                "
+                    : 'text-[#87919e]',
+                ]"
               >
                 {{ day }}
+              </span>
+              <span
+                v-if="day && isToday(month.year, month.month, day)"
+                class="pointer-events-none absolute top-[calc(50%+23px)] text-[9px] leading-none font-bold text-[#e85b61]"
+                aria-hidden="true"
+              >
+                오늘
               </span>
             </div>
           </div>

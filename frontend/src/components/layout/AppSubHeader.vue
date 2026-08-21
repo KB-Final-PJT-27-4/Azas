@@ -1,30 +1,63 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ChevronLeft } from 'lucide-vue-next'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     title: string
     fixed?: boolean
     backLabel?: string
+    backgroundColor?: string
+    hideDivider?: boolean
+    changeOnScroll?: boolean
+    scrollThreshold?: number
   }>(),
   {
     fixed: true,
     backLabel: '뒤로가기',
+    backgroundColor: '',
+    hideDivider: false,
+    changeOnScroll: false,
+    scrollThreshold: 12,
   },
 )
 
 defineEmits<{
   back: []
 }>()
+
+const isScrolled = ref(false)
+const useTopAppearance = computed(() => !props.changeOnScroll || !isScrolled.value)
+const appliedHeaderBackgroundColor = computed(() =>
+  useTopAppearance.value ? props.backgroundColor : '',
+)
+const hideAppliedDivider = computed(() => props.hideDivider && useTopAppearance.value)
+
+const updateScrollState = () => {
+  isScrolled.value = window.scrollY > props.scrollThreshold
+}
+
+onMounted(() => {
+  updateScrollState()
+  window.addEventListener('scroll', updateScrollState, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', updateScrollState)
+})
 </script>
 
 <template>
   <header
-    class="h-[calc(var(--app-header-height)+env(safe-area-inset-top))] border-b border-[var(--color-border)] bg-[var(--color-surface)]"
-    :class="
+    class="h-[calc(var(--app-header-height)+env(safe-area-inset-top))] border-b bg-[var(--color-surface)] transition-[background-color,border-color] duration-300 ease-out"
+    :class="[
       fixed
         ? 'fixed top-0 left-1/2 z-[var(--z-index-header)] w-full max-w-[var(--app-max-width)] -translate-x-1/2'
-        : 'relative w-full shrink-0'
+        : 'relative w-full shrink-0',
+      hideAppliedDivider ? 'border-transparent' : 'border-[var(--color-border)]',
+    ]"
+    :style="
+      appliedHeaderBackgroundColor ? { backgroundColor: appliedHeaderBackgroundColor } : undefined
     "
   >
     <div

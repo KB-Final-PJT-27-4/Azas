@@ -1,28 +1,22 @@
 <script setup lang="ts">
 import { CalendarDays, ChevronRight, CircleAlert, Sparkles, TrendingUp, X } from 'lucide-vue-next'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-import {
-  childcareCategories,
-  childcareReportSummary,
-  formatReportWon,
-} from '@/data/childcareReportData'
+import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const highestCategory = childcareCategories[0]!
+const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
+
+const highestCategory = computed(() => childcareCategories[0] ?? { id: '', label: '분류 없음', amount: 0, averageAmount: 0, color: '#ddd' })
 const isAverageInfoOpen = ref(false)
 const displayedCurrentMonthAmount = ref(0)
 let currentMonthAmountAnimationFrame: number | null = null
-const differenceAmount =
-  childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount
-const differenceRate = Math.round(
-  (differenceAmount / childcareReportSummary.peerAverageAmount) * 100,
-)
-const comparisonMaxAmount = Math.max(
-  childcareReportSummary.currentMonthAmount,
-  childcareReportSummary.peerAverageAmount,
-)
+const differenceAmount = computed(() => childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount)
+const differenceRate = computed(() => childcareReportSummary.peerAverageAmount
+  ? Math.round((differenceAmount.value / childcareReportSummary.peerAverageAmount) * 100)
+  : 0)
+const comparisonMaxAmount = computed(() => Math.max(childcareReportSummary.currentMonthAmount, childcareReportSummary.peerAverageAmount, 1))
 const comparisonBarWidth = (amount: number) =>
-  `${Math.max((amount / comparisonMaxAmount) * 100, 8)}%`
+  `${Math.max((amount / comparisonMaxAmount.value) * 100, 8)}%`
 
 const animateCurrentMonthAmount = () => {
   if (currentMonthAmountAnimationFrame !== null) {
@@ -57,7 +51,10 @@ const animateCurrentMonthAmount = () => {
   currentMonthAmountAnimationFrame = requestAnimationFrame(updateAmount)
 }
 
-onMounted(animateCurrentMonthAmount)
+onMounted(async () => {
+  await load()
+  animateCurrentMonthAmount()
+})
 
 onBeforeUnmount(() => {
   if (currentMonthAmountAnimationFrame !== null) {
