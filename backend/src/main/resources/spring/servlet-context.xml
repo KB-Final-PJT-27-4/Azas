@@ -44,9 +44,9 @@
     <!-- Vercel 운영 프론트엔드와 로컬 개발 서버의 API 호출만 허용한다. -->
     <mvc:cors>
         <mvc:mapping path="/api/**"
-                     allowed-origins="https://azas-seven.vercel.app,http://localhost:5173"
+                     allowed-origins="https://azas-seven.vercel.app,http://localhost:5173,http://127.0.0.1:5173"
                      allowed-methods="GET,POST,PUT,PATCH,DELETE,OPTIONS"
-                     allowed-headers="Authorization,Content-Type,Accept"
+                     allowed-headers="Authorization,Content-Type,Accept,Idempotency-Key,X-Requested-With"
                      allow-credentials="false"
                      max-age="3600"/>
     </mvc:cors>

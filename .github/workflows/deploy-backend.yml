@@ -21,6 +21,8 @@ env:
   BACKEND_DIR: backend
   WAR_NAME: backend-1.0-SNAPSHOT.war
   HEALTH_URL: https://api.43-202-193-156.sslip.io/api/v1/health
+  CORS_PREFLIGHT_URL: https://api.43-202-193-156.sslip.io/api/v1/auth/oauth/google
+  FRONTEND_ORIGIN: https://azas-seven.vercel.app
 
 jobs:
   build:
@@ -122,6 +124,31 @@ jobs:
             echo "External health check failed: $HEALTH_URL"
             exit 1
           fi
+
+      - name: Verify OAuth CORS preflight
+        run: |
+          cors_headers="$(
+            curl -sS -D - -o /dev/null \
+              -X OPTIONS "$CORS_PREFLIGHT_URL" \
+              -H "Origin: $FRONTEND_ORIGIN" \
+              -H "Access-Control-Request-Method: POST" \
+              -H "Access-Control-Request-Headers: Authorization,Content-Type,Idempotency-Key"
+          )"
+          normalized_headers="$(printf '%s' "$cors_headers" | tr -d '\r')"
+
+          printf '%s\n' "$normalized_headers"
+          printf '%s\n' "$normalized_headers" \
+            | grep -Eqi '^HTTP/[^ ]+ 200'
+          printf '%s\n' "$normalized_headers" \
+            | grep -Fqi "Access-Control-Allow-Origin: $FRONTEND_ORIGIN"
+          printf '%s\n' "$normalized_headers" \
+            | grep -Eqi '^Access-Control-Allow-Methods:.*POST'
+          printf '%s\n' "$normalized_headers" \
+            | grep -Eqi '^Access-Control-Allow-Headers:.*Authorization'
+          printf '%s\n' "$normalized_headers" \
+            | grep -Eqi '^Access-Control-Allow-Headers:.*Content-Type'
+          printf '%s\n' "$normalized_headers" \
+            | grep -Eqi '^Access-Control-Allow-Headers:.*Idempotency-Key'
 
       - name: Deployment summary
         run: |
