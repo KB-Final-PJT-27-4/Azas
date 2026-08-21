@@ -243,6 +243,10 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "타임캡슐 엔트리를 찾을 수 없습니다."
     ),
+    TIME_CAPSULE_NOT_RELEASED(
+            HttpStatus.CONFLICT,
+            "아직 공개되지 않은 타임캡슐입니다."
+    ),
     TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED(
             HttpStatus.CONFLICT,
             "현재 상태의 타임캡슐 엔트리는 변경할 수 없습니다."
