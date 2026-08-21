@@ -139,6 +139,10 @@ public enum ErrorCode {
             HttpStatus.CONFLICT,
             "자녀 대표 계좌의 사용 관리 정책이 설정되지 않았습니다."
     ),
+    CHILD_USAGE_LIMIT_VIEW_DISABLED(
+            HttpStatus.FORBIDDEN,
+            "자녀 사용 금액 한도 조회 권한이 비활성화되어 있습니다."
+    ),
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "금융 계좌를 찾을 수 없습니다."
@@ -326,6 +330,10 @@ public enum ErrorCode {
     INVALID_ALLOWANCE_ACTION(
             HttpStatus.BAD_REQUEST,
             "용돈 요청 처리 방식이 올바르지 않습니다."
+    ),
+    ALLOWANCE_REQUEST_DISABLED(
+            HttpStatus.FORBIDDEN,
+            "용돈 요청 권한이 비활성화되어 있습니다."
     ),
     ALLOWANCE_REQUEST_ACCESS_DENIED(
             HttpStatus.FORBIDDEN,

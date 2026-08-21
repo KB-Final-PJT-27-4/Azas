@@ -5,6 +5,7 @@ import com.azas.domain.allowance.dto.AllowanceRequestResponse;
 import com.azas.domain.allowance.dto.CreateAllowanceRequest;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
+import com.azas.domain.child.service.ChildFeaturePermissionService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +36,9 @@ class AllowanceRequestServiceImplTest {
 
     @Mock
     private AllowanceRequestMapper allowanceRequestMapper;
+
+    @Mock
+    private ChildFeaturePermissionService childFeaturePermissionService;
 
     @InjectMocks
     private AllowanceRequestServiceImpl allowanceRequestService;
@@ -106,6 +111,31 @@ class AllowanceRequestServiceImplTest {
 
         assertEquals(
                 ErrorCode.CHILD_MEMBER_ACCESS_REQUIRED,
+                exception.getErrorCode()
+        );
+        verify(allowanceRequestMapper, never())
+                .insertAllowanceRequest(any());
+    }
+
+    @Test
+    void rejectsAllowanceRequestWhenPermissionIsDisabled() {
+        when(allowanceRequestMapper.findActiveChildIdByMemberId(MEMBER_ID))
+                .thenReturn(CHILD_ID);
+        doThrow(new BusinessException(
+                ErrorCode.ALLOWANCE_REQUEST_DISABLED
+        )).when(childFeaturePermissionService)
+                .validateAllowanceRequestEnabled(CHILD_ID);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> allowanceRequestService.createAllowanceRequest(
+                        MEMBER_ID,
+                        request("10000", "용돈을 요청합니다.")
+                )
+        );
+
+        assertEquals(
+                ErrorCode.ALLOWANCE_REQUEST_DISABLED,
                 exception.getErrorCode()
         );
         verify(allowanceRequestMapper, never())

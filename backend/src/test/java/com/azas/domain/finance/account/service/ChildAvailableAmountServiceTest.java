@@ -4,6 +4,7 @@ import com.azas.domain.finance.account.dto.ChildAvailableAmountAccountRow;
 import com.azas.domain.finance.account.dto.ChildAvailableAmountResult;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
 import com.azas.domain.finance.account.mapper.FinancialAccountMapper;
+import com.azas.domain.child.service.ChildFeaturePermissionService;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.mapper.MemberMapper;
 import com.azas.global.exception.BusinessException;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,6 +49,9 @@ class ChildAvailableAmountServiceTest {
     @Mock
     private MemberMapper memberMapper;
 
+    @Mock
+    private ChildFeaturePermissionService childFeaturePermissionService;
+
     private ChildAvailableAmountService service;
 
     @BeforeEach
@@ -59,6 +64,7 @@ class ChildAvailableAmountServiceTest {
         service = new ChildAvailableAmountService(
                 financialAccountMapper,
                 memberMapper,
+                childFeaturePermissionService,
                 clock
         );
     }
@@ -233,6 +239,27 @@ class ChildAvailableAmountServiceTest {
                 .findActivePrimaryChildDemandDepositByMemberId(
                         MEMBER_ID
                 );
+    }
+
+    @Test
+    void rejectsChildWhenUsageLimitViewPermissionIsDisabled() {
+        mockChildMember();
+        doThrow(new BusinessException(
+                ErrorCode.CHILD_USAGE_LIMIT_VIEW_DISABLED
+        )).when(childFeaturePermissionService)
+                .validateUsageLimitViewEnabled(CHILD_ID);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.getCurrentMonthUsage(MEMBER_ID)
+        );
+
+        assertEquals(
+                ErrorCode.CHILD_USAGE_LIMIT_VIEW_DISABLED,
+                exception.getErrorCode()
+        );
+        verify(financialAccountMapper, never())
+                .findActivePrimaryChildDemandDepositByMemberId(MEMBER_ID);
     }
 
     @Test
