@@ -92,26 +92,49 @@ public class TimeCapsuleEntryService {
             long requesterMemberId,
             long timeCapsuleEntryId
     ) {
+        if (timeCapsuleEntryId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
         TimeCapsuleEntry entry = getAccessibleTimeCapsuleEntryOrThrow(
                 requesterMemberId,
                 timeCapsuleEntryId
         );
-        LocalDateTime expiresAt = LocalDateTime.now()
+        TimeCapsule timeCapsule = timeCapsuleMapper.findById(
+                entry.getTimeCapsuleId()
+        );
+        assertReleasedSealedEntry(timeCapsule, entry);
+
+        int entryNumber = timeCapsuleEntryMapper.countSealedUpToEntry(
+                entry.getTimeCapsuleId(),
+                entry.getContributedAt(),
+                entry.getTimeCapsuleEntryId()
+        );
+        int totalEntryCount = timeCapsuleEntryMapper
+                .countSealedByTimeCapsuleId(entry.getTimeCapsuleId());
+        LocalDateTime expiresAt = LocalDateTime.now(SERVICE_ZONE)
                 .plus(DOWNLOAD_URL_VALIDITY);
-        TimeCapsuleEntryDetailResponse.MediaResponse media =
+        TimeCapsuleEntryDetailResponse.ImageResponse image =
                 timeCapsuleMediaMapper
                         .findActiveByEntryId(timeCapsuleEntryId)
                         .stream()
                         .findFirst()
                         .map(currentMedia ->
-                                toEntryDetailMediaResponse(
+                                toEntryDetailImageResponse(
                                         currentMedia,
                                         expiresAt
                                 )
                         )
-                        .orElse(null);
+                        .orElseThrow(() -> new BusinessException(
+                                ErrorCode.TIME_CAPSULE_MEDIA_NOT_FOUND
+                        ));
 
-        return new TimeCapsuleEntryDetailResponse(entry, media);
+        return new TimeCapsuleEntryDetailResponse(
+                entry,
+                entryNumber,
+                totalEntryCount,
+                image
+        );
     }
 
     @Transactional
@@ -528,8 +551,8 @@ public class TimeCapsuleEntryService {
         );
     }
 
-    private TimeCapsuleEntryDetailResponse.MediaResponse
-    toEntryDetailMediaResponse(
+    private TimeCapsuleEntryDetailResponse.ImageResponse
+    toEntryDetailImageResponse(
             TimeCapsuleMedia media,
             LocalDateTime expiresAt
     ) {
@@ -538,11 +561,26 @@ public class TimeCapsuleEntryService {
                         media.getObjectKey(),
                         DOWNLOAD_URL_VALIDITY
                 );
-        return new TimeCapsuleEntryDetailResponse.MediaResponse(
-                media,
+        return new TimeCapsuleEntryDetailResponse.ImageResponse(
                 presignedUrl.url(),
                 expiresAt
         );
+    }
+
+    private void assertReleasedSealedEntry(
+            TimeCapsule timeCapsule,
+            TimeCapsuleEntry entry
+    ) {
+        boolean released = timeCapsule != null
+                && timeCapsule.getStatus() != TimeCapsuleStatus.ARCHIVED
+                && timeCapsule.getExpectedReleaseAt() != null
+                && !timeCapsule.getExpectedReleaseAt()
+                .toLocalDate()
+                .isAfter(LocalDate.now(SERVICE_ZONE));
+
+        if (!released || entry.getStatus() != TimeCapsuleEntryStatus.SEALED) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_RELEASED);
+        }
     }
 
     private void assertDraftEntry(TimeCapsuleEntry entry) {

@@ -49,6 +49,12 @@ public interface TimeCapsuleEntryMapper {
             @Param("timeCapsuleId") long timeCapsuleId
     );
 
+    int countSealedUpToEntry(
+            @Param("timeCapsuleId") long timeCapsuleId,
+            @Param("contributedAt") java.time.LocalDateTime contributedAt,
+            @Param("timeCapsuleEntryId") long timeCapsuleEntryId
+    );
+
     TimeCapsuleEntry findByTimeCapsuleAndTransactionId(
             @Param("timeCapsuleId") long timeCapsuleId,
             @Param("accountTransactionId") long accountTransactionId
