@@ -32,6 +32,15 @@ public interface MissionMapper {
             @Param("rewardAmount") BigDecimal rewardAmount,
             @Param("createdAt") LocalDateTime createdAt
     );
+
+    Long findChildNotificationRecipient(
+            @Param("childId") Long childId
+    );
+
+    List<Long> findParentNotificationRecipients(
+            @Param("childId") Long childId
+    );
+
     int countMissionAccess(
             @Param("memberId") Long memberId,
             @Param("childId") Long childId

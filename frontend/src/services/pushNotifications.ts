@@ -14,6 +14,21 @@ import {
 export type PushNotificationStatus =
   'enabled' | 'default' | 'denied' | 'unsupported' | 'not_configured'
 
+export type ForegroundPushMessage = {
+  title: string
+  body: string
+  actionUrl: string
+  data: Record<string, string>
+}
+
+type PushServiceWorkerMessage = {
+  type?: string
+  title?: string
+  body?: string
+  action_url?: string
+  data?: Record<string, string>
+}
+
 const isBrowserPushAvailable = (): boolean =>
   typeof window !== 'undefined' &&
   'Notification' in window &&
@@ -91,6 +106,34 @@ export const syncPushNotificationsIfPermitted = async (): Promise<boolean> => {
     console.warn('푸시 기기 정보를 동기화하지 못했습니다.', error)
     return false
   }
+}
+
+export const subscribeToForegroundPushMessages = (
+  listener: (message: ForegroundPushMessage) => void,
+): (() => void) => {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return () => undefined
+  }
+
+  const handleMessage = (event: MessageEvent<PushServiceWorkerMessage>) => {
+    const payload = event.data
+    if (payload?.type !== 'AZAS_FCM_MESSAGE') return
+
+    listener({
+      title: payload.title?.trim() || '아자스 알림',
+      body: payload.body?.trim() || '새로운 알림이 도착했어요.',
+      actionUrl:
+        typeof payload.action_url === 'string' &&
+        payload.action_url.startsWith('/') &&
+        !payload.action_url.startsWith('//')
+          ? payload.action_url
+          : '/alarm',
+      data: payload.data ?? {},
+    })
+  }
+
+  navigator.serviceWorker.addEventListener('message', handleMessage)
+  return () => navigator.serviceWorker.removeEventListener('message', handleMessage)
 }
 
 export const disablePushNotifications = async (): Promise<void> => {

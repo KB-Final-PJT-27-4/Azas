@@ -5,6 +5,7 @@ import com.azas.domain.mission.dto.CreateMissionRequest;
 import com.azas.domain.mission.dto.MissionInsertCommand;
 import com.azas.domain.mission.entity.MissionStatus;
 import com.azas.domain.mission.mapper.MissionMapper;
+import com.azas.domain.notification.service.PushNotificationPublisher;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ class MissionServiceImplTest {
     private MissionMapper missionMapper;
     private MissionServiceImpl missionService;
     private TransferService transferService;
+    private PushNotificationPublisher pushNotificationPublisher;
     private static final Instant FIXED_NOW =
             Instant.parse("2026-08-18T03:00:00Z");
 
@@ -44,6 +46,8 @@ class MissionServiceImplTest {
     void setUp() {
         missionMapper = mock(MissionMapper.class);
         transferService = mock(TransferService.class);
+        pushNotificationPublisher =
+                mock(PushNotificationPublisher.class);
 
         Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
 
@@ -51,7 +55,8 @@ class MissionServiceImplTest {
                 new MissionServiceImpl(
                         missionMapper,
                         transferService,
-                        clock
+                        clock,
+                        pushNotificationPublisher
                 );
     }
 
@@ -80,6 +85,8 @@ class MissionServiceImplTest {
                         any()
                 ))
                 .thenReturn(1);
+        when(missionMapper.findChildNotificationRecipient(6L))
+                .thenReturn(12L);
 
         var response =
                 missionService.createMission(
@@ -119,6 +126,22 @@ class MissionServiceImplTest {
                         eq(new BigDecimal("5000")),
                         any()
                 );
+        verify(pushNotificationPublisher).publish(
+                eq(12L),
+                argThat(message ->
+                        "새 용돈 미션이 도착했어요".equals(
+                                message.getTitle()
+                        )
+                                && "/child/missions".equals(
+                                message.getActionUrl()
+                        )
+                                && "MISSION_ASSIGNED".equals(
+                                message.getData().get(
+                                        "notification_type"
+                                )
+                        )
+                )
+        );
     }
 
     @Test
