@@ -8,12 +8,10 @@ import AccountRegistrationForm from '@/components/accounts/AccountRegistrationFo
 import AccountRegistrationConfirmation from '@/components/accounts/AccountRegistrationConfirmation.vue'
 import BankSelectionSheet from '@/components/accounts/BankSelectionSheet.vue'
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const { showToast } = useToast()
-const currentChildId = ref<number | null>(null)
 const isBankSelectorOpen = ref(false)
 const registrationStep = ref<'method' | 'import' | 'empty' | 'form' | 'confirmation' | 'complete'>('method')
 const selectedBank = ref('')
@@ -41,8 +39,7 @@ const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[
   try {
     const { data } = await api.linkUsingPOST(undefined, {
       account_ids: accounts.map(({ id }) => id),
-      child_id: currentChildId.value ?? undefined,
-      owner_type: 'CHILD',
+      owner_type: 'PARENT',
     })
     registeredAccounts.value = (data.accounts ?? []).map((account, index) => ({
       bank: account.bank_name ?? accounts[index]?.bank ?? '',
@@ -63,15 +60,14 @@ const createKbAccount = async () => {
     const product = (products.data.items?.[0] ?? {}) as unknown as { financial_product_id?: number }
     if (!product.financial_product_id) throw new Error('개설 가능한 상품을 찾을 수 없어요.')
     const { data } = await api.openUsingPOST(undefined, {
-      child_id: currentChildId.value ?? undefined,
       financial_product_id: product.financial_product_id,
       initial_deposit_amount: 0,
-      owner_type: 'CHILD',
+      owner_type: 'PARENT',
     })
     registeredAccounts.value = [{
       bank: data.bank_name ?? 'KB국민은행',
       accountNumber: data.account_number ?? '',
-      accountName: data.account_name ?? '자녀 계좌',
+      accountName: data.account_name ?? '보호자 계좌',
       balance: data.balance ?? 0,
     }]
     slideDirection.value = 'forward'
@@ -110,12 +106,7 @@ const completeRegistration = async () => {
 
 const loadDiscoveredAccounts = async () => {
   try {
-    currentChildId.value = await resolveCurrentChildId()
-    const { data } = await api.getDiscoveredAccountsUsingGET(
-      'CHILD',
-      undefined,
-      currentChildId.value,
-    )
+    const { data } = await api.getDiscoveredAccountsUsingGET('PARENT')
     importedAccounts.value = data.accounts.map((account) => ({
       id: account.account_id,
       bank: account.bank_name,

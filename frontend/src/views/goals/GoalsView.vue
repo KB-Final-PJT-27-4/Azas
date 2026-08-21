@@ -18,6 +18,7 @@ const router = useRouter()
 const { showToast } = useToast()
 const childId = ref<number | null>(null)
 const savingsAccounts = ref<Array<{ id: string; name: string; number: string; balance: number; rate: string; maturity: string }>>([])
+const unavailableSavingsIds = ref<string[]>([])
 const isSavingsLoading = ref(true)
 const currentStep = ref<'setup' | 'summary'>('setup')
 const selectedGoals = ref<string[]>([])
@@ -83,7 +84,7 @@ const updateTargetDate = (value: string) => {
 }
 
 const toggleLinkedSaving = (savingsId: string) => {
-  if (!currentGoalId.value) return
+  if (!currentGoalId.value || unavailableSavingsIds.value.includes(savingsId)) return
   const selected = linkedSavings[currentGoalId.value] ?? (linkedSavings[currentGoalId.value] = [])
   const index = selected.indexOf(savingsId)
   if (index >= 0) selected.splice(index, 1)
@@ -103,6 +104,19 @@ const goToSavingsRecommendation = () => {
   router.push({ name: 'SavingsRecommendation' })
 }
 
+const toGoalTargetDate = (targetMonth: string) => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(targetMonth)) return targetMonth
+
+  const match = /^(\d{4})-(\d{2})$/.exec(targetMonth)
+  if (!match) return targetMonth
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const lastDay = new Date(year, month, 0).getDate()
+
+  return `${targetMonth}-${String(lastDay).padStart(2, '0')}`
+}
+
 const goNext = async () => {
   if (currentStep.value === 'summary') {
     if (!childId.value || !canComplete.value) return
@@ -110,7 +124,7 @@ const goNext = async () => {
       await api.createGoalUsingPOST(childId.value, {
         title: currentGoalName.value,
         target_amount: setting.amount,
-        target_date: setting.targetDate,
+        target_date: toGoalTargetDate(setting.targetDate),
         account_ids: (linkedSavings[currentGoalId.value] ?? []).map(Number).filter(Number.isFinite),
       })
       showToast('목표를 만들었어요.', 'success')
@@ -128,8 +142,22 @@ const goNext = async () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const { data } = await api.getChildAccountsUsingGET(childId.value)
-    savingsAccounts.value = data.accounts
+    const [{ data: childAccounts }, { data: parentAccounts }, { data: goals }] = await Promise.all([
+      api.getChildAccountsUsingGET(childId.value),
+      api.getMyAccountsUsingGET(),
+      api.getGoalsUsingGET(childId.value),
+    ])
+    unavailableSavingsIds.value = [
+      ...new Set(
+        goals.financial_goals.flatMap((goal) =>
+          (goal.linked_accounts ?? [])
+            .map(({ account_id }) => account_id)
+            .filter((accountId): accountId is number => accountId != null)
+            .map(String),
+        ),
+      ),
+    ]
+    savingsAccounts.value = [...childAccounts.accounts, ...parentAccounts.accounts]
       .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
       .map((account) => ({
         id: String(account.account_id),
@@ -195,7 +223,7 @@ onMounted(async () => {
                   :goal-number="1"
                   :goal-count="1"
                   :selected-savings-ids="linkedSavings[currentGoalId] ?? []"
-                  :unavailable-savings-ids="[]"
+                  :unavailable-savings-ids="unavailableSavingsIds"
                   :savings-accounts="savingsAccounts"
                   :loading="isSavingsLoading"
                   embedded
