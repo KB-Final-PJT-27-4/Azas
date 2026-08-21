@@ -4,8 +4,11 @@ import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleReleaseDateRequest;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleReleaseDateResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
+import com.azas.domain.timecapsule.entity.TimeCapsuleStatus;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper;
 import com.azas.domain.timecapsule.mapper.TimeCapsuleMediaMapper;
@@ -61,6 +64,8 @@ public class TimeCapsuleService {
             );
         }
 
+        LocalDate releaseDate = resolveReleaseDateForCreate(account, request);
+
         if (timeCapsuleMapper.findByChildIdAndFinancialAccountId(
                 childId,
                 financialAccountId
@@ -74,7 +79,7 @@ public class TimeCapsuleService {
                 childId,
                 financialAccountId,
                 account.getAccountName(),
-                request.getReleaseDate()
+                releaseDate
         );
 
         try {
@@ -92,6 +97,52 @@ public class TimeCapsuleService {
                         timeCapsule.getTimeCapsuleId()
                 ),
                 account
+        );
+    }
+
+    @Transactional
+    public UpdateTimeCapsuleReleaseDateResponse updateReleaseDate(
+            long requesterMemberId,
+            long timeCapsuleId,
+            UpdateTimeCapsuleReleaseDateRequest request
+    ) {
+        if (timeCapsuleId < 1
+                || request == null
+                || request.getReleaseDate() == null
+                || !request.getReleaseDate().isAfter(
+                        LocalDate.now(SERVICE_ZONE)
+                )) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
+        TimeCapsule timeCapsule = getAccessibleTimeCapsuleForUpdateOrThrow(
+                requesterMemberId,
+                timeCapsuleId
+        );
+        assertParentAccess(requesterMemberId, timeCapsule.getChildId());
+
+        TimeCapsuleAccount account = getTimeCapsuleAccountOrThrow(
+                timeCapsule.getFinancialAccountId()
+        );
+        if (!"DEMAND_DEPOSIT".equals(account.getAccountProductType())
+                || timeCapsule.getStatus() != TimeCapsuleStatus.COLLECTING
+                || hasReleaseDateBeenReached(timeCapsule)) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_RELEASE_DATE_MODIFICATION_NOT_ALLOWED
+            );
+        }
+
+        LocalDate releaseDate = request.getReleaseDate();
+        if (timeCapsuleMapper.updateExpectedReleaseAt(
+                timeCapsuleId,
+                releaseDate.atStartOfDay()
+        ) != 1) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_FOUND);
+        }
+
+        return UpdateTimeCapsuleReleaseDateResponse.of(
+                timeCapsule,
+                releaseDate
         );
     }
 
@@ -180,6 +231,43 @@ public class TimeCapsuleService {
                 && !releaseDate.isAfter(LocalDate.now(SERVICE_ZONE))) {
             throw new BusinessException(ErrorCode.BADREQUEST);
         }
+
+    }
+
+    private LocalDate resolveReleaseDateForCreate(
+            TimeCapsuleAccount account,
+            CreateTimeCapsuleRequest request
+    ) {
+        LocalDate requestedReleaseDate = request.getReleaseDate();
+        if ("SAVINGS".equals(account.getAccountProductType())) {
+            if (requestedReleaseDate != null) {
+                throw new BusinessException(ErrorCode.BADREQUEST);
+            }
+
+            LocalDate maturityDate = account.getMaturityDate();
+            if (maturityDate == null
+                    || !maturityDate.isAfter(LocalDate.now(SERVICE_ZONE))) {
+                throw new BusinessException(
+                        ErrorCode.INELIGIBLE_TIME_CAPSULE_ACCOUNT
+                );
+            }
+            return maturityDate;
+        }
+
+        if (requestedReleaseDate != null
+                && !requestedReleaseDate.isAfter(
+                        LocalDate.now(SERVICE_ZONE)
+                )) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+        return requestedReleaseDate;
+    }
+
+    private boolean hasReleaseDateBeenReached(TimeCapsule timeCapsule) {
+        return timeCapsule.getExpectedReleaseAt() != null
+                && !timeCapsule.getExpectedReleaseAt()
+                .toLocalDate()
+                .isAfter(LocalDate.now(SERVICE_ZONE));
     }
 
     private void assertAccountAccess(
