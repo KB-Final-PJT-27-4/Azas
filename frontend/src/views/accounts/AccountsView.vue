@@ -22,7 +22,9 @@ const selectedBank = ref('')
 const accountNumber = ref('')
 const accountAlias = ref('')
 const slideDirection = ref<'forward' | 'backward'>('forward')
-const importedAccounts = ref<{ id: number; bank: string; number: string; balance: number; productType: string }[]>([])
+const importedAccounts = ref<
+  { id: number; bank: string; number: string; balance: number; productType: string }[]
+>([])
 const registeredAccounts = ref<
   { bank: string; accountNumber: string; accountName: string; balance: number }[]
 >([])
@@ -40,7 +42,10 @@ const showAccountOpeningGuide = () => {
 const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[number][]) => {
   const [primaryAccount] = accounts
   if (!primaryAccount) return
-  if (accountOwnerType.value === 'PARENT' && !accounts.some(({ productType }) => productType === 'DEMAND_DEPOSIT')) {
+  if (
+    accountOwnerType.value === 'PARENT' &&
+    !accounts.some(({ productType }) => productType === 'DEMAND_DEPOSIT')
+  ) {
     showToast('자녀 계좌보다 먼저 부모 입출금계좌를 연결해 주세요.', 'error')
     return
   }
@@ -77,7 +82,8 @@ const createKbAccount = async () => {
     registeredAccounts.value = [{
       bank: data.bank_name ?? 'KB국민은행',
       accountNumber: data.account_number ?? '',
-      accountName: data.account_name ?? (accountOwnerType.value === 'CHILD' ? '자녀 계좌' : '부모 계좌'),
+      accountName:
+        data.account_name ?? (accountOwnerType.value === 'CHILD' ? '자녀 계좌' : '부모 계좌'),
       balance: data.balance ?? 0,
     }]
     slideDirection.value = 'forward'
@@ -143,9 +149,10 @@ const loadDiscoveredAccounts = async () => {
 }
 
 const leaveRegistration = () => {
-  const next = typeof route.query.next === 'string' && route.query.next.startsWith('/')
-    ? route.query.next
-    : '/home'
+  const next =
+    typeof route.query.next === 'string' && route.query.next.startsWith('/')
+      ? route.query.next
+      : '/home'
   void router.push(next)
 }
 
