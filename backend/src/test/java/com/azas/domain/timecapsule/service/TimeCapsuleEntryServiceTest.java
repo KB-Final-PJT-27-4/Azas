@@ -689,7 +689,7 @@ class TimeCapsuleEntryServiceTest {
                 .willReturn(36);
         given(timeCapsuleMediaMapper.findActiveByEntryId(1000L))
                 .willReturn(List.of(media));
-        given(timeCapsuleObjectStorage.createDownloadUrl(
+        given(timeCapsuleObjectStorage.createViewUrl(
                 media.getObjectKey(),
                 Duration.ofMinutes(10)
         )).willReturn(new TimeCapsuleObjectStorage.PresignedUrl(
@@ -708,7 +708,7 @@ class TimeCapsuleEntryServiceTest {
         assertEquals(new BigDecimal("150000.00"),
                 response.getContributionAmount());
         assertEquals("https://storage.example/presigned-get",
-                response.getImage().getDownloadUrl());
+                response.getImage().getUrl());
     }
 
     @Test

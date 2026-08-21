@@ -48,7 +48,7 @@ public class TimeCapsuleEntryService {
 
     private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
     private static final Duration UPLOAD_URL_VALIDITY = Duration.ofMinutes(15);
-    private static final Duration DOWNLOAD_URL_VALIDITY = Duration.ofMinutes(10);
+    private static final Duration IMAGE_VIEW_URL_VALIDITY = Duration.ofMinutes(10);
     private static final long MAX_IMAGE_FILE_SIZE = 10L * 1024 * 1024;
     private static final int REPRESENTATIVE_IMAGE_SLOT_NO = 1;
 
@@ -113,7 +113,7 @@ public class TimeCapsuleEntryService {
         int totalEntryCount = timeCapsuleEntryMapper
                 .countSealedByTimeCapsuleId(entry.getTimeCapsuleId());
         LocalDateTime expiresAt = LocalDateTime.now(SERVICE_ZONE)
-                .plus(DOWNLOAD_URL_VALIDITY);
+                .plus(IMAGE_VIEW_URL_VALIDITY);
         TimeCapsuleEntryDetailResponse.ImageResponse image =
                 timeCapsuleMediaMapper
                         .findActiveByEntryId(timeCapsuleEntryId)
@@ -540,14 +540,14 @@ public class TimeCapsuleEntryService {
         }
 
         TimeCapsuleObjectStorage.PresignedUrl presignedUrl =
-                timeCapsuleObjectStorage.createDownloadUrl(
+                timeCapsuleObjectStorage.createViewUrl(
                         entry.getThumbnailObjectKey(),
-                        DOWNLOAD_URL_VALIDITY
+                        IMAGE_VIEW_URL_VALIDITY
                 );
         return TimeCapsuleEntrySummaryResponse.from(
                 entry,
                 presignedUrl.url(),
-                LocalDateTime.now().plus(DOWNLOAD_URL_VALIDITY)
+                LocalDateTime.now().plus(IMAGE_VIEW_URL_VALIDITY)
         );
     }
 
@@ -557,9 +557,9 @@ public class TimeCapsuleEntryService {
             LocalDateTime expiresAt
     ) {
         TimeCapsuleObjectStorage.PresignedUrl presignedUrl =
-                timeCapsuleObjectStorage.createDownloadUrl(
+                timeCapsuleObjectStorage.createViewUrl(
                         media.getObjectKey(),
-                        DOWNLOAD_URL_VALIDITY
+                        IMAGE_VIEW_URL_VALIDITY
                 );
         return new TimeCapsuleEntryDetailResponse.ImageResponse(
                 presignedUrl.url(),

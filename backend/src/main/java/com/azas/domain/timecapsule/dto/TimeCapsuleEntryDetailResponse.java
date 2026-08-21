@@ -62,17 +62,24 @@ public class TimeCapsuleEntryDetailResponse {
     @ApiModel(value = "TimeCapsuleEntryDetailImageResponse")
     public static class ImageResponse {
 
-        @JsonProperty("download_url")
-        private final String downloadUrl;
+        @ApiModelProperty(
+                value = "화면 표시용 이미지 임시 조회 URL",
+                required = true
+        )
+        private final String url;
 
+        @ApiModelProperty(
+                value = "이미지 조회 URL 만료 시각",
+                required = true
+        )
         @JsonProperty("expires_at")
         private final LocalDateTime expiresAt;
 
         public ImageResponse(
-                String downloadUrl,
+                String url,
                 LocalDateTime expiresAt
         ) {
-            this.downloadUrl = downloadUrl;
+            this.url = url;
             this.expiresAt = expiresAt;
         }
     }
