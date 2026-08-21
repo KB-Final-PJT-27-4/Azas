@@ -6,6 +6,7 @@ import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadRequest;
 import com.azas.domain.timecapsule.dto.CompleteTimeCapsuleMediaUploadResponse;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
+import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.entity.AccountTransactionDirection;
@@ -650,6 +651,140 @@ class TimeCapsuleEntryServiceTest {
         timeCapsuleEntryService.deleteTimeCapsuleEntry(7L, 1000L);
 
         verify(timeCapsuleObjectStorage).deleteObject("entries/image.webp");
+    }
+
+    @Test
+    void getTimeCapsuleEntryReturnsReleasedSealedEntryDetail() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsule timeCapsule = TimeCapsule.create(
+                10L,
+                31L,
+                "아이사랑적금",
+                LocalDate.of(2020, 8, 8)
+        );
+        ReflectionTestUtils.setField(timeCapsule, "timeCapsuleId", 100L);
+        TimeCapsuleMedia media = createMedia(
+                2000L,
+                1000L,
+                TimeCapsuleMediaStatus.ACTIVE
+        );
+
+        given(timeCapsuleEntryMapper.findAccessibleById(1000L, 7L))
+                .willReturn(entry);
+        given(timeCapsuleMapper.findById(100L)).willReturn(timeCapsule);
+        given(timeCapsuleEntryMapper.countSealedUpToEntry(
+                100L,
+                entry.getContributedAt(),
+                1000L
+        )).willReturn(1);
+        given(timeCapsuleEntryMapper.countSealedByTimeCapsuleId(100L))
+                .willReturn(36);
+        given(timeCapsuleMediaMapper.findActiveByEntryId(1000L))
+                .willReturn(List.of(media));
+        given(timeCapsuleObjectStorage.createDownloadUrl(
+                media.getObjectKey(),
+                Duration.ofMinutes(10)
+        )).willReturn(new TimeCapsuleObjectStorage.PresignedUrl(
+                "https://storage.example/presigned-get"
+        ));
+
+        TimeCapsuleEntryDetailResponse response =
+                timeCapsuleEntryService.getTimeCapsuleEntry(7L, 1000L);
+
+        assertEquals(1000L, response.getTimeCapsuleEntryId());
+        assertEquals(100L, response.getTimeCapsuleId());
+        assertEquals(1, response.getEntryNumber());
+        assertEquals(36, response.getTotalEntryCount());
+        assertEquals("첫 용돈을 받은 날", response.getTitle());
+        assertEquals("남은 돈은 꼭 저축하자.", response.getMessage());
+        assertEquals(new BigDecimal("150000.00"),
+                response.getContributionAmount());
+        assertEquals("https://storage.example/presigned-get",
+                response.getImage().getDownloadUrl());
+    }
+
+    @Test
+    void getTimeCapsuleEntryRejectsEntryBeforeReleaseDate() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsule timeCapsule = TimeCapsule.create(
+                10L,
+                31L,
+                "아이사랑적금",
+                LocalDate.of(2099, 8, 8)
+        );
+
+        given(timeCapsuleEntryMapper.findAccessibleById(1000L, 7L))
+                .willReturn(entry);
+        given(timeCapsuleMapper.findById(100L)).willReturn(timeCapsule);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.getTimeCapsuleEntry(7L, 1000L)
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_NOT_RELEASED,
+                exception.getErrorCode());
+        verify(timeCapsuleMediaMapper, never())
+                .findActiveByEntryId(1000L);
+    }
+
+    @Test
+    void getTimeCapsuleEntryRejectsDraftAfterReleaseDate() {
+        TimeCapsuleEntry entry = createEntry(
+                1000L,
+                100L,
+                901L,
+                AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"),
+                TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        TimeCapsule timeCapsule = TimeCapsule.create(
+                10L,
+                31L,
+                "아이사랑적금",
+                LocalDate.of(2020, 8, 8)
+        );
+
+        given(timeCapsuleEntryMapper.findAccessibleById(1000L, 7L))
+                .willReturn(entry);
+        given(timeCapsuleMapper.findById(100L)).willReturn(timeCapsule);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.getTimeCapsuleEntry(7L, 1000L)
+        );
+
+        assertEquals(ErrorCode.TIME_CAPSULE_NOT_RELEASED,
+                exception.getErrorCode());
+    }
+
+    @Test
+    void getTimeCapsuleEntryRejectsInvalidEntryId() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.getTimeCapsuleEntry(7L, 0L)
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
+        verify(timeCapsuleEntryMapper, never())
+                .findAccessibleById(0L, 7L);
     }
 
     private TimeCapsule createTimeCapsule(

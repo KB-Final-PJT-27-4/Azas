@@ -119,7 +119,7 @@ class TimeCapsuleEntryControllerTest {
     }
 
     @Test
-    void getTimeCapsuleEntryReturnsSingleImageObject() throws Exception {
+    void getTimeCapsuleEntryReturnsReleasedEntryDetail() throws Exception {
         TimeCapsuleEntry entry = createEntry(1000L);
         ReflectionTestUtils.setField(entry, "status",
                 TimeCapsuleEntryStatus.SEALED);
@@ -127,21 +127,12 @@ class TimeCapsuleEntryControllerTest {
                 LocalDateTime.of(2026, 8, 5, 11, 40));
         ReflectionTestUtils.setField(entry, "createdAt",
                 LocalDateTime.of(2026, 8, 5, 10, 35));
-        TimeCapsuleMedia media = TimeCapsuleMedia.createPendingUpload(
-                1000L,
-                TimeCapsuleMediaType.IMAGE,
-                "time-capsules/100/entries/1000/media/slot-1.jpg",
-                "image/jpeg",
-                1048576L,
-                1
-        );
-        ReflectionTestUtils.setField(media, "timeCapsuleMediaId", 2000L);
-        media.activate();
         TimeCapsuleEntryDetailResponse response =
                 new TimeCapsuleEntryDetailResponse(
                         entry,
-                        new TimeCapsuleEntryDetailResponse.MediaResponse(
-                                media,
+                        1,
+                        36,
+                        new TimeCapsuleEntryDetailResponse.ImageResponse(
                                 "https://storage.example/presigned-get",
                                 LocalDateTime.of(2026, 8, 5, 12, 40)
                         )
@@ -158,15 +149,22 @@ class TimeCapsuleEntryControllerTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.time_capsule_entry_id").value(1000))
-                .andExpect(jsonPath("$.media.time_capsule_media_id")
-                        .value(2000))
-                .andExpect(jsonPath("$.media.media_type").value("IMAGE"))
-                .andExpect(jsonPath("$.media.download_url")
+                .andExpect(jsonPath("$.entry_number").value(1))
+                .andExpect(jsonPath("$.total_entry_count").value(36))
+                .andExpect(jsonPath("$.title").value("첫 용돈을 받은 날"))
+                .andExpect(jsonPath("$.message")
+                        .value("남은 돈은 꼭 저축하자."))
+                .andExpect(jsonPath("$.contribution_amount").value(150000))
+                .andExpect(jsonPath("$.image.download_url")
                         .value("https://storage.example/presigned-get"))
-                .andExpect(jsonPath("$.media.length()").value(6))
+                .andExpect(jsonPath("$.image.length()").value(2))
+                .andExpect(jsonPath("$.author_member_id").doesNotExist())
+                .andExpect(jsonPath("$.status").doesNotExist())
+                .andExpect(jsonPath("$.sealed_at").doesNotExist())
+                .andExpect(jsonPath("$.created_at").doesNotExist())
+                .andExpect(jsonPath("$.media").doesNotExist())
                 .andExpect(jsonPath("$.media_mode").doesNotExist())
-                .andExpect(jsonPath("$.media.slot_no").doesNotExist())
-                .andExpect(jsonPath("$.media[0]").doesNotExist());
+                .andExpect(jsonPath("$.image.slot_no").doesNotExist());
     }
 
     @Test
