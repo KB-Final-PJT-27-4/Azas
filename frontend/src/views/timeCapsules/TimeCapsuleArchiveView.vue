@@ -81,8 +81,8 @@ const unlockCardRect = ref<UnlockCardRect | null>(null)
 const isUnlockCardCentered = ref(false)
 const unlockTimers: number[] = []
 const UNLOCK_CARD_CENTER_MS = 900
-const UNLOCK_LOCK_EMERGE_MS = 2500
-const UNLOCK_WHITE_FLASH_MS = 800
+const UNLOCK_LOCK_EMERGE_MS = 1000
+const UNLOCK_WHITE_FLASH_MS = 700
 const UNLOCK_REVEAL_FADE_MS = 800
 
 const pregnancyStages = [
