@@ -27,24 +27,24 @@ const selectedAccounts = computed(() =>
 
 const recommendedAccounts = [
   {
-    name: 'KB Young Youth 어린이통장',
-    badge: '자녀 추천',
+    name: 'KB 마이핏통장',
+    badge: '주거래 추천',
     badgeClass: 'bg-[#eaf7ff] text-[#179fdf]',
     selectedBadgeClass:
       'bg-[var(--color-brand-primary)] text-white shadow-[0_3px_8px_rgba(39,169,235,0.2)]',
     rate: '연 0.10%',
     period: '입출금 자유',
-    description: '용돈과 생활비를 편리하게 관리할 수 있는 어린이·청소년 전용 계좌예요.',
-    tags: ['#용돈관리', '#입출금자유', '#아이명의'],
+    description: '생활비와 아이를 위한 자금을 한곳에서 편리하게 관리할 수 있는 부모용 계좌예요.',
+    tags: ['#생활비관리', '#입출금자유', '#부모명의'],
   },
   {
-    name: 'KB 꿈나무통장',
-    badge: '첫 계좌 추천',
+    name: 'KB국민ONE통장',
+    badge: '생활비 추천',
     badgeClass: 'bg-[#fff0f2] text-[#ef4d61]',
     rate: '연 0.10%',
     period: '입출금 자유',
-    description: '아이의 첫 금융 습관을 시작하고 자산 흐름을 한눈에 관리할 수 있어요.',
-    tags: ['#첫통장', '#금융습관', '#자산관리'],
+    description: '수입과 지출을 모아 관리하고 아이에게 보낼 돈도 간편하게 준비할 수 있어요.',
+    tags: ['#주거래통장', '#간편이체', '#자산관리'],
   },
 ]
 const selectedRecommendedAccount = ref<string | null>(null)
@@ -129,7 +129,7 @@ const toggleAccount = (accountId: number) => {
 
   <section
     v-else
-    class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-white px-5 pt-5 pb-[calc(104px+env(safe-area-inset-bottom))]"
+    class="flex min-h-[calc(100dvh-var(--app-header-height))] flex-col bg-white px-5 pt-3 pb-[calc(104px+env(safe-area-inset-bottom))]"
     aria-labelledby="empty-account-title"
   >
     <header>
@@ -137,15 +137,15 @@ const toggleAccount = (accountId: number) => {
         id="empty-account-title"
         class="mt-2 text-[28px] leading-[1.3] font-extrabold tracking-[-0.035em] text-[var(--color-text-primary)]"
       >
-        아이에게 꼭 맞는<br />KB 계좌를 골라봤어요
+        보호자에게 꼭 맞는<br />KB 계좌를 골라봤어요
       </h1>
       <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
-        계좌별 특징을 비교하고 자산 관리에 사용할 계좌를 선택해보세요.
+        아이의 자산 관리에 연결할 부모 명의 계좌를 선택해보세요.
       </p>
     </header>
 
     <section class="mt-7" aria-labelledby="recommended-accounts-title">
-      <h2 id="recommended-accounts-title" class="sr-only">추천 입출금 계좌</h2>
+      <h2 id="recommended-accounts-title" class="sr-only">부모 명의 추천 입출금 계좌</h2>
       <ul class="grid list-none gap-3 p-0">
         <li v-for="account in recommendedAccounts" :key="account.name">
           <button

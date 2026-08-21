@@ -19,6 +19,7 @@ const router = useRouter()
 const { showToast } = useToast()
 const childId = ref<number | null>(null)
 const savingsAccounts = ref<Array<{ id: string; name: string; number: string; balance: number; rate: string; maturity: string }>>([])
+const unavailableSavingsIds = ref<string[]>([])
 const isSavingsLoading = ref(true)
 const currentStep = ref<'setup' | 'summary'>('setup')
 const selectedGoals = ref<string[]>([])
@@ -84,7 +85,7 @@ const updateTargetDate = (value: string) => {
 }
 
 const toggleLinkedSaving = (savingsId: string) => {
-  if (!currentGoalId.value) return
+  if (!currentGoalId.value || unavailableSavingsIds.value.includes(savingsId)) return
   const selected = linkedSavings[currentGoalId.value] ?? (linkedSavings[currentGoalId.value] = [])
   const index = selected.indexOf(savingsId)
   if (index >= 0) selected.splice(index, 1)
@@ -129,8 +130,21 @@ const goNext = async () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const { data } = await api.getChildAccountsUsingGET(childId.value)
-    savingsAccounts.value = data.accounts
+    const [{ data: childAccounts }, { data: goals }] = await Promise.all([
+      api.getChildAccountsUsingGET(childId.value),
+      api.getGoalsUsingGET(childId.value),
+    ])
+    unavailableSavingsIds.value = [
+      ...new Set(
+        goals.financial_goals.flatMap((goal) =>
+          (goal.linked_accounts ?? [])
+            .map(({ account_id }) => account_id)
+            .filter((accountId): accountId is number => accountId != null)
+            .map(String),
+        ),
+      ),
+    ]
+    savingsAccounts.value = childAccounts.accounts
       .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
       .map((account) => ({
         id: String(account.account_id),
@@ -196,7 +210,7 @@ onMounted(async () => {
                   :goal-number="1"
                   :goal-count="1"
                   :selected-savings-ids="linkedSavings[currentGoalId] ?? []"
-                  :unavailable-savings-ids="[]"
+                  :unavailable-savings-ids="unavailableSavingsIds"
                   :savings-accounts="savingsAccounts"
                   :loading="isSavingsLoading"
                   embedded
