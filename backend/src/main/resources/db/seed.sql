@@ -8,6 +8,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 TRUNCATE TABLE notification;
 TRUNCATE TABLE notification_preference;
+TRUNCATE TABLE push_device;
 TRUNCATE TABLE asset_report;
 TRUNCATE TABLE time_capsule_media;
 TRUNCATE TABLE time_capsule_entry;
@@ -787,4 +788,3 @@ INSERT INTO notification (
           'TIME_CAPSULE_RELEASE_SOON:1:3',
           0
       );
-

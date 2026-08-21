@@ -12,6 +12,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS notification;
 DROP TABLE IF EXISTS notification_preference;
+DROP TABLE IF EXISTS push_device;
 DROP TABLE IF EXISTS asset_report;
 DROP TABLE IF EXISTS time_capsule_export;
 DROP TABLE IF EXISTS time_capsule_media;
@@ -1036,6 +1037,38 @@ CREATE TABLE asset_report
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='월간 자산 리포트';
+
+CREATE TABLE push_device
+(
+    push_device_id  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '푸시 기기 ID',
+    member_id       BIGINT UNSIGNED NOT NULL COMMENT '회원 ID',
+    device_key      VARCHAR(100)    NOT NULL COMMENT '앱 설치 단위의 안정적인 기기 식별자',
+    platform        VARCHAR(20)     NOT NULL COMMENT 'WEB, ANDROID, IOS',
+    provider        VARCHAR(20)     NOT NULL DEFAULT 'FCM' COMMENT '푸시 제공자',
+    device_name     VARCHAR(100)    NULL COMMENT '사용자에게 표시할 기기명',
+    token_ciphertext VARBINARY(8192) NOT NULL COMMENT 'AES-GCM으로 암호화한 푸시 토큰',
+    token_hash      CHAR(64)        NOT NULL COMMENT '토큰 검색용 SHA-256 해시',
+    is_active       TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '푸시 발송 대상 여부',
+    last_seen_at    DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '마지막 등록·갱신 시각',
+    created_at      DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '최초 등록 시각',
+    updated_at      DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 시각',
+
+    PRIMARY KEY (push_device_id),
+    UNIQUE KEY uk_push_device_member_device_key (member_id, device_key),
+    KEY idx_push_device_token_hash (token_hash),
+    KEY idx_push_device_member_active (member_id, is_active),
+
+    CONSTRAINT fk_push_device_member
+        FOREIGN KEY (member_id) REFERENCES member (member_id)
+        ON DELETE CASCADE,
+    CONSTRAINT ck_push_device_platform
+        CHECK (platform IN ('WEB', 'ANDROID', 'IOS')),
+    CONSTRAINT ck_push_device_provider
+        CHECK (provider IN ('FCM'))
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+    COMMENT = '회원별 FCM 푸시 기기';
 
 CREATE TABLE notification_preference
 (

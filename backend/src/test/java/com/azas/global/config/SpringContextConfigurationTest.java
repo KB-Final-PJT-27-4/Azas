@@ -4,6 +4,8 @@ import com.azas.domain.member.service.FakeSmsSender;
 import com.azas.domain.member.service.PhoneNumberProtector;
 import com.azas.domain.member.service.PhoneVerificationHasher;
 import com.azas.domain.member.service.SmsSender;
+import com.azas.domain.notification.service.FakePushMessageSender;
+import com.azas.domain.notification.service.PushMessageSender;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.env.MapPropertySource;
@@ -51,6 +53,12 @@ class SpringContextConfigurationTest {
             );
             assertNotNull(
                     rootContext.getBean(SmsSender.class)
+            );
+            assertEquals(
+                    FakePushMessageSender.class,
+                    rootContext.getBean(
+                            PushMessageSender.class
+                    ).getClass()
             );
         }
     }
