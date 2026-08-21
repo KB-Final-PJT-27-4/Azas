@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
+import { getAuthMember } from '@/api/auth'
+import { getAccessToken } from '@/api/http'
+
 const timeCapsuleHeaderMeta = {
   requiresAuth: true,
   headerTitle: '타임캡슐',
@@ -133,23 +136,6 @@ const routes: RouteRecordRaw[] = [
     path: '/time-capsules/preview',
     name: 'TimeCapsulePreview',
     component: () => import('@/views/timeCapsules/TimeCapsulePreviewView.vue'),
-    meta: timeCapsuleHeaderMeta,
-  },
-  ...(import.meta.env.DEV
-    ? [
-        {
-          path: '/__dev/time-capsules-api-test',
-          name: 'TimeCapsuleApiTest',
-          component: () => import('@/views/timeCapsules/TimeCapsuleApiTestView.vue'),
-          meta: { ...timeCapsuleHeaderMeta, hideNavigation: true },
-        },
-      ]
-    : []),
-  {
-    path: '/time-capsules/:capsuleId/edit',
-    name: 'TimeCapsuleEdit',
-    component: () => import('@/views/timeCapsules/TimeCapsuleEditView.vue'),
-    props: true,
     meta: timeCapsuleHeaderMeta,
   },
   {
@@ -622,6 +608,22 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior: () => ({ top: 0 }),
+})
+
+router.beforeEach((to) => {
+  if (!to.meta.requiresAuth) return true
+
+  if (!getAccessToken()) {
+    return { name: 'Login', query: { redirect: to.fullPath } }
+  }
+
+  const allowedRoles = to.meta.roles as string[] | undefined
+  const memberType = getAuthMember()?.member_type
+  if (allowedRoles?.length && (!memberType || !allowedRoles.includes(memberType))) {
+    return { name: memberType === 'CHILD' ? 'ChildHome' : 'Home' }
+  }
+
+  return true
 })
 
 export default router

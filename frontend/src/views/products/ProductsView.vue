@@ -56,7 +56,7 @@ const toggleFavorite = async (productId: string) => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const { data } = await api.getProductsUsingGET(undefined, undefined, undefined, 100)
+    const { data } = await api.getProductsUsingGET(undefined, undefined, undefined, 50)
     const items = (data.items ?? []) as unknown as ProductApiItem[]
     const mascots = [productMascot1, productMascot2, productMascot3, productMascot4]
     recommendedProducts.value = items.map((product, index) => ({

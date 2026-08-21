@@ -3,7 +3,7 @@ import { ArrowUpRight } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
+import { hasParentDemandDepositAccount, resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
@@ -22,6 +22,11 @@ const selectProduct = (product: { id: number; name: string }) => {
 const openSelectedProduct = async () => {
   if (!selectedProductId.value || !selectedProductName.value) return
   try {
+    if (!await hasParentDemandDepositAccount()) {
+      showToast('자녀 적금 가입 전에 부모 입출금계좌를 먼저 등록해 주세요.', 'error')
+      await router.push({ name: 'Accounts', query: { next: router.currentRoute.value.fullPath } })
+      return
+    }
     const childId = await resolveCurrentChildId()
     await api.openUsingPOST(undefined, {
       child_id: childId,
