@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {
-  childcareCategories,
-  childcareReportSummary,
-  formatReportWon,
-} from '@/data/childcareReportData'
+import { onMounted } from 'vue'
+import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
+
+const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
+onMounted(load)
 </script>
 
 <template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
+import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import { BaseToast } from '@/components/feedback'
@@ -14,12 +15,28 @@ const hideNavigation = computed(() => route.meta.hideNavigation === true)
 const hideBottomNavigation = computed(
   () => hideNavigation.value || route.meta.hideBottomNavigation === true,
 )
+const childBottomNavigationRoutes = new Set([
+  'ChildHome',
+  'ChildAssets',
+  'ChildTransfer',
+  'ChildAllowanceRequests',
+  'ChildMissions',
+  'ChildQuiz',
+])
+const showChildBottomNavigation = computed(() =>
+  childBottomNavigationRoutes.has(String(route.name ?? '')),
+)
 const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
 const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
 const showHeaderNotification = computed(() => route.meta.showHeaderNotification !== false)
 const notificationCount = computed(() => Number(route.meta.notificationCount ?? 0))
 const isHome = computed(() => route.name === 'Home')
 const pageBackgroundColor = computed(() => String(route.meta.pageBackgroundColor ?? ''))
+const headerBackgroundColor = computed(() =>
+  String(route.meta.headerBackgroundColor ?? pageBackgroundColor.value),
+)
+const hideHeaderDivider = computed(() => route.meta.hideHeaderDivider === true || isHome.value)
+const changeHeaderOnScroll = computed(() => route.meta.changeHeaderOnScroll === true || isHome.value)
 const pageBackgroundStyle = computed(() =>
   pageBackgroundColor.value ? { backgroundColor: pageBackgroundColor.value } : undefined,
 )
@@ -32,6 +49,9 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
       <AppSubHeader
         v-if="!hideNavigation && showHeaderBack"
         :title="headerTitle"
+        :background-color="headerBackgroundColor || undefined"
+        :hide-divider="hideHeaderDivider"
+        :change-on-scroll="changeHeaderOnScroll"
         @back="router.back()"
       />
       <AppHeader
@@ -39,11 +59,12 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
         title="깨비"
         profile-name="깨비"
         :show-notification="showHeaderNotification"
+        :show-guide="isHome"
         :notification-count="notificationCount"
-        :background-color="pageBackgroundColor || undefined"
-        :profile-background-color="isHome ? '#ffffff' : undefined"
-        :hide-divider="isHome"
-        :change-on-scroll="isHome"
+        :background-color="headerBackgroundColor || undefined"
+        :profile-background-color="isHome || headerBackgroundColor ? '#ffffff' : undefined"
+        :hide-divider="hideHeaderDivider"
+        :change-on-scroll="changeHeaderOnScroll"
       />
       <div
         class="default-layout__content"
@@ -56,6 +77,7 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
         <slot />
       </div>
       <AppBottomNavigation v-if="!hideBottomNavigation" />
+      <ChildBottomNavigation v-if="showChildBottomNavigation" />
       <Transition name="global-toast">
         <BaseToast
           v-if="toastMessage"
@@ -63,6 +85,7 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
           :variant="toastVariant"
           :with-bottom-navigation="!hideBottomNavigation"
           :above-actions="toastPlacement === 'above-actions'"
+          :placement="toastPlacement"
         />
       </Transition>
     </div>

@@ -1,27 +1,79 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ChevronRight, Heart } from 'lucide-vue-next'
 
-import { recommendedProducts } from '@/data/productDummyData'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
+import { resolveCurrentChildId } from '@/api/context'
+import productMascot1 from '@/assets/images/products/product-1.png'
+import productMascot2 from '@/assets/images/products/product-2.png'
+import productMascot3 from '@/assets/images/products/product-3.png'
+import productMascot4 from '@/assets/images/products/product-4.png'
 
-const favoriteProductIds = ref(new Set<string>(['kb-child-love-saving-1']))
-type ProductFilter = '전체' | '적금' | '입출금계좌'
+type Product = { id: string; name: string; bankName: string; type: '적금' | '입출금계좌'; rate: string; period: string; monthlyLimit: string; mascot: string }
+type ProductApiItem = {
+  financial_product_id?: number; name?: string; bank_name?: string; product_type?: string
+  interest_rate?: { max_rate?: number }; contract_period?: { max_months?: number }
+  monthly_deposit?: { max_amount?: number }; is_bookmarked?: boolean
+}
+const { showToast } = useToast()
+const recommendedProducts = ref<Product[]>([])
+const childId = ref<number | null>(null)
 
-const productFilters: ProductFilter[] = ['전체', '적금', '입출금계좌']
+const favoriteProductIds = ref(new Set<string>())
+type ProductFilter = '전체' | '적금' | '입출금계좌' | '관심상품'
+
+const productFilters: ProductFilter[] = ['전체', '적금', '입출금계좌', '관심상품']
 const selectedProductFilter = ref<ProductFilter>('전체')
 
 const filteredProducts = computed(() => {
-  if (selectedProductFilter.value === '전체') return recommendedProducts
+  if (selectedProductFilter.value === '전체') return recommendedProducts.value
+  if (selectedProductFilter.value === '관심상품') {
+    return recommendedProducts.value.filter((product) => favoriteProductIds.value.has(product.id))
+  }
 
-  return recommendedProducts.filter((product) => product.type === selectedProductFilter.value)
+  return recommendedProducts.value.filter((product) => product.type === selectedProductFilter.value)
 })
 
-const toggleFavorite = (productId: string) => {
+const productSectionTitle = computed(() =>
+  selectedProductFilter.value === '관심상품' ? '관심 상품' : '추천 상품',
+)
+
+const toggleFavorite = async (productId: string) => {
   const nextFavorites = new Set(favoriteProductIds.value)
-  if (nextFavorites.has(productId)) nextFavorites.delete(productId)
-  else nextFavorites.add(productId)
-  favoriteProductIds.value = nextFavorites
+  const isBookmarked = !nextFavorites.has(productId)
+  try {
+    if (!childId.value) childId.value = await resolveCurrentChildId()
+    await api.updateBookmarkUsingPUT(childId.value, Number(productId), { is_bookmarked: isBookmarked })
+    if (isBookmarked) nextFavorites.add(productId)
+    else nextFavorites.delete(productId)
+    favoriteProductIds.value = nextFavorites
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '관심상품을 변경하지 못했습니다.'), 'error')
+  }
 }
+
+onMounted(async () => {
+  try {
+    childId.value = await resolveCurrentChildId()
+    const { data } = await api.getProductsUsingGET(undefined, undefined, undefined, 100)
+    const items = (data.items ?? []) as unknown as ProductApiItem[]
+    const mascots = [productMascot1, productMascot2, productMascot3, productMascot4]
+    recommendedProducts.value = items.map((product, index) => ({
+      id: String(product.financial_product_id ?? ''),
+      name: product.name ?? '금융 상품',
+      bankName: product.bank_name ?? '',
+      type: product.product_type === 'DEMAND_DEPOSIT' ? '입출금계좌' : '적금',
+      rate: product.interest_rate?.max_rate !== undefined ? `${product.interest_rate.max_rate}%` : '-',
+      period: product.contract_period?.max_months ? `${product.contract_period.max_months}개월` : '-',
+      monthlyLimit: product.monthly_deposit?.max_amount ? `${Math.round(product.monthly_deposit.max_amount / 10000)}만원` : '-',
+      mascot: mascots[index % mascots.length]!,
+    }))
+    favoriteProductIds.value = new Set(items.filter(({ is_bookmarked }) => is_bookmarked).map(({ financial_product_id }) => String(financial_product_id ?? '')))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '상품 목록을 불러오지 못했습니다.'), 'error')
+  }
+})
 </script>
 
 <template>
@@ -45,7 +97,7 @@ const toggleFavorite = (productId: string) => {
       </header>
 
       <h2 class="mt-5 mb-0 flex items-center gap-2 text-[16px] font-extrabold">
-        <span>추천 상품</span>
+        <span>{{ productSectionTitle }}</span>
         <span
           class="rounded-full bg-[var(--color-selected-background)] px-2.5 py-1 text-[11px] font-bold text-[var(--color-selected-text)]"
         >
@@ -56,12 +108,12 @@ const toggleFavorite = (productId: string) => {
       <fieldset class="mt-3">
         <legend class="sr-only">상품 유형 필터</legend>
         <div
-          class="grid grid-cols-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1"
+          class="grid grid-cols-4 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1"
         >
           <button
             v-for="filter in productFilters"
             :key="filter"
-            class="h-10 min-w-0 rounded-[10px] px-2 text-[13px] font-bold transition-all duration-200"
+            class="flex h-10 min-w-0 items-center justify-center gap-1 rounded-[10px] px-1 text-[11px] font-bold whitespace-nowrap transition-all duration-200"
             :class="
               selectedProductFilter === filter
                 ? 'bg-[var(--color-surface)] text-[var(--color-selected-text)] shadow-[0_2px_8px_rgb(43_171_232_/_16%)]'
@@ -107,7 +159,11 @@ const toggleFavorite = (productId: string) => {
             <button
               class="absolute top-5 right-5 z-20 grid size-8 place-items-center rounded-full active:bg-[var(--color-selected-background)]"
               type="button"
-              :aria-label="`${product.name} 찜하기`"
+              :aria-label="
+                favoriteProductIds.has(product.id)
+                  ? `${product.name} 관심상품 해제`
+                  : `${product.name} 관심상품 추가`
+              "
               :aria-pressed="favoriteProductIds.has(product.id)"
               @click="toggleFavorite(product.id)"
             >
@@ -168,9 +224,19 @@ const toggleFavorite = (productId: string) => {
         class="mt-4 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-16 text-center"
         role="status"
       >
-        <p class="m-0 text-[14px] font-bold">해당 유형의 추천 상품이 없어요.</p>
+        <p class="m-0 text-[14px] font-bold">
+          {{
+            selectedProductFilter === '관심상품'
+              ? '저장한 관심 상품이 없어요.'
+              : '해당 유형의 추천 상품이 없어요.'
+          }}
+        </p>
         <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">
-          다른 상품 유형을 선택해 주세요.
+          {{
+            selectedProductFilter === '관심상품'
+              ? '상품 카드의 하트를 눌러 관심 상품을 모아보세요.'
+              : '다른 상품 유형을 선택해 주세요.'
+          }}
         </p>
       </div>
 
