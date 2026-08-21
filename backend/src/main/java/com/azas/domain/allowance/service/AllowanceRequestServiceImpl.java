@@ -4,6 +4,7 @@ import com.azas.domain.allowance.dto.*;
 import com.azas.domain.allowance.entity.AllowanceRequestAction;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
+import com.azas.domain.child.service.ChildFeaturePermissionService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class AllowanceRequestServiceImpl implements AllowanceRequestService {
 
     private final AllowanceRequestMapper allowanceRequestMapper;
+    private final ChildFeaturePermissionService childFeaturePermissionService;
     private static final int DEFAULT_LIST_SIZE = 20;
     private static final int MAX_LIST_SIZE = 100;
 
@@ -38,6 +40,9 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                     ErrorCode.CHILD_MEMBER_ACCESS_REQUIRED
             );
         }
+
+        childFeaturePermissionService
+                .validateAllowanceRequestEnabled(childId);
 
         LocalDateTime requestedAt = LocalDateTime.now();
 
