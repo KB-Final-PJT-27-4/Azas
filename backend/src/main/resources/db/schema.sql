@@ -923,10 +923,10 @@ CREATE TABLE financial_transfer
 CREATE TABLE auto_transfer_schedule
 (
     auto_transfer_schedule_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '자동이체 일정 ID',
-    child_id                  BIGINT UNSIGNED NOT NULL COMMENT '자동이체 대상 자녀',
+    child_id                  BIGINT UNSIGNED NULL COMMENT '자동이체 대상 자녀(자녀 적금인 경우)',
     member_id                 BIGINT UNSIGNED NOT NULL COMMENT '일정 등록 회원 ID',
     request_idempotency_key   CHAR(36)        NOT NULL COMMENT '일정 등록 멱등성 키',
-    financial_goal_id         BIGINT UNSIGNED NOT NULL COMMENT '대상 금융 목표 ID',
+    financial_goal_id         BIGINT UNSIGNED NULL COMMENT '연결 금융 목표 ID(있는 경우)',
     source_account_id         BIGINT UNSIGNED NOT NULL COMMENT '출금 계좌 ID',
     destination_account_id    BIGINT UNSIGNED NOT NULL COMMENT '입금 계좌 ID',
     amount                    DECIMAL(19, 2)  NOT NULL COMMENT '회차별 이체 금액',
