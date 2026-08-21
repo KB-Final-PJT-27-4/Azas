@@ -243,9 +243,10 @@ class AutoTransferScheduleServiceImplTest {
         when(autoTransferScheduleMapper.findAccountForUpdate(1L))
                 .thenReturn(parentAccount(1L, 7L));
         when(autoTransferScheduleMapper.findAccountForUpdate(12L))
-                .thenReturn(childSavingsAccount(
+                .thenReturn(childAccount(
                         12L,
                         6L,
+                        "DEMAND_DEPOSIT",
                         null
                 ));
 
@@ -279,6 +280,48 @@ class AutoTransferScheduleServiceImplTest {
                 ErrorCode.BADREQUEST,
                 exception.getErrorCode()
         );
+    }
+
+    @Test
+    void 부모_적금으로_자동이체_일정을_등록할_수_있다() {
+        String key = UUID.randomUUID().toString();
+        CreateAutoTransferScheduleRequest request = createRequest();
+        ReflectionTestUtils.setField(request, "childId", null);
+        ReflectionTestUtils.setField(request, "destinationAccountId", 13L);
+
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
+                .thenReturn(null);
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
+                .thenReturn(parentAccount(1L, 7L));
+        when(autoTransferScheduleMapper.findAccountForUpdate(13L))
+                .thenReturn(parentSavingsAccount(13L, 7L));
+        when(autoTransferScheduleMapper.countEquivalentSchedule(
+                7L,
+                null,
+                1L,
+                13L,
+                new BigDecimal("80000"),
+                "MONTHLY",
+                10,
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2029, 2, 10)
+        )).thenReturn(0);
+        when(autoTransferScheduleMapper.insertSchedule(any()))
+                .thenAnswer(invocation -> {
+                    AutoTransferScheduleInsertCommand command =
+                            invocation.getArgument(0);
+                    command.setAutoTransferScheduleId(22L);
+                    return 1;
+                });
+
+        var response = autoTransferScheduleService.createSchedule(
+                7L,
+                key,
+                request
+        );
+
+        assertEquals(22L, response.getAutoTransferScheduleId());
+        assertEquals(null, response.getFinancialGoalId());
     }
 
     private CreateAutoTransferScheduleRequest createRequest() {
@@ -343,17 +386,45 @@ class AutoTransferScheduleServiceImplTest {
             Long childId,
             Long financialGoalId
     ) {
+        return childAccount(
+                accountId,
+                childId,
+                "SAVINGS",
+                financialGoalId
+        );
+    }
+
+    private AutoTransferAccountRow childAccount(
+            Long accountId,
+            Long childId,
+            String accountProductType,
+            Long financialGoalId
+    ) {
         AutoTransferAccountRow row =
                 new AutoTransferAccountRow();
 
         row.setFinancialAccountId(accountId);
         row.setOwnerType("CHILD");
         row.setChildId(childId);
-        row.setAccountProductType("SAVINGS");
+        row.setAccountProductType(accountProductType);
         row.setAccountStatus("ACTIVE");
         row.setLinkStatus("ACTIVE");
         row.setFinancialGoalId(financialGoalId);
 
+        return row;
+    }
+
+    private AutoTransferAccountRow parentSavingsAccount(
+            Long accountId,
+            Long memberId
+    ) {
+        AutoTransferAccountRow row = new AutoTransferAccountRow();
+        row.setFinancialAccountId(accountId);
+        row.setOwnerType("PARENT");
+        row.setOwnerMemberId(memberId);
+        row.setAccountProductType("SAVINGS");
+        row.setAccountStatus("ACTIVE");
+        row.setLinkStatus("ACTIVE");
         return row;
     }
 
