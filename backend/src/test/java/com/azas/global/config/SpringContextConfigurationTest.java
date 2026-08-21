@@ -295,11 +295,24 @@ class SpringContextConfigurationTest {
 
             assertAllowedPreflight(
                     mockMvc,
-                    "https://azas-seven.vercel.app"
+                    "https://azas-seven.vercel.app",
+                    "/api/v1/auth/oauth/google",
+                    "POST",
+                    "Content-Type,Authorization"
             );
             assertAllowedPreflight(
                     mockMvc,
-                    "http://localhost:5173"
+                    "http://localhost:5173",
+                    "/api/v1/members/me",
+                    "GET",
+                    "Authorization,Content-Type"
+            );
+            assertAllowedPreflight(
+                    mockMvc,
+                    "http://127.0.0.1:5173",
+                    "/api/v1/transfers",
+                    "POST",
+                    "Authorization,Content-Type,Idempotency-Key"
             );
 
             mockMvc.perform(
@@ -324,18 +337,21 @@ class SpringContextConfigurationTest {
 
     private void assertAllowedPreflight(
             MockMvc mockMvc,
-            String origin
+            String origin,
+            String requestPath,
+            String requestMethod,
+            String requestHeaders
     ) throws Exception {
         mockMvc.perform(
-                        options("/api/v1/members/me")
+                        options(requestPath)
                                 .header(HttpHeaders.ORIGIN, origin)
                                 .header(
                                         HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD,
-                                        "GET"
+                                        requestMethod
                                 )
                                 .header(
                                         HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS,
-                                        "Authorization,Content-Type"
+                                        requestHeaders
                                 )
                 )
                 .andExpect(status().isOk())
@@ -348,14 +364,16 @@ class SpringContextConfigurationTest {
                 .andExpect(
                         header().string(
                                 HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS,
-                                org.hamcrest.Matchers.containsString("GET")
+                                org.hamcrest.Matchers.containsString(
+                                        requestMethod
+                                )
                         )
                 )
                 .andExpect(
                         header().string(
                                 HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS,
                                 org.hamcrest.Matchers.containsString(
-                                        "Authorization"
+                                        requestHeaders.split(",")[0]
                                 )
                         )
                 );
@@ -435,6 +453,8 @@ class SpringContextConfigurationTest {
                         "GOOGLE_CLIENT_SECRET", "test-google-client-secret",
                         "JWT_SECRET_BASE64",
                         "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
+                        "ACCOUNT_NUMBER_ENCRYPTION_KEY_BASE64",
+                        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
                         "PHONE_NUMBER_ENCRYPTION_KEY_BASE64",
                         "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
                         "PHONE_VERIFICATION_SECRET_BASE64",
