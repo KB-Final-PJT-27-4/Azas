@@ -300,7 +300,30 @@ onMounted(async () => {
       class="bg-cover bg-center bg-no-repeat px-5 pt-7 pb-5"
       :style="{ backgroundImage: `url(${archiveBackgroundImage})` }"
     >
-      <div>
+      <div v-if="isLoading" class="animate-pulse" aria-label="타임캡슐 정보 불러오는 중" aria-busy="true">
+        <div class="relative min-h-[128px] overflow-hidden" aria-hidden="true">
+          <span class="block h-7 w-40 rounded-lg bg-[#dde8ed]"></span>
+          <span class="mt-3 block h-3.5 w-36 rounded-full bg-[#e4edf1]"></span>
+          <span class="mt-2 block h-3.5 w-28 rounded-full bg-[#e4edf1]"></span>
+          <span class="absolute top-0 right-0 block h-[118px] w-[108px] rounded-[34px] bg-white/55 p-3">
+            <span class="block size-full rounded-[28px] bg-[#dfeaed]"></span>
+          </span>
+        </div>
+
+        <article
+          class="relative z-10 mt-2 flex min-h-20 translate-y-7 items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 shadow-[0_8px_24px_rgba(67,139,179,0.08)]"
+          aria-hidden="true"
+        >
+          <span class="block size-14 shrink-0 rounded-2xl bg-[#e5edf1]"></span>
+          <span class="ml-3 min-w-0 flex-1">
+            <span class="block h-4 w-36 max-w-full rounded-md bg-[#dfe8ec]"></span>
+            <span class="mt-2 block h-3 w-24 rounded-full bg-[#e8eef1]"></span>
+          </span>
+          <span class="ml-3 block h-7 w-12 shrink-0 rounded-lg bg-[#dfeaf0]"></span>
+        </article>
+      </div>
+
+      <div v-else>
         <div class="relative min-h-[128px] overflow-visible">
           <h1
             class="relative z-10 pt-1 text-[24px] leading-tight font-bold tracking-[-0.025em] text-[var(--color-text-primary)]"
