@@ -12,6 +12,8 @@ import com.azas.domain.timecapsule.dto.TimeCapsuleEntryListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntryDetailResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleEntrySealResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleReleaseDateRequest;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleReleaseDateResponse;
 import com.azas.global.security.AccessTokenMemberResolver;
 import com.azas.domain.timecapsule.service.TimeCapsuleEntryService;
 import com.azas.domain.timecapsule.service.TimeCapsuleService;
@@ -109,6 +111,33 @@ public class TimeCapsuleController {
         timeCapsuleService.deleteTimeCapsule(memberId, timeCapsuleId);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @ApiOperation(
+            value = "TIMECAPSULE-16 타임캡슐 공개일 설정·변경",
+            notes = "부모는 연결된 입출금계좌 타임캡슐의 공개일을 오늘 이후 날짜로 설정하거나 변경할 수 있습니다. 적금 타임캡슐은 계좌 만기일을 공개일로 사용하므로 변경할 수 없습니다."
+    )
+    @PatchMapping("/time-capsules/{time_capsule_id}/release-date")
+    public ResponseEntity<UpdateTimeCapsuleReleaseDateResponse>
+    updateTimeCapsuleReleaseDate(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @ApiParam(value = "타임캡슐 보관함 ID", required = true)
+            @PathVariable("time_capsule_id")
+            long timeCapsuleId,
+            @Valid @RequestBody UpdateTimeCapsuleReleaseDateRequest request
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        return ResponseEntity.ok(
+                timeCapsuleService.updateReleaseDate(
+                        memberId,
+                        timeCapsuleId,
+                        request
+                )
+        );
     }
 
     @ApiOperation(

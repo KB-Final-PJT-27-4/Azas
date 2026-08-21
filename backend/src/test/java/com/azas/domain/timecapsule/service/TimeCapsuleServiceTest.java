@@ -3,6 +3,8 @@ package com.azas.domain.timecapsule.service;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleRequest;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleReleaseDateRequest;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleReleaseDateResponse;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.mapper.MemberMapper;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
@@ -63,14 +65,15 @@ class TimeCapsuleServiceTest {
     private TimeCapsuleService timeCapsuleService;
 
     @Test
-    void createTimeCapsuleUsesChildSavingsAccountAndRequestedReleaseDate() {
+    void createTimeCapsuleUsesChildSavingsAccountMaturityDate() {
         TimeCapsuleAccount account = createAccount(
                 1L, "CHILD", null, 10L,
                 "아이사랑적금", "SAVINGS", "ACTIVE", "ACTIVE"
         );
-        LocalDate releaseDate = LocalDate.now().plusYears(1);
-        CreateTimeCapsuleRequest request = createRequest(1L, releaseDate);
-        stubSuccessfulCreation(account, releaseDate);
+        LocalDate maturityDate = LocalDate.now().plusYears(3);
+        ReflectionTestUtils.setField(account, "maturityDate", maturityDate);
+        CreateTimeCapsuleRequest request = createRequest(1L, null);
+        stubSuccessfulCreation(account, maturityDate);
 
         CreateTimeCapsuleResponse response =
                 timeCapsuleService.createTimeCapsule(7L, 10L, request);
@@ -79,12 +82,38 @@ class TimeCapsuleServiceTest {
                 ArgumentCaptor.forClass(TimeCapsule.class);
         verify(timeCapsuleMapper).insert(captor.capture());
         assertEquals("아이사랑적금", captor.getValue().getTitle());
-        assertEquals(releaseDate.atStartOfDay(),
+        assertEquals(maturityDate.atStartOfDay(),
                 captor.getValue().getExpectedReleaseAt());
         assertEquals(100L, response.getTimeCapsuleId());
         assertEquals("CHILD", response.getAccount().getOwnerType());
         assertEquals("아이사랑적금", response.getTitle());
-        assertEquals(releaseDate, response.getReleaseDate());
+        assertEquals(maturityDate, response.getReleaseDate());
+    }
+
+    @Test
+    void createTimeCapsuleRejectsRequestedReleaseDateForSavingsAccount() {
+        TimeCapsuleAccount account = createAccount(
+                1L, "CHILD", null, 10L,
+                "아이사랑적금", "SAVINGS", "ACTIVE", "ACTIVE"
+        );
+        ReflectionTestUtils.setField(
+                account,
+                "maturityDate",
+                LocalDate.now().plusYears(1)
+        );
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findAccountById(1L)).willReturn(account);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.createTimeCapsule(
+                        7L,
+                        10L,
+                        createRequest(1L, LocalDate.now().plusMonths(3))
+                )
+        );
+
+        assertEquals(ErrorCode.BADREQUEST, exception.getErrorCode());
     }
 
     @Test
@@ -449,6 +478,82 @@ class TimeCapsuleServiceTest {
                 .lockByTimeCapsuleId(100L);
     }
 
+    @Test
+    void updateReleaseDateUpdatesDemandDepositCapsule() {
+        LocalDate releaseDate = LocalDate.now().plusMonths(6);
+        TimeCapsule timeCapsule = createTimeCapsule(
+                100L,
+                10L,
+                "아이 용돈통장",
+                LocalDateTime.now().plusMonths(3),
+                LocalDateTime.now()
+        );
+        TimeCapsuleAccount account = createAccount(
+                1L, "CHILD", null, 10L,
+                "KB Young Youth 입출금통장", "DEMAND_DEPOSIT", "ACTIVE", "ACTIVE"
+        );
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleMapper.findAccountById(1L)).willReturn(account);
+        given(timeCapsuleMapper.updateExpectedReleaseAt(
+                100L,
+                releaseDate.atStartOfDay()
+        )).willReturn(1);
+
+        UpdateTimeCapsuleReleaseDateResponse response =
+                timeCapsuleService.updateReleaseDate(
+                        7L,
+                        100L,
+                        updateReleaseDateRequest(releaseDate)
+                );
+
+        assertEquals(100L, response.getTimeCapsuleId());
+        assertEquals(releaseDate, response.getReleaseDate());
+        assertEquals("COLLECTING", response.getStatus());
+        verify(timeCapsuleMapper).updateExpectedReleaseAt(
+                100L,
+                releaseDate.atStartOfDay()
+        );
+    }
+
+    @Test
+    void updateReleaseDateRejectsSavingsCapsule() {
+        TimeCapsule timeCapsule = createTimeCapsule(
+                100L,
+                10L,
+                "아이사랑적금",
+                LocalDateTime.now().plusMonths(6),
+                LocalDateTime.now()
+        );
+        TimeCapsuleAccount account = createAccount(
+                1L, "CHILD", null, 10L,
+                "아이사랑적금", "SAVINGS", "ACTIVE", "ACTIVE"
+        );
+        stubParentAndChildAccess();
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(timeCapsule);
+        given(timeCapsuleMapper.findAccountById(1L)).willReturn(account);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleService.updateReleaseDate(
+                        7L,
+                        100L,
+                        updateReleaseDateRequest(LocalDate.now().plusMonths(7))
+                )
+        );
+
+        assertEquals(
+                ErrorCode.TIME_CAPSULE_RELEASE_DATE_MODIFICATION_NOT_ALLOWED,
+                exception.getErrorCode()
+        );
+        verify(timeCapsuleMapper, never()).updateExpectedReleaseAt(
+                anyLong(),
+                any(LocalDateTime.class)
+        );
+    }
+
 
     // [JMG] CAPSULE-1 테스트용 보관함 생성 가능 계좌를 구성한다.
     private TimeCapsuleAccount createAccount(
@@ -482,6 +587,11 @@ class TimeCapsuleServiceTest {
         );
         ReflectionTestUtils.setField(
                 account,
+                "maturityDate",
+                LocalDate.now().plusYears(1)
+        );
+        ReflectionTestUtils.setField(
+                account,
                 "accountStatus",
                 accountStatus
         );
@@ -504,6 +614,15 @@ class TimeCapsuleServiceTest {
                 "financialAccountId",
                 financialAccountId
         );
+        ReflectionTestUtils.setField(request, "releaseDate", releaseDate);
+        return request;
+    }
+
+    private UpdateTimeCapsuleReleaseDateRequest updateReleaseDateRequest(
+            LocalDate releaseDate
+    ) {
+        UpdateTimeCapsuleReleaseDateRequest request =
+                new UpdateTimeCapsuleReleaseDateRequest();
         ReflectionTestUtils.setField(request, "releaseDate", releaseDate);
         return request;
     }
