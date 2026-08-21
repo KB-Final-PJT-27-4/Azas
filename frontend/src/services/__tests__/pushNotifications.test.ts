@@ -21,7 +21,10 @@ vi.mock('@/config/firebase', () => ({
 }))
 
 import { ACCESS_TOKEN_STORAGE_KEY } from '@/api/http'
-import { enablePushNotifications } from '@/services/pushNotifications'
+import {
+  enablePushNotifications,
+  subscribeToForegroundPushMessages,
+} from '@/services/pushNotifications'
 import { PUSH_DEVICE_ID_STORAGE_KEY } from '@/utils/pushDevice'
 
 class MemoryStorage {
@@ -56,6 +59,8 @@ describe('pushNotifications', () => {
     const navigator = {
       serviceWorker: {
         register: vi.fn().mockResolvedValue(serviceWorkerRegistration),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
       },
       userAgent: 'Chrome on macOS',
     }
@@ -96,5 +101,37 @@ describe('pushNotifications', () => {
       device_name: 'Chrome on macOS',
     })
     expect(localStorage.getItem(PUSH_DEVICE_ID_STORAGE_KEY)).toBe('31')
+  })
+
+  it('subscribes to foreground messages and rejects external action URLs', () => {
+    const listener = vi.fn()
+    const unsubscribe = subscribeToForegroundPushMessages(listener)
+    const messageHandler = vi.mocked(navigator.serviceWorker.addEventListener).mock.calls[0]?.[1]
+
+    expect(messageHandler).toBeTypeOf('function')
+    if (typeof messageHandler !== 'function') return
+
+    messageHandler({
+      data: {
+        type: 'AZAS_FCM_MESSAGE',
+        title: '미션 알림',
+        body: '새 미션이 도착했어요.',
+        action_url: 'https://malicious.example/path',
+        data: { notification_type: 'MISSION_ASSIGNED' },
+      },
+    } as MessageEvent)
+
+    expect(listener).toHaveBeenCalledWith({
+      title: '미션 알림',
+      body: '새 미션이 도착했어요.',
+      actionUrl: '/alarm',
+      data: { notification_type: 'MISSION_ASSIGNED' },
+    })
+
+    unsubscribe()
+    expect(navigator.serviceWorker.removeEventListener).toHaveBeenCalledWith(
+      'message',
+      messageHandler,
+    )
   })
 })
