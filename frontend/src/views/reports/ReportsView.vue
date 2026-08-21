@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarDays, CheckCircle2, ChevronRight, Landmark, TrendingUp } from 'lucide-vue-next'
+import { CalendarDays, CheckCircle2, ChevronRight, Landmark, Target, TrendingUp } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -16,6 +16,7 @@ type GoalReport = {
   id: number
   name: string
   targetAmount: number
+  monthlySavedAmount: number
   accounts: Array<{
     id: number
     name: string
@@ -32,6 +33,7 @@ const activeGoalIndex = ref(0)
 const goalCarousel = ref<HTMLElement | null>(null)
 const goalCarouselHeight = ref<number | null>(null)
 const displayedTotalAssets = ref(0)
+const previousMonthChangeAmount = ref(0)
 let totalAssetsAnimationFrame: number | null = null
 
 const setReportTab = (tab: ReportTab) => {
@@ -51,8 +53,13 @@ const totalAssets = computed(() =>
 const totalTarget = computed(() =>
   goalReports.value.reduce((total, goal) => total + goal.targetAmount, 0),
 )
+const totalMonthlySavedAmount = computed(() =>
+  goalReports.value.reduce((total, goal) => total + goal.monthlySavedAmount, 0),
+)
 const totalRate = computed(() => totalTarget.value ? (totalAssets.value / totalTarget.value) * 100 : 0)
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+const formatSignedWon = (amount: number) =>
+  `${amount > 0 ? '+' : ''}${amount.toLocaleString('ko-KR')}원`
 
 const animateTotalAssets = () => {
   if (totalAssetsAnimationFrame !== null) cancelAnimationFrame(totalAssetsAnimationFrame)
@@ -113,11 +120,21 @@ onMounted(async () => {
   try {
     const childId = await resolveCurrentChildId()
     const now = new Date()
-    const { data } = await api.getAssetReportDetailUsingGET(childId, now.getMonth() + 1, now.getFullYear())
+    const [detailResponse, reportsResponse] = await Promise.all([
+      api.getAssetReportDetailUsingGET(childId, now.getMonth() + 1, now.getFullYear()),
+      api.getAssetReportsUsingGET(childId, undefined, undefined, 24, now.getFullYear()),
+    ])
+    const data = detailResponse.data
+    const currentMonthReport = (reportsResponse.data.items ?? []).find(
+      (item) =>
+        item.report_year === now.getFullYear() && item.report_month === now.getMonth() + 1,
+    )
+    previousMonthChangeAmount.value = currentMonthReport?.total_asset_change_amount ?? 0
     goalReports.value = (data.goal_summary ?? []).map((goal) => ({
       id: goal.financial_goal_id ?? 0,
       name: goal.title ?? '금융 목표',
       targetAmount: goal.target_amount ?? 0,
+      monthlySavedAmount: goal.monthly_saved_amount ?? 0,
       accounts: (goal.linked_accounts ?? []).map((account) => ({
         id: account.account_id ?? 0,
         name: account.account_name ?? '연결 계좌',
@@ -195,8 +212,21 @@ onBeforeUnmount(() => {
                 {{ formatWon(displayedTotalAssets) }}
               </strong>
               <p class="mt-3 text-xs text-[var(--color-text-secondary)]">
-                지난달보다
-                <strong class="text-[var(--color-selected-text)]">350,000원</strong> 늘었어요
+                <template v-if="previousMonthChangeAmount > 0">
+                  지난달보다
+                  <strong class="text-[var(--color-selected-text)]">
+                    {{ formatWon(previousMonthChangeAmount) }}
+                  </strong>
+                  늘었어요
+                </template>
+                <template v-else-if="previousMonthChangeAmount < 0">
+                  지난달보다
+                  <strong class="text-[#ef5f65]">
+                    {{ formatWon(Math.abs(previousMonthChangeAmount)) }}
+                  </strong>
+                  줄었어요
+                </template>
+                <template v-else>지난달과 같은 자산을 유지하고 있어요</template>
               </p>
             </div>
             <span
@@ -221,11 +251,11 @@ onBeforeUnmount(() => {
         >
           <div>
             <p class="text-sm font-bold">이번 달 저축</p>
-            <strong class="mt-2 block text-[23px] text-[var(--color-selected-text)]"
-              >+1,250,000원</strong
-            >
+            <strong class="mt-2 block text-[23px] text-[var(--color-selected-text)]">
+              {{ formatSignedWon(totalMonthlySavedAmount) }}
+            </strong>
             <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
-              이번 달 목표의 25%를 채웠어요
+              목표 계좌에 이번 달 모인 금액이에요
             </p>
           </div>
           <img
@@ -244,6 +274,7 @@ onBeforeUnmount(() => {
           </div>
 
           <div
+            v-if="goalReports.length"
             ref="goalCarousel"
             class="mt-4 flex w-full items-start snap-x snap-mandatory overflow-x-auto overflow-y-hidden scroll-smooth transition-[height] duration-300 ease-out [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             :style="goalCarouselHeight ? { height: `${goalCarouselHeight}px` } : undefined"
@@ -309,6 +340,21 @@ onBeforeUnmount(() => {
               </div>
             </article>
           </div>
+          <RouterLink
+            v-else
+            :to="{ name: 'Goals' }"
+            class="mt-4 flex min-h-[170px] flex-col items-center justify-center rounded-[22px] border border-dashed border-[#cfe3ed] bg-[#f7fcff] px-5 py-6 text-center !text-[var(--color-text-primary)] transition-colors active:bg-[#eef9ff]"
+          >
+            <strong class="mt-3 text-sm font-extrabold">아직 설정한 목표가 없어요</strong>
+            <span class="mt-1.5 text-xs leading-5 text-[var(--color-text-secondary)]">
+              첫 저축 목표를 만들고 달성률을 확인해보세요.
+            </span>
+            <span
+              class="mt-4 inline-flex min-h-9 items-center rounded-xl bg-[var(--color-brand-primary)] px-4 text-xs font-bold text-white"
+            >
+              목표 만들기
+            </span>
+          </RouterLink>
           <div
             v-if="goalReports.length > 1"
             class="mt-3 flex justify-center gap-2"

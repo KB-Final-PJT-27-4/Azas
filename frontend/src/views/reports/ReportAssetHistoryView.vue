@@ -49,19 +49,42 @@ const historyItems = computed(() => {
 })
 const periodLabel = computed(() => `최근 ${selectedPeriod.value}`)
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+
+const createEmptyMonthlyRecords = (monthCount = 12): MonthlyRecord[] => {
+  const now = new Date()
+  return Array.from({ length: monthCount }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1 - index), 1)
+    const month = date.getMonth() + 1
+    return {
+      key: `${date.getFullYear()}-${String(month).padStart(2, '0')}`,
+      month: `${month}월`,
+      saving: 0,
+      increase: 0,
+    }
+  })
+}
+
 onMounted(async () => {
   try {
     const childId = await resolveCurrentChildId()
-    const year = new Date().getFullYear()
-    const { data } = await api.getAssetReportsUsingGET(childId, undefined, undefined, 24, year)
-    allMonthlyData.value = (data.items ?? []).map((item) => ({
+    const { data } = await api.getAssetReportsUsingGET(childId, undefined, undefined, 24)
+    const reportRecords = (data.items ?? []).map((item) => ({
       key: `${item.report_year}-${String(item.report_month).padStart(2, '0')}`,
       month: `${item.report_month}월`,
       saving: item.monthly_saved_amount ?? 0,
       increase: item.total_asset_change_amount ?? 0,
     })).sort((a, b) => a.key.localeCompare(b.key))
+    const recordsByMonth = new Map(reportRecords.map((record) => [record.key, record]))
+    allMonthlyData.value = createEmptyMonthlyRecords().map(
+      (emptyRecord) => recordsByMonth.get(emptyRecord.key) ?? emptyRecord,
+    )
     selectedMonthKey.value = allMonthlyData.value.at(-1)?.key ?? ''
-    currentAssets.value = data.items?.at(-1)?.total_asset_amount ?? 0
+    const latestReport = [...(data.items ?? [])].sort((a, b) =>
+      `${a.report_year}-${String(a.report_month).padStart(2, '0')}`.localeCompare(
+        `${b.report_year}-${String(b.report_month).padStart(2, '0')}`,
+      ),
+    ).at(-1)
+    currentAssets.value = latestReport?.total_asset_amount ?? 0
     const now = new Date()
     const { data: detail } = await api.getAssetReportDetailUsingGET(childId, now.getMonth() + 1, now.getFullYear())
     goalAssets.value = (detail.goal_summary ?? []).map((goal, index) => ({
@@ -70,6 +93,10 @@ onMounted(async () => {
       color: index % 2 ? '#f2c94c' : '#55bcef',
     }))
   } catch (error) {
+    if (!allMonthlyData.value.length) {
+      allMonthlyData.value = createEmptyMonthlyRecords()
+      selectedMonthKey.value = allMonthlyData.value.at(-1)?.key ?? ''
+    }
     showToast(getApiErrorMessage(error, '자산 이력을 불러오지 못했습니다.'), 'error')
   }
 })

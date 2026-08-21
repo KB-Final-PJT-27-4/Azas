@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
   Plus,
   UserRound,
 } from 'lucide-vue-next'
@@ -25,6 +26,7 @@ const props = withDefaults(
     profileEmoji?: string
     showBack?: boolean
     showNotification?: boolean
+    showGuide?: boolean
     notificationCount?: number
     backgroundColor?: string
     profileBackgroundColor?: string
@@ -39,6 +41,7 @@ const props = withDefaults(
     profileEmoji: '👶',
     showBack: false,
     showNotification: true,
+    showGuide: false,
     notificationCount: 0,
     backgroundColor: '',
     profileBackgroundColor: '',
@@ -100,6 +103,8 @@ const selectProfile = (profileId: number) => {
 }
 
 const goToAlarm = () => router.push('/alarm')
+
+const openGuide = () => window.dispatchEvent(new CustomEvent('azas:open-home-guide'))
 
 const goToMypage = () => {
   closeProfileSheet()
@@ -193,21 +198,32 @@ onBeforeUnmount(() => {
         />
       </button>
 
-      <button
-        v-if="showNotification"
-        class="relative grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
-        type="button"
-        aria-label="알림 보기"
-        @click="goToAlarm"
-      >
-        <Bell :size="25" :stroke-width="2.4" />
-        <span
-          v-if="notificationCount > 0"
-          class="absolute top-1 right-0 grid size-[18px] place-items-center rounded-full bg-[#f04c5d] text-[10px] font-bold text-white"
+      <div v-if="showNotification || showGuide" class="flex shrink-0 items-center">
+        <button
+          v-if="showGuide"
+          class="grid size-10 cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
+          type="button"
+          aria-label="홈 사용 안내 보기"
+          @click="openGuide"
         >
-          {{ notificationCount > 9 ? '9+' : notificationCount }}
-        </span>
-      </button>
+          <CircleHelp :size="23" :stroke-width="2.3" />
+        </button>
+        <button
+          v-if="showNotification"
+          class="relative grid size-11 flex-[0_0_44px] cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[var(--color-unselected-text)] active:bg-[var(--color-unselected-background)]"
+          type="button"
+          aria-label="알림 보기"
+          @click="goToAlarm"
+        >
+          <Bell :size="25" :stroke-width="2.4" />
+          <span
+            v-if="notificationCount > 0"
+            class="absolute top-1 right-0 grid size-[18px] place-items-center rounded-full bg-[#f04c5d] text-[10px] font-bold text-white"
+          >
+            {{ notificationCount > 9 ? '9+' : notificationCount }}
+          </span>
+        </button>
+      </div>
       <div v-else id="app-header-action" class="size-11 flex-[0_0_44px]" />
     </div>
   </header>

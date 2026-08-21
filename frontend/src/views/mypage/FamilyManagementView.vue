@@ -11,6 +11,7 @@ type InviteType = 'guardian' | 'child'
 const { showToast } = useToast()
 const inviteType = ref<InviteType | null>(null)
 const copied = ref(false)
+const isLoading = ref(true)
 
 const childId = ref<number | null>(null)
 const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; isMe: boolean; color: string }>>([])
@@ -65,6 +66,8 @@ onMounted(async () => {
     }))
   } catch (error) {
     showToast(getApiErrorMessage(error, '가족 정보를 불러오지 못했습니다.'), 'error')
+  } finally {
+    isLoading.value = false
   }
 })
 
@@ -93,11 +96,35 @@ const copyInvitationLink = async () => {
     <section class="mt-5" aria-labelledby="family-members-title">
       <div class="flex items-center justify-between px-0.5">
         <h2 id="family-members-title" class="m-0 text-[18px] font-extrabold">함께 관리하는 가족</h2>
-        <span class="text-xs font-semibold text-[var(--color-text-secondary)]">{{ familyMembers.length }}명</span>
+        <span
+          v-if="isLoading"
+          class="h-3 w-8 animate-pulse rounded-full bg-[#e4ecef]"
+          aria-hidden="true"
+        ></span>
+        <span v-else class="text-xs font-semibold text-[var(--color-text-secondary)]">
+          {{ familyMembers.length }}명
+        </span>
       </div>
 
       <ul class="mt-2.5 m-0 list-none overflow-hidden rounded-[20px] border border-[#d9e2e7] bg-white px-4 p-0">
+        <template v-if="isLoading">
+          <li
+            v-for="index in 2"
+            :key="`family-member-skeleton-${index}`"
+            class="flex min-h-[68px] items-center gap-3.5"
+            :class="index > 1 ? 'border-t border-[#edf1f3]' : ''"
+            aria-hidden="true"
+          >
+            <span class="size-11 shrink-0 animate-pulse rounded-full bg-[#edf3f6]"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block h-4 w-20 animate-pulse rounded-md bg-[#e5ecef]"></span>
+              <span class="mt-2 block h-3 w-24 animate-pulse rounded-full bg-[#edf2f4]"></span>
+            </span>
+            <span class="h-5 w-10 shrink-0 animate-pulse rounded-full bg-[#edf2f4]"></span>
+          </li>
+        </template>
         <li
+          v-else
           v-for="(member, index) in familyMembers"
           :key="member.id"
           class="flex min-h-[68px] items-center gap-3.5"

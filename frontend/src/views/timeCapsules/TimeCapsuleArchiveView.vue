@@ -27,6 +27,7 @@ import { resolveCurrentChildId } from '@/api/context'
 const router = useRouter()
 const { showToast } = useToast()
 const isPageLeaving = ref(false)
+const isLoading = ref(true)
 const isFreeCapsuleSheetOpen = ref(false)
 const freeCapsuleSheetOffset = ref(0)
 const isFreeCapsuleSheetDragging = ref(false)
@@ -37,7 +38,8 @@ const isFreeCapsuleCreated = ref(false)
 const registration = ref<{ birthDate: string; childName: string } | null>(null)
 const childId = ref<number | null>(null)
 const demandAccountId = ref<number | null>(null)
-const capsuleAccounts = ref<Array<{ id: number; name: string; createdAt: string; savedAmount: number; isFree?: boolean }>>([])
+const capsuleAccounts = ref<Array<{ id: number; name: string; createdAt: string; savedAmount: number; dDay?: number; isFree?: boolean }>>([])
+const archiveChildName = computed(() => registration.value?.childName.trim() || '아이')
 
 const pregnancyStages = [
   { week: 7, fruit: '블루베리', image: blueberryImage, color: '#777bdc' },
@@ -106,6 +108,37 @@ const todayKey = [
 ].join('.')
 
 const isReleased = (releaseDate: string) => releaseDate <= todayKey
+
+const calculateDday = (releaseDate: string) => {
+  const [year, month, day] = releaseDate.replaceAll('.', '-').split('-').map(Number)
+  if (!year || !month || !day) return null
+
+  const releaseDay = new Date(year, month - 1, day)
+  releaseDay.setHours(0, 0, 0, 0)
+  return Math.ceil((releaseDay.getTime() - today.getTime()) / 86_400_000)
+}
+
+const nearestCapsule = computed(() => {
+  const upcomingCapsules = capsuleAccounts.value
+    .map((capsule) => ({
+      ...capsule,
+      resolvedDday: capsule.dDay ?? calculateDday(capsule.createdAt),
+    }))
+    .filter(
+      (capsule): capsule is typeof capsule & { resolvedDday: number } =>
+        capsule.resolvedDday !== null && capsule.resolvedDday >= 0,
+    )
+    .sort((a, b) => a.resolvedDday - b.resolvedDday)
+
+  return upcomingCapsules[0] ?? null
+})
+
+const nearestCapsuleDdayLabel = computed(() => {
+  if (!nearestCapsule.value) return ''
+  return nearestCapsule.value.resolvedDday === 0
+    ? 'D-Day'
+    : `D-${nearestCapsule.value.resolvedDday}`
+})
 
 const toDateValue = (date: Date) => {
   const year = date.getFullYear()
@@ -176,6 +209,7 @@ const confirmFreeCapsule = async () => {
       name: data.title ?? '입출금계좌 타임캡슐',
       createdAt: data.release_date?.replaceAll('-', '.') ?? formattedFreeOpenDate.value,
       savedAmount: data.total_saved_amount ?? 0,
+      dDay: calculateDday(data.release_date ?? freeCapsuleOpenDate.value) ?? undefined,
       isFree: true,
     })
     isFreeCapsuleCreated.value = true
@@ -245,11 +279,14 @@ onMounted(async () => {
       name: capsule.title ?? '타임캡슐',
       createdAt: capsule.release_date?.replaceAll('-', '.') ?? '오픈 날짜 설정',
       savedAmount: capsule.total_saved_amount ?? 0,
+      dDay: capsule.d_day,
       isFree: capsule.account_id === demandAccountId.value,
     }))
     isFreeCapsuleCreated.value = capsuleAccounts.value.some(({ isFree }) => isFree)
   } catch (error) {
     showToast(getApiErrorMessage(error, '타임캡슐을 불러오지 못했습니다.'), 'error')
+  } finally {
+    isLoading.value = false
   }
 })
 </script>
@@ -271,7 +308,7 @@ onMounted(async () => {
             타임캡슐 보관함
           </h1>
           <p class="relative z-10 mt-2 text-sm leading-5 text-[var(--color-text-secondary)]">
-            깨비의 성장 순간과<br />금융 기록을 모아보세요.
+            {{ archiveChildName }}의 성장 순간과<br />금융 기록을 모아보세요.
           </p>
 
           <aside
@@ -333,30 +370,91 @@ onMounted(async () => {
           class="relative z-10 mt-2 flex min-h-20 translate-y-7 items-center rounded-2xl border border-[var(--color-border)] bg-white px-4 shadow-[0_8px_24px_rgba(67,139,179,0.08)]"
         >
           <img class="size-14 shrink-0 object-contain" :src="calendarImage" alt="공개 예정일" />
-          <div class="ml-3 min-w-0 flex-1">
-            <p class="truncate text-sm font-bold text-[var(--color-text-primary)]">아이사랑적금</p>
-            <time class="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]"
-              >2026.08.08</time
+          <div v-if="nearestCapsule" class="ml-3 min-w-0 flex-1">
+            <p class="truncate text-sm font-bold text-[var(--color-text-primary)]">
+              {{ nearestCapsule.name }}
+            </p>
+            <time
+              class="mt-1 block text-xs font-medium text-[var(--color-text-secondary)]"
+              :datetime="nearestCapsule.createdAt.replaceAll('.', '-')"
             >
+              {{ nearestCapsule.createdAt }}
+            </time>
           </div>
-          <strong class="ml-3 shrink-0 text-[30px] font-bold tracking-[-0.04em] text-[#27a9eb]">
-            D-23
+          <div v-else class="ml-3 min-w-0 flex-1">
+            <p class="truncate text-sm font-bold text-[var(--color-text-primary)]">
+              새 타임캡슐을 기다리고 있어요
+            </p>
+            <p class="mt-1 text-xs font-medium text-[var(--color-text-secondary)]">
+              캡슐을 만들면 디데이를 알려드려요
+            </p>
+          </div>
+          <strong
+            v-if="nearestCapsule"
+            class="ml-3 shrink-0 text-[30px] font-bold tracking-[-0.04em] text-[#27a9eb]"
+          >
+            {{ nearestCapsuleDdayLabel }}
+          </strong>
+          <strong v-else class="ml-3 shrink-0 text-sm font-bold text-[#27a9eb]">
+            등록 전
           </strong>
         </article>
       </div>
     </section>
 
     <section class="grid grid-cols-2 gap-3 px-5 pt-7 pb-5" aria-label="타임캡슐 계좌 목록">
+      <template v-if="isLoading">
+        <article
+          v-for="index in 2"
+          :key="`capsule-skeleton-${index}`"
+          class="rounded-2xl border border-[var(--color-border)] bg-white p-3"
+          aria-hidden="true"
+        >
+          <span class="block aspect-[4/3] animate-pulse rounded-xl bg-[#edf2f4]"></span>
+          <span class="mt-4 block h-4 w-24 max-w-full animate-pulse rounded-md bg-[#e5ecef]"></span>
+          <span class="mt-2 block h-3 w-20 animate-pulse rounded-full bg-[#edf2f4]"></span>
+          <span class="mt-3 block h-3 w-28 max-w-full animate-pulse rounded-full bg-[#e5eef2]"></span>
+        </article>
+      </template>
+
       <article
-        v-for="capsule in capsuleAccounts"
-        :key="capsule.id"
-        class="overflow-hidden rounded-2xl border p-3 transition-colors"
-        :class="
-          isCapsuleReleased(capsule)
-            ? 'capsule-card--released border-transparent bg-white'
-            : 'border-[var(--color-border)] bg-white'
-        "
+        v-else-if="!capsuleAccounts.length"
+        class="col-span-2 rounded-[22px] border border-dashed border-[#cfe3ed] bg-[#f7fcff] px-5 py-8 text-center"
       >
+        <span class="mx-auto grid size-16 place-items-center rounded-full bg-[#e8f7fe]">
+          <img class="h-10 w-12 object-contain" :src="lockImage" alt="" aria-hidden="true" />
+        </span>
+        <h2 class="mt-4 text-[17px] font-extrabold">아직 만들어진 타임캡슐이 없어요</h2>
+        <p class="mt-2 text-[12px] leading-5 text-[var(--color-text-secondary)]">
+          적금이나 아이 명의 입출금계좌를 만들면<br />해당 계좌의 타임캡슐이 자동으로 생성돼요.
+        </p>
+        <div class="mt-5 grid grid-cols-2 gap-2.5">
+          <RouterLink
+            :to="{ name: 'SavingsRecommendation' }"
+            class="flex min-h-11 items-center justify-center rounded-[13px] border border-[#cdebf9] bg-white text-[12px] font-bold !text-[var(--color-selected-text)] active:bg-[#edf9ff]"
+          >
+            적금 알아보기
+          </RouterLink>
+          <RouterLink
+            :to="{ name: 'ChildAccountCreate' }"
+            class="flex min-h-11 items-center justify-center rounded-[13px] bg-[var(--color-brand-primary)] text-[12px] font-bold !text-white active:bg-[var(--color-brand-primary-pressed)]"
+          >
+            아이 계좌 만들기
+          </RouterLink>
+        </div>
+      </article>
+
+      <template v-else>
+      <article
+          v-for="capsule in capsuleAccounts"
+          :key="capsule.id"
+          class="overflow-hidden rounded-2xl border p-3 transition-colors"
+          :class="
+            isCapsuleReleased(capsule)
+              ? 'capsule-card--released border-transparent bg-white'
+              : 'border-[var(--color-border)] bg-white'
+          "
+        >
         <button
           class="block w-full text-left transition-transform active:scale-[0.98]"
           type="button"
@@ -397,18 +495,22 @@ onMounted(async () => {
           </p>
         </button>
       </article>
+      </template>
     </section>
 
-    <button
-      class="time-capsule-create-button fixed z-[40]"
-      type="button"
-      aria-label="타임캡슐 생성하기"
-      @click="navigateForward('/time-capsules/new')"
-    >
-      <span class="time-capsule-create-button__surface">
-        <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
-      </span>
-    </button>
+    <Teleport to="body">
+      <button
+        v-if="!isLoading && capsuleAccounts.length"
+        class="time-capsule-create-button fixed z-[40]"
+        type="button"
+        aria-label="타임캡슐 생성하기"
+        @click="navigateForward('/time-capsules/new')"
+      >
+        <span class="time-capsule-create-button__surface">
+          <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
+        </span>
+      </button>
+    </Teleport>
 
     <Teleport to="body">
       <Transition name="free-capsule-sheet">

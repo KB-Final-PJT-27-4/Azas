@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Check, ChevronRight } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Check, ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
 
 import homeBubbleUrl from '@/assets/images/accounts/complete-circle.png'
 import homeDiamondUrl from '@/assets/images/accounts/complete-diamond.png'
@@ -27,6 +27,13 @@ type HomeChecklistItem = {
   completed: boolean
 }
 
+type HomeGuideStep = {
+  eyebrow: string
+  title: string
+  description: string
+  target: 'goal' | 'checklist' | 'timeCapsule'
+}
+
 const childName = ref('우리 아이')
 const currentAssetAmount = ref(0)
 const currentAssetChangeAmount = ref(0)
@@ -38,10 +45,120 @@ const checklistTotalCount = ref(0)
 const checklistProgress = ref(0)
 const nearestTimeCapsuleDay = ref<number | null>(null)
 const errorMessage = ref('')
+const isGuideOpen = ref(false)
+const guideStepIndex = ref(0)
+const guideTargetRect = ref({ top: 0, left: 0, width: 0, height: 0 })
+const guideTooltipStyle = ref<Record<string, string>>({})
+const guideArrowPosition = ref<'top' | 'bottom'>('top')
 const selectedGoalIndex = ref(0)
 const goalCarouselRef = ref<HTMLElement | null>(null)
 let goalCarouselTimer: ReturnType<typeof window.setInterval> | null = null
+let guidePositionFrame: number | null = null
+let previousBodyOverflow = ''
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+
+const guideSteps = computed<HomeGuideStep[]>(() => [
+  {
+    eyebrow: '타임캡슐',
+    title: '소중한 순간을 타임캡슐에 담아요',
+    description: '아이에게 전하고 싶은 메시지와 추억을 저장하고 원하는 날에 함께 열어볼 수 있어요.',
+    target: 'timeCapsule',
+  },
+  {
+    eyebrow: '목표 설정',
+    title: '아이와 함께 저축 목표를 세워요',
+    description: '교육비, 여행, 선물처럼 함께 이루고 싶은 목표와 금액을 설정하고 진행 상황을 확인해요.',
+    target: 'goal',
+  },
+  {
+    eyebrow: '체크리스트',
+    title: '필요한 준비를 하나씩 확인해요',
+    description: '아이의 성장 시기에 맞춰 지금 챙겨야 할 금융 준비 항목을 확인하고 완료할 수 있어요.',
+    target: 'checklist',
+  },
+])
+const currentGuideStep = computed(() => guideSteps.value[guideStepIndex.value]!)
+const shouldScrollGuideTarget = () => currentGuideStep.value.target === 'checklist'
+
+const positionGuide = async (scrollTarget = false) => {
+  await nextTick()
+  const target = document.querySelector<HTMLElement>(
+    `[data-home-guide="${currentGuideStep.value.target}"]`,
+  )
+  if (!target) return
+
+  if (scrollTarget) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    window.setTimeout(() => void positionGuide(), 320)
+  }
+
+  const rect = target.getBoundingClientRect()
+  const padding = 6
+  guideTargetRect.value = {
+    top: rect.top - padding,
+    left: rect.left - padding,
+    width: rect.width + padding * 2,
+    height: rect.height + padding * 2,
+  }
+
+  const tooltipWidth = Math.min(340, window.innerWidth - 32)
+  const tooltipHeight = 205
+  const gap = 28
+  const showBelow = rect.bottom + gap + tooltipHeight < window.innerHeight
+  guideArrowPosition.value = showBelow ? 'top' : 'bottom'
+  const tooltipLeft = Math.min(
+    Math.max(rect.left + rect.width / 2 - tooltipWidth / 2, 16),
+    window.innerWidth - tooltipWidth - 16,
+  )
+  const arrowLeft = Math.min(
+    Math.max(rect.left + rect.width / 2 - tooltipLeft, 22),
+    tooltipWidth - 22,
+  )
+  guideTooltipStyle.value = {
+    width: `${tooltipWidth}px`,
+    left: `${tooltipLeft}px`,
+    top: showBelow ? `${rect.bottom + gap}px` : 'auto',
+    bottom: showBelow ? 'auto' : `${window.innerHeight - rect.top + gap}px`,
+    '--guide-arrow-left': `${arrowLeft}px`,
+  }
+}
+const updateGuidePosition = () => {
+  if (!isGuideOpen.value || guidePositionFrame !== null) return
+
+  guidePositionFrame = window.requestAnimationFrame(() => {
+    guidePositionFrame = null
+    void positionGuide()
+  })
+}
+
+const openGuide = () => {
+  if (!isGuideOpen.value) previousBodyOverflow = document.body.style.overflow
+  guideStepIndex.value = 0
+  isGuideOpen.value = true
+  document.body.style.overflow = 'hidden'
+  void positionGuide()
+}
+const closeGuide = () => {
+  isGuideOpen.value = false
+  if (guidePositionFrame !== null) {
+    window.cancelAnimationFrame(guidePositionFrame)
+    guidePositionFrame = null
+  }
+  document.body.style.overflow = previousBodyOverflow
+}
+const nextGuideStep = () => {
+  if (guideStepIndex.value < guideSteps.value.length - 1) {
+    guideStepIndex.value += 1
+    void positionGuide(shouldScrollGuideTarget())
+  }
+  else closeGuide()
+}
+const previousGuideStep = () => {
+  if (guideStepIndex.value > 0) {
+    guideStepIndex.value -= 1
+    void positionGuide()
+  }
+}
 
 const quickMenus = computed(() => [
   { title: '맞춤 금융상품', subtitle: '추천 받기', icon: 'checklist', to: '/products' },
@@ -125,13 +242,14 @@ const loadHome = async () => {
     errorMessage.value = ''
     const childId = await resolveCurrentChildId()
     const authorization = requireAuthorizationHeader()
-    const [dashboardResponse, goalsResponse, checklistResponse] = await Promise.all([
+    const [childResponse, dashboardResponse, goalsResponse, checklistResponse] = await Promise.all([
+      api.getChildUsingGET(childId),
       api.getDashboardUsingGET1(authorization, childId),
       api.getGoalsUsingGET(childId),
       api.getChecklistItemsUsingGET(authorization, childId),
     ])
     const dashboard = dashboardResponse.data
-    childName.value = dashboard.child?.name ?? '우리 아이'
+    childName.value = childResponse.data.name?.trim() || dashboard.child?.name?.trim() || '우리 아이'
     currentAssetAmount.value = dashboard.asset_summary?.total_asset_amount ?? 0
     currentAssetChangeAmount.value = dashboard.asset_summary?.total_asset_change_amount ?? 0
     nearestTimeCapsuleDay.value = dashboard.quick_summary?.nearest_time_capsule?.dday ?? null
@@ -157,6 +275,11 @@ const loadHome = async () => {
     checklistCompletedCount.value = checklist.completed_count ?? 0
     checklistTotalCount.value = checklist.total_count ?? checklistItems.value.length
     checklistProgress.value = checklist.progress_percent ?? 0
+    const guideStorageKey = 'azas_home_service_guide_seen_v1'
+    if (localStorage.getItem(guideStorageKey) !== 'true') {
+      openGuide()
+      localStorage.setItem(guideStorageKey, 'true')
+    }
     startGoalCarousel()
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error, '홈 정보를 불러오지 못했어요.')
@@ -167,6 +290,9 @@ let previousHtmlBackground = ''
 let previousBodyBackground = ''
 
 onMounted(() => {
+  window.addEventListener('azas:open-home-guide', openGuide)
+  window.addEventListener('resize', updateGuidePosition)
+  window.addEventListener('scroll', updateGuidePosition, { passive: true })
   void loadHome()
   startGoalCarousel()
   previousHtmlBackground = document.documentElement.style.backgroundColor
@@ -176,7 +302,12 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('azas:open-home-guide', openGuide)
+  window.removeEventListener('resize', updateGuidePosition)
+  window.removeEventListener('scroll', updateGuidePosition)
+  if (guidePositionFrame !== null) window.cancelAnimationFrame(guidePositionFrame)
   stopGoalCarousel()
+  if (isGuideOpen.value) document.body.style.overflow = previousBodyOverflow
   document.documentElement.style.backgroundColor = previousHtmlBackground
   document.body.style.backgroundColor = previousBodyBackground
 })
@@ -340,6 +471,7 @@ onBeforeUnmount(() => {
         v-for="menu in quickMenus"
         :key="menu.title"
         class="home-quick-card"
+        :data-home-guide="menu.icon === 'goal' ? 'goal' : menu.icon === 'timeCapsule' ? 'timeCapsule' : undefined"
         :to="menu.to"
       >
         <img
@@ -363,7 +495,7 @@ onBeforeUnmount(() => {
       </RouterLink>
     </section>
 
-    <section class="mt-[16px]" aria-labelledby="home-checklist-title">
+    <section class="mt-[16px]" aria-labelledby="home-checklist-title" data-home-guide="checklist">
       <div
         class="block overflow-hidden rounded-[20px] border border-[#dce8ee] bg-white text-[var(--color-text-primary)] shadow-[0_6px_18px_rgba(64,106,126,0.04)]"
       >
@@ -440,9 +572,128 @@ onBeforeUnmount(() => {
       </div>
     </section>
   </main>
+
+  <Teleport to="body">
+    <Transition name="home-guide">
+      <div
+        v-if="isGuideOpen"
+        class="pointer-events-none fixed inset-0 z-[calc(var(--z-index-overlay)+1)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="home-guide-title"
+      >
+        <div class="pointer-events-auto absolute inset-0 touch-none" aria-hidden="true" @click="closeGuide"></div>
+        <div
+          class="home-guide__spotlight absolute rounded-[20px]"
+          :style="{
+            top: `${guideTargetRect.top}px`,
+            left: `${guideTargetRect.left}px`,
+            width: `${guideTargetRect.width}px`,
+            height: `${guideTargetRect.height}px`,
+          }"
+        ></div>
+
+        <section
+          class="home-guide__tooltip pointer-events-auto fixed rounded-[18px] bg-white px-5 pb-5 pt-4 shadow-[0_16px_42px_rgba(13,35,47,0.26)]"
+          :class="`home-guide__tooltip--arrow-${guideArrowPosition}`"
+          :style="guideTooltipStyle"
+        >
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] font-extrabold text-[var(--color-brand-primary)]">
+                {{ guideStepIndex + 1 }}/{{ guideSteps.length }} · {{ currentGuideStep.eyebrow }}
+              </span>
+              <button
+                class="-mr-2 ml-auto grid size-8 shrink-0 place-items-center rounded-full border-0 bg-transparent text-[#8b9aa2] active:bg-[#f0f4f6]"
+                type="button"
+                aria-label="사용 안내 닫기"
+                @click="closeGuide"
+              >
+                <X :size="17" />
+              </button>
+            </div>
+            <h2 id="home-guide-title" class="mt-3 text-[17px] font-extrabold tracking-[-0.03em]">
+              {{ currentGuideStep.title }}
+            </h2>
+            <p class="mt-1.5 text-[12px] leading-5 text-[var(--color-text-secondary)]">
+              {{ currentGuideStep.description }}
+            </p>
+
+            <div class="mt-4 flex justify-end gap-2">
+              <button
+                v-if="guideStepIndex > 0"
+                class="grid size-9 shrink-0 place-items-center rounded-xl border border-[#dce7ed] bg-white text-[var(--color-text-secondary)]"
+                type="button"
+                aria-label="이전 안내"
+                @click="previousGuideStep"
+              >
+                <ChevronLeft :size="22" />
+              </button>
+              <button
+                class="min-h-9 rounded-xl border-0 bg-[var(--color-brand-primary)] px-5 text-[12px] font-extrabold text-white active:opacity-90"
+                type="button"
+                @click="nextGuideStep"
+              >
+                {{ guideStepIndex === guideSteps.length - 1 ? '시작하기' : '다음' }}
+              </button>
+            </div>
+            <div
+              class="pointer-events-none absolute bottom-[35px] left-1/2 flex -translate-x-1/2 gap-1.5"
+              aria-hidden="true"
+            >
+              <span
+                v-for="(_, index) in guideSteps"
+                :key="index"
+                class="size-1.5 rounded-full transition-colors"
+                :class="index === guideStepIndex ? 'bg-[var(--color-brand-primary)]' : 'bg-[#dce5ea]'"
+              />
+            </div>
+        </section>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
+.home-guide-enter-active,
+.home-guide-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.home-guide-enter-from,
+.home-guide-leave-to {
+  opacity: 0;
+}
+
+.home-guide__spotlight {
+  z-index: 1;
+  border: 2px solid rgb(255 255 255 / 92%);
+  box-shadow: 0 0 0 9999px rgb(25 34 40 / 68%);
+  pointer-events: none;
+  transition: top 220ms ease, left 220ms ease, width 220ms ease, height 220ms ease;
+}
+
+.home-guide__tooltip {
+  z-index: 2;
+}
+
+.home-guide__tooltip::before {
+  position: absolute;
+  left: var(--guide-arrow-left, 50%);
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  content: '';
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.home-guide__tooltip--arrow-top::before {
+  top: -7px;
+}
+
+.home-guide__tooltip--arrow-bottom::before {
+  bottom: -7px;
+}
+
 .home-shell {
   background: linear-gradient(180deg, #eef9ff 0%, #f6fbfe 58%, #eef9ff 100%);
 }

@@ -12,9 +12,11 @@ import { resolveCurrentChildId } from '@/api/context'
 const router = useRouter()
 const { showToast } = useToast()
 const accountAction = ref<'logout' | 'withdrawal' | null>(null)
+const isProfileLoading = ref(true)
 
-const profileName = ref('보호자')
-const childName = ref('아이')
+const profileName = ref('')
+const childName = ref('')
+const childAgeText = ref('')
 const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; color: string }>>([])
 
 const serviceMenus = [
@@ -60,6 +62,7 @@ onMounted(async () => {
       api.getFamilyMembersUsingGET(selectedChildId),
     ])
     childName.value = child.name ?? '아이'
+    childAgeText.value = typeof child.age === 'number' ? `${child.age}세` : '나이 정보 없음'
     familyMembers.value = (guardians.items ?? []).map((member, index) => ({
       id: member.member_id ?? index,
       name: member.name ?? '보호자',
@@ -69,6 +72,8 @@ onMounted(async () => {
     }))
   } catch (error) {
     showToast(getApiErrorMessage(error, '마이페이지 정보를 불러오지 못했습니다.'), 'error')
+  } finally {
+    isProfileLoading.value = false
   }
 })
 </script>
@@ -77,7 +82,28 @@ onMounted(async () => {
   <main class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] px-5 pt-5 pb-5 text-[var(--color-text-primary)]">
     <h1 class="sr-only">마이페이지</h1>
 
-    <section class="overflow-hidden rounded-[28px] border border-[#cfe8f3] bg-[#eaf8fe] p-5">
+    <section class="min-h-[200px] overflow-hidden rounded-[28px] border border-[#cfe8f3] bg-[#eaf8fe] p-5">
+      <div v-if="isProfileLoading" aria-label="프로필 정보를 불러오는 중" aria-busy="true">
+        <div class="flex items-start gap-4">
+          <span class="size-15 shrink-0 animate-pulse rounded-full bg-white/80"></span>
+          <span class="min-w-0 flex-1 pt-1">
+            <span class="block h-3 w-16 animate-pulse rounded-full bg-[#d7edf6]"></span>
+            <span class="mt-2 block h-6 w-28 animate-pulse rounded-lg bg-[#d7edf6]"></span>
+            <span class="mt-2 block h-3 w-40 animate-pulse rounded-full bg-[#d7edf6]"></span>
+          </span>
+          <span class="h-8 w-14 shrink-0 animate-pulse rounded-full bg-white/80"></span>
+        </div>
+        <div class="mt-5 flex items-center gap-3 rounded-[20px] bg-white p-3.5">
+          <span class="size-13 shrink-0 animate-pulse rounded-full bg-[#edf4f7]"></span>
+          <span class="min-w-0 flex-1">
+            <span class="block h-3 w-12 animate-pulse rounded-full bg-[#e3ebef]"></span>
+            <span class="mt-2 block h-5 w-24 animate-pulse rounded-md bg-[#e3ebef]"></span>
+          </span>
+          <span class="h-3 w-14 shrink-0 animate-pulse rounded-full bg-[#e3ebef]"></span>
+        </div>
+      </div>
+
+      <template v-else>
       <div class="flex items-start gap-4">
         <span class="grid size-15 shrink-0 place-items-center rounded-full bg-white text-[var(--color-selected-text)]">
           <UserRound :size="28" :stroke-width="2" />
@@ -100,16 +126,18 @@ onMounted(async () => {
           <img class="size-full object-cover" :src="childProfileUrl" :alt="`${childName} 프로필`" />
         </span>
         <span class="min-w-0 flex-1">
-          <span class="block text-[11px] font-semibold text-[var(--color-text-secondary)]">함께 관리 중인 아이</span>
+          <span class="block text-[11px] font-semibold text-[var(--color-text-secondary)]">
+            {{ childAgeText }}
+          </span>
           <strong class="mt-0.5 block text-[16px]">{{ childName }}</strong>
         </span>
-        <span class="text-right">
-          <span class="block text-xs font-semibold text-[var(--color-text-secondary)]">12세</span>
-          <span class="mt-1 inline-flex items-center text-[11px] font-bold text-[var(--color-selected-text)]">
-            정보 수정 <ChevronRight :size="13" />
-          </span>
+        <span
+          class="inline-flex shrink-0 items-center self-center text-[11px] font-bold text-[var(--color-selected-text)]"
+        >
+          정보 수정 <ChevronRight :size="13" />
         </span>
       </RouterLink>
+      </template>
     </section>
 
     <section class="mt-6">
@@ -125,7 +153,22 @@ onMounted(async () => {
       </div>
 
       <div class="family-scroll" aria-label="우리 가족 목록">
+        <template v-if="isProfileLoading">
+          <div
+            v-for="index in 2"
+            :key="`family-skeleton-${index}`"
+            class="family-card flex shrink-0 snap-start items-center gap-3 rounded-[16px] border border-[#d9e2e7] bg-white p-3"
+            aria-hidden="true"
+          >
+            <span class="size-10 shrink-0 animate-pulse rounded-full bg-[#edf3f6]"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block h-3.5 w-16 animate-pulse rounded-full bg-[#e5ecef]"></span>
+              <span class="mt-2 block h-2.5 w-10 animate-pulse rounded-full bg-[#edf2f4]"></span>
+            </span>
+          </div>
+        </template>
         <div
+          v-else
           v-for="member in familyMembers"
           :key="member.id"
           class="family-card flex shrink-0 snap-start items-center gap-3 rounded-[16px] border border-[#d9e2e7] bg-white p-3"
@@ -269,6 +312,7 @@ onMounted(async () => {
 
 .family-scroll {
   display: flex;
+  min-height: 76px;
   gap: 12px;
   margin-right: -20px;
   padding-right: 20px;
