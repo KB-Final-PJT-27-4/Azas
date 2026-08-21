@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Baby,
   CalendarClock,
@@ -16,8 +16,9 @@ import { useRoute } from 'vue-router'
 import AssetTransferResultSheet from '@/components/assets/AssetTransferResultSheet.vue'
 import AssetTransferSheet from '@/components/assets/AssetTransferSheet.vue'
 import AutoTransferSheet from '@/components/assets/AutoTransferSheet.vue'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
-import { deletedLinkedAssetAccountIds } from '@/data/assetDummyData'
 
 type AccountType = '적금' | '입출금'
 type AssetsTab = 'accounts' | 'autoTransfers'
@@ -59,63 +60,12 @@ type AutoTransferSheetData = {
 const route = useRoute()
 const { showToast } = useToast()
 const activeAssetsTab = ref<AssetsTab>('accounts')
+const isLoading = ref(true)
 
-const allAccountGroups: AccountGroup[] = [
-  {
-    id: 'parent',
-    title: '부모 계좌',
-    accounts: [
-      {
-        id: 'parent-saving-1',
-        name: '아이사랑적금1',
-        accountNumber: '952-17362605-43',
-        balance: 4_800_000,
-        type: '적금',
-      },
-      {
-        id: 'parent-saving-2',
-        name: '아이사랑적금2',
-        accountNumber: '952-17362605-44',
-        balance: 4_800_000,
-        type: '적금',
-      },
-      {
-        id: 'parent-account-1',
-        name: '아이사랑통장',
-        accountNumber: '952-17362605-45',
-        balance: 5_000_000,
-        type: '입출금',
-      },
-    ],
-  },
-  {
-    id: 'child',
-    title: '자녀 계좌',
-    accounts: [
-      {
-        id: 'child-saving-1',
-        name: '아이사랑적금1',
-        accountNumber: '952-17362605-46',
-        balance: 9_600_000,
-        type: '적금',
-      },
-      {
-        id: 'child-account-1',
-        name: '아이사랑통장',
-        accountNumber: '952-17362605-47',
-        balance: 5_000_000,
-        type: '입출금',
-      },
-    ],
-  },
-]
+const currentChildId = ref<number | null>(null)
+const accountGroups = ref<AccountGroup[]>([])
 
-const accountGroups = allAccountGroups.map((group) => ({
-  ...group,
-  accounts: group.accounts.filter(({ id }) => !deletedLinkedAssetAccountIds.has(id)),
-}))
-
-const accountOptions = accountGroups.flatMap((group) =>
+const accountOptions = computed(() => accountGroups.value.flatMap((group) =>
   group.accounts.map((account) => ({
     id: account.id,
     label: account.name,
@@ -125,36 +75,15 @@ const accountOptions = accountGroups.flatMap((group) =>
     balance: account.balance,
     type: account.type,
   })),
+))
+const defaultSourceAccount = computed(() =>
+  accountOptions.value.find(({ type }) => type === '입출금') ?? accountOptions.value[0],
 )
-const defaultSourceAccount =
-  accountOptions.find(({ type }) => type === '입출금') ?? accountOptions[0]!
-const defaultTargetAccount =
-  accountOptions.find(({ type }) => type === '적금') ?? accountOptions[0]!
+const defaultTargetAccount = computed(() =>
+  accountOptions.value.find(({ type }) => type === '적금') ?? accountOptions.value[0],
+)
 
-const autoTransfers = ref<AutoTransfer[]>([
-  {
-    id: 'saving-transfer',
-    title: '적금 자동저축',
-    sourceAccountId: 'parent-account-1',
-    sourceAccount: '아이사랑통장',
-    targetAccountId: 'parent-saving-1',
-    targetAccount: '아이사랑적금1',
-    amount: 200_000,
-    transferDay: 20,
-    enabled: true,
-  },
-  {
-    id: 'allowance-transfer',
-    title: '깨비 용돈',
-    sourceAccountId: 'parent-account-1',
-    sourceAccount: '아이사랑통장',
-    targetAccountId: 'child-account-1',
-    targetAccount: '아이사랑통장',
-    amount: 100_000,
-    transferDay: 1,
-    enabled: true,
-  },
-])
+const autoTransfers = ref<AutoTransfer[]>([])
 
 const autoTransferSheetMode = ref<'create' | 'edit'>('create')
 const selectedAutoTransferId = ref<string | null>(null)
@@ -170,8 +99,8 @@ const pendingDeleteAutoTransfer = computed(() =>
 )
 const autoTransferSheetInitialData = computed(() => ({
   title: selectedAutoTransfer.value?.title ?? '',
-  sourceAccountId: selectedAutoTransfer.value?.sourceAccountId ?? defaultSourceAccount.id,
-  targetAccountId: selectedAutoTransfer.value?.targetAccountId ?? defaultTargetAccount.id,
+  sourceAccountId: selectedAutoTransfer.value?.sourceAccountId ?? defaultSourceAccount.value?.id ?? '',
+  targetAccountId: selectedAutoTransfer.value?.targetAccountId ?? defaultTargetAccount.value?.id ?? '',
   amount: selectedAutoTransfer.value?.amount ?? 0,
   transferDay: selectedAutoTransfer.value?.transferDay ?? 1,
 }))
@@ -187,10 +116,10 @@ const isAnyTransferSheetOpen = computed(
 )
 const requestedTransferAmount = computed(() => Number(route.query.amount) || 0)
 const requestedTransferMemo = computed(() => String(route.query.memo ?? ''))
-const firstAccount = accountGroups[0]!.accounts[0]!
-const requestedTargetName = computed(() => String(route.query.targetName ?? firstAccount.name))
+const firstAccount = computed(() => accountGroups.value[0]?.accounts[0])
+const requestedTargetName = computed(() => String(route.query.targetName ?? firstAccount.value?.name ?? ''))
 const requestedTargetNumber = computed(() =>
-  String(route.query.targetNumber ?? firstAccount.accountNumber),
+  String(route.query.targetNumber ?? firstAccount.value?.accountNumber ?? ''),
 )
 
 let previousBodyOverflow = ''
@@ -256,18 +185,22 @@ const closeDeleteAutoTransferDialog = () => {
   pendingDeleteAutoTransferId.value = null
 }
 
-const deleteAutoTransfer = () => {
+const deleteAutoTransfer = async () => {
   const transfer = pendingDeleteAutoTransfer.value
   if (!transfer) return
-
-  autoTransfers.value = autoTransfers.value.filter(({ id }) => id !== transfer.id)
-  closeDeleteAutoTransferDialog()
-  showToast('자동이체를 삭제했어요.', 'success')
+  try {
+    await api.cancelScheduleUsingDELETE(Number(transfer.id))
+    autoTransfers.value = autoTransfers.value.filter(({ id }) => id !== transfer.id)
+    closeDeleteAutoTransferDialog()
+    showToast('자동이체를 삭제했어요.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자동이체를 삭제하지 못했어요.'), 'error')
+  }
 }
 
-const saveAutoTransfer = (payload: AutoTransferSheetData) => {
-  const source = accountOptions.find(({ id }) => id === payload.sourceAccountId)
-  const target = accountOptions.find(({ id }) => id === payload.targetAccountId)
+const saveAutoTransfer = async (payload: AutoTransferSheetData) => {
+  const source = accountOptions.value.find(({ id }) => id === payload.sourceAccountId)
+  const target = accountOptions.value.find(({ id }) => id === payload.targetAccountId)
   if (!source || !target) return
 
   const transferData = {
@@ -277,30 +210,141 @@ const saveAutoTransfer = (payload: AutoTransferSheetData) => {
   }
 
   if (autoTransferSheetMode.value === 'edit' && selectedAutoTransfer.value) {
-    Object.assign(selectedAutoTransfer.value, transferData)
-    isAutoTransferSheetOpen.value = false
-    showToast('자동이체를 수정했어요.', 'success')
+    try {
+      await api.updateScheduleUsingPATCH(Number(selectedAutoTransfer.value.id), {
+        action: 'UPDATE',
+        amount: payload.amount,
+        transfer_day: payload.transferDay,
+      })
+      Object.assign(selectedAutoTransfer.value, transferData)
+      isAutoTransferSheetOpen.value = false
+      showToast('자동이체를 수정했어요.', 'success')
+    } catch (error) {
+      showToast(getApiErrorMessage(error, '자동이체를 수정하지 못했어요.'), 'error')
+    }
     return
   }
 
-  autoTransfers.value.push({
-    id: `auto-transfer-${Date.now()}`,
-    ...transferData,
-    enabled: true,
-  })
-  isAutoTransferSheetOpen.value = false
-  showToast('자동이체를 등록했어요.', 'success')
+  try {
+    const { data } = await api.createScheduleUsingPOST({
+      amount: payload.amount,
+      child_id: currentChildId.value ?? undefined,
+      destination_account_id: Number(payload.targetAccountId),
+      frequency: 'MONTHLY',
+      source_account_id: Number(payload.sourceAccountId),
+      start_date: new Date().toISOString().slice(0, 10),
+      transfer_day: payload.transferDay,
+    }, undefined, crypto.randomUUID())
+    autoTransfers.value.push({
+      id: String(data.auto_transfer_schedule_id ?? ''),
+      ...transferData,
+      enabled: data.status === 'ACTIVE',
+    })
+    isAutoTransferSheetOpen.value = false
+    showToast('자동이체를 등록했어요.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자동이체를 등록하지 못했어요.'), 'error')
+  }
 }
 
-const completeTransfer = ({ success }: { success: boolean }) => {
-  isTransferSheetOpen.value = false
-  transferResult.value = success ? 'success' : 'failure'
+const completeTransfer = async ({
+  amount,
+  memo,
+  sourceAccountId,
+  targetAccountId,
+}: {
+  amount: number
+  memo: string
+  sourceAccountId: string
+  targetAccountId: string
+}) => {
+  try {
+    await api.createTransferUsingPOST(crypto.randomUUID(), {
+      amount,
+      destination_account_id: Number(targetAccountId),
+      memo,
+      source_account_id: Number(sourceAccountId),
+    })
+    isTransferSheetOpen.value = false
+    transferResult.value = 'success'
+    await loadAssets()
+  } catch {
+    isTransferSheetOpen.value = false
+    transferResult.value = 'failure'
+  }
 }
 
 const retryTransfer = () => {
   transferResult.value = null
   isTransferSheetOpen.value = true
 }
+
+const mapAccountType = (value: string): AccountType =>
+  value === 'SAVINGS' || value === 'SUBSCRIPTION' ? '적금' : '입출금'
+
+const loadAssets = async () => {
+  try {
+    currentChildId.value = await resolveCurrentChildId()
+    const [parentResponse, childResponse, scheduleResponse] = await Promise.all([
+      api.getMyAccountsUsingGET(),
+      api.getChildAccountsUsingGET(currentChildId.value),
+      api.getSchedulesUsingGET(currentChildId.value),
+    ])
+    accountGroups.value = [
+      {
+        id: 'parent',
+        title: '부모 계좌',
+        accounts: parentResponse.data.accounts.map((account) => ({
+          id: String(account.account_id),
+          name: account.account_name,
+          accountNumber: account.account_number,
+          balance: account.balance,
+          type: mapAccountType(account.account_product_type),
+        })),
+      },
+      {
+        id: 'child',
+        title: '자녀 계좌',
+        accounts: childResponse.data.accounts.map((account) => ({
+          id: String(account.account_id),
+          name: account.account_name,
+          accountNumber: account.account_number,
+          balance: account.balance,
+          type: mapAccountType(account.account_product_type),
+        })),
+      },
+    ]
+
+    const details = await Promise.all(
+      (scheduleResponse.data.items ?? []).map((item) =>
+        item.auto_transfer_schedule_id
+          ? api.getScheduleDetailUsingGET(item.auto_transfer_schedule_id)
+          : null,
+      ),
+    )
+    autoTransfers.value = details.flatMap((response) => {
+      if (!response) return []
+      const schedule = response.data
+      return [{
+        id: String(schedule.auto_transfer_schedule_id ?? ''),
+        title: schedule.goal_title ?? '자동이체',
+        sourceAccountId: String(schedule.source_account_id ?? ''),
+        sourceAccount: schedule.source_account_name ?? '',
+        targetAccountId: String(schedule.destination_account_id ?? ''),
+        targetAccount: schedule.destination_account_name ?? '',
+        amount: schedule.amount ?? 0,
+        transferDay: schedule.transfer_day ?? 1,
+        enabled: schedule.status === 'ACTIVE',
+      }]
+    })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자산 정보를 불러오지 못했어요.'), 'error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(loadAssets)
 </script>
 
 <template>
@@ -308,13 +352,13 @@ const retryTransfer = () => {
     class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] bg-white px-[18px] pt-4 pb-9 text-[var(--color-text-primary)]"
   >
     <div
-      class="grid grid-cols-2 rounded-[14px] border border-[var(--color-border)] bg-[#f3f7f9] p-1"
+      class="grid grid-cols-2 rounded-[13px] border border-[var(--color-border)] bg-[#f3f7f9] p-[3px]"
       role="tablist"
       aria-label="계좌 관리 목록 선택"
     >
       <button
         id="accounts-tab"
-        class="h-11 rounded-[10px] text-[13px] font-semibold transition-all"
+        class="h-10 rounded-[10px] text-xs font-semibold transition-all"
         :class="
           activeAssetsTab === 'accounts'
             ? 'bg-white text-[var(--color-selected-text)] shadow-[0_2px_8px_rgba(43,171,232,0.16)]'
@@ -330,7 +374,7 @@ const retryTransfer = () => {
       </button>
       <button
         id="auto-transfers-tab"
-        class="h-11 rounded-[10px] text-[13px] font-semibold transition-all"
+        class="h-10 rounded-[10px] text-xs font-semibold transition-all"
         :class="
           activeAssetsTab === 'autoTransfers'
             ? 'bg-white text-[var(--color-selected-text)] shadow-[0_2px_8px_rgba(43,171,232,0.16)]'
@@ -346,8 +390,41 @@ const retryTransfer = () => {
       </button>
     </div>
 
+    <div v-if="isLoading" class="mt-3 grid gap-4" aria-label="자산 정보를 불러오는 중" aria-busy="true">
+      <section
+        v-for="groupIndex in 2"
+        :key="`asset-group-skeleton-${groupIndex}`"
+        class="overflow-hidden rounded-[22px] border border-[#e2edf2] bg-white shadow-[0_8px_24px_rgba(54,112,139,0.07)]"
+        aria-hidden="true"
+      >
+        <div class="px-5 pt-[18px] pb-4" :class="groupIndex === 1 ? 'bg-[#f7fcff]' : 'bg-[#fffdf5]'">
+          <div class="flex items-center gap-3">
+            <span class="size-10 shrink-0 animate-pulse rounded-[13px] bg-[#e5eef2]"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block h-4 w-20 animate-pulse rounded-md bg-[#e1eaee]"></span>
+              <span class="mt-2 block h-3 w-24 animate-pulse rounded-full bg-[#e8eef1]"></span>
+            </span>
+            <span class="h-8 w-[82px] shrink-0 animate-pulse rounded-[10px] bg-white"></span>
+          </div>
+          <div class="mt-4 border-t border-[#e8f0f4] pt-3.5">
+            <span class="block h-3 w-10 animate-pulse rounded-full bg-[#e5ecef]"></span>
+            <span class="mt-2 block h-7 w-32 animate-pulse rounded-md bg-[#e1e9ed]"></span>
+          </div>
+        </div>
+        <div class="p-3" :class="groupIndex === 1 ? 'bg-[#f8fbfd]' : 'bg-[#fffdf5]'">
+          <div class="flex min-h-[70px] items-center gap-3 rounded-[15px] border border-[#e5edf1] bg-white px-4 py-2.5">
+            <span class="min-w-0 flex-1">
+              <span class="block h-4 w-28 animate-pulse rounded-md bg-[#e5ecef]"></span>
+              <span class="mt-2 block h-3 w-36 animate-pulse rounded-full bg-[#edf2f4]"></span>
+            </span>
+            <span class="h-4 w-20 shrink-0 animate-pulse rounded-md bg-[#e5ecef]"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <div
-      v-if="activeAssetsTab === 'accounts'"
+      v-else-if="activeAssetsTab === 'accounts'"
       id="accounts-panel"
       class="mt-3 grid gap-4"
       role="tabpanel"
@@ -400,7 +477,7 @@ const retryTransfer = () => {
               :to="group.id === 'parent' ? { name: 'Accounts' } : { name: 'ChildAccountCreate' }"
             >
               <Plus :size="13" :stroke-width="2.8" aria-hidden="true" />
-              계좌 연결
+              {{ group.id === 'parent' ? '계좌 연동' : '계좌 등록' }}
             </RouterLink>
           </div>
 
@@ -666,16 +743,19 @@ const retryTransfer = () => {
       </Transition>
     </Teleport>
 
-    <button
-      class="asset-transfer-button fixed z-[40]"
-      type="button"
-      aria-label="이체하기"
-      @click="isTransferSheetOpen = true"
-    >
-      <span class="asset-transfer-button__surface">
-        <Plus :size="23" :stroke-width="3" aria-hidden="true" />
-      </span>
-    </button>
+    <Teleport to="body">
+      <button
+        v-if="!isLoading"
+        class="asset-transfer-button fixed z-[40]"
+        type="button"
+        aria-label="이체하기"
+        @click="isTransferSheetOpen = true"
+      >
+        <span class="asset-transfer-button__surface">
+          <Plus class="-translate-y-0.5" :size="23" :stroke-width="3" aria-hidden="true" />
+        </span>
+      </button>
+    </Teleport>
 
     <AssetTransferSheet
       :open="isTransferSheetOpen"
@@ -683,6 +763,8 @@ const retryTransfer = () => {
       :target-account-number="requestedTargetNumber"
       :initial-amount="requestedTransferAmount"
       :initial-memo="requestedTransferMemo"
+      :source-accounts="accountOptions"
+      :target-accounts="accountOptions"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"
     />

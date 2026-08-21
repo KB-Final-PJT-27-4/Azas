@@ -7,14 +7,18 @@ import goalEducationIcon from '@/assets/images/goals/goals_1.png'
 import goalLumpSumIcon from '@/assets/images/goals/goal-lump-sum.png'
 import goalCloudBackground from '@/assets/images/home/home-hero-bg.png'
 import { useToast } from '@/composables/useToast'
-import { linkedAssetAccounts } from '@/data/assetDummyData'
+import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 
 interface ManagedGoal {
   id: number
   name: string
   targetAmount: number
   targetDate: string
-  accountIds: string[]
+  currentAmount: number
+  achievementRate: number
+  remainingAmount: number
+  accounts: Array<{ id: string; name: string; bankName: string; accountNumber: string; balance: number }>
 }
 
 const router = useRouter()
@@ -22,30 +26,12 @@ const { showToast } = useToast()
 const openMenuId = ref<number | null>(null)
 let previousHtmlBackground = ''
 let previousBodyBackground = ''
-const goals = ref<ManagedGoal[]>([
-  {
-    id: 1,
-    name: '대학자금',
-    targetAmount: 30_000_000,
-    targetDate: '2045-03',
-    accountIds: ['parent-saving-1', 'parent-saving-2'],
-  },
-  {
-    id: 2,
-    name: '독립자금',
-    targetAmount: 10_000_000,
-    targetDate: '2045-03',
-    accountIds: ['child-saving-1'],
-  },
-])
+const goals = ref<ManagedGoal[]>([])
 
-const connectedAccounts = (goal: ManagedGoal) =>
-  linkedAssetAccounts.filter(({ id }) => goal.accountIds.includes(id))
-const currentAmount = (goal: ManagedGoal) =>
-  connectedAccounts(goal).reduce((total, account) => total + account.balance, 0)
-const achievementRate = (goal: ManagedGoal) =>
-  Math.min((currentAmount(goal) / goal.targetAmount) * 100, 100)
-const remainingAmount = (goal: ManagedGoal) => Math.max(goal.targetAmount - currentAmount(goal), 0)
+const connectedAccounts = (goal: ManagedGoal) => goal.accounts
+const currentAmount = (goal: ManagedGoal) => goal.currentAmount
+const achievementRate = (goal: ManagedGoal) => goal.achievementRate
+const remainingAmount = (goal: ManagedGoal) => goal.remainingAmount
 
 const formatAmount = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const formatRate = (rate: number) => rate.toFixed(1).replace('.0', '')
@@ -63,10 +49,15 @@ const toggleGoalMenu = (goalId: number) => {
   openMenuId.value = openMenuId.value === goalId ? null : goalId
 }
 
-const deleteGoal = (goalId: number) => {
-  goals.value = goals.value.filter((goal) => goal.id !== goalId)
-  openMenuId.value = null
-  showToast('목표를 삭제했어요.', 'success')
+const deleteGoal = async (goalId: number) => {
+  try {
+    await api.deleteGoalUsingDELETE(goalId)
+    goals.value = goals.value.filter((goal) => goal.id !== goalId)
+    openMenuId.value = null
+    showToast('목표를 삭제했어요.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '목표를 삭제하지 못했습니다.'), 'error')
+  }
 }
 
 const addGoal = () => {
@@ -77,11 +68,33 @@ const linkGoalAccount = (goalId: number) => {
   router.push({ name: 'Goals', query: { linkGoal: goalId } })
 }
 
-onMounted(() => {
+onMounted(async () => {
   previousHtmlBackground = document.documentElement.style.backgroundColor
   previousBodyBackground = document.body.style.backgroundColor
   document.documentElement.style.backgroundColor = '#eef9fe'
   document.body.style.backgroundColor = '#eef9fe'
+  try {
+    const childId = await resolveCurrentChildId()
+    const { data } = await api.getGoalsUsingGET(childId)
+    goals.value = data.financial_goals.map((goal) => ({
+      id: goal.financial_goal_id ?? 0,
+      name: goal.title ?? '금융 목표',
+      targetAmount: goal.target_amount ?? 0,
+      targetDate: goal.target_date ?? '',
+      currentAmount: goal.current_amount ?? 0,
+      achievementRate: goal.achievement_rate ?? 0,
+      remainingAmount: goal.remaining_amount ?? 0,
+      accounts: (goal.linked_accounts ?? []).map((account) => ({
+        id: String(account.account_id ?? ''),
+        name: account.account_name ?? '연결 계좌',
+        bankName: account.bank_name ?? '',
+        accountNumber: '',
+        balance: account.balance ?? 0,
+      })),
+    }))
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '목표 목록을 불러오지 못했습니다.'), 'error')
+  }
 })
 
 onBeforeUnmount(() => {
@@ -92,7 +105,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="min-h-[calc(100dvh-var(--app-header-height))] bg-[#eef9fe] bg-cover bg-top bg-no-repeat px-[18px] pt-5 pb-10 text-[var(--color-text-primary)]"
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] bg-[#eef9fe] bg-cover bg-top bg-no-repeat px-[18px] pt-5 pb-10 text-[var(--color-text-primary)]"
     :style="{
       backgroundImage: `linear-gradient(rgba(247, 250, 252, 0.28), rgba(247, 250, 252, 0.42)), url(${goalCloudBackground})`,
     }"

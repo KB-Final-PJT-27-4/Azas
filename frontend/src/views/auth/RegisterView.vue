@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Baby, CalendarDays, ShieldCheck, UserRound } from 'lucide-vue-next'
+import { Baby, UserRound } from 'lucide-vue-next'
 import { BaseDatePicker } from '@/components/common'
 import logoPigUrl from '@/assets/images/login/logo-pig.png'
+import type { FamilyInvitationInfoResponse } from '@/api/generated'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 import {
   loadRegistrationDraft,
   saveRegistrationDraft,
@@ -13,12 +16,18 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+const { showToast } = useToast()
 
-// 기본: /register, 공동 보호자 초대: /register?invited=true
-const isGuardianInvitation = computed(() => route.query.invited === 'true')
+const props = defineProps<{
+  invitation?: FamilyInvitationInfoResponse
+  inviteToken?: string
+}>()
+
+// 기본 가입은 /register, 공동 보호자 초대는 /family-invitations/:inviteToken에서 전달됩니다.
+const isGuardianInvitation = computed(() => props.invitation?.invitee_type === 'PARENT')
 const isEditing = computed(() => route.query.edit === 'true')
 
-const inviterName = ref('김하나')
+const inviterName = computed(() => props.invitation?.inviter_name ?? '')
 const guardianRoles: { label: string; value: GuardianRole }[] = [
   { label: '부', value: 'father' },
   { label: '모', value: 'mother' },
@@ -34,20 +43,41 @@ const savedDraft = isEditing.value ? loadRegistrationDraft() : null
 
 const form = reactive({
   guardianRole: savedDraft?.guardianRole ?? ('father' as GuardianRole),
-  childName: savedDraft?.childName ?? (isGuardianInvitation.value ? '김깨비' : ''),
-  birthDate: savedDraft?.birthDate ?? (isGuardianInvitation.value ? '2025-07-15' : ''),
+  childName: savedDraft?.childName ?? (isGuardianInvitation.value ? (props.invitation?.child_name ?? '') : ''),
+  birthDate: savedDraft?.birthDate ?? '',
   gender: savedDraft?.gender ?? ('male' as ChildGender),
 })
 
-const isSubmitDisabled = computed(() => !form.childName.trim() || !form.birthDate.trim())
+const isSubmitDisabled = computed(() =>
+  isGuardianInvitation.value
+    ? !form.childName.trim()
+    : !form.childName.trim() || !form.birthDate.trim(),
+)
 
-const submitRegistration = () => {
+const submitRegistration = async () => {
   if (isSubmitDisabled.value) return
 
   saveRegistrationDraft({ ...form, invited: isGuardianInvitation.value })
 
-  // TODO: 회원가입 또는 공동 보호자 초대 수락 API 연결
-  router.push({ name: isGuardianInvitation.value ? 'Login' : 'Onboarding' })
+  try {
+    if (isGuardianInvitation.value && props.inviteToken) {
+      await api.acceptFamilyInvitationUsingPOST(props.inviteToken, undefined, {
+        relation_type: form.guardianRole.toUpperCase() as 'FATHER' | 'MOTHER' | 'GUARDIAN',
+      })
+      await router.push({ name: 'Home' })
+      return
+    }
+    await api.createChildUsingPOST({
+      name: form.childName.trim(),
+      birth_date: form.birthDate,
+      birth_status: 'BORN',
+      gender: form.gender.toUpperCase() as 'MALE' | 'FEMALE' | 'UNKNOWN',
+      relation_type: form.guardianRole.toUpperCase() as 'FATHER' | 'MOTHER' | 'GUARDIAN',
+    })
+    await router.push({ name: 'Onboarding' })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '가족 정보를 등록하지 못했습니다.'), 'error')
+  }
 }
 
 const declineInvitation = () => router.push({ name: 'Login' })
@@ -68,13 +98,13 @@ const declineInvitation = () => router.push({ name: 'Login' })
       </strong>
     </header>
 
-    <form class="flex flex-1 flex-col px-5 pt-1 pb-[max(24px,env(safe-area-inset-bottom))]" @submit.prevent="submitRegistration">
+    <form class="flex flex-1 flex-col px-5 pt-3 pb-[max(24px,env(safe-area-inset-bottom))]" @submit.prevent="submitRegistration">
       <section aria-labelledby="register-title">
         <template v-if="isGuardianInvitation">
-          <h1 id="register-title" class="mt-5 break-keep text-[27px] leading-[1.35] font-extrabold tracking-[-0.04em]">
+          <h1 id="register-title" class="break-keep text-[30px] leading-[1.35] font-bold tracking-[-0.04em]">
             <span class="text-[var(--color-selected-text)]">{{ inviterName }}</span>님이<br />공동 보호자로 초대했어요
           </h1>
-          <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
+          <p class="mt-3 text-base text-[var(--color-text-secondary)]">
             가족 정보를 확인하고 깨비와 함께할 관계를 선택해주세요.
           </p>
         </template>
@@ -90,11 +120,11 @@ const declineInvitation = () => router.push({ name: 'Login' })
       </section>
 
       <template v-if="isGuardianInvitation">
-        <section class="mt-6" aria-labelledby="inviter-info-title">
+        <section class="mt-10" aria-labelledby="inviter-info-title">
           <div class="mb-3 flex items-center justify-between">
             <h2 id="inviter-info-title" class="text-base font-bold">초대한 보호자</h2>
           </div>
-          <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
+          <article class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <div class="flex items-center gap-4">
               <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
                 <UserRound :size="27" :stroke-width="2.1" aria-hidden="true" />
@@ -104,26 +134,17 @@ const declineInvitation = () => router.push({ name: 'Login' })
                   <strong class="text-lg">{{ inviterName }}</strong>
                   <span class="rounded-full bg-[#eaf8ff] px-2 py-1 text-[10px] font-bold text-[var(--color-selected-text)]">대표 보호자</span>
                 </div>
-                <dl class="mt-2 grid gap-1.5 text-xs">
-                  <div class="grid grid-cols-[56px_1fr] items-center">
-                    <dt class="text-[var(--color-text-secondary)]">관계</dt>
-                    <dd class=" text-[var(--color-text-secondary)]">부</dd>
-                  </div>
-                  <div class="grid grid-cols-[56px_1fr] items-center">
-                    <dt class="text-[var(--color-text-secondary)]">연락처</dt>
-                    <dd class="text-[var(--color-text-secondary)]">010-1234-5678</dd>
-                  </div>
-                </dl>
+                <p class="mt-2 text-xs text-[var(--color-text-secondary)]">가족 초대를 보냈어요</p>
               </div>
             </div>
           </article>
         </section>
 
-        <section class="mt-5" aria-labelledby="invited-child-title">
+        <section class="mt-8" aria-labelledby="invited-child-title">
           <div class="mb-3 flex items-center justify-between">
             <h2 id="invited-child-title" class="text-base font-bold">함께 관리할 아이</h2>
           </div>
-          <article class="rounded-[20px] border border-[#d9eaf2] bg-white p-4">
+          <article class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <div class="flex items-center gap-4">
               <span class="grid size-14 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
                 <Baby :size="28" :stroke-width="2.1" aria-hidden="true" />
@@ -132,33 +153,24 @@ const declineInvitation = () => router.push({ name: 'Login' })
                 <div class="flex items-center gap-2">
                   <strong class="text-lg">{{ form.childName }}</strong>
                 </div>
-                <dl class="mt-2 grid gap-1.5 text-xs text-[var(--color-text-secondary)]">
-                  <div class="grid grid-cols-[56px_1fr] items-center">
-                    <dt>생년월일</dt>
-                    <dd>{{ form.birthDate.replaceAll('-', '.') }}</dd>
-                  </div>
-                  <div class="grid grid-cols-[56px_1fr] items-center">
-                    <dt>성별</dt>
-                    <dd>{{ genderOptions.find(({ value }) => value === form.gender)?.label }}</dd>
-                  </div>
-                </dl>
+                <p class="mt-2 text-xs text-[var(--color-text-secondary)]">함께 관리할 아이</p>
               </div>
             </div>
           </article>
         </section>
 
-        <fieldset class="mt-5">
+        <fieldset class="mt-8">
           <legend class="mb-3 text-base font-bold">본인 정보</legend>
           <p class="-mt-2 mb-3 text-xs text-[var(--color-text-secondary)]">아이와의 관계를 선택해주세요.</p>
           <div class="grid grid-cols-3 gap-3">
             <button
               v-for="role in guardianRoles"
               :key="role.value"
-              class="h-12 rounded-xl border text-sm font-bold transition-colors"
+              class="h-14 rounded-xl text-lg font-bold transition-colors"
               :class="
                 form.guardianRole === role.value
-                  ? 'border-[var(--color-brand-primary)] bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
-                  : 'border-[var(--color-border)] bg-white text-[var(--color-text-secondary)]'
+                  ? 'bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+                  : 'bg-[var(--color-unselected-background)] text-[var(--color-unselected-text)]'
               "
               type="button"
               :aria-pressed="form.guardianRole === role.value"
@@ -171,14 +183,14 @@ const declineInvitation = () => router.push({ name: 'Login' })
 
         <div class="mt-auto grid grid-cols-2 gap-3 pt-7">
           <button
-            class="h-14 rounded-2xl border border-[var(--color-border)] bg-white text-base font-bold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
+            class="h-14 rounded-xl border border-[var(--color-border)] bg-white text-lg font-bold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
             type="button"
             @click="declineInvitation"
           >
             거절하기
           </button>
           <button
-            class="h-14 rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
+            class="h-14 rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] active:bg-[var(--color-brand-primary-pressed)]"
             type="submit"
           >
             수락하기
@@ -252,14 +264,15 @@ const declineInvitation = () => router.push({ name: 'Login' })
         </fieldset>
       </div>
 
-      <button
-        v-if="!isGuardianInvitation"
-        class="mt-auto h-14 rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
-        type="submit"
-        :disabled="isSubmitDisabled"
-      >
-        다음
-      </button>
+      <div v-if="!isGuardianInvitation" class="mt-auto pt-8">
+        <button
+          class="h-14 w-full rounded-xl bg-[var(--color-brand-primary)] text-lg font-bold text-[var(--color-text-inverse)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
+          type="submit"
+          :disabled="isSubmitDisabled"
+        >
+          다음
+        </button>
+      </div>
     </form>
   </main>
 </template>

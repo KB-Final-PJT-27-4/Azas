@@ -1,15 +1,26 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { Pencil } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
-import { getAssetTransaction } from '@/data/assetDummyData'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
-const transaction = computed(() => getAssetTransaction(String(route.params.transactionId ?? '1')))
+const { showToast } = useToast()
+const transaction = ref({
+  accountLabel: '',
+  amount: 0,
+  depositName: '',
+  depositAccountNumber: '',
+  withdrawalName: '',
+  withdrawalAccountNumber: '',
+  transactedAt: '',
+  balanceAfterTransaction: 0,
+})
 
-const memo = ref(transaction.value.memo)
+const memo = ref('')
 const memoDraft = ref(memo.value)
 const isEditingMemo = ref(false)
 const memoInput = ref<HTMLTextAreaElement | null>(null)
@@ -39,6 +50,32 @@ const updateMemoDraft = (event: Event) => {
 const goToAccount = () =>
   router.push({ name: 'AssetDetail', params: { assetId: String(route.params.assetId) } })
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')} 원`
+
+const loadTransaction = async () => {
+  try {
+    const [transactionResponse, accountResponse] = await Promise.all([
+      api.getTransactionDetailUsingGET(Number(route.params.transactionId)),
+      api.getAccountDetailUsingGET(Number(route.params.assetId)),
+    ])
+    const detail = transactionResponse.data
+    transaction.value = {
+      accountLabel: accountResponse.data.account_name,
+      amount: detail.amount,
+      depositName: detail.deposit_account.account_name ?? detail.deposit_account.bank_name ?? '',
+      depositAccountNumber: detail.deposit_account.account_number ?? '',
+      withdrawalName: detail.withdrawal_account.account_name ?? detail.withdrawal_account.bank_name ?? '',
+      withdrawalAccountNumber: detail.withdrawal_account.account_number ?? '',
+      transactedAt: new Date(detail.occurred_at).toLocaleString('ko-KR'),
+      balanceAfterTransaction: detail.balance_after ?? 0,
+    }
+    memo.value = detail.memo ?? ''
+    memoDraft.value = memo.value
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '거래 상세를 불러오지 못했어요.'), 'error')
+  }
+}
+
+onMounted(loadTransaction)
 </script>
 
 <template>
