@@ -85,6 +85,30 @@ class DatabaseSchemaConsistencyTest {
         assertTrue(transferMapper.contains("financial_goal_account"));
     }
 
+    @Test
+    void schemaAndSeedContainFourStageGoalAmountRecommendations()
+            throws Exception {
+        String schema = normalize(readResource("db/schema.sql"));
+        String seed = normalize(readResource("db/seed.sql"));
+
+        assertTrue(schema.contains(
+                "CREATE TABLE financial_goal_recommendation_basis"
+        ));
+        assertTrue(schema.contains(
+                "CREATE TABLE financial_goal_amount_recommendation"
+        ));
+        assertTrue(schema.contains(
+                "'STARTER', 'BALANCED', 'SECURE', 'LIFECYCLE'"
+        ));
+        assertTrue(seed.contains("7106500"));
+        assertTrue(seed.contains("333000000"));
+        assertTrue(seed.contains("21010000"));
+        assertTrue(seed.contains("130790000"));
+        assertTrue(seed.contains(
+                "'LIFECYCLE', '생애주기 준비안', 300000000"
+        ));
+    }
+
     private String normalize(String value) {
         return value.replaceAll("\\s+", " ");
     }

@@ -30,6 +30,8 @@ TRUNCATE TABLE allowance_request;
 TRUNCATE TABLE family_invitation;
 TRUNCATE TABLE child_parent;
 TRUNCATE TABLE child;
+TRUNCATE TABLE financial_goal_amount_recommendation;
+TRUNCATE TABLE financial_goal_recommendation_basis;
 TRUNCATE TABLE financial_goal_template;
 TRUNCATE TABLE refresh_token;
 TRUNCATE TABLE social_account;
@@ -75,6 +77,87 @@ INSERT INTO financial_goal_template (
   (2, '주거자금', '내 집 마련을 위한 자금', 'house', 2, 1, 1, NULL),
   (4, '결혼자금', '미래 자녀의 결혼을 위한 자금', 'hearts', 3, 1, 1, NULL),
   (3, '목돈 마련', '아이의 미래를 위한 든든한 목돈', 'coins', 4, 1, 1, NULL);
+
+INSERT INTO financial_goal_recommendation_basis (
+  financial_goal_recommendation_basis_id,
+  financial_goal_template_id,
+  recommendation_method,
+  organization,
+  dataset_name,
+  reference_year,
+  metric_name,
+  metric_value,
+  metric_unit,
+  source_url,
+  description,
+  disclaimer
+) VALUES
+  (1, 1, 'STATISTICS_REFERENCE',
+   '교육부·한국대학교육협의회',
+   '2025년 4월 대학정보공시 분석 결과',
+   2025,
+   '4년제 일반·교육대학 1인당 연평균 등록금',
+   7106500,
+   '원/년',
+   'https://www.moe.go.kr/boardCnts/viewRenew.do?boardID=294&boardSeq=103257&lev=0&m=020402&opType=N',
+   '연평균 등록금 7,106,500원의 4년치 28,426,000원을 기본 근거로 교육·생활·사회초년 비용을 단계별로 구성했습니다.',
+   '공공 통계를 참고한 서비스 추천금액이며 실제 대학과 생활 방식에 따른 비용 또는 목표 달성을 보장하지 않습니다.'),
+  (2, 2, 'STATISTICS_REFERENCE',
+   '국가데이터처',
+   '2024년 주택소유통계',
+   2024,
+   '주택 소유 가구 평균 주택 자산가액',
+   333000000,
+   '원',
+   'https://www.kostat.go.kr/board.es?act=view&bid=11471&list_no=439298&mid=a10301100400',
+   '평균 주택 자산가액 333,000,000원은 지역 편차가 커 직접 목표로 쓰지 않고 계약금·보증금·주택 구입 종잣돈 단계의 참고값으로 사용했습니다.',
+   '주택 전체 구매가격이 아닌 초기 주거 종잣돈 참고값이며 실제 지역과 주택 유형에 따라 크게 달라질 수 있습니다.'),
+  (3, 4, 'STATISTICS_REFERENCE',
+   '한국소비자원',
+   '2025년 4월 결혼서비스 가격조사',
+   2025,
+   '전국 결혼서비스 평균 계약금액',
+   21010000,
+   '원',
+   'https://www.kca.go.kr/webzine/board/view?div=kca_2507&linkId=868&menuId=MENU00307',
+   '결혼식장과 스드메 평균 계약금액 21,010,000원을 시작 근거로 신혼여행·가전·초기 생활비를 단계별로 더했습니다.',
+   '주거비가 제외된 결혼서비스 조사에 서비스 시나리오를 더한 참고값이며 실제 결혼 비용을 보장하지 않습니다.'),
+  (4, 3, 'STATISTICS_REFERENCE',
+   '통계청',
+   '2024년 가계금융복지조사',
+   2024,
+   '가구주 39세 이하 가구 평균 금융자산',
+   130790000,
+   '원',
+   'https://www.kostat.go.kr/board.es?act=view&bid=215&list_no=434107&mid=a10301010000',
+   '39세 이하 가구 평균 금융자산 130,790,000원은 자녀 개인 평균이 아니므로 규모 검토에만 참고해 장기 종잣돈을 단계별로 구성했습니다.',
+   '가구 단위 금융자산을 참고한 서비스 추천금액이며 자녀 개인의 미래 자산 또는 수익을 보장하지 않습니다.');
+
+INSERT INTO financial_goal_amount_recommendation (
+  financial_goal_amount_recommendation_id,
+  financial_goal_template_id,
+  recommendation_code,
+  title,
+  target_amount,
+  coverage_items,
+  display_order
+) VALUES
+  (1, 1, 'STARTER', '시작 준비안', 30000000, '4년 등록금 중심|교재 및 학습비 일부', 1),
+  (2, 1, 'BALANCED', '균형 준비안', 50000000, '등록금|생활비|취업 준비비', 2),
+  (3, 1, 'SECURE', '든든 준비안', 70000000, '등록금|생활비|교환학생 또는 추가 교육비', 3),
+  (4, 1, 'LIFECYCLE', '생애주기 준비안', 100000000, '등록금|생활비|주거비|사회초년 자금', 4),
+  (5, 2, 'STARTER', '시작 준비안', 50000000, '청약 계약금|초기 보증금', 1),
+  (6, 2, 'BALANCED', '균형 준비안', 100000000, '전월세 보증금|주택 구입 종잣돈', 2),
+  (7, 2, 'SECURE', '든든 준비안', 200000000, '주택 구입 종잣돈|이사 및 정착 비용', 3),
+  (8, 2, 'LIFECYCLE', '생애주기 준비안', 300000000, '주택 구입 종잣돈|장기 주거 안정 자금', 4),
+  (9, 4, 'STARTER', '시작 준비안', 20000000, '예식|신혼여행', 1),
+  (10, 4, 'BALANCED', '균형 준비안', 30000000, '예식|신혼여행|가전', 2),
+  (11, 4, 'SECURE', '든든 준비안', 50000000, '예식|가전|신혼생활', 3),
+  (12, 4, 'LIFECYCLE', '생애주기 준비안', 80000000, '예식|가전|신혼생활|주거 종잣돈', 4),
+  (13, 3, 'STARTER', '시작 준비안', 30000000, '비상금|첫 종잣돈', 1),
+  (14, 3, 'BALANCED', '균형 준비안', 50000000, '교육|취업 준비|독립 준비', 2),
+  (15, 3, 'SECURE', '든든 준비안', 100000000, '교육|독립 준비|장기 자산 기반', 3),
+  (16, 3, 'LIFECYCLE', '생애주기 준비안', 200000000, '교육|독립|주거 종잣돈|장기 자산', 4);
 
 INSERT INTO child (
   child_id,

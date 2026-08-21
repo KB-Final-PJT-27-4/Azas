@@ -38,6 +38,8 @@ DROP TABLE IF EXISTS allowance_request;
 DROP TABLE IF EXISTS family_invitation;
 DROP TABLE IF EXISTS child_parent;
 DROP TABLE IF EXISTS child;
+DROP TABLE IF EXISTS financial_goal_amount_recommendation;
+DROP TABLE IF EXISTS financial_goal_recommendation_basis;
 DROP TABLE IF EXISTS financial_goal_template;
 DROP TABLE IF EXISTS refresh_token;
 DROP TABLE IF EXISTS social_account;
@@ -148,6 +150,60 @@ CREATE TABLE financial_goal_template
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='적금 목표 템플릿';
+
+CREATE TABLE financial_goal_recommendation_basis
+(
+    financial_goal_recommendation_basis_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '추천 기준 ID',
+    financial_goal_template_id             BIGINT UNSIGNED NOT NULL COMMENT '목표 템플릿 ID',
+    recommendation_method                  VARCHAR(30)     NOT NULL COMMENT 'STATISTICS_REFERENCE, SERVICE_SCENARIO',
+    organization                           VARCHAR(200)    NULL COMMENT '통계 제공 기관',
+    dataset_name                           VARCHAR(300)    NULL COMMENT '참고 데이터셋명',
+    reference_year                         SMALLINT UNSIGNED NULL COMMENT '통계 기준연도',
+    metric_name                            VARCHAR(200)    NULL COMMENT '참고 지표명',
+    metric_value                           DECIMAL(19, 2)  NULL COMMENT '참고 지표값',
+    metric_unit                            VARCHAR(50)     NULL COMMENT '참고 지표 단위',
+    source_url                             VARCHAR(1000)   NULL COMMENT '공식 출처 URL',
+    description                            VARCHAR(1000)   NOT NULL COMMENT '추천 산정 기준 설명',
+    disclaimer                             VARCHAR(1000)   NOT NULL COMMENT '추천 금액 유의사항',
+    created_at                             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                             DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    PRIMARY KEY (financial_goal_recommendation_basis_id),
+    UNIQUE KEY uk_goal_recommendation_basis_template (financial_goal_template_id),
+    CONSTRAINT fk_goal_recommendation_basis_template
+        FOREIGN KEY (financial_goal_template_id)
+            REFERENCES financial_goal_template (financial_goal_template_id),
+    CONSTRAINT ck_goal_recommendation_method CHECK (
+        recommendation_method IN ('STATISTICS_REFERENCE', 'SERVICE_SCENARIO')
+    )
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='목표별 추천 금액 통계·서비스 기준';
+
+CREATE TABLE financial_goal_amount_recommendation
+(
+    financial_goal_amount_recommendation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '추천 금액 ID',
+    financial_goal_template_id              BIGINT UNSIGNED NOT NULL COMMENT '목표 템플릿 ID',
+    recommendation_code                     VARCHAR(30)     NOT NULL COMMENT 'STARTER, BALANCED, SECURE, LIFECYCLE',
+    title                                   VARCHAR(100)    NOT NULL COMMENT '추천안 표시명',
+    target_amount                           DECIMAL(19, 2)  NOT NULL COMMENT '추천 목표 금액',
+    coverage_items                          VARCHAR(1000)   NOT NULL COMMENT '포함 범위, | 구분',
+    display_order                           INT             NOT NULL COMMENT '표시 순서',
+    is_active                               TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '노출 여부',
+    created_at                              DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
+    updated_at                              DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
+    PRIMARY KEY (financial_goal_amount_recommendation_id),
+    UNIQUE KEY uk_goal_amount_recommendation_code (financial_goal_template_id, recommendation_code),
+    KEY idx_goal_amount_recommendation_display (financial_goal_template_id, is_active, display_order),
+    CONSTRAINT fk_goal_amount_recommendation_template
+        FOREIGN KEY (financial_goal_template_id)
+            REFERENCES financial_goal_template (financial_goal_template_id),
+    CONSTRAINT ck_goal_amount_recommendation_amount CHECK (target_amount > 0),
+    CONSTRAINT ck_goal_amount_recommendation_code CHECK (
+        recommendation_code IN ('STARTER', 'BALANCED', 'SECURE', 'LIFECYCLE')
+    )
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='목표별 4단계 생애주기 추천 금액';
 
 CREATE TABLE child
 (
