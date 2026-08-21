@@ -478,17 +478,79 @@ class TimeCapsuleEntryServiceTest {
         );
         given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
                 .willReturn(draft);
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(createTimeCapsule(
+                        100L, 4L, TimeCapsuleStatus.COLLECTING
+                ));
         given(timeCapsuleMediaMapper.findNotDeletedByEntryIdForUpdate(1000L))
                 .willReturn(List.of());
         given(timeCapsuleMediaMapper.markNotDeletedMediaAsDeleted(1000L))
                 .willReturn(0);
-        given(timeCapsuleEntryMapper.markDraftEntryAsDeleted(1000L))
+        given(timeCapsuleEntryMapper.markEntryAsDeleted(1000L))
                 .willReturn(1);
 
         timeCapsuleEntryService.deleteTimeCapsuleEntry(7L, 1000L);
 
-        verify(timeCapsuleEntryMapper).markDraftEntryAsDeleted(1000L);
-        verify(timeCapsuleEntryMapper, never()).increaseEntryAggregates(any());
+        verify(timeCapsuleEntryMapper).markEntryAsDeleted(1000L);
+        verify(timeCapsuleEntryMapper, never())
+                .recalculateTimeCapsuleAggregates(100L);
+    }
+
+    @Test
+    void deleteTimeCapsuleEntryDeletesSealedAndRecalculatesAggregates() {
+        TimeCapsuleEntry sealed = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(sealed);
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(createTimeCapsule(
+                        100L, 4L, TimeCapsuleStatus.COLLECTING
+                ));
+        given(timeCapsuleMediaMapper.findNotDeletedByEntryIdForUpdate(1000L))
+                .willReturn(List.of());
+        given(timeCapsuleMediaMapper.markNotDeletedMediaAsDeleted(1000L))
+                .willReturn(0);
+        given(timeCapsuleEntryMapper.markEntryAsDeleted(1000L))
+                .willReturn(1);
+        given(timeCapsuleEntryMapper.recalculateTimeCapsuleAggregates(100L))
+                .willReturn(1);
+
+        timeCapsuleEntryService.deleteTimeCapsuleEntry(7L, 1000L);
+
+        verify(timeCapsuleEntryMapper)
+                .recalculateTimeCapsuleAggregates(100L);
+    }
+
+    @Test
+    void deleteTimeCapsuleEntryRejectsReleasedTimeCapsule() {
+        TimeCapsuleEntry sealed = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(sealed);
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(createTimeCapsule(
+                        100L, 4L, TimeCapsuleStatus.RELEASED
+                ));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> timeCapsuleEntryService.deleteTimeCapsuleEntry(
+                        7L, 1000L
+                )
+        );
+
+        assertEquals(
+                ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED,
+                exception.getErrorCode()
+        );
+        verify(timeCapsuleMediaMapper, never())
+                .findNotDeletedByEntryIdForUpdate(1000L);
     }
 
     @Test
@@ -574,11 +636,15 @@ class TimeCapsuleEntryServiceTest {
         );
         given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
                 .willReturn(draft);
+        given(timeCapsuleMapper.findAccessibleByIdForUpdate(100L, 7L))
+                .willReturn(createTimeCapsule(
+                        100L, 4L, TimeCapsuleStatus.COLLECTING
+                ));
         given(timeCapsuleMediaMapper.findNotDeletedByEntryIdForUpdate(1000L))
                 .willReturn(List.of(media));
         given(timeCapsuleMediaMapper.markNotDeletedMediaAsDeleted(1000L))
                 .willReturn(1);
-        given(timeCapsuleEntryMapper.markDraftEntryAsDeleted(1000L))
+        given(timeCapsuleEntryMapper.markEntryAsDeleted(1000L))
                 .willReturn(1);
 
         timeCapsuleEntryService.deleteTimeCapsuleEntry(7L, 1000L);

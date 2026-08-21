@@ -14,6 +14,7 @@ import com.azas.domain.timecapsule.dto.CreateTimeCapsuleMediaUploadUrlResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntry;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryMediaMode;
+import com.azas.domain.timecapsule.entity.TimeCapsuleEntryStatus;
 import com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMediaType;
 import com.azas.domain.timecapsule.entity.TimeCapsuleMedia;
@@ -118,11 +119,19 @@ public class TimeCapsuleEntryService {
             long requesterMemberId,
             long timeCapsuleEntryId
     ) {
+        if (timeCapsuleEntryId < 1) {
+            throw new BusinessException(ErrorCode.BADREQUEST);
+        }
+
         TimeCapsuleEntry entry = getOwnedTimeCapsuleEntryForUpdateOrThrow(
                 requesterMemberId,
                 timeCapsuleEntryId
         );
-        assertDraftEntry(entry);
+        TimeCapsule timeCapsule = getAccessibleTimeCapsuleForUpdateOrThrow(
+                requesterMemberId,
+                entry.getTimeCapsuleId()
+        );
+        assertEntryDeletionAllowed(timeCapsule);
 
         List<TimeCapsuleMedia> media =
                 timeCapsuleMediaMapper.findNotDeletedByEntryIdForUpdate(
@@ -137,9 +146,19 @@ public class TimeCapsuleEntryService {
         if (timeCapsuleMediaMapper.markNotDeletedMediaAsDeleted(
                 timeCapsuleEntryId
         ) != media.size()
-                || timeCapsuleEntryMapper.markDraftEntryAsDeleted(
+                || timeCapsuleEntryMapper.markEntryAsDeleted(
                 timeCapsuleEntryId
         ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
+            );
+        }
+
+        if (entry.getStatus() == TimeCapsuleEntryStatus.SEALED
+                && timeCapsuleEntryMapper
+                .recalculateTimeCapsuleAggregates(
+                        entry.getTimeCapsuleId()
+                ) != 1) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
             );
@@ -376,6 +395,22 @@ public class TimeCapsuleEntryService {
         return timeCapsule;
     }
 
+    private TimeCapsule getAccessibleTimeCapsuleForUpdateOrThrow(
+            long requesterMemberId,
+            long timeCapsuleId
+    ) {
+        TimeCapsule timeCapsule = timeCapsuleMapper
+                .findAccessibleByIdForUpdate(
+                        timeCapsuleId,
+                        requesterMemberId
+                );
+        if (timeCapsule == null) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_NOT_FOUND);
+        }
+
+        return timeCapsule;
+    }
+
     private TimeCapsuleEntry getAccessibleTimeCapsuleEntryOrThrow(
             long requesterMemberId,
             long timeCapsuleEntryId
@@ -459,6 +494,17 @@ public class TimeCapsuleEntryService {
                 && !releaseAt.isAfter(LocalDateTime.now(SERVICE_ZONE)))) {
             throw new BusinessException(
                     ErrorCode.TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED
+            );
+        }
+    }
+
+    private void assertEntryDeletionAllowed(TimeCapsule timeCapsule) {
+        LocalDateTime releaseAt = timeCapsule.getExpectedReleaseAt();
+        if (timeCapsule.getStatus() != TimeCapsuleStatus.COLLECTING
+                || (releaseAt != null
+                && !releaseAt.isAfter(LocalDateTime.now(SERVICE_ZONE)))) {
+            throw new BusinessException(
+                    ErrorCode.TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED
             );
         }
     }
