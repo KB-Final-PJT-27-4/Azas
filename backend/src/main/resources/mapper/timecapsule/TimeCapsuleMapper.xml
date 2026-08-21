@@ -137,6 +137,14 @@
         )
     </insert>
 
+    <select id="findById"
+            resultMap="timeCapsuleResultMap">
+        SELECT
+            <include refid="timeCapsuleColumnsWithAlias"/>
+        FROM time_capsule tc
+        WHERE tc.time_capsule_id = #{timeCapsuleId}
+    </select>
+
     <select id="findAccessibleById"
             resultMap="timeCapsuleResultMap">
         SELECT
