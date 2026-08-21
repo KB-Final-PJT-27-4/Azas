@@ -3,10 +3,14 @@ import axios from 'axios'
 import { DefaultApi } from '@/api/generated'
 import type { ApiErrorResponse } from '@/api/generated'
 import { apiConfig } from './config'
-import { applyAccessToken, clearTokenPair, getRefreshToken, saveTokenPair } from './http'
+import {
+  clearTokenPair,
+  createAuthenticatedHttpClient,
+  getRefreshToken,
+  saveTokenPair,
+} from './http'
 
-const generatedHttp = axios.create({ timeout: 15_000 })
-generatedHttp.interceptors.request.use(applyAccessToken)
+const generatedHttp = createAuthenticatedHttpClient()
 
 export const api = new DefaultApi(apiConfig, '', generatedHttp)
 

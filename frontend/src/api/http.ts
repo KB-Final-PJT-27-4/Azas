@@ -1,4 +1,7 @@
-import axios, { type InternalAxiosRequestConfig } from 'axios'
+import axios, {
+  type AxiosRequestConfig,
+  type InternalAxiosRequestConfig,
+} from 'axios'
 
 import { apiBaseUrl } from '@/api/config'
 
@@ -27,9 +30,12 @@ export const applyAccessToken = (config: InternalAxiosRequestConfig) => {
   return config
 }
 
-export const http = axios.create({
-  baseURL: apiBaseUrl,
-  timeout: 15_000,
-})
+export const createAuthenticatedHttpClient = (config: AxiosRequestConfig = {}) => {
+  const client = axios.create({ timeout: 15_000, ...config })
+  client.interceptors.request.use(applyAccessToken)
+  return client
+}
 
-http.interceptors.request.use(applyAccessToken)
+export const http = createAuthenticatedHttpClient({
+  baseURL: apiBaseUrl,
+})
