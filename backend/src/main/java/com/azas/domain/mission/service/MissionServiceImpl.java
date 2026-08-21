@@ -9,6 +9,8 @@ import com.azas.domain.mission.dto.MissionInsertCommand;
 import com.azas.domain.mission.entity.MissionAction;
 import com.azas.domain.mission.entity.MissionStatus;
 import com.azas.domain.mission.mapper.MissionMapper;
+import com.azas.domain.notification.service.PushMessage;
+import com.azas.domain.notification.service.PushNotificationPublisher;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,27 +34,32 @@ public class MissionServiceImpl implements MissionService {
     private static final int DEFAULT_LIST_SIZE = 20;
     private static final int MAX_LIST_SIZE = 100;
     private final TransferService transferService;
+    private final PushNotificationPublisher pushNotificationPublisher;
 
     @Autowired
     public MissionServiceImpl(
             MissionMapper missionMapper,
-            TransferService transferService
+            TransferService transferService,
+            PushNotificationPublisher pushNotificationPublisher
     ) {
         this(
                 missionMapper,
                 transferService,
-                Clock.systemUTC()
+                Clock.systemUTC(),
+                pushNotificationPublisher
         );
     }
 
     MissionServiceImpl(
             MissionMapper missionMapper,
             TransferService transferService,
-            Clock clock
+            Clock clock,
+            PushNotificationPublisher pushNotificationPublisher
     ) {
         this.missionMapper = missionMapper;
         this.transferService = transferService;
         this.clock = clock;
+        this.pushNotificationPublisher = pushNotificationPublisher;
     }
 
     @Override
@@ -104,13 +111,31 @@ public class MissionServiceImpl implements MissionService {
          * 자녀 회원 계정이 연결된 경우에만 알림이 저장된다.
          * 알림 INSERT가 0건이어도 미션 생성은 성공한다.
          */
-        missionMapper.insertMissionAssignedNotification(
-                command.getMissionId(),
-                childId,
-                command.getTitle(),
-                command.getRewardAmount(),
-                createdAt
-        );
+        int insertedNotificationCount =
+                missionMapper.insertMissionAssignedNotification(
+                        command.getMissionId(),
+                        childId,
+                        command.getTitle(),
+                        command.getRewardAmount(),
+                        createdAt
+                );
+
+        if (insertedNotificationCount > 0) {
+            publishToChild(
+                    childId,
+                    "MISSION_ASSIGNED",
+                    "새 용돈 미션이 도착했어요",
+                    command.getTitle()
+                            + " 미션을 확인해 보세요. 완료 보상은 "
+                            + String.format(
+                                    Locale.KOREA,
+                                    "%,.0f",
+                                    command.getRewardAmount()
+                            )
+                            + "원이에요.",
+                    command.getMissionId()
+            );
+        }
 
         return new MissionCreateResponse(
                 command.getMissionId(),
@@ -448,12 +473,24 @@ public class MissionServiceImpl implements MissionService {
                 updatedAt
         );
 
-        missionMapper.insertMissionSubmittedNotification(
+        int insertedNotificationCount =
+                missionMapper.insertMissionSubmittedNotification(
                 mission.getMissionId(),
                 mission.getChildId(),
                 mission.getTitle(),
                 updatedAt
         );
+
+        if (insertedNotificationCount > 0) {
+            publishToParents(
+                    mission.getChildId(),
+                    "MISSION_SUBMITTED",
+                    "자녀가 미션 완료를 요청했어요",
+                    mission.getTitle()
+                            + " 미션을 확인하고 보상해 주세요.",
+                    mission.getMissionId()
+            );
+        }
     }
 
     private void approveMission(
@@ -508,7 +545,8 @@ public class MissionServiceImpl implements MissionService {
                 updatedAt
         );
 
-        missionMapper.insertChildMissionStatusNotification(
+        int insertedNotificationCount =
+                missionMapper.insertChildMissionStatusNotification(
                 mission.getMissionId(),
                 mission.getChildId(),
                 "MISSION_APPROVED",
@@ -517,6 +555,17 @@ public class MissionServiceImpl implements MissionService {
                         + " 미션이 승인되었어요.",
                 updatedAt
         );
+
+        if (insertedNotificationCount > 0) {
+            publishToChild(
+                    mission.getChildId(),
+                    "MISSION_APPROVED",
+                    "미션 보상이 지급되었어요",
+                    mission.getTitle()
+                            + " 미션이 승인되었어요.",
+                    mission.getMissionId()
+            );
+        }
     }
 
     private void rejectMission(
@@ -540,7 +589,8 @@ public class MissionServiceImpl implements MissionService {
                 updatedAt
         );
 
-        missionMapper.insertChildMissionStatusNotification(
+        int insertedNotificationCount =
+                missionMapper.insertChildMissionStatusNotification(
                 mission.getMissionId(),
                 mission.getChildId(),
                 "MISSION_REJECTED",
@@ -549,6 +599,17 @@ public class MissionServiceImpl implements MissionService {
                         + " 미션이 반려되었어요.",
                 updatedAt
         );
+
+        if (insertedNotificationCount > 0) {
+            publishToChild(
+                    mission.getChildId(),
+                    "MISSION_REJECTED",
+                    "미션을 다시 확인해 주세요",
+                    mission.getTitle()
+                            + " 미션이 반려되었어요.",
+                    mission.getMissionId()
+            );
+        }
     }
     private void cancelMission(
             Long memberId,
@@ -574,7 +635,8 @@ public class MissionServiceImpl implements MissionService {
                 updatedAt
         );
 
-        missionMapper.insertChildMissionStatusNotification(
+        int insertedNotificationCount =
+                missionMapper.insertChildMissionStatusNotification(
                 mission.getMissionId(),
                 mission.getChildId(),
                 "MISSION_CANCELED",
@@ -583,6 +645,17 @@ public class MissionServiceImpl implements MissionService {
                         + " 미션이 취소되었어요.",
                 updatedAt
         );
+
+        if (insertedNotificationCount > 0) {
+            publishToChild(
+                    mission.getChildId(),
+                    "MISSION_CANCELED",
+                    "미션이 취소되었어요",
+                    mission.getTitle()
+                            + " 미션이 취소되었어요.",
+                    mission.getMissionId()
+            );
+        }
     }
 
     private void changeMissionStatus(
@@ -634,6 +707,84 @@ public class MissionServiceImpl implements MissionService {
     private BusinessException invalidMissionTransition() {
         return new BusinessException(
                 ErrorCode.INVALID_MISSION_STATUS_TRANSITION
+        );
+    }
+
+    private void publishToChild(
+            Long childId,
+            String notificationType,
+            String title,
+            String content,
+            Long missionId
+    ) {
+        Long recipientMemberId =
+                missionMapper.findChildNotificationRecipient(
+                        childId
+                );
+
+        publish(
+                recipientMemberId,
+                notificationType,
+                title,
+                content,
+                "/child/missions",
+                missionId
+        );
+    }
+
+    private void publishToParents(
+            Long childId,
+            String notificationType,
+            String title,
+            String content,
+            Long missionId
+    ) {
+        List<Long> recipientMemberIds =
+                missionMapper.findParentNotificationRecipients(
+                        childId
+                );
+
+        if (recipientMemberIds == null) {
+            return;
+        }
+
+        recipientMemberIds.forEach(memberId -> publish(
+                memberId,
+                notificationType,
+                title,
+                content,
+                "/missions",
+                missionId
+        ));
+    }
+
+    private void publish(
+            Long memberId,
+            String notificationType,
+            String title,
+            String content,
+            String actionUrl,
+            Long missionId
+    ) {
+        if (memberId == null) {
+            return;
+        }
+
+        pushNotificationPublisher.publish(
+                memberId,
+                new PushMessage(
+                        title,
+                        content,
+                        actionUrl,
+                        Map.of(
+                                "notification_type",
+                                notificationType,
+                                "reference_type",
+                                "MISSION",
+                                "reference_id",
+                                String.valueOf(missionId)
+                        )
+                )
         );
     }
 

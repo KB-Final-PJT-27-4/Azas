@@ -102,6 +102,49 @@
                       1
               ) = 1
     </insert>
+
+    <select id="findChildNotificationRecipient"
+            resultType="long">
+        SELECT c.member_id
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'CHILD'
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = c.member_id
+                            AND np.notification_category = 'MISSION'
+                      ),
+                      1
+              ) = 1
+    </select>
+
+    <select id="findParentNotificationRecipients"
+            resultType="long">
+        SELECT cp.member_id
+        FROM child_parent cp
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = cp.member_id
+                            AND np.notification_category = 'MISSION'
+                      ),
+                      1
+              ) = 1
+        ORDER BY cp.member_id ASC
+    </select>
+
     <resultMap id="missionListRowMap"
                type="com.azas.domain.mission.dto.MissionListRow">
         <id property="missionId"
