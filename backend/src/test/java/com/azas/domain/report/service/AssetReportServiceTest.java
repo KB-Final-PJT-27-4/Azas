@@ -18,6 +18,9 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +38,9 @@ class AssetReportServiceTest {
     @Mock
     private AssetReportMapper assetReportMapper;
 
+    @Mock
+    private AssetReportSnapshotService snapshotService;
+
     private AssetReportService assetReportService;
 
     @BeforeEach
@@ -42,7 +48,12 @@ class AssetReportServiceTest {
         assetReportService =
                 new AssetReportService(
                         assetReportMapper,
-                        new ObjectMapper()
+                        new ObjectMapper(),
+                        snapshotService,
+                        Clock.fixed(
+                                Instant.parse("2026-08-20T00:00:00Z"),
+                                ZoneOffset.UTC
+                        )
                 );
     }
 
@@ -168,6 +179,38 @@ class AssetReportServiceTest {
     }
 
     @Test
+    void size_24로_최근_리포트를_조회할_수_있다() {
+        mockAccess();
+
+        when(assetReportMapper.findAssetReports(any()))
+                .thenReturn(Collections.emptyList());
+
+        assetReportService.getAssetReports(
+                MEMBER_ID,
+                CHILD_ID,
+                2026,
+                null,
+                24
+        );
+
+        ArgumentCaptor<AssetReportListQuery> captor =
+                ArgumentCaptor.forClass(
+                        AssetReportListQuery.class
+                );
+
+        verify(assetReportMapper).findAssetReports(
+                captor.capture()
+        );
+
+        assertEquals(25, captor.getValue().getLimit());
+
+        verify(snapshotService).generateForChild(
+                CHILD_ID,
+                java.time.YearMonth.of(2026, 8)
+        );
+    }
+
+    @Test
     void 존재하지_않는_자녀는_404_예외를_발생시킨다() {
         when(assetReportMapper.findActiveChildId(CHILD_ID))
                 .thenReturn(null);
@@ -231,7 +274,7 @@ class AssetReportServiceTest {
                         CHILD_ID,
                         null,
                         null,
-                        13
+                        25
                 )
         );
 
