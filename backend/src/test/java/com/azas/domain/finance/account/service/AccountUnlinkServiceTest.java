@@ -26,6 +26,8 @@ import static org.mockito.Mockito.when;
 class AccountUnlinkServiceTest {
 
     private static final long MEMBER_ID = 8L;
+    private static final long CHILD_MEMBER_ID = 9L;
+    private static final long CHILD_ID = 6L;
     private static final long ACCOUNT_ID = 3L;
     private static final Instant NOW = Instant.parse(
             "2026-08-10T06:30:00Z"
@@ -75,6 +77,53 @@ class AccountUnlinkServiceTest {
         service.unlinkAccount(MEMBER_ID, ACCOUNT_ID);
 
         verify(financialAccountMapper).unlinkAccount(
+                ACCOUNT_ID,
+                LocalDateTime.ofInstant(NOW, ZoneOffset.UTC)
+        );
+    }
+
+    @Test
+    void unlinksChildAccountForParentWithChildAccess() {
+        when(financialAccountMapper
+                .findAccountUnlinkTargetByIdForUpdate(ACCOUNT_ID))
+                .thenReturn(childTarget("ACTIVE"));
+        when(financialAccountMapper.countActiveParentAccess(
+                MEMBER_ID,
+                CHILD_ID
+        )).thenReturn(1);
+        when(financialAccountMapper.unlinkAccount(
+                ACCOUNT_ID,
+                LocalDateTime.ofInstant(NOW, ZoneOffset.UTC)
+        )).thenReturn(1);
+
+        service.unlinkAccount(MEMBER_ID, ACCOUNT_ID);
+
+        verify(financialAccountMapper).unlinkAccount(
+                ACCOUNT_ID,
+                LocalDateTime.ofInstant(NOW, ZoneOffset.UTC)
+        );
+    }
+
+    @Test
+    void rejectsChildAccountForParentWithoutChildAccess() {
+        when(financialAccountMapper
+                .findAccountUnlinkTargetByIdForUpdate(ACCOUNT_ID))
+                .thenReturn(childTarget("ACTIVE"));
+        when(financialAccountMapper.countActiveParentAccess(
+                MEMBER_ID,
+                CHILD_ID
+        )).thenReturn(0);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.unlinkAccount(MEMBER_ID, ACCOUNT_ID)
+        );
+
+        assertEquals(
+                ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED,
+                exception.getErrorCode()
+        );
+        verify(financialAccountMapper, never()).unlinkAccount(
                 ACCOUNT_ID,
                 LocalDateTime.ofInstant(NOW, ZoneOffset.UTC)
         );
@@ -230,6 +279,18 @@ class AccountUnlinkServiceTest {
                 "linkStatus",
                 linkStatus
         );
+        return target;
+    }
+
+    private AccountUnlinkTargetRow childTarget(String linkStatus) {
+        AccountUnlinkTargetRow target = target(linkStatus);
+        ReflectionTestUtils.setField(target, "ownerType", "CHILD");
+        ReflectionTestUtils.setField(
+                target,
+                "ownerMemberId",
+                CHILD_MEMBER_ID
+        );
+        ReflectionTestUtils.setField(target, "childId", CHILD_ID);
         return target;
     }
 }
