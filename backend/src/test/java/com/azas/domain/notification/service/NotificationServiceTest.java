@@ -72,6 +72,34 @@ class NotificationServiceTest {
         assertTrue(response.isHasNext());
         assertFalse(response.isHasMoreNew());
         assertEquals(3L, response.getUnreadCount());
+        assertEquals(
+                15,
+                response.getRecommendedPollIntervalSeconds()
+        );
+    }
+
+    @Test
+    void returnsZeroCursorWhenMemberHasNoNotificationYet() {
+        when(notificationMapper.findNotifications(any()))
+                .thenReturn(List.of());
+        when(notificationMapper.countUnreadNotifications(MEMBER_ID))
+                .thenReturn(0L);
+
+        NotificationListResponse response =
+                notificationService.getNotifications(
+                        MEMBER_ID,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "20"
+                );
+
+        assertTrue(response.getItems().isEmpty());
+        assertEquals(0L, response.getPollCursor());
+        assertEquals(15, response.getRecommendedPollIntervalSeconds());
     }
 
     // 신규 알림 폴링(실시간 갱신) 테스트 (중간 누락 없음)
@@ -219,6 +247,29 @@ class NotificationServiceTest {
         assertFalse(response.isHasNext());
         assertNull(response.getNextCursor());
         assertEquals(2L, response.getUnreadCount());
+    }
+
+    @Test
+    void acceptsZeroAsFirstAfterIdForPwaPolling() {
+        when(notificationMapper.findNotifications(any()))
+                .thenReturn(List.of());
+        when(notificationMapper.countUnreadNotifications(MEMBER_ID))
+                .thenReturn(0L);
+
+        NotificationListResponse response =
+                notificationService.getNotifications(
+                        MEMBER_ID,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "0",
+                        "20"
+                );
+
+        assertEquals(0L, response.getPollCursor());
+        assertFalse(response.isHasMoreNew());
     }
 
     // 과거 페이지네이션 조회 테스트

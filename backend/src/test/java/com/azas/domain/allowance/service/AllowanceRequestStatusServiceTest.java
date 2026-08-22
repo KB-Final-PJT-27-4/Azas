@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -109,6 +110,16 @@ class AllowanceRequestStatusServiceTest {
                 AllowanceRequestStatus.REJECTED,
                 response.getStatus()
         );
+
+        verify(allowanceRequestMapper)
+                .insertAllowanceStatusNotification(
+                        eq(REQUEST_ID),
+                        eq(CHILD_ID),
+                        eq("ALLOWANCE_REJECTED"),
+                        eq("용돈 요청이 거절되었어요"),
+                        eq("10,000원 요청이 거절되었어요."),
+                        any(LocalDateTime.class)
+                );
     }
 
     @Test
@@ -146,6 +157,16 @@ class AllowanceRequestStatusServiceTest {
                 AllowanceRequestStatus.CANCELED,
                 response.getStatus()
         );
+
+        verify(allowanceRequestMapper, never())
+                .insertAllowanceStatusNotification(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                );
     }
 
     @Test
