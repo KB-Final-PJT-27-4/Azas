@@ -38,8 +38,14 @@ onMounted(async () => {
   try {
     const invitation = consumeOAuthInvitation(provider)
     const response = await loginWithOAuthCode(provider, code, getOAuthRedirectUri(provider), invitation)
+    const isChildMember = response.member?.member_type === 'CHILD'
+    const nextRouteName = response.is_new_member && !invitation
+      ? 'Register'
+      : invitation?.inviteeType === 'CHILD' || isChildMember
+        ? 'ChildHome'
+        : 'Home'
 
-    await router.replace({ name: response.is_new_member && !invitation ? 'Register' : invitation?.inviteeType === 'CHILD' ? 'ChildHome' : 'Home' })
+    await router.replace({ name: nextRouteName })
   } catch (error) {
     errorMessage.value = getOAuthErrorMessage(error)
   }
