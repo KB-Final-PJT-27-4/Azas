@@ -7,13 +7,17 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleHelp,
+  LogOut,
   Plus,
+  ShieldCheck,
+  X,
 } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import defaultProfileImageUrl from '@/assets/images/home/home-profile-baby.png'
 import { useToast } from '@/composables/useToast'
 import { api } from '@/api'
+import { clearAuthSession, getRefreshToken } from '@/api/auth'
 import {
   getStoredCurrentChildId,
   requireAuthorizationHeader,
@@ -68,6 +72,7 @@ const profiles = ref<HeaderChildProfile[]>([])
 const selectedProfileId = ref<number | null>(null)
 const isProfileLoading = ref(true)
 const isProfileSheetOpen = ref(false)
+const isChildAccountSheetOpen = ref(false)
 const isScrolled = ref(false)
 const isChildRoute = computed(() => route.path === '/child' || route.path.startsWith('/child/'))
 const useTopAppearance = computed(() => !props.changeOnScroll || !isScrolled.value)
@@ -105,8 +110,11 @@ const startProfilePress = (event: PointerEvent) => {
 }
 
 const openProfileSheet = () => {
-  if (isChildRoute.value) return
   clearProfilePress()
+  if (isChildRoute.value) {
+    isChildAccountSheetOpen.value = true
+    return
+  }
   isProfileSheetOpen.value = true
 }
 
@@ -140,6 +148,22 @@ const goBack = () => {
   router.back()
 }
 
+const closeChildAccountSheet = () => {
+  isChildAccountSheetOpen.value = false
+}
+
+const logoutChildAccount = async () => {
+  closeChildAccountSheet()
+  try {
+    const refreshToken = getRefreshToken()
+    if (refreshToken) await api.logoutUsingPOST({ refresh_token: refreshToken })
+  } finally {
+    clearAuthSession()
+    showToast('로그아웃되었습니다.', 'info')
+    await router.push({ name: 'Login' })
+  }
+}
+
 const updateScrollState = () => {
   isScrolled.value = window.scrollY > props.scrollThreshold
 }
@@ -149,6 +173,18 @@ onMounted(async () => {
   window.addEventListener('scroll', updateScrollState, { passive: true })
 
   try {
+    if (isChildRoute.value) {
+      const { data } = await api.getDashboardUsingGET()
+      profiles.value = [{
+        id: data.child?.child_id ?? 0,
+        name: data.child?.name?.trim() || '아이',
+        detail: '아이 계정',
+        image: data.child?.profile_image_url || defaultProfileImageUrl,
+      }]
+      selectedProfileId.value = profiles.value[0]?.id ?? null
+      return
+    }
+
     const authorization = requireAuthorizationHeader()
     const { data } = await api.getChildrenUsingGET(authorization)
     const childrenByAge = [...(data.items ?? [])].sort((firstChild, secondChild) => {
@@ -239,9 +275,7 @@ onBeforeUnmount(() => {
         v-else-if="!showBack"
         class="flex min-w-0 select-none items-center gap-[var(--space-3)] rounded-xl border-0 bg-transparent p-0 pr-2 text-left active:bg-[var(--color-unselected-background)]"
         type="button"
-        :class="isChildRoute ? 'pointer-events-none' : ''"
-        :disabled="isChildRoute"
-        :aria-label="isChildRoute ? undefined : '프로필 전환 메뉴 열기'"
+        :aria-label="isChildRoute ? '아이 계정 메뉴 열기' : '프로필 전환 메뉴 열기'"
         @pointerdown="startProfilePress"
         @pointerup="clearProfilePress"
         @pointercancel="clearProfilePress"
@@ -272,7 +306,6 @@ onBeforeUnmount(() => {
           {{ activeProfile.name }}
         </strong>
         <ChevronDown
-          v-if="!isChildRoute"
           :size="18"
           :stroke-width="2.5"
           class="-ml-1 shrink-0 text-[var(--color-unselected-text)]"
@@ -389,6 +422,92 @@ onBeforeUnmount(() => {
             <ChevronRight :size="18" class="text-[var(--color-text-secondary)]" />
           </button>
 
+        </section>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <Teleport to="body">
+    <Transition name="profile-sheet">
+      <div
+        v-if="isChildAccountSheetOpen && isChildRoute"
+        class="fixed inset-y-0 left-1/2 z-[var(--z-index-overlay)] w-full max-w-[var(--app-max-width)] -translate-x-1/2"
+      >
+        <button
+          class="absolute inset-0 size-full border-0 bg-black/40"
+          type="button"
+          aria-label="아이 계정 메뉴 닫기"
+          @click="closeChildAccountSheet"
+        ></button>
+
+        <section
+          class="profile-sheet__panel absolute right-0 bottom-0 left-0 rounded-t-[28px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgba(31,52,62,0.16)]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="child-account-sheet-title"
+        >
+          <div class="mx-auto h-1.5 w-10 rounded-full bg-[#d8e0e5]" aria-hidden="true"></div>
+
+          <header class="mt-5 flex items-start justify-between gap-4">
+            <div class="flex min-w-0 items-center gap-3">
+              <span
+                class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--color-selected-background)]"
+                aria-hidden="true"
+              >
+                <img
+                  v-if="activeProfile.image"
+                  class="size-full object-cover"
+                  :src="activeProfile.image"
+                  alt=""
+                />
+                <span v-else>{{ props.profileEmoji }}</span>
+              </span>
+              <div class="min-w-0">
+                <h2
+                  id="child-account-sheet-title"
+                  class="m-0 truncate text-[18px] font-extrabold text-[var(--color-text-primary)]"
+                >
+                  {{ activeProfile.name }}
+                </h2>
+                <p class="mt-1 mb-0 text-[12px] text-[var(--color-text-secondary)]">
+                  아이 계정으로 이용 중이에요.
+                </p>
+              </div>
+            </div>
+            <button
+              class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f0f3f5]"
+              type="button"
+              aria-label="아이 계정 메뉴 닫기"
+              @click="closeChildAccountSheet"
+            >
+              <X :size="20" />
+            </button>
+          </header>
+
+          <div class="mt-5 flex items-center gap-3 rounded-[16px] bg-[#f1f9fd] p-4">
+            <ShieldCheck class="shrink-0 text-[var(--color-brand-primary)]" :size="25" />
+            <p class="m-0 text-[12px] leading-[1.55] text-[var(--color-text-secondary)]">
+              로그아웃해도 용돈 내역과 미션 기록은 안전하게 보관돼요.
+            </p>
+          </div>
+
+          <div class="mt-5 grid grid-cols-2 gap-3">
+            <button
+              class="h-12 rounded-[13px] border border-[var(--color-border)] bg-white text-[14px] font-bold text-[var(--color-unselected-text)]"
+              type="button"
+              @click="closeChildAccountSheet"
+            >
+              취소
+            </button>
+            <button
+              class="flex h-12 items-center justify-center gap-1.5 rounded-[13px] bg-[var(--color-brand-primary)] text-[14px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+              type="button"
+              @click="logoutChildAccount"
+            >
+              <LogOut :size="17" />
+              로그아웃
+            </button>
+          </div>
         </section>
       </div>
     </Transition>
