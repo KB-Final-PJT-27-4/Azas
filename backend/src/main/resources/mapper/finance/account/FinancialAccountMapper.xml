@@ -174,6 +174,7 @@
         SELECT
             financial_account_id AS account_id,
             bank_name,
+            account_name,
             account_number_ciphertext,
             account_product_type,
             balance
