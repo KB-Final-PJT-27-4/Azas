@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Bell,
   Check,
@@ -83,10 +83,13 @@ const appliedProfileBackgroundColor = computed(() =>
   useTopAppearance.value ? props.profileBackgroundColor : '',
 )
 const hideAppliedDivider = computed(() => props.hideDivider && useTopAppearance.value)
+const fallbackProfileName = computed(() =>
+  isChildRoute.value ? '아이' : props.profileName || props.title || '아이',
+)
 const activeProfile = computed(
   () => profiles.value.find(({ id }) => id === selectedProfileId.value) ?? profiles.value[0] ?? {
     id: 0,
-    name: props.profileName || props.title,
+    name: fallbackProfileName.value,
     detail: '',
     image: props.profileImage || defaultProfileImageUrl,
   },
@@ -168,10 +171,18 @@ const updateScrollState = () => {
   isScrolled.value = window.scrollY > props.scrollThreshold
 }
 
-onMounted(async () => {
-  updateScrollState()
-  window.addEventListener('scroll', updateScrollState, { passive: true })
+const setChildFallbackProfile = () => {
+  profiles.value = [{
+    id: 0,
+    name: '아이',
+    detail: '아이 계정',
+    image: defaultProfileImageUrl,
+  }]
+  selectedProfileId.value = 0
+}
 
+const loadProfiles = async () => {
+  isProfileLoading.value = true
   try {
     if (isChildRoute.value) {
       const { data } = await api.getDashboardUsingGET()
@@ -219,11 +230,29 @@ onMounted(async () => {
     selectedProfileId.value = profiles.value.some(({ id }) => id === storedChildId)
       ? storedChildId
       : profiles.value[0]?.id ?? null
-  } catch {
-    profiles.value = []
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn('AppHeader profile load failed.', error)
+    if (isChildRoute.value) {
+      setChildFallbackProfile()
+    } else {
+      profiles.value = []
+      selectedProfileId.value = null
+    }
   } finally {
     isProfileLoading.value = false
   }
+}
+
+onMounted(() => {
+  updateScrollState()
+  window.addEventListener('scroll', updateScrollState, { passive: true })
+  void loadProfiles()
+})
+
+watch(() => route.path, () => {
+  closeProfileSheet()
+  closeChildAccountSheet()
+  void loadProfiles()
 })
 
 onBeforeUnmount(() => {
