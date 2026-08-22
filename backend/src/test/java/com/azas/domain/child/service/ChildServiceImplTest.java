@@ -100,6 +100,11 @@ class ChildServiceImplTest {
                 RelationType.GUARDIAN
         );
 
+        verify(childMapper).insertExistingGuardiansForNewChild(
+                CHILD_ID,
+                MEMBER_ID
+        );
+
         assertSame(expectedResponse, response);
     }
 
@@ -135,6 +140,11 @@ class ChildServiceImplTest {
                 CHILD_ID,
                 MEMBER_ID,
                 RelationType.MOTHER
+        );
+
+        verify(childMapper).insertExistingGuardiansForNewChild(
+                CHILD_ID,
+                MEMBER_ID
         );
     }
 
