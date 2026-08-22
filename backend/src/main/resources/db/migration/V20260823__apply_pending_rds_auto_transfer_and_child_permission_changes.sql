@@ -194,6 +194,18 @@ BEGIN
 
         SET @inserted_child_parent_count = ROW_COUNT();
     END WHILE;
+
+    -- Account names are snapshots of the selected Mock financial product.
+    -- Earlier application versions overwrote demand-deposit names by owner
+    -- type, so align existing product-linked accounts before new deployments.
+    UPDATE financial_account fa
+             INNER JOIN financial_product fp
+                        ON fp.financial_product_id = fa.financial_product_id
+    SET fa.account_name = fp.name,
+        fa.updated_at = CURRENT_TIMESTAMP(6)
+    WHERE fp.name IS NOT NULL
+      AND TRIM(fp.name) <> ''
+      AND fa.account_name <> fp.name;
 END //
 
 DELIMITER ;
