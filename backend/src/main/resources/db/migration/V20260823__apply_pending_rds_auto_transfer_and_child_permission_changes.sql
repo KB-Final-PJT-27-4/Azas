@@ -131,6 +131,69 @@ BEGIN
                        ON fic.family_invitation_id = fi.family_invitation_id
                            AND fic.child_id = fi.child_id
     WHERE fic.family_invitation_id IS NULL;
+
+    -- A child account can be created before that child completes social sign-up.
+    -- Keep the RDS constraint aligned with schema.sql, where owner_member_id is
+    -- optional for CHILD accounts but always required for PARENT accounts.
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'financial_account'
+          AND CONSTRAINT_NAME = 'ck_financial_account_owner'
+          AND CONSTRAINT_TYPE = 'CHECK'
+    ) THEN
+        ALTER TABLE financial_account
+            DROP CHECK ck_financial_account_owner;
+    END IF;
+
+    ALTER TABLE financial_account
+        ADD CONSTRAINT ck_financial_account_owner
+            CHECK (
+                (owner_type = 'PARENT'
+                    AND owner_member_id IS NOT NULL
+                    AND child_id IS NULL)
+                OR
+                (owner_type = 'CHILD'
+                    AND child_id IS NOT NULL)
+            );
+
+    -- Existing profiles in the same household may have been created before
+    -- common guardian propagation was introduced. Expand the relation graph
+    -- until every child sharing one guardian has the same active guardians.
+    SET @inserted_child_parent_count = 1;
+
+    WHILE @inserted_child_parent_count > 0 DO
+        INSERT IGNORE INTO child_parent (
+            child_id,
+            member_id,
+            relation_type,
+            created_at,
+            updated_at
+        )
+        SELECT DISTINCT
+            sibling.child_id,
+            guardian.member_id,
+            guardian.relation_type,
+            CURRENT_TIMESTAMP(6),
+            CURRENT_TIMESTAMP(6)
+        FROM child_parent shared_guardian
+                 INNER JOIN child_parent guardian
+                            ON guardian.child_id = shared_guardian.child_id
+                 INNER JOIN child_parent sibling
+                            ON sibling.member_id = shared_guardian.member_id
+                 INNER JOIN child source_child
+                            ON source_child.child_id = shared_guardian.child_id
+                 INNER JOIN child target_child
+                            ON target_child.child_id = sibling.child_id
+                 INNER JOIN member guardian_member
+                            ON guardian_member.member_id = guardian.member_id
+        WHERE source_child.status = 'ACTIVE'
+          AND target_child.status = 'ACTIVE'
+          AND guardian_member.status = 'ACTIVE';
+
+        SET @inserted_child_parent_count = ROW_COUNT();
+    END WHILE;
 END //
 
 DELIMITER ;

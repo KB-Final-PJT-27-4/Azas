@@ -129,6 +129,28 @@ class AccountOpenServiceTest {
     }
 
     @Test
+    void opensChildAccountBeforeChildMemberIsLinked() {
+        AccountOpenRequest request = request("CHILD", 6L, 2L);
+        when(accountMapper.countActiveChildById(6L)).thenReturn(1);
+        when(accountMapper.countActiveParentAccess(1L, 6L)).thenReturn(1);
+        when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
+        when(accountMapper.findActiveChildMemberIdByChildId(6L)).thenReturn(null);
+        when(productMapper.findActiveProductById(2L))
+                .thenReturn(product(2L, "ACCOUNT", null));
+        prepareNumber();
+        assignAccountId(12L);
+
+        AccountOpenResult result = service.open(1L, request);
+
+        assertEquals(12L, result.getAccountId());
+
+        ArgumentCaptor<AccountOpenRecord> captor =
+                ArgumentCaptor.forClass(AccountOpenRecord.class);
+        verify(accountMapper).insertOpenedAccount(captor.capture());
+        assertEquals(null, captor.getValue().getOwnerMemberId());
+    }
+
+    @Test
     void opensParentSavingsForParentTargetProduct() {
         AccountOpenRequest request = request("PARENT", null, 3L);
         when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
