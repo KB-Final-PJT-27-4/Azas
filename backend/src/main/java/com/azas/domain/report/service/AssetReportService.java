@@ -183,15 +183,6 @@ public class AssetReportService {
             return;
         }
 
-        LocalDate reportMonth = currentMonth.atDay(1);
-
-        if (assetReportMapper.findAssetReportDetail(
-                childId,
-                reportMonth
-        ) != null) {
-            return;
-        }
-
         snapshotService.generateForChild(
                 childId,
                 currentMonth
@@ -365,23 +356,18 @@ public class AssetReportService {
         LocalDate reportMonth =
                 LocalDate.of(year, month, 1);
 
+        if (isCurrentMonth(year, month)) {
+            snapshotService.generateForChild(
+                    childId,
+                    YearMonth.of(year, month)
+            );
+        }
+
         AssetReportDetailRow row =
                 assetReportMapper.findAssetReportDetail(
                         childId,
                         reportMonth
                 );
-
-        if (row == null && isCurrentMonth(year, month)) {
-            snapshotService.generateForChild(
-                    childId,
-                    YearMonth.of(year, month)
-            );
-
-            row = assetReportMapper.findAssetReportDetail(
-                    childId,
-                    reportMonth
-            );
-        }
 
         if (row == null) {
             throw new BusinessException(

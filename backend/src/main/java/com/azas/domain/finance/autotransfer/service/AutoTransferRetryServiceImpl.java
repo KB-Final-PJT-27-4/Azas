@@ -8,6 +8,7 @@ import com.azas.domain.finance.transfer.dto.TransferTransactionInsertCommand;
 import com.azas.domain.finance.transfer.entity.TransferStatus;
 import com.azas.domain.notification.service.PushMessage;
 import com.azas.domain.notification.service.PushNotificationPublisher;
+import com.azas.domain.report.service.AssetReportSnapshotService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Map;
@@ -26,22 +29,28 @@ import java.util.UUID;
 public class AutoTransferRetryServiceImpl
         implements AutoTransferRetryService {
 
+    private static final ZoneId SERVICE_ZONE =
+            ZoneId.of("Asia/Seoul");
+
     private final AutoTransferScheduleMapper scheduleMapper;
     private final AutoTransferRetryMapper retryMapper;
     private final Clock clock;
     private final PushNotificationPublisher pushNotificationPublisher;
+    private final AssetReportSnapshotService assetReportSnapshotService;
 
     @Autowired
     public AutoTransferRetryServiceImpl(
             AutoTransferScheduleMapper scheduleMapper,
             AutoTransferRetryMapper retryMapper,
-            PushNotificationPublisher pushNotificationPublisher
+            PushNotificationPublisher pushNotificationPublisher,
+            AssetReportSnapshotService assetReportSnapshotService
     ) {
         this(
                 scheduleMapper,
                 retryMapper,
                 Clock.systemUTC(),
-                pushNotificationPublisher
+                pushNotificationPublisher,
+                assetReportSnapshotService
         );
     }
 
@@ -49,12 +58,14 @@ public class AutoTransferRetryServiceImpl
             AutoTransferScheduleMapper scheduleMapper,
             AutoTransferRetryMapper retryMapper,
             Clock clock,
-            PushNotificationPublisher pushNotificationPublisher
+            PushNotificationPublisher pushNotificationPublisher,
+            AssetReportSnapshotService assetReportSnapshotService
     ) {
         this.scheduleMapper = scheduleMapper;
         this.retryMapper = retryMapper;
         this.clock = clock;
         this.pushNotificationPublisher = pushNotificationPublisher;
+        this.assetReportSnapshotService = assetReportSnapshotService;
     }
 
     @Override
@@ -198,6 +209,18 @@ public class AutoTransferRetryServiceImpl
 
         LocalDateTime completedAt = LocalDateTime.now(clock);
 
+        if (destination.getChildId() != null
+                && retryMapper.insertDestinationBalanceSnapshot(
+                destination.getFinancialAccountId(),
+                destination.getChildId(),
+                destination.getBalance().add(schedule.getAmount()),
+                completedAt
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TRANSFER_PROCESSING_FAILED
+            );
+        }
+
         TransferTransactionInsertCommand debit =
                 transaction(
                         source,
@@ -250,6 +273,16 @@ public class AutoTransferRetryServiceImpl
                 null,
                 completedAt
         );
+
+        if (destination.getChildId() != null) {
+            assetReportSnapshotService.generateForChild(
+                    destination.getChildId(),
+                    YearMonth.from(
+                            completedAt.atZone(ZoneOffset.UTC)
+                                    .withZoneSameInstant(SERVICE_ZONE)
+                    )
+            );
+        }
 
         return new AutoTransferRetryResponse(
                 command.getFinancialTransferId(),

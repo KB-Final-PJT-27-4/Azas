@@ -114,6 +114,16 @@ class AssetReportSnapshotServiceTest {
                         .get("account_number_masked")
                         .asText()
         );
+        verify(assetReportMapper).findMonthlySavedAmount(
+                CHILD_ID,
+                LocalDateTime.of(2026, 7, 31, 15, 0),
+                LocalDateTime.of(2026, 8, 31, 15, 0)
+        );
+        verify(assetReportMapper).findGoalAccountSnapshots(
+                CHILD_ID,
+                LocalDateTime.of(2026, 7, 31, 15, 0),
+                LocalDateTime.of(2026, 8, 31, 15, 0)
+        );
     }
 
     private void mockAmounts() {
