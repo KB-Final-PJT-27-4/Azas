@@ -34,6 +34,10 @@ public class ChildServiceImpl implements ChildService {
 
         RelationType relationType = getRelationTypeOrDefault(request);
         childMapper.insertChildParent(child.getChildId(), memberId, relationType);
+        childMapper.insertExistingGuardiansForNewChild(
+                child.getChildId(),
+                memberId
+        );
 
         return childMapper.findChildByIdForMember(child.getChildId(), memberId);
     }
