@@ -70,8 +70,9 @@ class AccountOpenServiceTest {
     @Test
     void opensFirstParentDemandAsPrimary() {
         AccountOpenRequest request = request("PARENT", null, 2L);
-        when(productMapper.findActiveProductById(2L))
-                .thenReturn(product(2L, "ACCOUNT", null));
+        FinancialProduct product = product(2L, "ACCOUNT", null);
+        product.setName("KB국민 입출금통장");
+        when(productMapper.findActiveProductById(2L)).thenReturn(product);
         prepareNumber();
         assignAccountId(10L);
 
@@ -91,8 +92,9 @@ class AccountOpenServiceTest {
     void opensChildDemandWithYoungYouthAccountName() {
         AccountOpenRequest request = request("CHILD", 6L, 2L);
         prepareChildScope();
-        when(productMapper.findActiveProductById(2L))
-                .thenReturn(product(2L, "ACCOUNT", null));
+        FinancialProduct product = product(2L, "ACCOUNT", null);
+        product.setName("KB Young Youth 입출금통장");
+        when(productMapper.findActiveProductById(2L)).thenReturn(product);
         prepareNumber();
         assignAccountId(11L);
 
@@ -107,6 +109,25 @@ class AccountOpenServiceTest {
                 "KB Young Youth 입출금통장",
                 captor.getValue().getAccountName()
         );
+    }
+
+    @Test
+    void opensDemandDepositWithSelectedProductNameRegardlessOfOwnerType() {
+        AccountOpenRequest request = request("CHILD", 6L, 2L);
+        prepareChildScope();
+        FinancialProduct product = product(2L, "ACCOUNT", null);
+        product.setName("상품 기준 입출금통장");
+        when(productMapper.findActiveProductById(2L)).thenReturn(product);
+        prepareNumber();
+        assignAccountId(12L);
+
+        AccountOpenResult result = service.open(1L, request);
+
+        assertEquals("상품 기준 입출금통장", result.getAccountName());
+        ArgumentCaptor<AccountOpenRecord> captor =
+                ArgumentCaptor.forClass(AccountOpenRecord.class);
+        verify(accountMapper).insertOpenedAccount(captor.capture());
+        assertEquals("상품 기준 입출금통장", captor.getValue().getAccountName());
     }
 
     @Test

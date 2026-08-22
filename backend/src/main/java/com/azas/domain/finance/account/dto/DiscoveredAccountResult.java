@@ -11,6 +11,7 @@ public class DiscoveredAccountResult {
 
     private final Long accountId;
     private final String bankName;
+    private final String accountName;
     private final String accountNumber;
     private final String accountProductType;
     private final BigDecimal balance;

@@ -14,14 +14,16 @@ import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -29,22 +31,53 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class AssetReportService {
 
     private static final int DEFAULT_SIZE = 12;
 
-    private static final int MAX_SIZE = 12;
+    private static final int MAX_SIZE = 24;
 
     private static final int MIN_YEAR = 1900;
 
     private static final int MAX_YEAR = 9999;
 
+    private static final ZoneId SERVICE_ZONE =
+            ZoneId.of("Asia/Seoul");
+
     private final AssetReportMapper assetReportMapper;
 
     private final ObjectMapper objectMapper;
 
-    @Transactional(readOnly = true)
+    private final AssetReportSnapshotService snapshotService;
+
+    private final Clock clock;
+
+    @Autowired
+    public AssetReportService(
+            AssetReportMapper assetReportMapper,
+            ObjectMapper objectMapper,
+            AssetReportSnapshotService snapshotService
+    ) {
+        this(
+                assetReportMapper,
+                objectMapper,
+                snapshotService,
+                Clock.systemUTC()
+        );
+    }
+
+    AssetReportService(
+            AssetReportMapper assetReportMapper,
+            ObjectMapper objectMapper,
+            AssetReportSnapshotService snapshotService,
+            Clock clock
+    ) {
+        this.assetReportMapper = assetReportMapper;
+        this.objectMapper = objectMapper;
+        this.snapshotService = snapshotService;
+        this.clock = clock;
+    }
+
     public AssetReportListResponse getAssetReports(
             Long memberId,
             Long childId,
@@ -76,6 +109,8 @@ public class AssetReportService {
                     ErrorCode.PARENT_ACCESS_REQUIRED
             );
         }
+
+        ensureCurrentMonthReport(childId, year);
 
         AssetReportListQuery query =
                 new AssetReportListQuery(
@@ -132,6 +167,34 @@ public class AssetReportService {
                 items,
                 nextCursor,
                 hasNext
+        );
+    }
+
+    private void ensureCurrentMonthReport(
+            Long childId,
+            Integer requestedYear
+    ) {
+        YearMonth currentMonth = YearMonth.from(
+                clock.instant().atZone(SERVICE_ZONE)
+        );
+
+        if (requestedYear != null
+                && requestedYear != currentMonth.getYear()) {
+            return;
+        }
+
+        LocalDate reportMonth = currentMonth.atDay(1);
+
+        if (assetReportMapper.findAssetReportDetail(
+                childId,
+                reportMonth
+        ) != null) {
+            return;
+        }
+
+        snapshotService.generateForChild(
+                childId,
+                currentMonth
         );
     }
 
@@ -272,7 +335,6 @@ public class AssetReportService {
         }
     }
 
-    @Transactional(readOnly = true)
     public AssetReportDetailResponse getAssetReportDetail(
             Long memberId,
             Long childId,
@@ -308,6 +370,18 @@ public class AssetReportService {
                         childId,
                         reportMonth
                 );
+
+        if (row == null && isCurrentMonth(year, month)) {
+            snapshotService.generateForChild(
+                    childId,
+                    YearMonth.of(year, month)
+            );
+
+            row = assetReportMapper.findAssetReportDetail(
+                    childId,
+                    reportMonth
+            );
+        }
 
         if (row == null) {
             throw new BusinessException(
@@ -398,6 +472,19 @@ public class AssetReportService {
                 row.getUpdatedAt().toInstant(
                         ZoneOffset.UTC
                 )
+        );
+    }
+
+    private boolean isCurrentMonth(
+            Integer year,
+            Integer month
+    ) {
+        YearMonth currentMonth = YearMonth.from(
+                clock.instant().atZone(SERVICE_ZONE)
+        );
+
+        return currentMonth.equals(
+                YearMonth.of(year, month)
         );
     }
 

@@ -24,10 +24,6 @@ import java.util.Set;
 @Service
 public class AccountOpenService {
     private static final int MAX_NUMBER_ATTEMPTS = 10;
-    private static final String PARENT_DEMAND_DEPOSIT_ACCOUNT_NAME =
-            "KB국민 입출금통장";
-    private static final String CHILD_DEMAND_DEPOSIT_ACCOUNT_NAME =
-            "KB Young Youth 입출금통장";
     private final MemberMapper memberMapper;
     private final FinancialAccountMapper accountMapper;
     private final FinancialProductMapper productMapper;
@@ -89,9 +85,7 @@ public class AccountOpenService {
         LocalDate maturityDate = "SAVINGS".equals(accountProductType)
                 ? now.toLocalDate().plusMonths(product.getContractPeriodMonths())
                 : null;
-        String accountName = resolveAccountName(
-                ownerType, accountProductType, product.getName()
-        );
+        String accountName = product.getName();
         boolean primary = ownerType == FinancialAccountOwnerType.PARENT
                 && "DEMAND_DEPOSIT".equals(accountProductType)
                 && !hasParentDemand;
@@ -185,15 +179,6 @@ public class AccountOpenService {
             return;
         }
         throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
-    }
-
-    private String resolveAccountName(FinancialAccountOwnerType ownerType,
-                                      String accountProductType,
-                                      String productName) {
-        if (!"DEMAND_DEPOSIT".equals(accountProductType)) return productName;
-        return ownerType == FinancialAccountOwnerType.PARENT
-                ? PARENT_DEMAND_DEPOSIT_ACCOUNT_NAME
-                : CHILD_DEMAND_DEPOSIT_ACCOUNT_NAME;
     }
 
     private BigDecimal validateDeposit(BigDecimal value) {

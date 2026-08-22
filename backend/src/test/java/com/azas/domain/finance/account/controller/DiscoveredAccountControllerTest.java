@@ -51,6 +51,7 @@ class DiscoveredAccountControllerTest {
                 new DiscoveredAccountResult(
                         101L,
                         "KB국민은행",
+                        "KB Young Youth 적금",
                         "1234-567-890123",
                         "DEMAND_DEPOSIT",
                         new BigDecimal("12450000")
@@ -65,6 +66,8 @@ class DiscoveredAccountControllerTest {
                         .value(101L))
                 .andExpect(jsonPath("$.accounts[0].bank_name")
                         .value("KB국민은행"))
+                .andExpect(jsonPath("$.accounts[0].account_name")
+                        .value("KB Young Youth 적금"))
                 .andExpect(jsonPath("$.accounts[0].account_number")
                         .value("1234-567-890123"));
 
