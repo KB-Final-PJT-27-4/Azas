@@ -505,7 +505,7 @@ No authorization required
 # **createGoalUsingPOST**
 > FinancialGoalCreateResponse createGoalUsingPOST(request)
 
-부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
 
 ### Example
 

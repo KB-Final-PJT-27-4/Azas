@@ -528,7 +528,7 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
-         * 부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+         * 부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
          * @summary GOAL-2 자녀 금융 목표 생성
          * @param {number} childId child_id
          * @param {FinancialGoalCreateRequest} request request
@@ -4269,7 +4269,7 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * 부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+         * 부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
          * @summary GOAL-2 자녀 금융 목표 생성
          * @param {number} childId child_id
          * @param {FinancialGoalCreateRequest} request request
@@ -5643,7 +5643,7 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.createChildUsingPOST(request, authorization, options).then((request) => request(axios, basePath));
         },
         /**
-         * 부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+         * 부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
          * @summary GOAL-2 자녀 금융 목표 생성
          * @param {number} childId child_id
          * @param {FinancialGoalCreateRequest} request request
@@ -6758,7 +6758,7 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
-     * 부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+     * 부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
      * @summary GOAL-2 자녀 금융 목표 생성
      * @param {number} childId child_id
      * @param {FinancialGoalCreateRequest} request request

@@ -23,6 +23,16 @@ const emit = defineEmits<{
   select: [productId: number]
   open: []
 }>()
+
+const badgeClasses = [
+  'bg-[#e8f6ff] text-[#168fca]',
+  'bg-[#eaf8ef] text-[#258b58]',
+  'bg-[#fff5dc] text-[#ad7915]',
+  'bg-[#f2edff] text-[#7657bd]',
+  'bg-[#fff0f2] text-[#ef4d61]',
+]
+
+const getBadgeClass = (index: number) => badgeClasses[index % badgeClasses.length]
 </script>
 
 <template>
@@ -66,7 +76,7 @@ const emit = defineEmits<{
     </div>
 
     <ul v-else class="mt-7 grid list-none gap-3 p-0">
-      <li v-for="product in products" :key="product.id">
+      <li v-for="(product, productIndex) in products" :key="product.id">
         <button
           class="w-full rounded-[20px] border p-5 text-left transition-[border-color,background-color,transform,box-shadow] active:scale-[0.99]"
           :class="
@@ -80,7 +90,10 @@ const emit = defineEmits<{
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <span class="inline-flex rounded-full bg-[#fff0f2] px-3 py-1.5 text-xs font-bold text-[#ef4d61]">
+              <span
+                class="inline-flex rounded-full px-3 py-1.5 text-xs font-bold"
+                :class="getBadgeClass(productIndex)"
+              >
                 {{ product.badge }}
               </span>
               <h2 class="mt-3 text-[18px] leading-tight font-extrabold tracking-[-0.02em]">
@@ -112,7 +125,12 @@ const emit = defineEmits<{
             <span
               v-for="tag in product.tags"
               :key="tag"
-              class="rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)]"
+              class="inline-flex min-h-7 items-center rounded-full border bg-white px-3 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]"
+              :class="
+                selectedProductId === product.id
+                  ? 'border-[#b9dfef] shadow-[0_2px_6px_rgba(39,169,235,0.06)]'
+                  : 'border-[#dce5e9]'
+              "
             >
               {{ tag }}
             </span>

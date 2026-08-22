@@ -46,7 +46,6 @@ type RecommendedAccount = {
   name: string
   badge: string
   badgeClass: string
-  selectedBadgeClass?: string
   rate: string
   period: string
   description: string
@@ -57,6 +56,13 @@ const { showToast } = useToast()
 const recommendedAccounts = ref<RecommendedAccount[]>([])
 const selectedRecommendedAccountId = ref<number | null>(null)
 const isRecommendationsLoading = ref(false)
+const recommendationBadgeClasses = [
+  'bg-[#e8f6ff] text-[#168fca]',
+  'bg-[#eaf8ef] text-[#258b58]',
+  'bg-[#fff5dc] text-[#ad7915]',
+  'bg-[#f2edff] text-[#7657bd]',
+  'bg-[#fff0f2] text-[#ef4d61]',
+]
 
 const formatPeriod = (period?: ProductApiItem['contract_period']) => {
   if (!period?.min_months && !period?.max_months) return '입출금 자유'
@@ -72,43 +78,29 @@ const loadRecommendedAccounts = async () => {
   try {
     const { data } = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 20)
     const ownerType = props.ownerType ?? 'PARENT'
-    recommendedAccounts.value = ((data.items ?? []) as unknown as ProductApiItem[]).flatMap(
-      (product, index) => {
-        if (
-          !product.financial_product_id ||
-          (product.target_owner_type &&
-            product.target_owner_type !== 'BOTH' &&
-            product.target_owner_type !== ownerType)
-        ) {
-          return []
-        }
-
-        return [
-          {
-            id: product.financial_product_id,
-            bankName: product.bank_name ?? 'KB국민은행',
-            name: product.name ?? 'KB 입출금통장',
-            badge: product.highlight_label ?? (ownerType === 'CHILD' ? '자녀 추천' : '부모 추천'),
-            badgeClass:
-              index % 2 === 0
-                ? 'bg-[#eaf7ff] text-[#179fdf]'
-                : 'bg-[#fff0f2] text-[#ef4d61]',
-            selectedBadgeClass:
-              index === 0
-                ? 'bg-[var(--color-brand-primary)] text-white shadow-[0_3px_8px_rgba(39,169,235,0.2)]'
-                : undefined,
-            rate:
-              product.max_interest_rate == null
-                ? '금리 확인 필요'
-                : `최고 연 ${product.max_interest_rate}%`,
-            period: formatPeriod(product.contract_period),
-            description:
-              product.summary ?? '자금을 편리하게 관리할 수 있는 KB국민은행 입출금계좌예요.',
-            tags: product.hashtags ?? [],
-          },
-        ]
-      },
+    const visibleProducts = ((data.items ?? []) as unknown as ProductApiItem[]).filter(
+      (product) =>
+        Boolean(product.financial_product_id) &&
+        (!product.target_owner_type ||
+          product.target_owner_type === 'BOTH' ||
+          product.target_owner_type === ownerType),
     )
+
+    recommendedAccounts.value = visibleProducts.map((product, index) => ({
+      id: product.financial_product_id!,
+      bankName: product.bank_name ?? 'KB국민은행',
+      name: product.name ?? 'KB 입출금통장',
+      badge: product.highlight_label ?? (ownerType === 'CHILD' ? '자녀 추천' : '부모 추천'),
+      badgeClass: recommendationBadgeClasses[index % recommendationBadgeClasses.length]!,
+      rate:
+        product.max_interest_rate == null
+          ? '금리 확인 필요'
+          : `최고 연 ${product.max_interest_rate}%`,
+      period: formatPeriod(product.contract_period),
+      description:
+        product.summary ?? '자금을 편리하게 관리할 수 있는 KB국민은행 입출금계좌예요.',
+      tags: product.hashtags ?? [],
+    }))
   } catch (error) {
     showToast(getApiErrorMessage(error, '추천 계좌를 불러오지 못했습니다.'), 'error')
   } finally {
@@ -251,11 +243,7 @@ onMounted(loadRecommendedAccounts)
               <div class="min-w-0">
                 <span
                   class="inline-flex h-7 items-center rounded-full px-3 text-xs font-bold"
-                  :class="
-                    selectedRecommendedAccountId === account.id
-                      ? account.selectedBadgeClass ?? account.badgeClass
-                      : account.badgeClass
-                  "
+                  :class="account.badgeClass"
                 >
                   {{ account.badge }}
                 </span>
@@ -286,8 +274,12 @@ onMounted(loadRecommendedAccounts)
               <span
                 v-for="tag in account.tags"
                 :key="tag"
-                class="rounded-full px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)]"
-                :class="selectedRecommendedAccountId === account.id ? 'bg-white' : 'bg-[#f5f7f8]'"
+                class="inline-flex min-h-7 items-center rounded-full border bg-white px-3 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]"
+                :class="
+                  selectedRecommendedAccountId === account.id
+                    ? 'border-[#b9dfef] shadow-[0_2px_6px_rgba(39,169,235,0.06)]'
+                    : 'border-[#dce5e9]'
+                "
               >
                 {{ tag }}
               </span>
