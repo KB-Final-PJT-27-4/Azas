@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Check, ContactRound, Smartphone, X } from 'lucide-vue-next'
+import { Check, ContactRound, Landmark, Smartphone, X } from 'lucide-vue-next'
 
 import babyImage from '@/assets/images/child/baby.png'
 import completePigUrl from '@/assets/images/accounts/complete-pig.png'
@@ -40,9 +40,17 @@ const accountProducts = ref<ChildAccountProduct[]>([])
 const selectedProductId = ref<number | null>(null)
 const isProductsLoading = ref(false)
 const isOpeningAccount = ref(false)
+const openedAccount = ref<{
+  accountNumber: string
+  balance: number
+  bankName: string
+} | null>(null)
 
 const selectedChildName = computed(
   () => children.value.find(({ id }) => id === selectedChildId.value)?.name ?? '아이',
+)
+const selectedProduct = computed(() =>
+  accountProducts.value.find(({ id }) => id === selectedProductId.value),
 )
 const normalizedPhoneNumber = computed(() => phoneNumber.value.replace(/\D/g, ''))
 const canRequestVerificationCode = computed(() => /^01\d{9}$/.test(normalizedPhoneNumber.value))
@@ -200,7 +208,10 @@ const continueAfterAuthentication = async () => {
     }
     const { data } = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 20)
     accountProducts.value = ((data.items ?? []) as unknown as ProductItem[]).flatMap((product) => {
-      if (!product.financial_product_id || product.target_owner_type === 'PARENT') return []
+      if (
+        !product.financial_product_id ||
+        (product.target_owner_type !== 'CHILD' && product.target_owner_type !== 'BOTH')
+      ) return []
       return [{
         id: product.financial_product_id,
         name: product.name ?? '아이 입출금통장',
@@ -222,12 +233,17 @@ const openSelectedAccount = async () => {
   if (!selectedChildId.value || !selectedProductId.value || isOpeningAccount.value) return
   isOpeningAccount.value = true
   try {
-    await api.openUsingPOST(undefined, {
+    const { data } = await api.openUsingPOST(undefined, {
       child_id: selectedChildId.value,
       financial_product_id: selectedProductId.value,
       initial_deposit_amount: 0,
       owner_type: 'CHILD',
     })
+    openedAccount.value = {
+      accountNumber: data.account_number ?? '',
+      balance: data.balance ?? 0,
+      bankName: data.bank_name ?? selectedProduct.value?.bankName ?? 'KB국민은행',
+    }
     step.value = 4
   } catch (error) {
     showToast(getApiErrorMessage(error, '아이 통장을 개설하지 못했습니다.'), 'error')
@@ -426,6 +442,30 @@ onBeforeUnmount(stopVerificationTimer)
           <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
             {{ selectedChildName }} 님의 통장이 만들어졌어요!
           </p>
+
+          <article
+            v-if="selectedProduct"
+            class="mt-7 flex w-full items-center rounded-[20px] border border-[var(--color-border)] bg-white px-4 py-4 text-left shadow-[0_5px_18px_rgba(43,83,105,0.05)]"
+            aria-label="개설한 계좌 정보"
+          >
+            <span
+              class="grid size-12 shrink-0 place-items-center rounded-full bg-[#eef7fb] text-[var(--color-selected-text)]"
+              aria-hidden="true"
+            >
+              <Landmark :size="23" :stroke-width="2" />
+            </span>
+            <div class="ml-3 min-w-0 flex-1">
+              <strong class="block truncate text-[15px] font-extrabold">
+                {{ selectedProduct.name }}
+              </strong>
+              <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">
+                {{ openedAccount?.bankName }}<template v-if="openedAccount?.accountNumber"> · {{ openedAccount.accountNumber }}</template>
+              </span>
+            </div>
+            <strong class="ml-3 shrink-0 text-sm font-bold">
+              {{ (openedAccount?.balance ?? 0).toLocaleString('ko-KR') }}원
+            </strong>
+          </article>
 
           <div class="mt-auto grid w-full grid-cols-2 gap-3">
             <button

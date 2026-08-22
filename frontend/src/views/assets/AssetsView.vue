@@ -76,6 +76,9 @@ const accountOptions = computed(() => accountGroups.value.flatMap((group) =>
     type: account.type,
   })),
 ))
+const sourceAccountOptions = computed(() =>
+  accountOptions.value.filter(({ tag, type }) => tag === '부모' && type === '입출금'),
+)
 const defaultSourceAccount = computed(() =>
   accountOptions.value.find(({ type }) => type === '입출금') ?? accountOptions.value[0],
 )
@@ -763,7 +766,7 @@ onMounted(loadAssets)
       :target-account-number="requestedTargetNumber"
       :initial-amount="requestedTransferAmount"
       :initial-memo="requestedTransferMemo"
-      :source-accounts="accountOptions"
+      :source-accounts="sourceAccountOptions"
       :target-accounts="accountOptions"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"

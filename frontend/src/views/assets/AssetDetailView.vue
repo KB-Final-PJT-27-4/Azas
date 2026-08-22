@@ -36,6 +36,7 @@ const recentTransfers = ref<
   }>
 >([])
 const transferAccounts = ref<AssetAccountSelectOption[]>([])
+const sourceTransferAccounts = ref<AssetAccountSelectOption[]>([])
 const isTransferSheetOpen = ref(false)
 const transferResult = ref<'success' | 'failure' | null>(null)
 const isDeleteDialogOpen = ref(false)
@@ -157,14 +158,25 @@ const loadAccount = async () => {
         name: item.account_name,
         number: item.account_number,
         balance: item.balance,
+        tag: '부모',
       })),
       ...childResponse.data.accounts.map((item) => ({
         id: String(item.account_id),
         name: item.account_name,
         number: item.account_number,
         balance: item.balance,
+        tag: '자녀',
       })),
     ]
+    sourceTransferAccounts.value = parentResponse.data.accounts
+      .filter(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')
+      .map((item) => ({
+        id: String(item.account_id),
+        name: item.account_name,
+        number: item.account_number,
+        balance: item.balance,
+        tag: '부모',
+      }))
   } catch (error) {
     showToast(getApiErrorMessage(error, '계좌 상세를 불러오지 못했어요.'), 'error')
   } finally {
@@ -309,6 +321,7 @@ onMounted(loadAccount)
               {{ account.accountNumber }}
             </p>
             <button
+              v-if="account.type === '입출금'"
               class="h-8 w-[64px] -translate-y-[9px] shrink-0 rounded-full text-[11px] font-bold text-white shadow-[0_4px_10px_rgba(255,177,0,0.15)] active:opacity-80"
               :class="isParentAccount ? 'bg-[var(--color-brand-primary)]' : 'bg-[#ffb000]'"
               type="button"
@@ -456,7 +469,8 @@ onMounted(loadAccount)
       :open="isTransferSheetOpen"
       :target-account-name="account.name"
       :target-account-number="account.accountNumber"
-      :source-accounts="transferAccounts"
+      :initial-source-account-id="String(account.id)"
+      :source-accounts="sourceTransferAccounts"
       :target-accounts="transferAccounts"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"

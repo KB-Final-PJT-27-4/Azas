@@ -13,6 +13,7 @@ const props = withDefaults(
     targetAccountNumber?: string
     initialAmount?: number
     initialMemo?: string
+    initialSourceAccountId?: string
     sourceAccounts?: AssetAccountSelectOption[]
     targetAccounts?: AssetAccountSelectOption[]
   }>(),
@@ -21,6 +22,7 @@ const props = withDefaults(
     targetAccountNumber: '123-456-789',
     initialAmount: 0,
     initialMemo: '',
+    initialSourceAccountId: '',
     sourceAccounts: () => [],
     targetAccounts: () => [],
   },
@@ -38,7 +40,9 @@ const targetAccountId = ref('')
 const quickAmounts = [10000, 50000, 100000, 500000]
 
 const sourceAccounts = computed(() => props.sourceAccounts)
-const targetAccounts = computed(() => props.targetAccounts)
+const targetAccounts = computed(() =>
+  props.targetAccounts.filter(({ id }) => id !== sourceAccountId.value),
+)
 const hasTransferAccounts = computed(
   () => sourceAccounts.value.length > 0 && targetAccounts.value.length > 0,
 )
@@ -54,10 +58,21 @@ watch(
     if (!open) return
     amountInput.value = props.initialAmount > 0 ? props.initialAmount.toLocaleString('ko-KR') : '0'
     memo.value = props.initialMemo
-    sourceAccountId.value = sourceAccounts.value[0]?.id ?? ''
+    sourceAccountId.value = sourceAccounts.value.some(
+      ({ id }) => id === props.initialSourceAccountId,
+    )
+      ? props.initialSourceAccountId
+      : sourceAccounts.value[0]?.id ?? ''
     targetAccountId.value = targetAccounts.value[0]?.id ?? ''
   },
 )
+
+watch(sourceAccountId, () => {
+  if (!props.open) return
+  if (!targetAccounts.value.some(({ id }) => id === targetAccountId.value)) {
+    targetAccountId.value = targetAccounts.value[0]?.id ?? ''
+  }
+})
 
 const updateAmount = (event: Event) => {
   const input = event.target as HTMLInputElement
