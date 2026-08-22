@@ -18,6 +18,7 @@ const recentTransactionCount = ref(0)
 const errorMessage = ref('')
 const hasCompletedTodayQuiz = ref(isChildQuizCompletedToday())
 const showQuizCompletedModal = ref(false)
+type ChildHomeMissionStatus = 'progress' | 'review' | 'completed'
 
 const openQuizCompletedModal = () => {
   showQuizCompletedModal.value = true
@@ -40,7 +41,33 @@ const quickActions = computed(() => [
   },
 ])
 
-const visibleMissions = ref<Array<{ id: number; title: string; description: string; reward: number; status: string }>>([])
+const visibleMissions = ref<
+  Array<{
+    id: number
+    title: string
+    description: string
+    reward: number
+    status: ChildHomeMissionStatus
+  }>
+>([])
+
+const resolveMissionStatus = (status?: string): ChildHomeMissionStatus => {
+  if (status === 'APPROVED') return 'completed'
+  if (status === 'SUBMITTED') return 'review'
+  return 'progress'
+}
+
+const getMissionStatusLabel = (status: ChildHomeMissionStatus) => {
+  if (status === 'completed') return '완료됨'
+  if (status === 'review') return '승인 대기'
+  return '진행 중'
+}
+
+const getMissionStatusBadgeClass = (status: ChildHomeMissionStatus) => {
+  if (status === 'completed') return 'bg-[#eaf8ef] text-[#2f9b62]'
+  if (status === 'review') return 'bg-[#fff7dd] text-[#c8951d]'
+  return 'bg-[#eaf8ff] text-[var(--color-selected-text)]'
+}
 
 onMounted(async () => {
   try {
@@ -58,7 +85,7 @@ onMounted(async () => {
       title: mission.title ?? '용돈 미션',
       description: mission.description ?? '',
       reward: mission.reward_amount ?? 0,
-      status: mission.status === 'APPROVED' ? 'completed' : 'progress',
+      status: resolveMissionStatus(mission.status),
     }))
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error, '자녀 홈 정보를 불러오지 못했습니다.')
@@ -175,16 +202,24 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
         >
           <div class="home-mission-ticket__content">
             <div class="min-w-0">
-              <strong
-                class="block truncate text-[16px] font-bold"
-                :class="
-                  mission.status === 'completed'
-                    ? 'text-[#7d8790]'
-                    : 'text-[var(--color-text-primary)]'
-                "
-              >
-                {{ mission.title }}
-              </strong>
+              <div class="flex min-w-0 items-center gap-2">
+                <strong
+                  class="min-w-0 truncate text-[16px] font-bold"
+                  :class="
+                    mission.status === 'completed'
+                      ? 'text-[#7d8790]'
+                      : 'text-[var(--color-text-primary)]'
+                  "
+                >
+                  {{ mission.title }}
+                </strong>
+                <span
+                  class="shrink-0 rounded-full px-2.5 py-1 text-[11px] leading-none font-bold"
+                  :class="getMissionStatusBadgeClass(mission.status)"
+                >
+                  {{ getMissionStatusLabel(mission.status) }}
+                </span>
+              </div>
               <span
                 class="mt-1 block truncate text-[13px]"
                 :class="
@@ -200,7 +235,7 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
 
           <div class="home-mission-ticket__reward">
             <strong
-              class="text-[17px] leading-tight font-extrabold"
+              class="home-mission-ticket__reward-amount font-extrabold"
               :class="
                 mission.status === 'completed'
                   ? 'text-[#9aa4ad]'
@@ -209,16 +244,6 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
             >
               {{ formatCurrency(mission.reward) }}
             </strong>
-            <span
-              class="text-[12px] leading-none font-bold"
-              :class="
-                mission.status === 'completed'
-                  ? 'text-[#77828c]'
-                  : 'text-[var(--color-text-secondary)]'
-              "
-            >
-              {{ mission.status === 'completed' ? '완료됨' : '진행 중' }}
-            </span>
           </div>
         </article>
       </div>
@@ -294,7 +319,7 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
 .home-mission-ticket {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 88px;
+  grid-template-columns: minmax(0, 1fr) minmax(112px, 30%);
   min-height: 86px;
   overflow: hidden;
   border: 1px solid #e1eaee;
@@ -315,9 +340,17 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 8px;
+  gap: 0;
   min-width: 0;
   padding: 14px 10px;
+}
+
+.home-mission-ticket__reward-amount {
+  font-size: clamp(14px, 4vw, 17px);
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .home-mission-ticket__reward::before {
