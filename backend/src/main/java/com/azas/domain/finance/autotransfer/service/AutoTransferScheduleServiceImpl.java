@@ -267,9 +267,14 @@ public class AutoTransferScheduleServiceImpl
                         && "ACTIVE".equals(source.getAccountStatus())
                         && "ACTIVE".equals(source.getLinkStatus());
 
-        boolean validDestination = "SAVINGS".equals(
+        boolean validDestinationProduct =
+                "SAVINGS".equals(
                         destination.getAccountProductType()
-                )
+                ) || "DEMAND_DEPOSIT".equals(
+                        destination.getAccountProductType()
+                );
+
+        boolean validDestination = validDestinationProduct
                         && "ACTIVE".equals(
                         destination.getAccountStatus()
                 )
@@ -282,8 +287,7 @@ public class AutoTransferScheduleServiceImpl
         }
 
         if ("PARENT".equals(destination.getOwnerType())) {
-            if (!Objects.equals(destination.getOwnerMemberId(), memberId)
-                    || request.getChildId() != null) {
+            if (!Objects.equals(destination.getOwnerMemberId(), memberId)) {
                 throw new BusinessException(
                         ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE
                 );
@@ -322,7 +326,8 @@ public class AutoTransferScheduleServiceImpl
             AutoTransferScheduleRow existing
     ) {
         return Objects.equals(existing.getMemberId(), memberId)
-                && (request.getChildId() == null
+                && (existing.getChildId() == null
+                || request.getChildId() == null
                 || Objects.equals(
                 existing.getChildId(),
                 request.getChildId()

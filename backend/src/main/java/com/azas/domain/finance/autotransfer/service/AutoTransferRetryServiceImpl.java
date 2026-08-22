@@ -433,9 +433,14 @@ public class AutoTransferRetryServiceImpl
             return "출금 계좌가 비활성화되었거나 연결이 해제되었습니다.";
         }
 
-        boolean validDestination = "SAVINGS".equals(
+        boolean validDestinationProduct =
+                "SAVINGS".equals(
                         destination.getAccountProductType()
-                )
+                ) || "DEMAND_DEPOSIT".equals(
+                        destination.getAccountProductType()
+                );
+
+        boolean validDestination = validDestinationProduct
                         && "ACTIVE".equals(
                         destination.getAccountStatus()
                 )
@@ -455,7 +460,7 @@ public class AutoTransferRetryServiceImpl
                 ));
 
         if (!validDestination || !destinationAccessAllowed) {
-            return "입금 계좌가 비활성화되었거나 연결이 해제되었습니다.";
+            return "받는 계좌가 비활성화되었거나 연결이 해제되었습니다.";
         }
 
         return null;
