@@ -15,11 +15,11 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { Item } from './item';
+import type { FinancialProductListItemResponse } from './financial-product-list-item-response';
 
 export interface FinancialProductListResponse {
     'has_next'?: boolean;
-    'items'?: Array<Item>;
+    'items'?: Array<FinancialProductListItemResponse>;
     'next_cursor'?: string;
 }
 

@@ -5,7 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**items** | [**Array&lt;Item&gt;**](Item.md) |  | [optional] [default to undefined]
+**items** | [**Array&lt;NotificationPreferenceUpdateItemRequest&gt;**](NotificationPreferenceUpdateItemRequest.md) |  | [optional] [default to undefined]
 
 ## Example
 

@@ -15,9 +15,9 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { Item } from './item';
+import type { FinancialGoalTemplateListItemResponse } from './financial-goal-template-list-item-response';
 
 export interface FinancialGoalTemplateListResponse {
-    'templates'?: Array<Item>;
+    'templates'?: Array<FinancialGoalTemplateListItemResponse>;
 }
 

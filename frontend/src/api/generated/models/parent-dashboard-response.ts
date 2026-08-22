@@ -21,10 +21,10 @@ import type { AssetSummary } from './asset-summary';
 import type { ChecklistSummary } from './checklist-summary';
 // May contain unused imports in some cases
 // @ts-ignore
-import type { ChildInfo } from './child-info';
+import type { ParentDashboardChildInfoResponse } from './parent-dashboard-child-info-response';
 // May contain unused imports in some cases
 // @ts-ignore
-import type { NotificationSummary } from './notification-summary';
+import type { ParentDashboardNotificationSummaryResponse } from './parent-dashboard-notification-summary-response';
 // May contain unused imports in some cases
 // @ts-ignore
 import type { PrimaryGoal } from './primary-goal';
@@ -35,8 +35,8 @@ import type { QuickSummary } from './quick-summary';
 export interface ParentDashboardResponse {
     'asset_summary'?: AssetSummary;
     'checklist_summary'?: ChecklistSummary;
-    'child'?: ChildInfo;
-    'notifications'?: NotificationSummary;
+    'child'?: ParentDashboardChildInfoResponse;
+    'notifications'?: ParentDashboardNotificationSummaryResponse;
     'primary_goal'?: PrimaryGoal;
     'quick_summary'?: QuickSummary;
 }
