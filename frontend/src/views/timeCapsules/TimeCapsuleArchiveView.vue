@@ -267,19 +267,86 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const [{ data: child }, { data: capsules }, { data: accounts }] = await Promise.all([
+    const [
+      { data: child },
+      { data: initialCapsules },
+      { data: childAccounts },
+      { data: parentAccounts },
+    ] = await Promise.all([
       api.getChildUsingGET(childId.value),
       api.getTimeCapsulesUsingGET(childId.value),
       api.getChildAccountsUsingGET(childId.value),
+      api.getMyAccountsUsingGET(),
     ])
     registration.value = {
       birthDate: child.birth_date ?? child.expected_birth_date ?? '',
       childName: child.name ?? '아이',
     }
-    demandAccountId.value = accounts.accounts.find(
+    demandAccountId.value = childAccounts.accounts.find(
       ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
     )?.account_id ?? null
-    capsuleAccounts.value = (capsules.time_capsules ?? []).map((capsule) => ({
+
+    const allAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
+    const activeAccountIds = new Set(allAccounts.map(({ account_id }) => account_id))
+    let capsuleItems = initialCapsules.time_capsules ?? []
+    const orphanedCapsules = capsuleItems.filter(
+      ({ account_id, time_capsule_id }) =>
+        account_id != null &&
+        time_capsule_id != null &&
+        !activeAccountIds.has(account_id),
+    )
+
+    if (orphanedCapsules.length > 0) {
+      const deleteResults = await Promise.allSettled(
+        orphanedCapsules.map(({ time_capsule_id }) =>
+          api.deleteTimeCapsuleUsingDELETE(time_capsule_id!),
+        ),
+      )
+      if (deleteResults.some(({ status }) => status === 'rejected')) {
+        showToast('삭제된 계좌의 일부 타임캡슐을 정리하지 못했습니다.', 'error')
+      }
+      const { data: capsulesAfterCleanup } = await api.getTimeCapsulesUsingGET(childId.value)
+      capsuleItems = capsulesAfterCleanup.time_capsules ?? []
+    }
+
+    const savingsAccountIds = [
+      ...new Set(
+        allAccounts
+          .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
+          .map(({ account_id }) => account_id),
+      ),
+    ]
+    const capsuleAccountIds = new Set(
+      capsuleItems
+        .map(({ account_id }) => account_id)
+        .filter((accountId): accountId is number => accountId != null),
+    )
+    const missingSavingsAccountIds = savingsAccountIds.filter(
+      (accountId) => !capsuleAccountIds.has(accountId),
+    )
+
+    if (missingSavingsAccountIds.length > 0) {
+      await Promise.allSettled(
+        missingSavingsAccountIds.map((financialAccountId) =>
+          api.createTimeCapsuleUsingPOST(childId.value!, {
+            financial_account_id: financialAccountId,
+          }),
+        ),
+      )
+      const { data: refreshedCapsules } = await api.getTimeCapsulesUsingGET(childId.value)
+      capsuleItems = refreshedCapsules.time_capsules ?? []
+
+      const refreshedAccountIds = new Set(
+        capsuleItems
+          .map(({ account_id }) => account_id)
+          .filter((accountId): accountId is number => accountId != null),
+      )
+      if (missingSavingsAccountIds.some((accountId) => !refreshedAccountIds.has(accountId))) {
+        showToast('일부 적금의 타임캡슐을 만들지 못했습니다.', 'error')
+      }
+    }
+
+    capsuleAccounts.value = capsuleItems.map((capsule) => ({
       id: capsule.time_capsule_id ?? 0,
       name: capsule.title ?? '타임캡슐',
       createdAt: capsule.release_date?.replaceAll('-', '.') ?? '오픈 날짜 설정',

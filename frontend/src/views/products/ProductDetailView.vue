@@ -19,8 +19,12 @@ const maxRate = ref<number | undefined>()
 const baseRate = ref<number | undefined>()
 const periodMonths = ref(12)
 const monthlyMax = ref<number | undefined>()
+const currentChildId = ref<number | null>(null)
+const childName = ref('아이')
+const childAge = ref<number | null>(null)
 
 const isFavorite = ref(false)
+const isFavoriteUpdating = ref(false)
 const isBasicInfoOpen = ref(true)
 const isRateInfoOpen = ref(true)
 const isBenefitsOpen = ref(true)
@@ -102,13 +106,32 @@ const updateMonthlyAmount = (event: Event) => {
 }
 
 const toggleFavorite = async () => {
+  if (isFavoriteUpdating.value) return
+  const financialProductId = Number(props.productId)
+  if (!Number.isInteger(financialProductId) || financialProductId < 1) {
+    showToast('상품 정보를 확인할 수 없습니다.', 'error')
+    return
+  }
+
+  isFavoriteUpdating.value = true
+  const previousFavoriteState = isFavorite.value
+  const nextFavoriteState = !previousFavoriteState
+  isFavorite.value = nextFavoriteState
   try {
-    const next = !isFavorite.value
-    const childId = await resolveCurrentChildId()
-    await api.updateBookmarkUsingPUT(childId, Number(props.productId), { is_bookmarked: next })
-    isFavorite.value = next
+    const childId = currentChildId.value ?? (await resolveCurrentChildId())
+    currentChildId.value = childId
+    const response = await api.updateBookmarkUsingPUT(childId, financialProductId, {
+      is_bookmarked: nextFavoriteState,
+    })
+    if (typeof response.data?.is_bookmarked === 'boolean') {
+      isFavorite.value = response.data.is_bookmarked
+    }
+    showToast(isFavorite.value ? '관심상품에 저장했어요.' : '관심상품에서 해제했어요.', 'success')
   } catch (error) {
+    isFavorite.value = previousFavoriteState
     showToast(getApiErrorMessage(error, '관심상품을 변경하지 못했습니다.'), 'error')
+  } finally {
+    isFavoriteUpdating.value = false
   }
 }
 
@@ -156,7 +179,13 @@ watch(monthlySavingAmount, () => {
 onMounted(async () => {
   try {
     const childId = await resolveCurrentChildId()
-    const { data } = await api.getProductDetailUsingGET(Number(props.productId), undefined, childId)
+    currentChildId.value = childId
+    const [{ data }, { data: child }] = await Promise.all([
+      api.getProductDetailUsingGET(Number(props.productId), undefined, childId),
+      api.getChildUsingGET(childId),
+    ])
+    childName.value = child.name?.trim() || '아이'
+    childAge.value = child.age ?? null
     productName.value = data.name ?? '금융 상품'
     bankName.value = data.bank_name ?? ''
     summary.value = data.summary ?? data.curation_reason ?? ''
@@ -244,10 +273,11 @@ onMounted(async () => {
         class="mt-2 flex h-10 w-full items-center justify-center gap-1 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
         type="button"
         :aria-pressed="isFavorite"
+        :disabled="isFavoriteUpdating"
         @click="toggleFavorite"
       >
         <Heart :size="15" :class="isFavorite ? 'fill-[#ff001b] text-[#ff001b]' : ''" />
-        {{ isFavorite ? '관심상품 저장됨' : '관심상품 저장' }}
+        {{ isFavoriteUpdating ? '처리 중' : isFavorite ? '관심상품 저장됨' : '관심상품 저장' }}
       </button>
     </section>
 
@@ -259,11 +289,12 @@ onMounted(async () => {
         >
           <Sparkles :size="17" />
         </span>
-        <h2 class="m-0 text-[14px] font-bold">깨비에게 추천하는 이유</h2>
+        <h2 class="m-0 text-[14px] font-bold">{{ childName }}에게 추천하는 이유</h2>
       </div>
       <p class="mt-3 mb-0 text-[11px] leading-[1.65] text-[var(--color-text-secondary)]">
-        깨비는 현재 만 0세이므로 가입 시 성장축하 우대금리 대상이 될 수 있어요. 아동수당 수령, 가족
-        등록, 자동이체 조건도 함께 확인해보세요.
+        {{ childName }}은(는) 현재
+        {{ childAge === null ? '가입 가능한 연령' : `만 ${childAge}세` }}이므로 상품의 연령별 우대조건을
+        확인해볼 수 있어요. 아동수당 수령, 가족 등록, 자동이체 조건도 함께 확인해보세요.
       </p>
       <div class="mt-4 flex items-end justify-between border-t border-[var(--color-border)] pt-3">
         <span class="text-[11px] font-bold text-[var(--color-selected-text)]">목표 적합도</span>

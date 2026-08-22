@@ -50,6 +50,10 @@ const hasGoalName = computed(
 const canComplete = computed(
   () => hasGoalName.value && setting.amount > 0 && Boolean(setting.targetDate),
 )
+const hasLinkedSavings = computed(
+  () => (linkedSavings[currentGoalId.value] ?? []).length > 0,
+)
+const canSubmitGoal = computed(() => canComplete.value && hasLinkedSavings.value)
 const currentPlan = computed(() =>
   currentGoalId.value
     ? {
@@ -107,7 +111,10 @@ const goToSavingsRecommendation = () => {
 
 const goNext = async () => {
   if (currentStep.value === 'summary') {
-    if (!childId.value || !canComplete.value) return
+    if (!childId.value || !canSubmitGoal.value) {
+      showToast('목표에 연결할 적금을 하나 이상 선택해 주세요.', 'error')
+      return
+    }
     try {
       await api.createGoalUsingPOST(childId.value, {
         title: currentGoalName.value,
@@ -122,7 +129,12 @@ const goNext = async () => {
     }
     return
   }
-  if (!canComplete.value) return
+  if (!canSubmitGoal.value) {
+    if (canComplete.value) {
+      showToast('목표에 연결할 적금을 하나 이상 선택해 주세요.', 'error')
+    }
+    return
+  }
   slideDirection.value = 'forward'
   currentStep.value = 'summary'
 }
@@ -130,8 +142,9 @@ const goNext = async () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const [{ data: childAccounts }, { data: goals }] = await Promise.all([
+    const [{ data: childAccounts }, { data: parentAccounts }, { data: goals }] = await Promise.all([
       api.getChildAccountsUsingGET(childId.value),
+      api.getMyAccountsUsingGET(),
       api.getGoalsUsingGET(childId.value),
     ])
     unavailableSavingsIds.value = [
@@ -144,8 +157,15 @@ onMounted(async () => {
         ),
       ),
     ]
-    savingsAccounts.value = childAccounts.accounts
+    const allSavingsAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
+    const seenAccountIds = new Set<number>()
+    savingsAccounts.value = allSavingsAccounts
       .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
+      .filter(({ account_id }) => {
+        if (seenAccountIds.has(account_id)) return false
+        seenAccountIds.add(account_id)
+        return true
+      })
       .map((account) => ({
         id: String(account.account_id),
         name: account.account_name,
@@ -221,7 +241,12 @@ onMounted(async () => {
             </Transition>
           </template>
 
-          <GoalSetupSummaryStep v-else :plans="plans" :linked-savings="linkedSavings" />
+          <GoalSetupSummaryStep
+            v-else
+            :plans="plans"
+            :linked-savings="linkedSavings"
+            :savings-accounts="savingsAccounts"
+          />
         </div>
       </Transition>
     </div>
@@ -230,7 +255,7 @@ onMounted(async () => {
       <button
         class="flex h-14 w-full items-center justify-center rounded-2xl bg-[var(--color-brand-primary)] font-bold text-[var(--color-text-inverse)] transition-[transform,background-color] active:scale-[0.985] active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
         type="button"
-        :disabled="currentStep === 'setup' && !canComplete"
+        :disabled="currentStep === 'setup' && !canSubmitGoal"
         @click="goNext"
       >
         {{ currentStep === 'setup' ? '목표 설정 완료' : '목표 관리로 이동' }}

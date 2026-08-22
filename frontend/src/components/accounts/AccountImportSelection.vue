@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Check, Landmark } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
 
 type ImportedAccount = {
   id: number
@@ -12,11 +14,12 @@ type ImportedAccount = {
 
 const props = defineProps<{
   accounts: ImportedAccount[]
+  ownerType?: 'PARENT' | 'CHILD'
 }>()
 
 const emit = defineEmits<{
   connect: [accounts: ImportedAccount[]]
-  createAccount: []
+  createAccount: [productId: number]
   later: []
 }>()
 
@@ -25,35 +28,101 @@ const selectedAccounts = computed(() =>
   props.accounts.filter(({ id }) => selectedAccountIds.value.includes(id)),
 )
 
-const recommendedAccounts = [
-  {
-    name: 'KB 마이핏통장',
-    badge: '주거래 추천',
-    badgeClass: 'bg-[#eaf7ff] text-[#179fdf]',
-    selectedBadgeClass:
-      'bg-[var(--color-brand-primary)] text-white shadow-[0_3px_8px_rgba(39,169,235,0.2)]',
-    rate: '연 0.10%',
-    period: '입출금 자유',
-    description: '생활비와 아이를 위한 자금을 한곳에서 편리하게 관리할 수 있는 부모용 계좌예요.',
-    tags: ['#생활비관리', '#입출금자유', '#부모명의'],
-  },
-  {
-    name: 'KB국민ONE통장',
-    badge: '생활비 추천',
-    badgeClass: 'bg-[#fff0f2] text-[#ef4d61]',
-    rate: '연 0.10%',
-    period: '입출금 자유',
-    description: '수입과 지출을 모아 관리하고 아이에게 보낼 돈도 간편하게 준비할 수 있어요.',
-    tags: ['#주거래통장', '#간편이체', '#자산관리'],
-  },
-]
-const selectedRecommendedAccount = ref<string | null>(null)
+type ProductApiItem = {
+  financial_product_id?: number
+  bank_name?: string
+  name?: string
+  target_owner_type?: string
+  highlight_label?: string
+  summary?: string
+  hashtags?: string[]
+  max_interest_rate?: number
+  contract_period?: { min_months?: number; max_months?: number }
+}
+
+type RecommendedAccount = {
+  id: number
+  bankName: string
+  name: string
+  badge: string
+  badgeClass: string
+  selectedBadgeClass?: string
+  rate: string
+  period: string
+  description: string
+  tags: string[]
+}
+
+const { showToast } = useToast()
+const recommendedAccounts = ref<RecommendedAccount[]>([])
+const selectedRecommendedAccountId = ref<number | null>(null)
+const isRecommendationsLoading = ref(false)
+
+const formatPeriod = (period?: ProductApiItem['contract_period']) => {
+  if (!period?.min_months && !period?.max_months) return '입출금 자유'
+  if (period.min_months && period.max_months && period.min_months !== period.max_months) {
+    return `${period.min_months}~${period.max_months}개월`
+  }
+  return `${period.max_months ?? period.min_months}개월`
+}
+
+const loadRecommendedAccounts = async () => {
+  if (props.accounts.length > 0) return
+  isRecommendationsLoading.value = true
+  try {
+    const { data } = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 20)
+    const ownerType = props.ownerType ?? 'PARENT'
+    recommendedAccounts.value = ((data.items ?? []) as unknown as ProductApiItem[]).flatMap(
+      (product, index) => {
+        if (
+          !product.financial_product_id ||
+          (product.target_owner_type &&
+            product.target_owner_type !== 'BOTH' &&
+            product.target_owner_type !== ownerType)
+        ) {
+          return []
+        }
+
+        return [
+          {
+            id: product.financial_product_id,
+            bankName: product.bank_name ?? 'KB국민은행',
+            name: product.name ?? 'KB 입출금통장',
+            badge: product.highlight_label ?? (ownerType === 'CHILD' ? '자녀 추천' : '부모 추천'),
+            badgeClass:
+              index % 2 === 0
+                ? 'bg-[#eaf7ff] text-[#179fdf]'
+                : 'bg-[#fff0f2] text-[#ef4d61]',
+            selectedBadgeClass:
+              index === 0
+                ? 'bg-[var(--color-brand-primary)] text-white shadow-[0_3px_8px_rgba(39,169,235,0.2)]'
+                : undefined,
+            rate:
+              product.max_interest_rate == null
+                ? '금리 확인 필요'
+                : `최고 연 ${product.max_interest_rate}%`,
+            period: formatPeriod(product.contract_period),
+            description:
+              product.summary ?? '자금을 편리하게 관리할 수 있는 KB국민은행 입출금계좌예요.',
+            tags: product.hashtags ?? [],
+          },
+        ]
+      },
+    )
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '추천 계좌를 불러오지 못했습니다.'), 'error')
+  } finally {
+    isRecommendationsLoading.value = false
+  }
+}
 
 const toggleAccount = (accountId: number) => {
   selectedAccountIds.value = selectedAccountIds.value.includes(accountId)
     ? selectedAccountIds.value.filter((id) => id !== accountId)
     : [...selectedAccountIds.value, accountId]
 }
+
+onMounted(loadRecommendedAccounts)
 </script>
 
 <template>
@@ -146,21 +215,44 @@ const toggleAccount = (accountId: number) => {
 
     <section class="mt-7" aria-labelledby="recommended-accounts-title">
       <h2 id="recommended-accounts-title" class="sr-only">부모 명의 추천 입출금 계좌</h2>
-      <ul class="grid list-none gap-3 p-0">
-        <li v-for="account in recommendedAccounts" :key="account.name">
+      <div
+        v-if="isRecommendationsLoading"
+        class="grid gap-3"
+        aria-label="추천 계좌 불러오는 중"
+        aria-busy="true"
+      >
+        <div
+          v-for="index in 2"
+          :key="index"
+          class="h-[208px] animate-pulse rounded-[20px] border border-[#e2e9ed] bg-[#f5f8fa]"
+          aria-hidden="true"
+        ></div>
+      </div>
+      <div
+        v-else-if="recommendedAccounts.length === 0"
+        class="rounded-[20px] border border-[#d7e9f2] bg-[#f3faff] px-5 py-8 text-center"
+      >
+        <Landmark class="mx-auto text-[var(--color-brand-primary)]" :size="34" />
+        <strong class="mt-4 block text-base">추천 가능한 계좌가 아직 없어요</strong>
+        <p class="mt-2 text-[13px] text-[var(--color-text-secondary)]">
+          잠시 후 다시 확인해주세요.
+        </p>
+      </div>
+      <ul v-else class="grid list-none gap-3 p-0">
+        <li v-for="account in recommendedAccounts" :key="account.id">
           <button
             class="recommended-account w-full rounded-[20px] border p-5 text-left"
-            :class="selectedRecommendedAccount === account.name ? 'recommended-account--selected border-[var(--color-brand-primary)] bg-[#e8f7ff]' : 'border-[var(--color-border)] bg-white'"
+            :class="selectedRecommendedAccountId === account.id ? 'recommended-account--selected border-[var(--color-brand-primary)] bg-[#e8f7ff]' : 'border-[var(--color-border)] bg-white'"
             type="button"
-            :aria-pressed="selectedRecommendedAccount === account.name"
-            @click="selectedRecommendedAccount = account.name"
+            :aria-pressed="selectedRecommendedAccountId === account.id"
+            @click="selectedRecommendedAccountId = account.id"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <span
                   class="inline-flex h-7 items-center rounded-full px-3 text-xs font-bold"
                   :class="
-                    selectedRecommendedAccount === account.name
+                    selectedRecommendedAccountId === account.id
                       ? account.selectedBadgeClass ?? account.badgeClass
                       : account.badgeClass
                   "
@@ -170,10 +262,13 @@ const toggleAccount = (accountId: number) => {
                 <h3 class="mt-3 text-[18px] leading-tight font-extrabold tracking-[-0.02em]">
                   {{ account.name }}
                 </h3>
+                <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">
+                  {{ account.bankName }}
+                </span>
               </div>
               <span
                 class="grid size-8 shrink-0 place-items-center rounded-full transition-colors"
-                :class="selectedRecommendedAccount === account.name ? 'bg-[var(--color-brand-primary)] text-white' : 'border border-[#d7e0e5] bg-white text-transparent'"
+                :class="selectedRecommendedAccountId === account.id ? 'bg-[var(--color-brand-primary)] text-white' : 'border border-[#d7e0e5] bg-white text-transparent'"
                 aria-hidden="true"
               >
                 <Check :size="16" :stroke-width="3" />
@@ -192,7 +287,7 @@ const toggleAccount = (accountId: number) => {
                 v-for="tag in account.tags"
                 :key="tag"
                 class="rounded-full px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)]"
-                :class="selectedRecommendedAccount === account.name ? 'bg-white' : 'bg-[#f5f7f8]'"
+                :class="selectedRecommendedAccountId === account.id ? 'bg-white' : 'bg-[#f5f7f8]'"
               >
                 {{ tag }}
               </span>
@@ -207,10 +302,10 @@ const toggleAccount = (accountId: number) => {
         <button
           class="min-h-14 w-full rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white shadow-[0_7px_18px_rgba(39,169,235,0.2)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#cbd8df] disabled:shadow-none"
           type="button"
-          :disabled="!selectedRecommendedAccount"
-          @click="emit('createAccount')"
+          :disabled="selectedRecommendedAccountId === null || isRecommendationsLoading"
+          @click="selectedRecommendedAccountId !== null && emit('createAccount', selectedRecommendedAccountId)"
         >
-          {{ selectedRecommendedAccount ? '선택한 계좌 만들기' : '계좌를 선택해주세요' }}
+          {{ selectedRecommendedAccountId !== null ? '선택한 계좌 만들기' : '계좌를 선택해주세요' }}
         </button>
       </div>
     </Teleport>
