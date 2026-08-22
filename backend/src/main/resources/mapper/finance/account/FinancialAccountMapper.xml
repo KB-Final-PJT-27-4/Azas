@@ -332,7 +332,7 @@
         LIMIT 1
     </select>
 
-    <select id="findActiveChildMemberIdByChildId" resultType="long">
+    <select id="findActiveChildMemberIdByChildId" resultType="java.lang.Long">
         SELECT member_id FROM child
         WHERE child_id = #{childId} AND status = 'ACTIVE'
     </select>

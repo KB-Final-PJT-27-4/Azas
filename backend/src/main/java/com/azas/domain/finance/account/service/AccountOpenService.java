@@ -78,9 +78,14 @@ public class AccountOpenService {
 
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
         String accountNumber = uniqueAccountNumber();
-        Long ownerMemberId = ownerType == FinancialAccountOwnerType.PARENT
-                ? memberId
-                : accountMapper.findActiveChildMemberIdByChildId(request.getChildId());
+        Long ownerMemberId;
+        if (ownerType == FinancialAccountOwnerType.PARENT) {
+            ownerMemberId = memberId;
+        } else {
+            ownerMemberId = accountMapper.findActiveChildMemberIdByChildId(
+                    request.getChildId()
+            );
+        }
         LocalDate maturityDate = "SAVINGS".equals(accountProductType)
                 ? now.toLocalDate().plusMonths(product.getContractPeriodMonths())
                 : null;
