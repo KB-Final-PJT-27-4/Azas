@@ -10,6 +10,7 @@ type ImportedAccount = {
   number: string
   balance: number
   productType: string
+  accountName?: string
 }
 
 const props = defineProps<{
@@ -19,7 +20,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   connect: [accounts: ImportedAccount[]]
-  createAccount: [productId: number]
+  createAccount: [product: { id: number; name: string; bankName: string }]
   later: []
 }>()
 
@@ -77,20 +78,17 @@ const loadRecommendedAccounts = async () => {
   isRecommendationsLoading.value = true
   try {
     const { data } = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 20)
-    const ownerType = props.ownerType ?? 'PARENT'
     const visibleProducts = ((data.items ?? []) as unknown as ProductApiItem[]).filter(
       (product) =>
         Boolean(product.financial_product_id) &&
-        (!product.target_owner_type ||
-          product.target_owner_type === 'BOTH' ||
-          product.target_owner_type === ownerType),
+        (product.target_owner_type === 'PARENT' || product.target_owner_type === 'BOTH'),
     )
 
     recommendedAccounts.value = visibleProducts.map((product, index) => ({
       id: product.financial_product_id!,
       bankName: product.bank_name ?? 'KB국민은행',
       name: product.name ?? 'KB 입출금통장',
-      badge: product.highlight_label ?? (ownerType === 'CHILD' ? '자녀 추천' : '부모 추천'),
+      badge: product.highlight_label ?? '부모 추천',
       badgeClass: recommendationBadgeClasses[index % recommendationBadgeClasses.length]!,
       rate:
         product.max_interest_rate == null
@@ -154,10 +152,10 @@ onMounted(loadRecommendedAccounts)
           </span>
           <span class="ml-3 min-w-0 flex-1">
             <strong class="block truncate text-sm font-bold text-[var(--color-text-primary)]">
-              {{ account.bank }}
+              {{ account.accountName ?? (account.productType === 'SAVINGS' ? '적금 계좌' : '입출금 계좌') }}
             </strong>
             <span class="mt-0.5 block text-xs text-[var(--color-text-secondary)]">
-              {{ account.number }}
+              {{ account.bank }} · {{ account.number }}
             </span>
             <span class="mt-1 block text-sm font-bold text-[var(--color-text-primary)]">
               {{ account.balance.toLocaleString('ko-KR') }}원
@@ -295,7 +293,14 @@ onMounted(loadRecommendedAccounts)
           class="min-h-14 w-full rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white shadow-[0_7px_18px_rgba(39,169,235,0.2)] transition-colors active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-not-allowed disabled:bg-[#cbd8df] disabled:shadow-none"
           type="button"
           :disabled="selectedRecommendedAccountId === null || isRecommendationsLoading"
-          @click="selectedRecommendedAccountId !== null && emit('createAccount', selectedRecommendedAccountId)"
+          @click="
+            selectedRecommendedAccountId !== null &&
+            recommendedAccounts.find(({ id }) => id === selectedRecommendedAccountId) &&
+            emit(
+              'createAccount',
+              recommendedAccounts.find(({ id }) => id === selectedRecommendedAccountId)!,
+            )
+          "
         >
           {{ selectedRecommendedAccountId !== null ? '선택한 계좌 만들기' : '계좌를 선택해주세요' }}
         </button>
