@@ -49,6 +49,33 @@
                )
     </insert>
 
+    <insert id="insertExistingGuardiansForNewChild">
+        INSERT IGNORE INTO child_parent (
+            child_id,
+            member_id,
+            relation_type,
+            created_at,
+            updated_at
+        )
+        SELECT DISTINCT
+            #{childId},
+            guardian.member_id,
+            guardian.relation_type,
+            NOW(),
+            NOW()
+        FROM child_parent requester_child
+                 INNER JOIN child managed_child
+                            ON managed_child.child_id = requester_child.child_id
+                 INNER JOIN child_parent guardian
+                            ON guardian.child_id = requester_child.child_id
+                 INNER JOIN member guardian_member
+                            ON guardian_member.member_id = guardian.member_id
+        WHERE requester_child.member_id = #{memberId}
+          AND guardian.member_id != #{memberId}
+          AND managed_child.status = 'ACTIVE'
+          AND guardian_member.status = 'ACTIVE'
+    </insert>
+
     <select id="findChildrenByMemberId"
             resultType="com.azas.domain.child.dto.ChildSummaryResponse">
         SELECT

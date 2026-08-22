@@ -129,6 +129,28 @@ class AccountOpenServiceTest {
     }
 
     @Test
+    void opensChildAccountBeforeChildMemberIsLinked() {
+        AccountOpenRequest request = request("CHILD", 6L, 2L);
+        when(accountMapper.countActiveChildById(6L)).thenReturn(1);
+        when(accountMapper.countActiveParentAccess(1L, 6L)).thenReturn(1);
+        when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
+        when(accountMapper.findActiveChildMemberIdByChildId(6L)).thenReturn(null);
+        when(productMapper.findActiveProductById(2L))
+                .thenReturn(product(2L, "ACCOUNT", null));
+        prepareNumber();
+        assignAccountId(12L);
+
+        AccountOpenResult result = service.open(1L, request);
+
+        assertEquals(12L, result.getAccountId());
+
+        ArgumentCaptor<AccountOpenRecord> captor =
+                ArgumentCaptor.forClass(AccountOpenRecord.class);
+        verify(accountMapper).insertOpenedAccount(captor.capture());
+        assertEquals(null, captor.getValue().getOwnerMemberId());
+    }
+
+    @Test
     void opensParentSavingsForParentTargetProduct() {
         AccountOpenRequest request = request("PARENT", null, 3L);
         when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
@@ -147,22 +169,21 @@ class AccountOpenServiceTest {
     }
 
     @Test
-    void rejectsParentOpeningChildTargetProduct() {
+    void opensParentAccountForChildTargetProduct() {
         AccountOpenRequest request = request("PARENT", null, 1L);
+        when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
         FinancialProduct product = product(1L, "SAVING", 12);
         product.setTargetOwnerType("CHILD");
         when(productMapper.findActiveProductById(1L)).thenReturn(product);
+        prepareNumber();
+        assignAccountId(31L);
 
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> service.open(1L, request)
-        );
+        AccountOpenResult result = service.open(1L, request);
 
-        assertEquals(
-                ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST,
-                exception.getErrorCode()
-        );
-        verify(accountMapper, never()).insertOpenedAccount(any());
+        assertEquals(31L, result.getAccountId());
+        assertEquals("PARENT", result.getOwnerType());
+        assertEquals("SAVINGS", result.getAccountProductType());
+        verify(accountMapper).insertOpenedAccount(any());
     }
 
     @Test

@@ -11,6 +11,7 @@ public class FinancialGoalAccountTargetRow {
 
     private Long accountId;
     private String ownerType;
+    private Long ownerMemberId;
     private Long childId;
     private String bankName;
     private String accountName;

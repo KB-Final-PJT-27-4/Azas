@@ -24,6 +24,11 @@ public interface ChildMapper {
             @Param("relationType") RelationType relationType
     );
 
+    int insertExistingGuardiansForNewChild(
+            @Param("childId") Long childId,
+            @Param("memberId") Long memberId
+    );
+
     // 특정 부모가 접근 가능한 활성 자녀 목록 조회
     List<ChildSummaryResponse> findChildrenByMemberId(@Param("memberId") Long memberId);
 

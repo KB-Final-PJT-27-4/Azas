@@ -61,7 +61,7 @@ public class FinancialGoalCreateService {
         ValidatedRequest request = validateRequest(command);
         String title = resolveTitle(request);
         List<FinancialGoalAccountTargetRow> accounts =
-                findAndValidateAccounts(childId, request.accountIds());
+                findAndValidateAccounts(requesterMemberId, childId, request.accountIds());
 
         BigDecimal currentAmount = accounts.stream()
                 .map(FinancialGoalAccountTargetRow::getBalance)
@@ -164,7 +164,7 @@ public class FinancialGoalCreateService {
     }
 
     private List<FinancialGoalAccountTargetRow> findAndValidateAccounts(
-            long childId, List<Long> accountIds) {
+            long requesterMemberId, long childId, List<Long> accountIds) {
         List<FinancialGoalAccountTargetRow> rows =
                 goalMapper.findAccountTargetsForUpdate(accountIds);
         if (rows == null || rows.size() != accountIds.size()) {
@@ -179,8 +179,7 @@ public class FinancialGoalCreateService {
             throw new BusinessException(ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND);
         }
         for (FinancialGoalAccountTargetRow row : ordered) {
-            if (!"CHILD".equals(row.getOwnerType())
-                    || row.getChildId() == null || row.getChildId() != childId
+            if (!isEligibleGoalAccount(row, requesterMemberId, childId)
                     || !"SAVINGS".equals(row.getAccountProductType())
                     || !"ACTIVE".equals(row.getAccountStatus())
                     || !"ACTIVE".equals(row.getLinkStatus())) {
@@ -191,6 +190,20 @@ public class FinancialGoalCreateService {
             }
         }
         return ordered;
+    }
+
+    private boolean isEligibleGoalAccount(
+            FinancialGoalAccountTargetRow account,
+            long requesterMemberId,
+            long childId
+    ) {
+        if ("CHILD".equals(account.getOwnerType())) {
+            return Objects.equals(account.getChildId(), childId);
+        }
+        if ("PARENT".equals(account.getOwnerType())) {
+            return Objects.equals(account.getOwnerMemberId(), requesterMemberId);
+        }
+        return false;
     }
 
     private void insertCheckpoints(long goalId, BigDecimal targetAmount,
