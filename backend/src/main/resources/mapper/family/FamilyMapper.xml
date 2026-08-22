@@ -128,7 +128,7 @@
     <select id="findActiveChildrenManagedByMember"
             resultType="com.azas.domain.family.dto.FamilyInvitationChildResponse">
         SELECT DISTINCT
-            c.child_id AS childId,
+            CAST(c.child_id AS SIGNED) AS childId,
             c.name AS name
         FROM child c
                  INNER JOIN child_parent cp ON cp.child_id = c.child_id
@@ -155,7 +155,7 @@
     <select id="findInvitationChildren"
             resultType="com.azas.domain.family.dto.FamilyInvitationChildResponse">
         SELECT
-            c.child_id AS childId,
+            CAST(c.child_id AS SIGNED) AS childId,
             c.name AS name
         FROM family_invitation_child fic
                  INNER JOIN child c ON c.child_id = fic.child_id
