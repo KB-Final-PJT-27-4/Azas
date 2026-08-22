@@ -11,10 +11,10 @@ Name | Type | Description | Notes
 **created_at** | **string** |  | [optional] [default to undefined]
 **goal_summary** | [**Array&lt;GoalSummary&gt;**](GoalSummary.md) |  | [optional] [default to undefined]
 **insight_items** | [**Array&lt;InsightItem&gt;**](InsightItem.md) |  | [optional] [default to undefined]
-**period** | [**Period**](Period.md) |  | [optional] [default to undefined]
+**period** | [**AssetReportPeriodResponse**](AssetReportPeriodResponse.md) |  | [optional] [default to undefined]
 **report_month** | **number** |  | [optional] [default to undefined]
 **report_year** | **number** |  | [optional] [default to undefined]
-**summary** | [**Summary**](Summary.md) |  | [optional] [default to undefined]
+**summary** | [**AssetReportSummaryResponse**](AssetReportSummaryResponse.md) |  | [optional] [default to undefined]
 **updated_at** | **string** |  | [optional] [default to undefined]
 
 ## Example

@@ -30,6 +30,14 @@ const canStart = computed(() => currentSlide.value === slides.length - 1)
 
 const setSlide = (index: number) => { currentSlide.value = Math.max(0, Math.min(index, slides.length - 1)) }
 const openLogin = () => { errorMessage.value = ''; isLoginOpen.value = true }
+const handlePrimaryAction = () => {
+  if (canStart.value) {
+    openLogin()
+    return
+  }
+
+  setSlide(currentSlide.value + 1)
+}
 const closeLogin = () => { isLoginOpen.value = false }
 const handleSheetTouchStart = (event: TouchEvent) => {
   sheetTouchStartY.value = event.touches[0]?.clientY ?? 0
@@ -120,11 +128,15 @@ const login = (provider: OAuthProvider) => {
       <div class="onboarding-footer relative z-3 min-h-0">
         <button
           type="button"
-          class="h-14 w-full shrink-0 rounded-[18px] border-0 bg-[var(--color-brand-primary)] text-[17px] font-extrabold text-white transition-[background-color,color,transform] active:scale-[0.985] disabled:cursor-not-allowed disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)] disabled:active:scale-100"
-          :disabled="!canStart"
-          @click="openLogin"
+          class="h-14 w-full shrink-0 rounded-[18px] border-0 text-[17px] font-extrabold transition-[background-color,color,transform,box-shadow] active:scale-[0.985]"
+          :class="
+            canStart
+              ? 'bg-[var(--color-brand-primary)] text-white shadow-[0_7px_18px_rgba(39,169,235,0.2)]'
+              : 'bg-[#eaf7ff] text-[var(--color-selected-text)] shadow-[inset_0_0_0_1px_rgba(82,187,237,0.12)]'
+          "
+          @click="handlePrimaryAction"
         >
-          시작하기
+          {{ canStart ? '시작하기' : '다음' }}
         </button>
       </div>
     </section>

@@ -12,6 +12,7 @@ const { showToast } = useToast()
 const inviteType = ref<InviteType | null>(null)
 const copied = ref(false)
 const isLoading = ref(true)
+const isCreatingInvitation = ref(false)
 
 const childId = ref<number | null>(null)
 const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; isMe: boolean; color: string }>>([])
@@ -34,16 +35,24 @@ const openInvitation = async (type: InviteType) => {
   copied.value = false
   createdInvitationLink.value = ''
   if (!childId.value) return
+  isCreatingInvitation.value = true
   try {
-    const { data } = await api.createFamilyInvitationUsingPOST(childId.value, {
+    const invitationRequest = {
       invitee_type: type === 'guardian' ? 'PARENT' : 'CHILD',
       expires_in_hours: 24,
-    })
+    }
+    const { data } = await api.createChildFamilyInvitationUsingPOST(
+      childId.value,
+      undefined,
+      invitationRequest,
+    )
     createdInvitationLink.value = data.invite_url
       ?? `${window.location.origin}/family-invitations/${data.invite_token ?? ''}`
   } catch (error) {
     showToast(getApiErrorMessage(error, '초대 링크를 만들지 못했습니다.'), 'error')
     closeInvitation()
+  } finally {
+    isCreatingInvitation.value = false
   }
 }
 
@@ -72,6 +81,8 @@ onMounted(async () => {
 })
 
 const copyInvitationLink = async () => {
+  if (isCreatingInvitation.value || !invitationLink.value) return
+
   try {
     await navigator.clipboard.writeText(invitationLink.value)
     copied.value = true
@@ -219,24 +230,38 @@ const copyInvitationLink = async () => {
               </button>
             </header>
 
-            <div class="mt-5 flex items-center gap-3 rounded-2xl bg-[#f3f8fa] p-4">
+            <div
+              class="mt-5 flex min-h-[72px] items-center gap-3 rounded-2xl bg-[#f3f8fa] p-4"
+              :aria-busy="isCreatingInvitation"
+            >
               <span
                 class="grid size-10 shrink-0 place-items-center rounded-full bg-white text-[var(--color-selected-text)] shadow-sm"
-                ><Link2 :size="20"
-              /></span>
-              <p class="m-0 min-w-0 flex-1 truncate text-[12px] font-medium text-[#647783]">
+              >
+                <Link2 :size="20" />
+              </span>
+              <div v-if="isCreatingInvitation" class="min-w-0 flex-1" aria-hidden="true">
+                <span class="block h-3 w-[88%] animate-pulse rounded-full bg-[#dfe8ec]"></span>
+              </div>
+              <p v-else class="m-0 min-w-0 flex-1 truncate text-[12px] font-medium text-[#647783]">
                 {{ invitationLink }}
               </p>
             </div>
 
             <button
-              class="mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-brand-primary)] text-[14px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+              class="mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-brand-primary)] text-[14px] font-bold text-white active:bg-[var(--color-brand-primary-pressed)] disabled:cursor-wait disabled:bg-[#cbd8df]"
               type="button"
+              :disabled="isCreatingInvitation || !invitationLink"
               @click="copyInvitationLink"
             >
               <Check v-if="copied" :size="18" />
-              <Copy v-else :size="17" />
-              {{ copied ? '링크 복사 완료' : '초대 링크 복사하기' }}
+              <Copy v-else-if="!isCreatingInvitation" :size="17" />
+              {{
+                isCreatingInvitation
+                  ? '초대 링크 만드는 중...'
+                  : copied
+                    ? '링크 복사 완료'
+                    : '초대 링크 복사하기'
+              }}
             </button>
           </section>
         </div>

@@ -49,6 +49,14 @@ const toggleChecklistItem = async (item: ChecklistItem) => {
     if (completed) next.add(item.id)
     else next.delete(item.id)
     checkedItemIds.value = next
+
+    if (
+      completed &&
+      currentStageItems.value.length > 0 &&
+      currentStageItems.value.every((stageItem) => next.has(stageItem.id))
+    ) {
+      openCompleteSheet()
+    }
   } catch (error) {
     showToast(getApiErrorMessage(error, '체크 상태를 변경하지 못했습니다.'), 'error')
   }
@@ -292,28 +300,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
       </section>
 
       <div v-else key="checklist">
-    <section class="px-5 pt-6 pb-5" aria-label="생애주기 로드맵">
-      <div
-        class="flex gap-2 overflow-x-auto rounded-[22px] border border-[#dce8f0] bg-[#f4f9fc] p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        <button
-          v-for="stage in lifecycleStages"
-          :key="stage.id"
-          class="shrink-0 rounded-[16px] border-0 px-3 py-2 text-[12px] font-bold whitespace-nowrap"
-          :class="
-            stage.id === currentStage.id
-              ? 'bg-white text-[var(--color-selected-text)] shadow-[0_8px_18px_rgb(85_192_244_/_16%)]'
-              : 'bg-transparent text-[var(--color-text-secondary)]'
-          "
-          type="button"
-          @click="selectedStageId = stage.id"
-        >
-          {{ stage.ageRange }}
-        </button>
-      </div>
-    </section>
-
-    <section class="px-5 pb-5">
+    <section class="px-5 pt-6 pb-5">
       <article
         class="rounded-[22px] border border-[#d5e8f8] bg-[#EBFAFF] px-5 py-5 shadow-[0_14px_34px_rgb(31_72_97_/_7%),inset_0_0_0_1px_rgb(255_255_255_/_70%)]"
       >
@@ -432,13 +419,6 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
         </li>
       </ul>
 
-      <button
-        class="mt-5 h-12 w-full rounded-[16px] border border-[#55C0F4] bg-[#55C0F4] text-[15px] font-bold text-white"
-        type="button"
-        @click="openCompleteSheet"
-      >
-        완료 화면 보기
-      </button>
     </section>
 
     <Teleport to="body">

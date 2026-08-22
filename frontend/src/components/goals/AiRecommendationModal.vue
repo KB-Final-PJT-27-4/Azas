@@ -144,7 +144,7 @@ const cancelDrag = () => {
 
           <header class="flex shrink-0 items-center justify-between px-6 pt-1 pb-1">
             <div>
-              <h2 id="ai-modal-title" class="mt-1 text-xl font-bold">AI 추천 금액</h2>
+              <h2 id="ai-modal-title" class="mt-1 text-xl font-bold">목표 금액 가이드</h2>
             </div>
             <button
               class="grid size-9 place-items-center rounded-full text-[var(--color-text-secondary)] transition-colors active:bg-[var(--color-surface-muted)]"

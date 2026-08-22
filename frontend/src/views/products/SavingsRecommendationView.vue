@@ -10,6 +10,7 @@ const router = useRouter()
 const { showToast } = useToast()
 const selectedProductName = ref<string | null>(null)
 const selectedProductId = ref<number | null>(null)
+const selectedProductOwnerType = ref<'PARENT' | 'CHILD' | null>(null)
 const isLoading = ref(true)
 const isOpening = ref(false)
 
@@ -48,13 +49,19 @@ type SavingsProduct = {
 
 const savingsProducts = ref<SavingsProduct[]>([])
 
-const selectProduct = (product: { id: number; name: string }) => {
+const selectProduct = (product: { id: number; name: string; ownerType: 'PARENT' | 'CHILD' }) => {
   selectedProductId.value = product.id
   selectedProductName.value = product.name
+  selectedProductOwnerType.value = product.ownerType
 }
 
 const openSelectedProduct = async () => {
-  if (selectedProductId.value === null || !selectedProductName.value || isOpening.value) return
+  if (
+    selectedProductId.value === null ||
+    !selectedProductName.value ||
+    selectedProductOwnerType.value === null ||
+    isOpening.value
+  ) return
   isOpening.value = true
   try {
     if (!(await hasParentDemandDepositAccount())) {
@@ -65,12 +72,13 @@ const openSelectedProduct = async () => {
       })
       return
     }
-    const childId = await resolveCurrentChildId()
+    const ownerType = selectedProductOwnerType.value
+    const childId = ownerType === 'CHILD' ? await resolveCurrentChildId() : undefined
     await api.openUsingPOST(undefined, {
       child_id: childId,
       financial_product_id: selectedProductId.value,
       initial_deposit_amount: 0,
-      owner_type: 'CHILD',
+      owner_type: ownerType,
     })
     await router.push({ name: 'SavingsOpenComplete', query: { product: selectedProductName.value } })
   } catch (error) {

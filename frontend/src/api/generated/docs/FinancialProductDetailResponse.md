@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **badges** | [**Array&lt;Badge&gt;**](Badge.md) |  | [optional] [default to undefined]
 **bank_name** | **string** |  | [optional] [default to undefined]
 **cautions** | **object** |  | [optional] [default to undefined]
-**contract_period** | [**ContractPeriod**](ContractPeriod.md) |  | [optional] [default to undefined]
+**contract_period** | [**FinancialProductDetailContractPeriodResponse**](FinancialProductDetailContractPeriodResponse.md) |  | [optional] [default to undefined]
 **curation_reason** | **string** |  | [optional] [default to undefined]
 **detail_url** | **string** |  | [optional] [default to undefined]
 **eligibility_conditions** | **object** |  | [optional] [default to undefined]
