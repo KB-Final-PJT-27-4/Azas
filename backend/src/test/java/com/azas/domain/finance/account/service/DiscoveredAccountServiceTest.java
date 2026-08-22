@@ -62,6 +62,10 @@ class DiscoveredAccountServiceTest {
                 "1234-567-890123",
                 result.getAccounts().get(0).getAccountNumber()
         );
+        assertEquals(
+                "KB Young Youth 적금",
+                result.getAccounts().get(0).getAccountName()
+        );
     }
 
     @Test
@@ -163,6 +167,9 @@ class DiscoveredAccountServiceTest {
         DiscoveredAccountRow row = new DiscoveredAccountRow();
         ReflectionTestUtils.setField(row, "accountId", 101L);
         ReflectionTestUtils.setField(row, "bankName", "KB국민은행");
+        ReflectionTestUtils.setField(
+                row, "accountName", "KB Young Youth 적금"
+        );
         ReflectionTestUtils.setField(
                 row, "accountNumberCiphertext", ciphertext
         );
