@@ -73,6 +73,9 @@ dependencies {
     // 아니라 배포 WAR의 WEB-INF/lib에서 제공한다.
     runtimeOnly "com.google.http-client:google-http-client-jackson2:${googleHttpClientVersion}"
 
+    // Tomcat 배포 WAR에서 SLF4J 로그를 실제로 기록하는 provider
+    runtimeOnly 'ch.qos.logback:logback-classic:1.5.18'
+
     // 타임캡슐 이미지·영상은 비공개 S3 객체로 저장하고 Presigned URL로만 접근
     implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
     implementation 'software.amazon.awssdk:s3'
