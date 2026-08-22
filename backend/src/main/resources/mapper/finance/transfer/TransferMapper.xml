@@ -52,8 +52,11 @@
                fa.account_product_type AS accountProductType,
                fa.account_status AS accountStatus,
                fa.link_status AS linkStatus,
-               fa.balance AS balance
+               fa.balance AS balance,
+               fga.financial_goal_id AS financialGoalId
         FROM financial_account fa
+        LEFT JOIN financial_goal_account fga
+               ON fga.financial_account_id = fa.financial_account_id
         WHERE fa.financial_account_id = #{accountId}
             FOR UPDATE
     </select>
@@ -99,6 +102,20 @@
             balance_updated_at = UTC_TIMESTAMP(6)
         WHERE financial_account_id = #{accountId}
     </update>
+
+    <insert id="insertDestinationBalanceSnapshot">
+        INSERT INTO account_balance_snapshot (
+            financial_account_id,
+            child_id,
+            balance,
+            observed_at
+        ) VALUES (
+            #{accountId},
+            #{childId},
+            #{balance},
+            #{observedAt}
+        )
+    </insert>
 
     <insert id="insertTransaction"
             useGeneratedKeys="true"

@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -18,6 +17,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,11 +31,14 @@ public class AssetReportSnapshotService {
     private static final BigDecimal ONE_HUNDRED =
             new BigDecimal("100");
 
+    private static final ZoneId SERVICE_ZONE =
+            ZoneId.of("Asia/Seoul");
+
     private final AssetReportMapper assetReportMapper;
     private final ObjectMapper objectMapper;
     private final AccountNumberProtector accountNumberProtector;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void generateForChild(
             Long childId,
             YearMonth targetMonth
@@ -43,12 +47,10 @@ public class AssetReportSnapshotService {
                 targetMonth.atDay(1);
 
         LocalDateTime startAt =
-                targetMonth.atDay(1).atStartOfDay();
+                toUtcStart(targetMonth);
 
         LocalDateTime endExclusive =
-                targetMonth.plusMonths(1)
-                        .atDay(1)
-                        .atStartOfDay();
+                toUtcStart(targetMonth.plusMonths(1));
 
         BigDecimal totalAssetAmount = zeroIfNull(
                 assetReportMapper.findTotalAssetAmountAt(
@@ -95,9 +97,7 @@ public class AssetReportSnapshotService {
             previousMonthlySavedAmount = zeroIfNull(
                     assetReportMapper.findMonthlySavedAmount(
                             childId,
-                            targetMonth.minusMonths(1)
-                                    .atDay(1)
-                                    .atStartOfDay(),
+                            toUtcStart(targetMonth.minusMonths(1)),
                             startAt
                     )
             );
@@ -169,6 +169,13 @@ public class AssetReportSnapshotService {
                         .build();
 
         assetReportMapper.upsertAssetReport(command);
+    }
+
+    private LocalDateTime toUtcStart(YearMonth month) {
+        return month.atDay(1)
+                .atStartOfDay(SERVICE_ZONE)
+                .withZoneSameInstant(ZoneOffset.UTC)
+                .toLocalDateTime();
     }
 
     private List<GoalSnapshot> createGoalSnapshots(
