@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class FamilyInvitationInfoProjection {
 
+    private Long familyInvitationId;
     private String childName;
     private String inviterName;
     private FamilyInviteeType inviteeType;
