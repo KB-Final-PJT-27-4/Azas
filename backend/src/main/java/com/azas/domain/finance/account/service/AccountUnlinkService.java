@@ -16,6 +16,7 @@ import java.time.ZoneOffset;
 public class AccountUnlinkService {
 
     private static final String ACTIVE = "ACTIVE";
+    private static final String CHILD = "CHILD";
     private static final String DISCOVERED = "DISCOVERED";
     private static final String UNLINKED = "UNLINKED";
 
@@ -98,11 +99,22 @@ public class AccountUnlinkService {
     ) {
         Long ownerMemberId = target.getOwnerMemberId();
 
-        if (ownerMemberId == null
-                || ownerMemberId != requesterMemberId) {
-            throw new BusinessException(
-                    ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED
-            );
+        if (ownerMemberId != null
+                && ownerMemberId == requesterMemberId) {
+            return;
         }
+
+        if (CHILD.equals(target.getOwnerType())
+                && target.getChildId() != null
+                && financialAccountMapper.countActiveParentAccess(
+                requesterMemberId,
+                target.getChildId()
+        ) > 0) {
+            return;
+        }
+
+        throw new BusinessException(
+                ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED
+        );
     }
 }
