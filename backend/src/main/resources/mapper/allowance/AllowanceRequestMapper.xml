@@ -40,6 +40,118 @@
         )
     </insert>
 
+    <insert id="insertAllowanceRequestedNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            cp.member_id,
+            cp.child_id,
+            'ALLOWANCE',
+            'ALLOWANCE_REQUESTED',
+            '자녀가 용돈을 요청했어요',
+            CONCAT(
+                FORMAT(#{requestedAmount}, 0),
+                '원을 요청했어요. ',
+                #{message}
+            ),
+            'ALLOWANCE_REQUEST',
+            #{allowanceRequestId},
+            JSON_OBJECT(
+                'allowance_request_id', #{allowanceRequestId},
+                'requested_amount', #{requestedAmount}
+            ),
+            CONCAT(
+                'ALLOWANCE_REQUESTED:',
+                #{allowanceRequestId},
+                ':',
+                cp.member_id
+            ),
+            0,
+            #{createdAt}
+        FROM child_parent cp
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = cp.member_id
+                            AND np.notification_category = 'ALLOWANCE'
+                      ),
+                      1
+              ) = 1
+    </insert>
+
+    <insert id="insertAllowanceStatusNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            c.member_id,
+            c.child_id,
+            'ALLOWANCE',
+            #{notificationType},
+            #{title},
+            #{content},
+            'ALLOWANCE_REQUEST',
+            #{allowanceRequestId},
+            JSON_OBJECT(
+                'allowance_request_id', #{allowanceRequestId},
+                'status', #{notificationType}
+            ),
+            CONCAT(
+                #{notificationType},
+                ':',
+                #{allowanceRequestId},
+                ':',
+                c.member_id
+            ),
+            0,
+            #{createdAt}
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'CHILD'
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = c.member_id
+                            AND np.notification_category = 'ALLOWANCE'
+                      ),
+                      1
+              ) = 1
+    </insert>
+
     <resultMap id="allowanceRequestListRowMap"
                type="com.azas.domain.allowance.dto.AllowanceRequestListRow">
         <id property="allowanceRequestId"

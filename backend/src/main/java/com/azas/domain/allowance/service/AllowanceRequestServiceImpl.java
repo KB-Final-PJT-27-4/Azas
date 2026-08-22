@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +65,14 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                     ErrorCode.INTERNAL_SERVER_ERROR
             );
         }
+
+        allowanceRequestMapper.insertAllowanceRequestedNotification(
+                command.getAllowanceRequestId(),
+                childId,
+                command.getRequestedAmount(),
+                command.getMessage(),
+                requestedAt
+        );
 
         return new AllowanceRequestResponse(
                 command.getAllowanceRequestId(),
@@ -285,11 +294,12 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
         AllowanceRequestStatus nextStatus =
                 getNextStatus(action);
 
+        LocalDateTime updatedAt = LocalDateTime.now();
         int updatedCount =
                 allowanceRequestMapper.updateAllowanceRequestStatus(
                         allowanceRequestId,
                         nextStatus,
-                        LocalDateTime.now()
+                        updatedAt
                 );
 
         if (updatedCount != 1) {
@@ -297,6 +307,14 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                     ErrorCode.INVALID_ALLOWANCE_STATUS_TRANSITION
             );
         }
+
+        insertStatusNotification(
+                allowanceRequestId,
+                current.getChildId(),
+                current.getRequestedAmount(),
+                nextStatus,
+                updatedAt
+        );
 
         AllowanceRequestDetailRow updated =
                 allowanceRequestMapper.findAllowanceRequestDetail(
@@ -310,6 +328,47 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
         }
 
         return AllowanceRequestDetailResponse.from(updated);
+    }
+
+    private void insertStatusNotification(
+            Long allowanceRequestId,
+            Long childId,
+            BigDecimal requestedAmount,
+            AllowanceRequestStatus status,
+            LocalDateTime createdAt
+    ) {
+        if (status != AllowanceRequestStatus.APPROVED
+                && status != AllowanceRequestStatus.REJECTED) {
+            return;
+        }
+
+        boolean approved = status == AllowanceRequestStatus.APPROVED;
+        String title = approved
+                ? "용돈 요청이 승인되었어요"
+                : "용돈 요청이 거절되었어요";
+        String content = approved
+                ? String.format(
+                        Locale.KOREA,
+                        "%,.0f원 요청이 승인되었어요.",
+                        requestedAmount
+                )
+                : String.format(
+                        Locale.KOREA,
+                        "%,.0f원 요청이 거절되었어요.",
+                        requestedAmount
+                );
+        String notificationType = approved
+                ? "ALLOWANCE_APPROVED"
+                : "ALLOWANCE_REJECTED";
+
+        allowanceRequestMapper.insertAllowanceStatusNotification(
+                allowanceRequestId,
+                childId,
+                notificationType,
+                title,
+                content,
+                createdAt
+        );
     }
 
     private AllowanceRequestAction parseAllowanceRequestAction(
