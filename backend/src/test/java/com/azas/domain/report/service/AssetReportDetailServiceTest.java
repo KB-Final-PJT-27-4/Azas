@@ -174,7 +174,7 @@ class AssetReportDetailServiceTest {
     }
 
     @Test
-    void 이번_달_리포트가_없으면_즉시_생성한_뒤_반환한다() {
+    void 이번_달_리포트는_최신_잔액으로_다시_생성한_뒤_반환한다() {
         mockAccess();
 
         AssetReportDetailRow august = detailRow();
@@ -183,7 +183,7 @@ class AssetReportDetailServiceTest {
         when(assetReportMapper.findAssetReportDetail(
                 CHILD_ID,
                 LocalDate.of(2026, 8, 1)
-        )).thenReturn(null, august);
+        )).thenReturn(august);
 
         AssetReportDetailResponse response =
                 assetReportService.getAssetReportDetail(
@@ -200,7 +200,7 @@ class AssetReportDetailServiceTest {
                 java.time.YearMonth.of(2026, 8)
         );
 
-        verify(assetReportMapper, times(2))
+        verify(assetReportMapper)
                 .findAssetReportDetail(
                         CHILD_ID,
                         LocalDate.of(2026, 8, 1)
