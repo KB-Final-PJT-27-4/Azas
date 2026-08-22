@@ -435,7 +435,9 @@
             resultType="com.azas.domain.finance.account.dto.AccountUnlinkTargetRow">
         SELECT
             fa.financial_account_id AS account_id,
+            fa.owner_type,
             fa.owner_member_id,
+            fa.child_id,
             fa.link_status,
             fa.unlinked_at
         FROM financial_account fa
