@@ -84,7 +84,9 @@ public class AutoTransferRetryServiceImplTest {
         when(retryMapper.findAccountForExecutionForUpdate(1L))
                 .thenReturn(sourceAccount(new BigDecimal("200000")));
         when(retryMapper.findAccountForExecutionForUpdate(3L))
-                .thenReturn(destinationAccount(new BigDecimal("500000")));
+                .thenReturn(destinationDemandDepositAccount(
+                        new BigDecimal("500000")
+                ));
 
         when(retryMapper.insertRetryTransfer(any()))
                 .thenAnswer(invocation -> {
@@ -340,6 +342,15 @@ public class AutoTransferRetryServiceImplTest {
         row.setLinkStatus("ACTIVE");
         row.setBalance(balance);
 
+        return row;
+    }
+
+    private AutoTransferExecutionAccountRow
+    destinationDemandDepositAccount(BigDecimal balance) {
+        AutoTransferExecutionAccountRow row =
+                destinationAccount(balance);
+        row.setAccountProductType("DEMAND_DEPOSIT");
+        row.setAccountName("자녀 입출금 계좌");
         return row;
     }
     private AutoTransferRetryRow failedTransfer(
