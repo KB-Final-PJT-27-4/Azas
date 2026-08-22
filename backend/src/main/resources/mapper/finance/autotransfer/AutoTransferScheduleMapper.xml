@@ -132,6 +132,7 @@
         LEFT JOIN financial_goal fg
         ON fg.financial_goal_id = ats.financial_goal_id
         WHERE ats.child_id = #{childId}
+          AND ats.member_id = #{memberId}
 
         <if test="status != null">
             AND ats.status = #{status}
