@@ -98,7 +98,7 @@ public class FinancialGoalUpdateService {
         List<FinancialGoalAccountTargetRow> lockedAccounts =
                 goalMapper.findAccountTargetsForUpdate(new ArrayList<>(allIds));
         Map<Long, FinancialGoalAccountTargetRow> byId = validateAndIndexAccounts(
-                goal, financialGoalId, allIds, lockedAccounts);
+                goal, requesterMemberId, financialGoalId, allIds, lockedAccounts);
 
         List<FinancialGoalAccountTargetRow> finalAccounts = finalIds.stream()
                 .map(byId::get)
@@ -167,6 +167,7 @@ public class FinancialGoalUpdateService {
 
     private Map<Long, FinancialGoalAccountTargetRow> validateAndIndexAccounts(
             FinancialGoalUpdateTargetRow goal,
+            long requesterMemberId,
             long financialGoalId,
             Set<Long> requestedIds,
             List<FinancialGoalAccountTargetRow> accounts
@@ -183,8 +184,7 @@ public class FinancialGoalUpdateService {
             if (account == null) {
                 throw new BusinessException(ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND);
             }
-            if (!"CHILD".equals(account.getOwnerType())
-                    || !Objects.equals(goal.getChildId(), account.getChildId())
+            if (!isEligibleGoalAccount(account, requesterMemberId, goal.getChildId())
                     || !"SAVINGS".equals(account.getAccountProductType())
                     || !"ACTIVE".equals(account.getAccountStatus())
                     || !"ACTIVE".equals(account.getLinkStatus())) {
@@ -197,6 +197,20 @@ public class FinancialGoalUpdateService {
             }
         }
         return byId;
+    }
+
+    private boolean isEligibleGoalAccount(
+            FinancialGoalAccountTargetRow account,
+            long requesterMemberId,
+            Long childId
+    ) {
+        if ("CHILD".equals(account.getOwnerType())) {
+            return Objects.equals(account.getChildId(), childId);
+        }
+        if ("PARENT".equals(account.getOwnerType())) {
+            return Objects.equals(account.getOwnerMemberId(), requesterMemberId);
+        }
+        return false;
     }
 
     private void applyAccountLinks(

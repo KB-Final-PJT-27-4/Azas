@@ -19,6 +19,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.*;
 import java.util.HexFormat;
+import java.util.Set;
 
 @Service
 public class AccountOpenService {
@@ -169,8 +170,15 @@ public class AccountOpenService {
 
     private void validateTargetOwner(FinancialAccountOwnerType ownerType,
                                      String targetOwnerType) {
-        if ("BOTH".equals(targetOwnerType)) return;
-        if (ownerType.name().equals(targetOwnerType)) return;
+        if (targetOwnerType == null
+                || !Set.of("PARENT", "CHILD", "BOTH").contains(targetOwnerType)) {
+            throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
+        }
+        if (ownerType == FinancialAccountOwnerType.PARENT
+                || "BOTH".equals(targetOwnerType)
+                || "CHILD".equals(targetOwnerType)) {
+            return;
+        }
         throw new BusinessException(ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST);
     }
 
