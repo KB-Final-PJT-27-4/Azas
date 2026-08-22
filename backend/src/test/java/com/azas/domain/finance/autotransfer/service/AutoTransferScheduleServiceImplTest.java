@@ -662,6 +662,53 @@ class AutoTransferScheduleServiceImplTest {
                         .get(0)
                         .getAutoTransferScheduleId()
         );
+
+        ArgumentCaptor<AutoTransferScheduleListQuery> queryCaptor =
+                ArgumentCaptor.forClass(
+                        AutoTransferScheduleListQuery.class
+                );
+        verify(autoTransferScheduleMapper)
+                .findSchedules(queryCaptor.capture());
+
+        AutoTransferScheduleListQuery query = queryCaptor.getValue();
+        assertEquals(1L, query.getMemberId());
+        assertEquals(1L, query.getChildId());
+        assertEquals(
+                AutoTransferScheduleStatus.ACTIVE,
+                query.getStatus()
+        );
+        assertEquals(3, query.getLimit());
+    }
+
+    @Test
+    void 상태를_생략하면_활성_자동이체_일정만_조회한다() {
+        when(autoTransferScheduleMapper.countChildAccess(1L, 1L))
+                .thenReturn(1);
+        when(autoTransferScheduleMapper.findSchedules(any(
+                AutoTransferScheduleListQuery.class
+        ))).thenReturn(List.of());
+
+        autoTransferScheduleService.getSchedules(
+                1L,
+                1L,
+                null,
+                null,
+                null
+        );
+
+        ArgumentCaptor<AutoTransferScheduleListQuery> queryCaptor =
+                ArgumentCaptor.forClass(
+                        AutoTransferScheduleListQuery.class
+                );
+        verify(autoTransferScheduleMapper)
+                .findSchedules(queryCaptor.capture());
+
+        AutoTransferScheduleListQuery query = queryCaptor.getValue();
+        assertEquals(
+                AutoTransferScheduleStatus.ACTIVE,
+                query.getStatus()
+        );
+        assertEquals(21, query.getLimit());
     }
 
     @Test

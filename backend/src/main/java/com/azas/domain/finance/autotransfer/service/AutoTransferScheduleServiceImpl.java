@@ -420,6 +420,7 @@ public class AutoTransferScheduleServiceImpl
 
         AutoTransferScheduleListQuery query =
                 new AutoTransferScheduleListQuery(
+                        memberId,
                         childId,
                         parsedStatus,
                         cursorId,
@@ -463,7 +464,7 @@ public class AutoTransferScheduleServiceImpl
             String value
     ) {
         if (value == null || value.isBlank()) {
-            return null;
+            return AutoTransferScheduleStatus.ACTIVE;
         }
 
         try {
