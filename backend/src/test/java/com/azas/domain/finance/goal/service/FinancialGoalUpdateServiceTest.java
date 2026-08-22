@@ -117,6 +117,31 @@ class FinancialGoalUpdateServiceTest {
     }
 
     @Test
+    void updatesGoalWithRequestingParentSavingsAccount() {
+        givenParent();
+        when(goalMapper.findAccessibleGoalForUpdate(31L, 8L)).thenReturn(goal());
+        when(goalMapper.findGoalAccountIds(31L)).thenReturn(List.of(11L));
+        when(goalMapper.findAccountTargetsForUpdate(List.of(11L, 14L)))
+                .thenReturn(List.of(account(11L, "4800000", 31L),
+                        parentAccount(14L, "1000000", null)));
+        when(goalMapper.insertFinancialGoalAccount(31L, 14L)).thenReturn(1);
+        when(goalMapper.updateFinancialGoal(anyLong(), any(), any(), any(), any()))
+                .thenReturn(1);
+        List<FinancialGoalCheckpointRow> checkpoints = checkpoints();
+        when(goalMapper.findGoalCheckpoints(31L)).thenReturn(checkpoints);
+        when(goalMapper.updateFinancialGoalCheckpoint(anyLong(), any(), any()))
+                .thenReturn(1);
+        FinancialGoalDetailResult expected = mock(FinancialGoalDetailResult.class);
+        when(detailService.getGoal(8L, 31L)).thenReturn(expected);
+
+        FinancialGoalDetailResult result = service.update(8L, 31L,
+                new FinancialGoalUpdateRequest(null, null, List.of(11L, 14L)));
+
+        assertSame(expected, result);
+        verify(goalMapper).insertFinancialGoalAccount(31L, 14L);
+    }
+
+    @Test
     void rejectsEmptyPatch() {
         givenParent();
         BusinessException exception = assertThrows(BusinessException.class,
@@ -203,6 +228,15 @@ class FinancialGoalUpdateServiceTest {
         row.setLinkStatus("ACTIVE");
         row.setBalance(new BigDecimal(balance));
         row.setFinancialGoalId(goalId);
+        return row;
+    }
+
+    private FinancialGoalAccountTargetRow parentAccount(long id, String balance,
+                                                         Long goalId) {
+        FinancialGoalAccountTargetRow row = account(id, balance, goalId);
+        row.setOwnerType("PARENT");
+        row.setChildId(null);
+        row.setOwnerMemberId(8L);
         return row;
     }
 
