@@ -5,6 +5,9 @@ import { Check, ContactRound, Smartphone, X } from 'lucide-vue-next'
 
 import babyImage from '@/assets/images/child/baby.png'
 import completePigUrl from '@/assets/images/accounts/complete-pig.png'
+import ChildAccountProductSelection, {
+  type ChildAccountProduct,
+} from '@/components/child/ChildAccountProductSelection.vue'
 import { api, getApiErrorMessage } from '@/api'
 import { useToast } from '@/composables/useToast'
 
@@ -18,7 +21,7 @@ const children = ref<Child[]>([])
 const router = useRouter()
 const { showToast } = useToast()
 const selectedChildId = ref<number | null>(null)
-const step = ref<1 | 2 | 3>(1)
+const step = ref<1 | 2 | 3 | 4>(1)
 const selectedAuthMethod = ref<'kakao' | 'sms' | null>(null)
 const isAuthDialogOpen = ref(false)
 const isAuthenticated = ref(false)
@@ -33,6 +36,10 @@ const authSheetDragOffset = ref(0)
 const isAuthSheetDragging = ref(false)
 let timerId: ReturnType<typeof setInterval> | null = null
 const verificationId = ref<number | null>(null)
+const accountProducts = ref<ChildAccountProduct[]>([])
+const selectedProductId = ref<number | null>(null)
+const isProductsLoading = ref(false)
+const isOpeningAccount = ref(false)
 
 const selectedChildName = computed(
   () => children.value.find(({ id }) => id === selectedChildId.value)?.name ?? '아이',
@@ -176,21 +183,56 @@ const completeAuthentication = () => {
 
 const continueAfterAuthentication = async () => {
   if (!isAuthenticated.value) return
-  if (!selectedChildId.value) return
+  step.value = 3
+  if (accountProducts.value.length > 0 || isProductsLoading.value) return
+
+  isProductsLoading.value = true
   try {
-    type ProductItem = { financial_product_id?: number; product_type?: string }
+    type ProductItem = {
+      financial_product_id?: number
+      bank_name?: string
+      name?: string
+      target_owner_type?: string
+      highlight_label?: string
+      summary?: string
+      hashtags?: string[]
+      max_interest_rate?: number
+    }
     const { data } = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 20)
-    const product = ((data.items ?? []) as unknown as ProductItem[])[0]
-    if (!product?.financial_product_id) throw new Error('개설 가능한 입출금 상품이 없습니다.')
+    accountProducts.value = ((data.items ?? []) as unknown as ProductItem[]).flatMap((product) => {
+      if (!product.financial_product_id || product.target_owner_type === 'PARENT') return []
+      return [{
+        id: product.financial_product_id,
+        name: product.name ?? '아이 입출금통장',
+        bankName: product.bank_name ?? 'KB국민은행',
+        badge: product.highlight_label ?? '자녀 추천',
+        rate: product.max_interest_rate == null ? '금리 확인 필요' : `최고 연 ${product.max_interest_rate}%`,
+        description: product.summary ?? '용돈과 생활비를 편리하게 관리할 수 있는 아이 명의 계좌예요.',
+        tags: product.hashtags ?? [],
+      }]
+    })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌 상품을 불러오지 못했습니다.'), 'error')
+  } finally {
+    isProductsLoading.value = false
+  }
+}
+
+const openSelectedAccount = async () => {
+  if (!selectedChildId.value || !selectedProductId.value || isOpeningAccount.value) return
+  isOpeningAccount.value = true
+  try {
     await api.openUsingPOST(undefined, {
       child_id: selectedChildId.value,
-      financial_product_id: product.financial_product_id,
+      financial_product_id: selectedProductId.value,
       initial_deposit_amount: 0,
       owner_type: 'CHILD',
     })
-    step.value = 3
+    step.value = 4
   } catch (error) {
     showToast(getApiErrorMessage(error, '아이 통장을 개설하지 못했습니다.'), 'error')
+  } finally {
+    isOpeningAccount.value = false
   }
 }
 
@@ -220,7 +262,7 @@ onBeforeUnmount(stopVerificationTimer)
     class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col bg-white text-[var(--color-text-primary)]"
   >
     <section class="flex flex-1 flex-col overflow-x-hidden px-5 pt-5 pb-[max(32px,env(safe-area-inset-bottom))]">
-      <div v-if="step !== 3" class="grid grid-cols-2 gap-2" aria-label="아이 계좌 만들기 진행 단계">
+      <div v-if="step !== 4" class="grid grid-cols-3 gap-2" aria-label="아이 계좌 만들기 진행 단계">
         <span
           class="child-progress-step h-1 rounded-full"
           :class="step === 1 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
@@ -230,6 +272,11 @@ onBeforeUnmount(stopVerificationTimer)
           class="child-progress-step h-1 rounded-full"
           :class="step === 2 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
           :aria-current="step === 2 ? 'step' : undefined"
+        ></span>
+        <span
+          class="child-progress-step h-1 rounded-full"
+          :class="step === 3 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
+          :aria-current="step === 3 ? 'step' : undefined"
         ></span>
       </div>
 
@@ -353,6 +400,17 @@ onBeforeUnmount(stopVerificationTimer)
           </button>
         </form>
       </template>
+
+      <ChildAccountProductSelection
+        v-else-if="step === 3"
+        :products="accountProducts"
+        :selected-product-id="selectedProductId"
+        :child-name="selectedChildName"
+        :loading="isProductsLoading"
+        :opening="isOpeningAccount"
+        @select="selectedProductId = $event"
+        @open="openSelectedAccount"
+      />
 
       <template v-else>
         <div class="flex flex-1 flex-col items-center text-center">

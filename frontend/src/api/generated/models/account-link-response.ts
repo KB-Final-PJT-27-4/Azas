@@ -15,10 +15,10 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { LinkedAccountResponse } from './linked-account-response';
+import type { FinancialAccountLinkedAccountResponse } from './financial-account-linked-account-response';
 
 export interface AccountLinkResponse {
-    'accounts'?: Array<LinkedAccountResponse>;
+    'accounts'?: Array<FinancialAccountLinkedAccountResponse>;
     'goal_setup_account_ids'?: Array<number>;
     'linked_count'?: number;
 }

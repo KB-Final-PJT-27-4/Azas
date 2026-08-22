@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { CheckCircle2, ChevronRight, Landmark, Plus, Smartphone } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import { api, getApiErrorMessage } from '@/api'
@@ -16,7 +16,38 @@ const isCodeSent = ref(false)
 const isPhoneVerified = ref(false)
 const verificationError = ref('')
 const verificationId = ref<number | null>(null)
-const canVerify = computed(() => verificationCode.value.length === 6)
+const isSendingCode = ref(false)
+const isVerifyingCode = ref(false)
+const remainingSeconds = ref(180)
+let verificationTimer: ReturnType<typeof setInterval> | null = null
+const canSendCode = computed(() => /^010-\d{4}-\d{4}$/.test(phone.value))
+const canVerify = computed(() =>
+  isCodeSent.value && remainingSeconds.value > 0 && verificationCode.value.length === 6,
+)
+const timerText = computed(() => {
+  const minutes = Math.floor(remainingSeconds.value / 60)
+  const seconds = String(remainingSeconds.value % 60).padStart(2, '0')
+  return `${minutes}:${seconds}`
+})
+
+const stopVerificationTimer = () => {
+  if (verificationTimer === null) return
+  clearInterval(verificationTimer)
+  verificationTimer = null
+}
+
+const startVerificationTimer = () => {
+  stopVerificationTimer()
+  remainingSeconds.value = 180
+  verificationTimer = setInterval(() => {
+    if (remainingSeconds.value <= 1) {
+      remainingSeconds.value = 0
+      stopVerificationTimer()
+      return
+    }
+    remainingSeconds.value -= 1
+  }, 1000)
+}
 
 const formatPhone = (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -27,45 +58,64 @@ const formatPhone = (event: Event) => {
       ? `${digits.slice(0, 3)}-${digits.slice(3)}`
       : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
   input.value = phone.value
+  stopVerificationTimer()
+  remainingSeconds.value = 180
   isCodeSent.value = false
   verificationCode.value = ''
   isPhoneVerified.value = false
 }
 
 const sendVerificationCode = async () => {
-  if (!/^010-\d{4}-\d{4}$/.test(phone.value)) {
+  if (!canSendCode.value || isSendingCode.value) {
     showToast('휴대폰 번호를 정확히 입력해 주세요.', 'error')
     return
   }
+  isSendingCode.value = true
   try {
     const { data } = await api.sendVerificationCodeUsingPOST({
       phone_number: phone.value.replace(/-/g, ''),
     })
     verificationId.value = data.verification_id
     isCodeSent.value = true
+    verificationCode.value = ''
     verificationError.value = ''
+    startVerificationTimer()
     showToast('인증번호를 전송했습니다.', 'info')
   } catch (error) {
     showToast(getApiErrorMessage(error, '인증번호를 전송하지 못했어요.'), 'error')
+  } finally {
+    isSendingCode.value = false
   }
 }
 
 const verifyPhone = async () => {
+  if (!canVerify.value || isVerifyingCode.value) return
   if (!verificationId.value) {
     verificationError.value = '인증번호를 먼저 전송해 주세요.'
     return
   }
+  isVerifyingCode.value = true
   try {
     await api.confirmVerificationCodeUsingPOST(verificationId.value, {
       verification_code: verificationCode.value,
     })
+    stopVerificationTimer()
     isPhoneVerified.value = true
     verificationError.value = ''
     showToast('휴대폰 인증이 완료되었습니다.', 'success', 2200, 'slightly-above')
   } catch (error) {
     verificationError.value = getApiErrorMessage(error, '인증번호가 일치하지 않습니다.')
+  } finally {
+    isVerifyingCode.value = false
   }
 }
+
+const updateVerificationCode = (event: Event) => {
+  verificationCode.value = (event.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6)
+  verificationError.value = ''
+}
+
+onBeforeUnmount(stopVerificationTimer)
 </script>
 
 <template>
@@ -129,32 +179,47 @@ const verifyPhone = async () => {
             <button
               class="h-12 w-full rounded-[15px] bg-[var(--color-brand-primary)] text-[14px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-45"
               type="button"
-              :disabled="isCodeSent"
+              :disabled="!canSendCode || isSendingCode"
               @click="sendVerificationCode"
-            >{{ isCodeSent ? '전송 완료' : '인증번호 받기' }}</button>
+            >{{ isSendingCode ? '전송 중...' : isCodeSent ? '인증번호 재전송' : '인증번호 받기' }}</button>
             </div>
 
             <Transition name="account-reveal">
               <div v-if="isCodeSent" key="verification" class="mt-4">
               <label class="block text-xs font-bold" for="account-verification-code">인증번호</label>
               <div class="mt-2 flex h-12 gap-2">
-                <input
-                  id="account-verification-code"
-                  v-model="verificationCode"
-                  class="min-w-0 flex-1 rounded-xl border border-[#dce7ed] bg-white px-3 text-sm outline-none focus:border-[var(--color-brand-primary)] focus:ring-2 focus:ring-[#dff4fc]"
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="6"
-                  placeholder="6자리 입력"
-                />
+                <div class="relative min-w-0 flex-1">
+                  <input
+                    id="account-verification-code"
+                    :value="verificationCode"
+                    class="h-full w-full rounded-xl border border-[#dce7ed] bg-white px-3 pr-14 text-sm outline-none focus:border-[var(--color-brand-primary)] focus:ring-2 focus:ring-[#dff4fc]"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="6"
+                    placeholder="6자리 입력"
+                    @input="updateVerificationCode"
+                  />
+                  <span
+                    class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[11px] font-bold tabular-nums"
+                    :class="remainingSeconds > 0 ? 'text-[#ef5b5b]' : 'text-[#a1a9b4]'"
+                  >
+                    {{ timerText }}
+                  </span>
+                </div>
                 <button
                   class="w-[92px] shrink-0 rounded-xl border border-[#b9e2f5] bg-[#edf9ff] text-xs font-bold text-[var(--color-selected-text)] disabled:cursor-not-allowed disabled:opacity-45"
                   type="button"
-                  :disabled="!canVerify"
+                  :disabled="!canVerify || isVerifyingCode"
                   @click="verifyPhone"
-                >인증 확인</button>
+                >{{ isVerifyingCode ? '확인 중' : '인증 확인' }}</button>
               </div>
               <p v-if="verificationError" class="mt-2 text-[11px] font-semibold text-[var(--color-danger)]">{{ verificationError }}</p>
+              <p
+                v-else-if="remainingSeconds === 0"
+                class="mt-2 text-[11px] font-semibold text-[var(--color-danger)]"
+              >
+                인증 시간이 만료되었어요. 인증번호를 재전송해 주세요.
+              </p>
               </div>
             </Transition>
           </div>

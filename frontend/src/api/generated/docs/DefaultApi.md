@@ -9,23 +9,25 @@ All URIs are relative to *http://localhost*
 |[**completeMediaUploadUsingPOST**](#completemediauploadusingpost) | **POST** /api/v1/time-capsule-entries/{entry_id}/media/complete | TIMECAPSULE-8 타임캡슐 단일 이미지 업로드 완료|
 |[**confirmVerificationCodeUsingPOST**](#confirmverificationcodeusingpost) | **POST** /api/v1/members/me/phone-verifications/{verification_id}/confirm | 휴대폰 SMS 인증번호 확인|
 |[**createAllowanceRequestUsingPOST**](#createallowancerequestusingpost) | **POST** /api/v1/children/me/allowance-requests | 자녀 본인 용돈 요청|
+|[**createChildFamilyInvitationUsingPOST**](#createchildfamilyinvitationusingpost) | **POST** /api/v1/children/{child_id}/family-invitations | 자녀 계정 연결 초대코드 발급|
 |[**createChildUsingPOST**](#createchildusingpost) | **POST** /api/v1/children | 자녀 프로필 등록|
-|[**createFamilyInvitationUsingPOST**](#createfamilyinvitationusingpost) | **POST** /api/v1/children/{child_id}/family-invitations | 가족/아이 초대코드 발급|
 |[**createGoalUsingPOST**](#creategoalusingpost) | **POST** /api/v1/children/{child_id}/financial-goals | GOAL-2 자녀 금융 목표 생성|
 |[**createMediaUploadUrlUsingPOST**](#createmediauploadurlusingpost) | **POST** /api/v1/time-capsule-entries/{entry_id}/media/upload-url | TIMECAPSULE-7 타임캡슐 대표 이미지 업로드 URL 발급|
 |[**createMissionUsingPOST**](#createmissionusingpost) | **POST** /api/v1/children/{child_id}/missions | 미션 생성|
+|[**createParentFamilyInvitationUsingPOST**](#createparentfamilyinvitationusingpost) | **POST** /api/v1/family-invitations | 보호자 초대코드 발급|
 |[**createScheduleUsingPOST**](#createscheduleusingpost) | **POST** /api/v1/auto-transfer-schedules | 자동이체 일정 등록|
 |[**createTimeCapsuleEntryUsingPOST**](#createtimecapsuleentryusingpost) | **POST** /api/v1/time-capsules/{time_capsule_id}/entries | TIMECAPSULE-5 타임캡슐 기록 생성|
 |[**createTimeCapsuleUsingPOST**](#createtimecapsuleusingpost) | **POST** /api/v1/children/{child_id}/time-capsules | TIMECAPSULE-1 타임캡슐 보관함 생성|
 |[**createTransferUsingPOST**](#createtransferusingpost) | **POST** /api/v1/transfers | TRANSFER-1 목표 계좌로 이체 요청(수동)|
 |[**deleteChildUsingDELETE**](#deletechildusingdelete) | **DELETE** /api/v1/children/{childId} | deleteChild|
 |[**deleteGoalUsingDELETE**](#deletegoalusingdelete) | **DELETE** /api/v1/financial-goals/{financial_goal_id} | GOAL-6 자녀 금융 목표 삭제|
-|[**deleteTimeCapsuleEntryUsingDELETE**](#deletetimecapsuleentryusingdelete) | **DELETE** /api/v1/time-capsule-entries/{entry_id} | TC-13 타임캡슐 엔트리 삭제|
+|[**deleteTimeCapsuleEntryUsingDELETE**](#deletetimecapsuleentryusingdelete) | **DELETE** /api/v1/time-capsule-entries/{entry_id} | TIMECAPSULE-13 타임캡슐 엔트리 삭제|
 |[**deleteTimeCapsuleUsingDELETE**](#deletetimecapsuleusingdelete) | **DELETE** /api/v1/time-capsules/{time_capsule_id} | TIMECAPSULE-6 타임캡슐 보관함 삭제|
 |[**estimateMaturityUsingPOST**](#estimatematurityusingpost) | **POST** /api/v1/financial-products/{financial_product_id}/maturity-estimate | PRODUCT-5 예상 만기금액 계산|
 |[**getAccountDetailUsingGET**](#getaccountdetailusingget) | **GET** /api/v1/accounts/{account_id} | ACCOUNT-15 계좌 상세 조회|
 |[**getAllowanceRequestDetailUsingGET**](#getallowancerequestdetailusingget) | **GET** /api/v1/allowance-requests/{allowance_request_id} | 용돈 요청 상세 조회|
 |[**getAllowanceRequestsUsingGET**](#getallowancerequestsusingget) | **GET** /api/v1/children/{child_id}/allowance-requests | 자녀 용돈 요청 목록 조회|
+|[**getAmountRecommendationsUsingGET**](#getamountrecommendationsusingget) | **GET** /api/v1/financial-goal-templates/{financial_goal_template_id}/amount-recommendations | GOAL-2 목표 금액 추천 조회|
 |[**getAssetReportDetailUsingGET**](#getassetreportdetailusingget) | **GET** /api/v1/children/{child_id}/asset-reports/{year}/{month} | 월간 자산 리포트 상세 조회|
 |[**getAssetReportsUsingGET**](#getassetreportsusingget) | **GET** /api/v1/children/{child_id}/asset-reports | 자산 리포트 월 목록 조회|
 |[**getBalanceHistoryUsingGET**](#getbalancehistoryusingget) | **GET** /api/v1/accounts/{account_id}/balance-history | ACCOUNT-17 계좌 월별 잔액 변화 조회|
@@ -52,6 +54,7 @@ All URIs are relative to *http://localhost*
 |[**getMyProfileUsingGET**](#getmyprofileusingget) | **GET** /api/v1/members/me | 내 회원 정보 조회|
 |[**getNotificationPreferencesUsingGET**](#getnotificationpreferencesusingget) | **GET** /api/v1/notification-preferences | 알림 유형별 수신 설정 조회|
 |[**getNotificationsUsingGET**](#getnotificationsusingget) | **GET** /api/v1/notifications | 알림 목록 조회 및 신규 알림 폴링|
+|[**getPermissionUsingGET**](#getpermissionusingget) | **GET** /api/v1/children/{child_id}/feature-permissions | 자녀 이용 권한 조회|
 |[**getPregnancyStatusUsingGET**](#getpregnancystatususingget) | **GET** /api/v1/children/{child_id}/pregnancy-status | 임신 주차 및 캐릭터 조회|
 |[**getProductDetailUsingGET**](#getproductdetailusingget) | **GET** /api/v1/financial-products/{financial_product_id} | PRODUCT-4 금융상품 상세 조회|
 |[**getProductsUsingGET**](#getproductsusingget) | **GET** /api/v1/financial-products | PRODUCT-1 KB 금융상품 목록 조회|
@@ -60,7 +63,7 @@ All URIs are relative to *http://localhost*
 |[**getSchedulesUsingGET**](#getschedulesusingget) | **GET** /api/v1/children/{child_id}/auto-transfer-schedules | 자녀 자동이체 일정 목록 조회|
 |[**getTemplatesUsingGET**](#gettemplatesusingget) | **GET** /api/v1/financial-goal-templates | GOAL-1 금융 목표 템플릿 조회|
 |[**getTimeCapsuleEntriesUsingGET**](#gettimecapsuleentriesusingget) | **GET** /api/v1/time-capsules/{time_capsule_id}/entries | TIMECAPSULE-4 타임캡슐 엔트리 목록 조회|
-|[**getTimeCapsuleEntryUsingGET**](#gettimecapsuleentryusingget) | **GET** /api/v1/time-capsule-entries/{entry_id} | TC-14 타임캡슐 엔트리 상세 조회|
+|[**getTimeCapsuleEntryUsingGET**](#gettimecapsuleentryusingget) | **GET** /api/v1/time-capsule-entries/{entry_id} | TIMECAPSULE-14 공개된 타임캡슐 엔트리 상세 조회|
 |[**getTimeCapsulesUsingGET**](#gettimecapsulesusingget) | **GET** /api/v1/children/{child_id}/time-capsules | TIMECAPSULE-2 타임캡슐 보관함 목록 조회|
 |[**getTransactionDetailUsingGET**](#gettransactiondetailusingget) | **GET** /api/v1/account-transactions/{account_transaction_id} | ACCOUNT-24 거래내역 상세 조회|
 |[**getTransactionsUsingGET**](#gettransactionsusingget) | **GET** /api/v1/accounts/{account_id}/transactions | ACCOUNT-22 계좌 거래내역 목록 조회|
@@ -76,11 +79,13 @@ All URIs are relative to *http://localhost*
 |[**readAllNotificationsUsingPATCH**](#readallnotificationsusingpatch) | **PATCH** /api/v1/notifications/read-all | 알림 전체 읽음 처리|
 |[**readNotificationUsingPATCH**](#readnotificationusingpatch) | **PATCH** /api/v1/notifications/{notification_id}/read | 알림 한 건 읽음 처리|
 |[**refreshUsingPOST**](#refreshusingpost) | **POST** /api/v1/auth/token/refresh | Access Token 재발급|
+|[**registerUsingPOST**](#registerusingpost) | **POST** /api/v1/push-devices | 푸시 기기 등록 또는 토큰 갱신|
 |[**retryUsingPOST**](#retryusingpost) | **POST** /api/v1/auto-transfer-schedules/{schedule_id}/retry | 자동이체 실패 회차 수동 재시도|
 |[**sealTimeCapsuleEntryUsingPATCH**](#sealtimecapsuleentryusingpatch) | **PATCH** /api/v1/time-capsule-entries/{entry_id}/seal | TIMECAPSULE-15 타임캡슐 엔트리 봉인|
 |[**sendVerificationCodeUsingPOST**](#sendverificationcodeusingpost) | **POST** /api/v1/members/me/phone-verifications | 휴대폰 SMS 인증번호 발송|
 |[**setPrimaryAccountUsingPATCH**](#setprimaryaccountusingpatch) | **PATCH** /api/v1/accounts/{account_id}/primary | ACCOUNT-23 대표 계좌 설정|
 |[**unlinkAccountUsingDELETE**](#unlinkaccountusingdelete) | **DELETE** /api/v1/accounts/{account_id} | ACCOUNT-18 계좌 서비스 연결 해제|
+|[**unregisterUsingDELETE**](#unregisterusingdelete) | **DELETE** /api/v1/push-devices/{push_device_id} | 푸시 기기 해제|
 |[**updateAllowanceRequestStatusUsingPATCH**](#updateallowancerequeststatususingpatch) | **PATCH** /api/v1/allowance-requests/{allowance_request_id} | 용돈 요청 상태 변경|
 |[**updateBookmarkUsingPUT**](#updatebookmarkusingput) | **PUT** /api/v1/children/{child_id}/financial-products/{financial_product_id}/bookmark | PRODUCT-3 자녀별 관심상품 저장·해제|
 |[**updateChecklistItemCompletionUsingPATCH**](#updatechecklistitemcompletionusingpatch) | **PATCH** /api/v1/checklist-items/{checklist_item_id}/completion | updateChecklistItemCompletion|
@@ -89,7 +94,9 @@ All URIs are relative to *http://localhost*
 |[**updateMissionStatusUsingPATCH**](#updatemissionstatususingpatch) | **PATCH** /api/v1/missions/{mission_id} | 미션 상태 변경|
 |[**updateMyProfileUsingPATCH**](#updatemyprofileusingpatch) | **PATCH** /api/v1/members/me | 내 회원 정보 수정|
 |[**updateNotificationPreferencesUsingPUT**](#updatenotificationpreferencesusingput) | **PUT** /api/v1/notification-preferences | 알림 유형별 수신 설정 저장|
+|[**updatePermissionUsingPATCH**](#updatepermissionusingpatch) | **PATCH** /api/v1/children/{child_id}/feature-permissions | 자녀 이용 권한 수정|
 |[**updateScheduleUsingPATCH**](#updatescheduleusingpatch) | **PATCH** /api/v1/auto-transfer-schedules/{schedule_id} | 자동이체 일정 수정·일시정지·재개|
+|[**updateTimeCapsuleReleaseDateUsingPATCH**](#updatetimecapsulereleasedateusingpatch) | **PATCH** /api/v1/time-capsules/{time_capsule_id}/release-date | TIMECAPSULE-16 타임캡슐 공개일 설정·변경|
 |[**updateUsagePolicyUsingPATCH**](#updateusagepolicyusingpatch) | **PATCH** /api/v1/accounts/{account_id}/child-usage-policy | ACCOUNT-11 입출금 계좌 자녀 사용 관리 정책 설정|
 |[**withdrawMyMembershipUsingDELETE**](#withdrawmymembershipusingdelete) | **DELETE** /api/v1/members/me | 회원 탈퇴|
 
@@ -330,7 +337,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **createAllowanceRequestUsingPOST**
-> AllowanceRequestResponse createAllowanceRequestUsingPOST(request)
+> AllowancePlanRequestResponse createAllowanceRequestUsingPOST(request)
 
 
 ### Example
@@ -364,7 +371,64 @@ const { status, data } = await apiInstance.createAllowanceRequestUsingPOST(
 
 ### Return type
 
-**AllowanceRequestResponse**
+**AllowancePlanRequestResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createChildFamilyInvitationUsingPOST**
+> FamilyInvitationCreateResponse createChildFamilyInvitationUsingPOST()
+
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    FamilyInvitationCreateRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+let request: FamilyInvitationCreateRequest; //request (optional)
+
+const { status, data } = await apiInstance.createChildFamilyInvitationUsingPOST(
+    childId,
+    authorization,
+    request
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **FamilyInvitationCreateRequest**| request | |
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**FamilyInvitationCreateResponse**
 
 ### Authorization
 
@@ -438,67 +502,10 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **createFamilyInvitationUsingPOST**
-> FamilyInvitationCreateResponse createFamilyInvitationUsingPOST(request)
-
-
-### Example
-
-```typescript
-import {
-    DefaultApi,
-    Configuration,
-    FamilyInvitationCreateRequest
-} from './api';
-
-const configuration = new Configuration();
-const apiInstance = new DefaultApi(configuration);
-
-let childId: number; //child_id (default to undefined)
-let request: FamilyInvitationCreateRequest; //request
-let authorization: string; //Authorization (optional) (default to undefined)
-
-const { status, data } = await apiInstance.createFamilyInvitationUsingPOST(
-    childId,
-    request,
-    authorization
-);
-```
-
-### Parameters
-
-|Name | Type | Description  | Notes|
-|------------- | ------------- | ------------- | -------------|
-| **request** | **FamilyInvitationCreateRequest**| request | |
-| **childId** | [**number**] | child_id | defaults to undefined|
-| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
-
-
-### Return type
-
-**FamilyInvitationCreateResponse**
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: */*
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-|**200** | OK |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **createGoalUsingPOST**
 > FinancialGoalCreateResponse createGoalUsingPOST(request)
 
-부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
 
 ### Example
 
@@ -679,6 +686,60 @@ No authorization required
 |**401** | 인증 오류 |  -  |
 |**403** | 부모 권한 없음 |  -  |
 |**404** | 자녀 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createParentFamilyInvitationUsingPOST**
+> FamilyInvitationCreateResponse createParentFamilyInvitationUsingPOST()
+
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    FamilyInvitationCreateRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let authorization: string; //Authorization (optional) (default to undefined)
+let request: FamilyInvitationCreateRequest; //request (optional)
+
+const { status, data } = await apiInstance.createParentFamilyInvitationUsingPOST(
+    authorization,
+    request
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **FamilyInvitationCreateRequest**| request | |
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**FamilyInvitationCreateResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -1028,7 +1089,7 @@ No authorization required
 # **deleteTimeCapsuleEntryUsingDELETE**
 > deleteTimeCapsuleEntryUsingDELETE()
 
-작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다.
+작성자 본인의 공개 전 DRAFT 또는 SEALED 엔트리를 삭제합니다. DB 엔트리와 미디어는 삭제 상태로 변경하고 S3 원본 객체를 제거합니다.
 
 ### Example
 
@@ -1364,6 +1425,64 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getAmountRecommendationsUsingGET**
+> FinancialGoalAmountRecommendationResponse getAmountRecommendationsUsingGET()
+
+선택한 기본 금융 목표에 대해 공공 통계를 참고하여 서비스가 구성한 4단계 추천 금액과 산정 근거를 조회합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let financialGoalTemplateId: number; //financial_goal_template_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getAmountRecommendationsUsingGET(
+    financialGoalTemplateId,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **financialGoalTemplateId** | [**number**] | financial_goal_template_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**FinancialGoalAmountRecommendationResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 목표 금액 추천 조회 성공 |  -  |
+|**400** | 올바르지 않은 목표 템플릿 ID |  -  |
+|**401** | Access Token 누락·만료·위조 또는 탈퇴 회원 |  -  |
+|**404** | 목표 템플릿 또는 추천 금액 없음 |  -  |
+|**500** | 서버 오류 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getAssetReportDetailUsingGET**
 > AssetReportDetailResponse getAssetReportDetailUsingGET()
 
@@ -1637,7 +1756,7 @@ const apiInstance = new DefaultApi(configuration);
 
 let authorization: string; //Authorization (default to undefined)
 let childId: number; //자녀 프로필 ID (default to undefined)
-let stage: string; //PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7 (optional) (default to undefined)
+let stage: string; //PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7, AGE_8_TO_10, AGE_11_TO_13, AGE_14_TO_16, AGE_17_TO_19 (optional) (default to undefined)
 
 const { status, data } = await apiInstance.getChecklistItemsUsingGET(
     authorization,
@@ -1652,7 +1771,7 @@ const { status, data } = await apiInstance.getChecklistItemsUsingGET(
 |------------- | ------------- | ------------- | -------------|
 | **authorization** | [**string**] | Authorization | defaults to undefined|
 | **childId** | [**number**] | 자녀 프로필 ID | defaults to undefined|
-| **stage** | [**string**] | PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7 | (optional) defaults to undefined|
+| **stage** | [**string**] | PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7, AGE_8_TO_10, AGE_11_TO_13, AGE_14_TO_16, AGE_17_TO_19 | (optional) defaults to undefined|
 
 
 ### Return type
@@ -2895,6 +3014,62 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getPermissionUsingGET**
+> ChildFeaturePermissionResponse getPermissionUsingGET()
+
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.getPermissionUsingGET(
+    childId,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**ChildFeaturePermissionResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 자녀 이용 권한 조회 성공 |  -  |
+|**401** | Access Token이 없거나 유효하지 않음 |  -  |
+|**403** | 해당 자녀 정보에 접근할 부모 권한이 없음 |  -  |
+|**404** | 자녀 정보를 찾을 수 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getPregnancyStatusUsingGET**
 > PregnancyStatusResponse getPregnancyStatusUsingGET()
 
@@ -3359,7 +3534,7 @@ No authorization required
 # **getTimeCapsuleEntryUsingGET**
 > TimeCapsuleEntryDetailResponse getTimeCapsuleEntryUsingGET()
 
-부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다.
+공개일이 도래한 타임캡슐의 봉인된 엔트리를 연결된 보호자 또는 자녀 본인이 조회합니다. 편지, 기여 정보, 엔트리 순번과 화면 표시용 단일 이미지 임시 조회 URL을 반환합니다.
 
 ### Example
 
@@ -4247,6 +4422,61 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **registerUsingPOST**
+> PushDeviceResponse registerUsingPOST(request)
+
+동일한 device_key가 이미 있으면 FCM 토큰과 기기 정보를 갱신합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    RegisterPushDeviceRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let request: RegisterPushDeviceRequest; //request
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.registerUsingPOST(
+    request,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **RegisterPushDeviceRequest**| request | |
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**PushDeviceResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **retryUsingPOST**
 > AutoTransferRetryResponse retryUsingPOST()
 
@@ -4540,6 +4770,60 @@ No authorization required
 |**403** | 해당 금융 연결을 생성한 회원이 아님 |  -  |
 |**404** | 금융 계좌를 찾을 수 없음 |  -  |
 |**500** | 서버 내부 오류 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **unregisterUsingDELETE**
+> unregisterUsingDELETE()
+
+로그아웃하거나 푸시 권한을 해제한 기기를 비활성화합니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let pushDeviceId: number; //push_device_id (default to undefined)
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.unregisterUsingDELETE(
+    pushDeviceId,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **pushDeviceId** | [**number**] | push_device_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: Not defined
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -5016,6 +5300,67 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **updatePermissionUsingPATCH**
+> ChildFeaturePermissionResponse updatePermissionUsingPATCH(request)
+
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    ChildFeaturePermissionRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let childId: number; //child_id (default to undefined)
+let request: ChildFeaturePermissionRequest; //request
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.updatePermissionUsingPATCH(
+    childId,
+    request,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **ChildFeaturePermissionRequest**| request | |
+| **childId** | [**number**] | child_id | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**ChildFeaturePermissionResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | 자녀 이용 권한 수정 성공 |  -  |
+|**400** | 필수 권한 값이 누락되었거나 요청 값이 올바르지 않음 |  -  |
+|**401** | Access Token이 없거나 유효하지 않음 |  -  |
+|**403** | 해당 자녀 정보에 접근할 부모 권한이 없음 |  -  |
+|**404** | 자녀 정보를 찾을 수 없음 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **updateScheduleUsingPATCH**
 > AutoTransferScheduleDetailResponse updateScheduleUsingPATCH(request)
 
@@ -5076,6 +5421,64 @@ No authorization required
 |**404** | 자동이체 일정 없음 |  -  |
 |**409** | 중복 일정 또는 상태 전이 오류 |  -  |
 |**422** | 일정 조건 오류 |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateTimeCapsuleReleaseDateUsingPATCH**
+> UpdateTimeCapsuleReleaseDateResponse updateTimeCapsuleReleaseDateUsingPATCH(request)
+
+부모는 연결된 입출금계좌 타임캡슐의 공개일을 오늘 이후 날짜로 설정하거나 변경할 수 있습니다. 적금 타임캡슐은 계좌 만기일을 공개일로 사용하므로 변경할 수 없습니다.
+
+### Example
+
+```typescript
+import {
+    DefaultApi,
+    Configuration,
+    UpdateTimeCapsuleReleaseDateRequest
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new DefaultApi(configuration);
+
+let timeCapsuleId: number; //타임캡슐 보관함 ID (default to undefined)
+let request: UpdateTimeCapsuleReleaseDateRequest; //request
+let authorization: string; //Authorization (optional) (default to undefined)
+
+const { status, data } = await apiInstance.updateTimeCapsuleReleaseDateUsingPATCH(
+    timeCapsuleId,
+    request,
+    authorization
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **request** | **UpdateTimeCapsuleReleaseDateRequest**| request | |
+| **timeCapsuleId** | [**number**] | 타임캡슐 보관함 ID | defaults to undefined|
+| **authorization** | [**string**] | Authorization | (optional) defaults to undefined|
+
+
+### Return type
+
+**UpdateTimeCapsuleReleaseDateResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | OK |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

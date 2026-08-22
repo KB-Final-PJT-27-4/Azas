@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AccountConnectionMethod from '@/components/accounts/AccountConnectionMethod.vue'
+import AccountImportEmptyGuide from '@/components/accounts/AccountImportEmptyGuide.vue'
 import AccountImportSelection from '@/components/accounts/AccountImportSelection.vue'
 import AccountRegistrationComplete from '@/components/accounts/AccountRegistrationComplete.vue'
 import AccountRegistrationForm from '@/components/accounts/AccountRegistrationForm.vue'
@@ -17,7 +18,9 @@ const { showToast } = useToast()
 const currentChildId = ref<number | null>(null)
 const accountOwnerType = ref<'PARENT' | 'CHILD'>('CHILD')
 const isBankSelectorOpen = ref(false)
-const registrationStep = ref<'method' | 'import' | 'empty' | 'form' | 'confirmation' | 'complete'>('method')
+const registrationStep = ref<
+  'method' | 'import' | 'import-empty' | 'empty' | 'form' | 'confirmation' | 'complete'
+>('method')
 const selectedBank = ref('')
 const accountNumber = ref('')
 const accountAlias = ref('')
@@ -31,7 +34,7 @@ const registeredAccounts = ref<
 
 const startAccountImport = () => {
   slideDirection.value = 'forward'
-  registrationStep.value = 'import'
+  registrationStep.value = importedAccounts.value.length > 0 ? 'import' : 'import-empty'
 }
 
 const showAccountOpeningGuide = () => {
@@ -68,14 +71,11 @@ const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[
   }
 }
 
-const createKbAccount = async () => {
+const createKbAccount = async (financialProductId: number) => {
   try {
-    const products = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 1)
-    const product = (products.data.items?.[0] ?? {}) as unknown as { financial_product_id?: number }
-    if (!product.financial_product_id) throw new Error('개설 가능한 상품을 찾을 수 없어요.')
     const { data } = await api.openUsingPOST(undefined, {
       child_id: accountOwnerType.value === 'CHILD' ? currentChildId.value ?? undefined : undefined,
-      financial_product_id: product.financial_product_id,
+      financial_product_id: financialProductId,
       initial_deposit_amount: 0,
       owner_type: accountOwnerType.value,
     })
@@ -182,14 +182,22 @@ onMounted(loadDiscoveredAccounts)
         <AccountImportSelection
           v-else-if="registrationStep === 'import'"
           :accounts="importedAccounts"
+          :owner-type="accountOwnerType"
           @connect="connectImportedAccount"
           @create-account="createKbAccount"
+          @later="leaveRegistration"
+        />
+
+        <AccountImportEmptyGuide
+          v-else-if="registrationStep === 'import-empty'"
+          @create="showAccountOpeningGuide"
           @later="leaveRegistration"
         />
 
         <AccountImportSelection
           v-else-if="registrationStep === 'empty'"
           :accounts="[]"
+          :owner-type="accountOwnerType"
           @create-account="createKbAccount"
           @later="leaveRegistration"
         />

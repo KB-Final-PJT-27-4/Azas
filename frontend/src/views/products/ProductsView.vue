@@ -13,12 +13,18 @@ import productMascot4 from '@/assets/images/products/product-4.png'
 type Product = { id: string; name: string; bankName: string; type: '적금' | '입출금계좌'; rate: string; period: string; monthlyLimit: string; mascot: string }
 type ProductApiItem = {
   financial_product_id?: number; name?: string; bank_name?: string; product_type?: string
-  interest_rate?: { max_rate?: number }; contract_period?: { max_months?: number }
-  monthly_deposit?: { max_amount?: number }; is_bookmarked?: boolean
+  target_owner_type?: string
+  max_interest_rate?: number
+  interest_rate?: { max_rate?: number }; contract_period?: { min_months?: number; max_months?: number }
+  monthly_deposit?: { max_amount?: number }
 }
+type BookmarkApiItem = { financial_product_id?: number }
 const { showToast } = useToast()
 const recommendedProducts = ref<Product[]>([])
 const childId = ref<number | null>(null)
+const PRODUCT_PAGE_SIZE = 3
+const API_PAGE_SIZE = 50
+const isLoadingProducts = ref(false)
 
 const favoriteProductIds = ref(new Set<string>())
 type ProductFilter = '전체' | '적금' | '입출금계좌' | '관심상품'
@@ -39,13 +45,115 @@ const productSectionTitle = computed(() =>
   selectedProductFilter.value === '관심상품' ? '관심 상품' : '추천 상품',
 )
 
+const formatRate = (rate?: number) =>
+  rate == null ? '상세 확인' : `${Number(rate).toFixed(2)}%`
+
+const formatPeriod = (period?: ProductApiItem['contract_period']) => {
+  const minMonths = period?.min_months
+  const maxMonths = period?.max_months
+
+  if (minMonths && maxMonths && minMonths !== maxMonths) return `${minMonths}~${maxMonths}개월`
+  if (maxMonths) return `${maxMonths}개월`
+  if (minMonths) return `${minMonths}개월`
+  return '상세 확인'
+}
+
+const formatMonthlyLimit = (amount?: number) => {
+  if (amount == null) return '상세 확인'
+  if (amount >= 10000 && amount % 10000 === 0) return `${amount / 10000}만원`
+  return `${amount.toLocaleString('ko-KR')}원`
+}
+
+const resolveProductType = (productType?: string): Product['type'] => {
+  const normalizedType = productType?.trim().toUpperCase()
+  return ['ACCOUNT', 'DEMAND_DEPOSIT', 'DEPOSIT'].includes(normalizedType ?? '')
+    ? '입출금계좌'
+    : '적금'
+}
+
+const mapProduct = (product: ProductApiItem): Product => {
+  const mascots = [productMascot1, productMascot2, productMascot3, productMascot4]
+  const productId = product.financial_product_id ?? 0
+
+  return {
+    id: String(product.financial_product_id ?? ''),
+    name: product.name ?? '금융 상품',
+    bankName: product.bank_name ?? '',
+    type: resolveProductType(product.product_type),
+    rate: formatRate(product.interest_rate?.max_rate ?? product.max_interest_rate),
+    period: formatPeriod(product.contract_period),
+    monthlyLimit: formatMonthlyLimit(product.monthly_deposit?.max_amount),
+    mascot: mascots[productId % mascots.length]!,
+  }
+}
+
+const loadProducts = async () => {
+  if (isLoadingProducts.value) return
+
+  isLoadingProducts.value = true
+
+  try {
+    const newProducts: Product[] = []
+    let cursor: string | undefined
+    let hasNextPage = true
+
+    // 서버의 커서 페이지를 모두 모은 뒤 화면에서는 번호형 페이지네이션으로 나눠 보여줘요.
+    while (hasNextPage) {
+      const { data } = await api.getProductsUsingGET(
+        undefined,
+        cursor,
+        undefined,
+        API_PAGE_SIZE,
+      )
+      const items = (data.items ?? []) as unknown as ProductApiItem[]
+      const childEligibleItems = items.filter(
+        ({ target_owner_type }) =>
+          !target_owner_type || target_owner_type === 'CHILD' || target_owner_type === 'BOTH',
+      )
+
+      const productsWithDetails = await Promise.all(
+        childEligibleItems.map(async (product) => {
+          if (!product.financial_product_id) return product
+
+          try {
+            const { data: detail } = await api.getProductDetailUsingGET(
+              product.financial_product_id,
+              undefined,
+              childId.value ?? undefined,
+            )
+            return { ...product, ...(detail as ProductApiItem) }
+          } catch {
+            return product
+          }
+        }),
+      )
+
+      newProducts.push(...productsWithDetails.map(mapProduct))
+      const nextCursor = data.next_cursor
+      hasNextPage = Boolean(data.has_next && nextCursor && nextCursor !== cursor)
+      cursor = nextCursor
+    }
+
+    recommendedProducts.value = Array.from(
+      new Map(newProducts.filter(({ id }) => id).map((product) => [product.id, product])).values(),
+    )
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '상품 목록을 불러오지 못했습니다.'), 'error')
+  } finally {
+    isLoadingProducts.value = false
+  }
+}
+
 const toggleFavorite = async (productId: string) => {
   const nextFavorites = new Set(favoriteProductIds.value)
   const isBookmarked = !nextFavorites.has(productId)
   try {
     if (!childId.value) childId.value = await resolveCurrentChildId()
-    await api.updateBookmarkUsingPUT(childId.value, Number(productId), { is_bookmarked: isBookmarked })
-    if (isBookmarked) nextFavorites.add(productId)
+    const { data } = await api.updateBookmarkUsingPUT(childId.value, Number(productId), {
+      is_bookmarked: isBookmarked,
+    })
+    const savedBookmarkState = data.is_bookmarked ?? isBookmarked
+    if (savedBookmarkState) nextFavorites.add(productId)
     else nextFavorites.delete(productId)
     favoriteProductIds.value = nextFavorites
   } catch (error) {
@@ -56,20 +164,17 @@ const toggleFavorite = async (productId: string) => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const { data } = await api.getProductsUsingGET(undefined, undefined, undefined, 50)
-    const items = (data.items ?? []) as unknown as ProductApiItem[]
-    const mascots = [productMascot1, productMascot2, productMascot3, productMascot4]
-    recommendedProducts.value = items.map((product, index) => ({
-      id: String(product.financial_product_id ?? ''),
-      name: product.name ?? '금융 상품',
-      bankName: product.bank_name ?? '',
-      type: product.product_type === 'DEMAND_DEPOSIT' ? '입출금계좌' : '적금',
-      rate: product.interest_rate?.max_rate !== undefined ? `${product.interest_rate.max_rate}%` : '-',
-      period: product.contract_period?.max_months ? `${product.contract_period.max_months}개월` : '-',
-      monthlyLimit: product.monthly_deposit?.max_amount ? `${Math.round(product.monthly_deposit.max_amount / 10000)}만원` : '-',
-      mascot: mascots[index % mascots.length]!,
-    }))
-    favoriteProductIds.value = new Set(items.filter(({ is_bookmarked }) => is_bookmarked).map(({ financial_product_id }) => String(financial_product_id ?? '')))
+    const [, { data: bookmarks }] = await Promise.all([
+      loadProducts(),
+      api.getBookmarksUsingGET(childId.value, undefined, 0, undefined, 50),
+    ])
+    const bookmarkedItems = (bookmarks.content ?? []) as unknown as BookmarkApiItem[]
+    favoriteProductIds.value = new Set(
+      bookmarkedItems
+        .map(({ financial_product_id }) => financial_product_id)
+        .filter((productId): productId is number => productId != null)
+        .map(String),
+    )
   } catch (error) {
     showToast(getApiErrorMessage(error, '상품 목록을 불러오지 못했습니다.'), 'error')
   }
@@ -128,7 +233,44 @@ onMounted(async () => {
         </div>
       </fieldset>
 
-      <ul v-if="filteredProducts.length" class="mt-4 mb-0 grid list-none gap-3 p-0">
+      <ul
+        v-if="isLoadingProducts && recommendedProducts.length === 0"
+        class="mt-4 mb-0 grid list-none gap-3 p-0"
+        aria-label="추천 상품을 불러오는 중"
+        aria-busy="true"
+      >
+        <li v-for="index in PRODUCT_PAGE_SIZE" :key="`product-skeleton-${index}`">
+          <article
+            class="min-h-[202px] animate-pulse rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="block h-6 w-[58%] rounded-lg bg-[#e7edf1]"></span>
+                  <span class="block h-7 w-12 shrink-0 rounded-full bg-[#eaf6fb]"></span>
+                </div>
+                <span class="mt-2 block h-4 w-20 rounded-md bg-[#edf1f4]"></span>
+              </div>
+              <span class="block size-8 shrink-0 rounded-full bg-[#edf1f4]"></span>
+            </div>
+
+            <div class="mt-5 grid grid-cols-[1fr_0.9fr_0.9fr_88px] items-start gap-2">
+              <div v-for="item in 3" :key="item">
+                <span class="block h-3 w-12 rounded bg-[#edf1f4]"></span>
+                <span class="mt-2 block h-5 w-14 rounded-md bg-[#e7edf1]"></span>
+              </div>
+              <span class="mx-auto block size-14 rounded-full bg-[#eef5f7]"></span>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+              <span class="block h-4 w-[58%] rounded-md bg-[#edf1f4]"></span>
+              <span class="block size-7 rounded-full bg-[#eaf6fb]"></span>
+            </div>
+          </article>
+        </li>
+      </ul>
+
+      <ul v-else-if="filteredProducts.length" class="mt-4 mb-0 grid list-none gap-3 p-0">
         <li v-for="product in filteredProducts" :key="product.id">
           <article
             class="relative overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm transition-shadow hover:shadow-md"
@@ -240,13 +382,6 @@ onMounted(async () => {
         </p>
       </div>
 
-      <button
-        v-if="filteredProducts.length"
-        class="mt-3 h-12 w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] font-extrabold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
-        type="button"
-      >
-        추천 상품 더 보기
-      </button>
     </section>
 
     <aside

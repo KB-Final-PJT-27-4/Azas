@@ -68,6 +68,10 @@
       "description": "Time Capsule Controller"
     },
     {
+      "name": "푸시 알림",
+      "description": "Push Device Controller"
+    },
+    {
       "name": "회원",
       "description": "Member Controller"
     }
@@ -1497,7 +1501,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/AllowanceRequestResponse"
+              "$ref": "#/definitions/AllowancePlanRequestResponse"
             }
           }
         }
@@ -2092,7 +2096,7 @@
           {
             "name": "stage",
             "in": "query",
-            "description": "PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7",
+            "description": "PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7, AGE_8_TO_10, AGE_11_TO_13, AGE_14_TO_16, AGE_17_TO_19",
             "required": false,
             "type": "string"
           }
@@ -2178,8 +2182,8 @@
         "tags": [
           "자녀·가족"
         ],
-        "summary": "가족/아이 초대코드 발급",
-        "operationId": "createFamilyInvitationUsingPOST",
+        "summary": "자녀 계정 연결 초대코드 발급",
+        "operationId": "createChildFamilyInvitationUsingPOST",
         "consumes": [
           "application/json"
         ],
@@ -2206,7 +2210,7 @@
             "in": "body",
             "name": "request",
             "description": "request",
-            "required": true,
+            "required": false,
             "schema": {
               "$ref": "#/definitions/FamilyInvitationCreateRequest"
             }
@@ -2255,6 +2259,111 @@
             "schema": {
               "$ref": "#/definitions/FamilyGuardianListResponse"
             }
+          }
+        }
+      }
+    },
+    "/api/v1/children/{child_id}/feature-permissions": {
+      "get": {
+        "tags": [
+          "자녀"
+        ],
+        "summary": "자녀 이용 권한 조회",
+        "operationId": "getPermissionUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "child_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "자녀 이용 권한 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/ChildFeaturePermissionResponse"
+            }
+          },
+          "401": {
+            "description": "Access Token이 없거나 유효하지 않음"
+          },
+          "403": {
+            "description": "해당 자녀 정보에 접근할 부모 권한이 없음"
+          },
+          "404": {
+            "description": "자녀 정보를 찾을 수 없음"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "자녀"
+        ],
+        "summary": "자녀 이용 권한 수정",
+        "operationId": "updatePermissionUsingPATCH",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "child_id",
+            "in": "path",
+            "description": "child_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChildFeaturePermissionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "자녀 이용 권한 수정 성공",
+            "schema": {
+              "$ref": "#/definitions/ChildFeaturePermissionResponse"
+            }
+          },
+          "400": {
+            "description": "필수 권한 값이 누락되었거나 요청 값이 올바르지 않음"
+          },
+          "401": {
+            "description": "Access Token이 없거나 유효하지 않음"
+          },
+          "403": {
+            "description": "해당 자녀 정보에 접근할 부모 권한이 없음"
+          },
+          "404": {
+            "description": "자녀 정보를 찾을 수 없음"
           }
         }
       }
@@ -2316,7 +2425,7 @@
           "목표·자산 형성"
         ],
         "summary": "GOAL-2 자녀 금융 목표 생성",
-        "description": "부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.",
+        "description": "부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.",
         "operationId": "createGoalUsingPOST",
         "consumes": [
           "application/json"
@@ -2880,6 +2989,47 @@
         }
       }
     },
+    "/api/v1/family-invitations": {
+      "post": {
+        "tags": [
+          "자녀·가족"
+        ],
+        "summary": "보호자 초대코드 발급",
+        "operationId": "createParentFamilyInvitationUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/FamilyInvitationCreateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/FamilyInvitationCreateResponse"
+            }
+          }
+        }
+      }
+    },
     "/api/v1/family-invitations/{invite_token}": {
       "get": {
         "tags": [
@@ -2986,6 +3136,56 @@
           },
           "401": {
             "description": "Access Token 누락·만료·위조 또는 탈퇴 회원"
+          },
+          "500": {
+            "description": "서버 오류"
+          }
+        }
+      }
+    },
+    "/api/v1/financial-goal-templates/{financial_goal_template_id}/amount-recommendations": {
+      "get": {
+        "tags": [
+          "목표·자산 형성"
+        ],
+        "summary": "GOAL-2 목표 금액 추천 조회",
+        "description": "선택한 기본 금융 목표에 대해 공공 통계를 참고하여 서비스가 구성한 4단계 추천 금액과 산정 근거를 조회합니다.",
+        "operationId": "getAmountRecommendationsUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "financial_goal_template_id",
+            "in": "path",
+            "description": "financial_goal_template_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "목표 금액 추천 조회 성공",
+            "schema": {
+              "$ref": "#/definitions/FinancialGoalAmountRecommendationResponse"
+            }
+          },
+          "400": {
+            "description": "올바르지 않은 목표 템플릿 ID"
+          },
+          "401": {
+            "description": "Access Token 누락·만료·위조 또는 탈퇴 회원"
+          },
+          "404": {
+            "description": "목표 템플릿 또는 추천 금액 없음"
           },
           "500": {
             "description": "서버 오류"
@@ -4029,13 +4229,90 @@
         }
       }
     },
+    "/api/v1/push-devices": {
+      "post": {
+        "tags": [
+          "푸시 알림"
+        ],
+        "summary": "푸시 기기 등록 또는 토큰 갱신",
+        "description": "동일한 device_key가 이미 있으면 FCM 토큰과 기기 정보를 갱신합니다.",
+        "operationId": "registerUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RegisterPushDeviceRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PushDeviceResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/push-devices/{push_device_id}": {
+      "delete": {
+        "tags": [
+          "푸시 알림"
+        ],
+        "summary": "푸시 기기 해제",
+        "description": "로그아웃하거나 푸시 권한을 해제한 기기를 비활성화합니다.",
+        "operationId": "unregisterUsingDELETE",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "push_device_id",
+            "in": "path",
+            "description": "push_device_id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/time-capsule-entries/{entry_id}": {
       "get": {
         "tags": [
           "타임캡슐"
         ],
-        "summary": "TC-14 타임캡슐 엔트리 상세 조회",
-        "description": "부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다.",
+        "summary": "TIMECAPSULE-14 공개된 타임캡슐 엔트리 상세 조회",
+        "description": "공개일이 도래한 타임캡슐의 봉인된 엔트리를 연결된 보호자 또는 자녀 본인이 조회합니다. 편지, 기여 정보, 엔트리 순번과 화면 표시용 단일 이미지 임시 조회 URL을 반환합니다.",
         "operationId": "getTimeCapsuleEntryUsingGET",
         "produces": [
           "*/*"
@@ -4070,8 +4347,8 @@
         "tags": [
           "타임캡슐"
         ],
-        "summary": "TC-13 타임캡슐 엔트리 삭제",
-        "description": "작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다.",
+        "summary": "TIMECAPSULE-13 타임캡슐 엔트리 삭제",
+        "description": "작성자 본인의 공개 전 DRAFT 또는 SEALED 엔트리를 삭제합니다. DB 엔트리와 미디어는 삭제 상태로 변경하고 S3 원본 객체를 제거합니다.",
         "operationId": "deleteTimeCapsuleEntryUsingDELETE",
         "produces": [
           "*/*"
@@ -4362,6 +4639,56 @@
         }
       }
     },
+    "/api/v1/time-capsules/{time_capsule_id}/release-date": {
+      "patch": {
+        "tags": [
+          "타임캡슐"
+        ],
+        "summary": "TIMECAPSULE-16 타임캡슐 공개일 설정·변경",
+        "description": "부모는 연결된 입출금계좌 타임캡슐의 공개일을 오늘 이후 날짜로 설정하거나 변경할 수 있습니다. 적금 타임캡슐은 계좌 만기일을 공개일로 사용하므로 변경할 수 없습니다.",
+        "operationId": "updateTimeCapsuleReleaseDateUsingPATCH",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Authorization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateTimeCapsuleReleaseDateRequest"
+            }
+          },
+          {
+            "name": "time_capsule_id",
+            "in": "path",
+            "description": "타임캡슐 보관함 ID",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/UpdateTimeCapsuleReleaseDateResponse"
+            }
+          }
+        }
+      }
+    },
     "/api/v1/transfers": {
       "post": {
         "tags": [
@@ -4614,7 +4941,7 @@
         "accounts": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/LinkedAccountResponse"
+            "$ref": "#/definitions/FinancialAccountLinkedAccountResponse"
           }
         },
         "goal_setup_account_ids": {
@@ -4871,6 +5198,39 @@
       },
       "title": "ActivitySummary"
     },
+    "AllowancePlanRequestResponse": {
+      "type": "object",
+      "properties": {
+        "allowance_request_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "message": {
+          "type": "string"
+        },
+        "requested_amount": {
+          "type": "number"
+        },
+        "requested_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "APPROVED",
+            "CANCELED",
+            "PENDING",
+            "REJECTED"
+          ]
+        }
+      },
+      "title": "AllowancePlanRequestResponse"
+    },
     "AllowanceRequestDetailResponse": {
       "type": "object",
       "properties": {
@@ -4953,39 +5313,6 @@
       },
       "title": "AllowanceRequestListResponse"
     },
-    "AllowanceRequestResponse": {
-      "type": "object",
-      "properties": {
-        "allowance_request_id": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "child_id": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "message": {
-          "type": "string"
-        },
-        "requested_amount": {
-          "type": "number"
-        },
-        "requested_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "APPROVED",
-            "CANCELED",
-            "PENDING",
-            "REJECTED"
-          ]
-        }
-      },
-      "title": "AllowanceRequestResponse"
-    },
     "ApiErrorResponse": {
       "type": "object",
       "properties": {
@@ -5040,7 +5367,7 @@
           }
         },
         "period": {
-          "$ref": "#/definitions/Period"
+          "$ref": "#/definitions/AssetReportPeriodResponse"
         },
         "report_month": {
           "type": "integer",
@@ -5053,7 +5380,7 @@
           "example": 2026
         },
         "summary": {
-          "$ref": "#/definitions/Summary"
+          "$ref": "#/definitions/AssetReportSummaryResponse"
         },
         "updated_at": {
           "type": "string",
@@ -5131,6 +5458,50 @@
       },
       "title": "AssetReportListResponse",
       "description": "자산 리포트 월 목록 응답"
+    },
+    "AssetReportPeriodResponse": {
+      "type": "object",
+      "properties": {
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "title": "AssetReportPeriodResponse"
+    },
+    "AssetReportSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "goal_achievement_rate": {
+          "type": "number"
+        },
+        "monthly_saved_amount": {
+          "type": "number"
+        },
+        "monthly_saving_achievement_rate": {
+          "type": "number"
+        },
+        "monthly_saving_target_amount": {
+          "type": "number"
+        },
+        "total_asset_amount": {
+          "type": "number"
+        },
+        "total_asset_change_amount": {
+          "type": "number"
+        },
+        "total_goal_saved_amount": {
+          "type": "number"
+        },
+        "total_goal_target_amount": {
+          "type": "number"
+        }
+      },
+      "title": "AssetReportSummaryResponse"
     },
     "AssetSummary": {
       "type": "object",
@@ -5446,6 +5817,31 @@
       },
       "title": "Badge"
     },
+    "ChecklistInfoItemResponse": {
+      "type": "object",
+      "properties": {
+        "action_label": {
+          "type": "string"
+        },
+        "checklist_item_detail_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "content": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "title": "ChecklistInfoItemResponse"
+    },
     "ChecklistItem": {
       "type": "object",
       "properties": {
@@ -5494,6 +5890,64 @@
       },
       "title": "ChecklistItemCompletionResponse"
     },
+    "ChecklistItemListItemResponse": {
+      "type": "object",
+      "properties": {
+        "action_type": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "checklist_item_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "checklist_item_template_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "content": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "info_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ChecklistInfoItemResponse"
+          }
+        },
+        "info_notice": {
+          "type": "string"
+        },
+        "info_title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "template_key": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "title": "ChecklistItemListItemResponse",
+      "description": "체크리스트 항목"
+    },
     "ChecklistItemListResponse": {
       "type": "object",
       "properties": {
@@ -5508,7 +5962,7 @@
         "items": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Item"
+            "$ref": "#/definitions/ChecklistItemListItemResponse"
           }
         },
         "lifecycle_stage": {
@@ -5845,6 +6299,34 @@
       },
       "title": "ChildCreateRequest"
     },
+    "ChildDashboardChildInfoResponse": {
+      "type": "object",
+      "properties": {
+        "child_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": 6
+        },
+        "name": {
+          "type": "string",
+          "example": "깨비"
+        },
+        "profile_image_url": {
+          "type": "string"
+        }
+      },
+      "title": "ChildDashboardChildInfoResponse"
+    },
+    "ChildDashboardNotificationSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "unread_count": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "ChildDashboardNotificationSummaryResponse"
+    },
     "ChildDashboardResponse": {
       "type": "object",
       "properties": {
@@ -5852,13 +6334,13 @@
           "$ref": "#/definitions/ActivitySummary"
         },
         "child": {
-          "$ref": "#/definitions/ChildInfo"
+          "$ref": "#/definitions/ChildDashboardChildInfoResponse"
         },
         "mission_summary": {
           "$ref": "#/definitions/MissionSummary"
         },
         "notification_summary": {
-          "$ref": "#/definitions/NotificationSummary"
+          "$ref": "#/definitions/ChildDashboardNotificationSummaryResponse"
         },
         "spending_summary": {
           "$ref": "#/definitions/SpendingSummary"
@@ -5867,21 +6349,33 @@
       "title": "ChildDashboardResponse",
       "description": "자녀 본인 홈 대시보드"
     },
-    "ChildInfo": {
+    "ChildFeaturePermissionRequest": {
       "type": "object",
       "properties": {
+        "allowance_request_enabled": {
+          "type": "boolean"
+        },
+        "usage_limit_view_enabled": {
+          "type": "boolean"
+        }
+      },
+      "title": "ChildFeaturePermissionRequest"
+    },
+    "ChildFeaturePermissionResponse": {
+      "type": "object",
+      "properties": {
+        "allowance_request_enabled": {
+          "type": "boolean"
+        },
         "child_id": {
           "type": "integer",
           "format": "int64"
         },
-        "name": {
-          "type": "string"
-        },
-        "profile_image_url": {
-          "type": "string"
+        "usage_limit_view_enabled": {
+          "type": "boolean"
         }
       },
-      "title": "ChildInfo"
+      "title": "ChildFeaturePermissionResponse"
     },
     "ChildInviteChildResponse": {
       "type": "object",
@@ -6274,7 +6768,7 @@
           }
         },
         "period": {
-          "$ref": "#/definitions/Period"
+          "$ref": "#/definitions/ChildcareReportPeriodResponse"
         },
         "report_month": {
           "type": "integer",
@@ -6287,11 +6781,46 @@
           "example": 2026
         },
         "summary": {
-          "$ref": "#/definitions/Summary"
+          "$ref": "#/definitions/ChildcareReportSummaryResponse"
         }
       },
       "title": "ChildcareReportDetailResponse",
       "description": "월간 양육비 리포트 상세 응답"
+    },
+    "ChildcareReportPeriodResponse": {
+      "type": "object",
+      "properties": {
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "title": "ChildcareReportPeriodResponse"
+    },
+    "ChildcareReportSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "annual_expense_amount": {
+          "type": "number"
+        },
+        "previous_month_change_amount": {
+          "type": "number"
+        },
+        "previous_month_change_rate": {
+          "type": "number"
+        },
+        "previous_month_expense_amount": {
+          "type": "number"
+        },
+        "total_expense_amount": {
+          "type": "number"
+        }
+      },
+      "title": "ChildcareReportSummaryResponse"
     },
     "CompleteTimeCapsuleMediaUploadRequest": {
       "type": "object",
@@ -6319,23 +6848,6 @@
         }
       },
       "title": "CompleteTimeCapsuleMediaUploadResponse"
-    },
-    "ContractPeriod": {
-      "type": "object",
-      "properties": {
-        "max_months": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "min_months": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "renewal_description": {
-          "type": "string"
-        }
-      },
-      "title": "ContractPeriod"
     },
     "CreateAllowanceRequest": {
       "type": "object",
@@ -6741,6 +7253,16 @@
         "child": {
           "$ref": "#/definitions/FamilyInvitationChildResponse"
         },
+        "child_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FamilyInvitationChildResponse"
+          }
+        },
         "family_invitation_id": {
           "type": "integer",
           "format": "int64"
@@ -6791,13 +7313,6 @@
         "expires_in_hours": {
           "type": "integer",
           "format": "int32"
-        },
-        "invitee_type": {
-          "type": "string",
-          "enum": [
-            "CHILD",
-            "PARENT"
-          ]
         }
       },
       "title": "FamilyInvitationCreateRequest"
@@ -6805,9 +7320,19 @@
     "FamilyInvitationCreateResponse": {
       "type": "object",
       "properties": {
+        "child_count": {
+          "type": "integer",
+          "format": "int32"
+        },
         "child_id": {
           "type": "integer",
           "format": "int64"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FamilyInvitationChildResponse"
+          }
         },
         "created_at": {
           "type": "string",
@@ -6849,8 +7374,18 @@
     "FamilyInvitationInfoResponse": {
       "type": "object",
       "properties": {
+        "child_count": {
+          "type": "integer",
+          "format": "int32"
+        },
         "child_name": {
           "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FamilyInvitationChildResponse"
+          }
         },
         "expires_at": {
           "type": "string",
@@ -6877,6 +7412,157 @@
         }
       },
       "title": "FamilyInvitationInfoResponse"
+    },
+    "FinancialAccountLinkedAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "account_number": {
+          "type": "string"
+        },
+        "account_product_type": {
+          "type": "string"
+        },
+        "account_status": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "number"
+        },
+        "bank_name": {
+          "type": "string"
+        },
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "is_primary": {
+          "type": "boolean"
+        },
+        "link_status": {
+          "type": "string"
+        },
+        "linked_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "owner_type": {
+          "type": "string"
+        },
+        "requires_goal_setup": {
+          "type": "boolean"
+        }
+      },
+      "title": "FinancialAccountLinkedAccountResponse"
+    },
+    "FinancialGoalAmountRecommendationItem": {
+      "type": "object",
+      "properties": {
+        "coverage_items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "display_order": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "recommendation_code": {
+          "type": "string"
+        },
+        "target_amount": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialGoalAmountRecommendationItem"
+    },
+    "FinancialGoalAmountRecommendationReferenceData": {
+      "type": "object",
+      "properties": {
+        "dataset_name": {
+          "type": "string"
+        },
+        "metric_name": {
+          "type": "string"
+        },
+        "metric_unit": {
+          "type": "string"
+        },
+        "metric_value": {
+          "type": "number"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "reference_year": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialGoalAmountRecommendationReferenceData"
+    },
+    "FinancialGoalAmountRecommendationResponse": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "disclaimer": {
+          "type": "string"
+        },
+        "financial_goal_template_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "goal_name": {
+          "type": "string"
+        },
+        "recommendation_method": {
+          "type": "string"
+        },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FinancialGoalAmountRecommendationItem"
+          }
+        },
+        "reference_data": {
+          "$ref": "#/definitions/FinancialGoalAmountRecommendationReferenceData"
+        }
+      },
+      "title": "FinancialGoalAmountRecommendationResponse"
+    },
+    "FinancialGoalCreateLinkedAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "number"
+        },
+        "bank_name": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialGoalCreateLinkedAccountResponse"
     },
     "FinancialGoalCreateRequest": {
       "type": "object",
@@ -6937,7 +7623,7 @@
         "linked_accounts": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/LinkedAccountResponse"
+            "$ref": "#/definitions/FinancialGoalCreateLinkedAccountResponse"
           }
         },
         "monthly_saving_amount": {
@@ -6961,6 +7647,28 @@
         }
       },
       "title": "FinancialGoalCreateResponse"
+    },
+    "FinancialGoalDetailLinkedAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "account_number": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "number"
+        },
+        "bank_name": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialGoalDetailLinkedAccountResponse"
     },
     "FinancialGoalDetailResponse": {
       "type": "object",
@@ -6999,7 +7707,7 @@
         "linked_accounts": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/LinkedAccountResponse"
+            "$ref": "#/definitions/FinancialGoalDetailLinkedAccountResponse"
           }
         },
         "monthly_saving_amount": {
@@ -7024,6 +7732,28 @@
       },
       "title": "FinancialGoalDetailResponse",
       "description": "자녀 금융 목표 상세 조회 응답"
+    },
+    "FinancialGoalListLinkedAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "account_number": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "number"
+        },
+        "bank_name": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialGoalListLinkedAccountResponse"
     },
     "FinancialGoalListResponse": {
       "type": "object",
@@ -7056,13 +7786,36 @@
       "title": "FinancialGoalListResponse",
       "description": "자녀 금융 목표 목록 조회 응답"
     },
+    "FinancialGoalTemplateListItemResponse": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "display_order": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "financial_goal_template_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "icon_key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialGoalTemplateListItemResponse"
+    },
     "FinancialGoalTemplateListResponse": {
       "type": "object",
       "properties": {
         "templates": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Item"
+            "$ref": "#/definitions/FinancialGoalTemplateListItemResponse"
           }
         }
       },
@@ -7088,13 +7841,75 @@
       },
       "title": "FinancialGoalUpdateRequest"
     },
+    "FinancialProductBookmarkListItemResponse": {
+      "type": "object",
+      "properties": {
+        "bank_name": {
+          "type": "string"
+        },
+        "base_interest_rate": {
+          "type": "number"
+        },
+        "bookmarked_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contract_period_months": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "detail_url": {
+          "type": "string"
+        },
+        "display_badges": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "financial_product_bookmark_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "financial_product_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "max_interest_rate": {
+          "type": "number"
+        },
+        "max_monthly_amount": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "product_image_key": {
+          "type": "string"
+        },
+        "product_subtype": {
+          "type": "string"
+        },
+        "product_type": {
+          "type": "string"
+        },
+        "source_base_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialProductBookmarkListItemResponse"
+    },
     "FinancialProductBookmarkListResponse": {
       "type": "object",
       "properties": {
         "content": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Item"
+            "$ref": "#/definitions/FinancialProductBookmarkListItemResponse"
           }
         },
         "has_next": {
@@ -7145,6 +7960,23 @@
       },
       "title": "FinancialProductBookmarkResponse"
     },
+    "FinancialProductDetailContractPeriodResponse": {
+      "type": "object",
+      "properties": {
+        "max_months": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "min_months": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "renewal_description": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialProductDetailContractPeriodResponse"
+    },
     "FinancialProductDetailResponse": {
       "type": "object",
       "properties": {
@@ -7164,7 +7996,7 @@
           "$ref": "#/definitions/JsonNode"
         },
         "contract_period": {
-          "$ref": "#/definitions/ContractPeriod"
+          "$ref": "#/definitions/FinancialProductDetailContractPeriodResponse"
         },
         "curation_reason": {
           "type": "string"
@@ -7219,6 +8051,63 @@
       },
       "title": "FinancialProductDetailResponse"
     },
+    "FinancialProductListContractPeriodResponse": {
+      "type": "object",
+      "properties": {
+        "max_months": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "min_months": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "FinancialProductListContractPeriodResponse"
+    },
+    "FinancialProductListItemResponse": {
+      "type": "object",
+      "properties": {
+        "bank_name": {
+          "type": "string"
+        },
+        "contract_period": {
+          "$ref": "#/definitions/FinancialProductListContractPeriodResponse"
+        },
+        "financial_product_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "hashtags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "highlight_label": {
+          "type": "string"
+        },
+        "max_interest_rate": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "product_subtype": {
+          "type": "string"
+        },
+        "product_type": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "target_owner_type": {
+          "type": "string"
+        }
+      },
+      "title": "FinancialProductListItemResponse"
+    },
     "FinancialProductListResponse": {
       "type": "object",
       "properties": {
@@ -7228,7 +8117,7 @@
         "items": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Item"
+            "$ref": "#/definitions/FinancialProductListItemResponse"
           }
         },
         "next_cursor": {
@@ -7333,7 +8222,7 @@
         "linked_accounts": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/LinkedAccountResponse"
+            "$ref": "#/definitions/FinancialGoalListLinkedAccountResponse"
           }
         },
         "remaining_amount": {
@@ -7432,26 +8321,6 @@
       },
       "title": "InterestRate"
     },
-    "Item": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "notification_category": {
-          "type": "string",
-          "enum": [
-            "ALLOWANCE",
-            "MISSION",
-            "PREGNANCY",
-            "SAVINGS",
-            "TIME_CAPSULE",
-            "USAGE_LIMIT"
-          ]
-        }
-      },
-      "title": "Item"
-    },
     "JsonNode": {
       "type": "object",
       "title": "JsonNode"
@@ -7477,52 +8346,6 @@
         }
       },
       "title": "LinkedAccount"
-    },
-    "LinkedAccountResponse": {
-      "type": "object",
-      "properties": {
-        "account_id": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "account_name": {
-          "type": "string"
-        },
-        "balance": {
-          "type": "number"
-        },
-        "bank_name": {
-          "type": "string"
-        }
-      },
-      "title": "LinkedAccountResponse"
-    },
-    "MediaResponse": {
-      "type": "object",
-      "properties": {
-        "download_url": {
-          "type": "string"
-        },
-        "expires_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "file_size": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "media_type": {
-          "type": "string"
-        },
-        "mime_type": {
-          "type": "string"
-        },
-        "time_capsule_media_id": {
-          "type": "integer",
-          "format": "int64"
-        }
-      },
-      "title": "MediaResponse"
     },
     "MemberProfileResponse": {
       "type": "object",
@@ -8130,6 +8953,26 @@
       },
       "title": "NotificationPreferenceListResponse"
     },
+    "NotificationPreferenceUpdateItemRequest": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "notification_category": {
+          "type": "string",
+          "enum": [
+            "ALLOWANCE",
+            "MISSION",
+            "PREGNANCY",
+            "SAVINGS",
+            "TIME_CAPSULE",
+            "USAGE_LIMIT"
+          ]
+        }
+      },
+      "title": "NotificationPreferenceUpdateItemRequest"
+    },
     "NotificationReadAllResponse": {
       "type": "object",
       "properties": {
@@ -8156,16 +8999,6 @@
         }
       },
       "title": "NotificationReadResponse"
-    },
-    "NotificationSummary": {
-      "type": "object",
-      "properties": {
-        "unread_count": {
-          "type": "integer",
-          "format": "int32"
-        }
-      },
-      "title": "NotificationSummary"
     },
     "NotificationUnreadCountResponse": {
       "type": "object",
@@ -8392,6 +9225,32 @@
       "title": "ParentAccountListResponse",
       "description": "부모 계좌 목록 조회 응답"
     },
+    "ParentDashboardChildInfoResponse": {
+      "type": "object",
+      "properties": {
+        "child_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "profile_image_url": {
+          "type": "string"
+        }
+      },
+      "title": "ParentDashboardChildInfoResponse"
+    },
+    "ParentDashboardNotificationSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "unread_count": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ParentDashboardNotificationSummaryResponse"
+    },
     "ParentDashboardResponse": {
       "type": "object",
       "properties": {
@@ -8402,10 +9261,10 @@
           "$ref": "#/definitions/ChecklistSummary"
         },
         "child": {
-          "$ref": "#/definitions/ChildInfo"
+          "$ref": "#/definitions/ParentDashboardChildInfoResponse"
         },
         "notifications": {
-          "$ref": "#/definitions/NotificationSummary"
+          "$ref": "#/definitions/ParentDashboardNotificationSummaryResponse"
         },
         "primary_goal": {
           "$ref": "#/definitions/PrimaryGoal"
@@ -8560,20 +9419,6 @@
       },
       "title": "ParentInviteOAuthResponse",
       "description": "부모 초대 기반 소셜 로그인 및 수락 대기 응답"
-    },
-    "Period": {
-      "type": "object",
-      "properties": {
-        "end_date": {
-          "type": "string",
-          "format": "date"
-        },
-        "start_date": {
-          "type": "string",
-          "format": "date"
-        }
-      },
-      "title": "Period"
     },
     "PhoneVerificationConfirmRequest": {
       "type": "object",
@@ -8758,6 +9603,51 @@
       },
       "title": "PrimaryGoal"
     },
+    "PushDeviceResponse": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "device_key": {
+          "type": "string"
+        },
+        "device_name": {
+          "type": "string"
+        },
+        "last_seen_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ANDROID",
+            "IOS",
+            "WEB"
+          ]
+        },
+        "provider": {
+          "type": "string",
+          "enum": [
+            "FCM"
+          ]
+        },
+        "push_device_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "PushDeviceResponse"
+    },
     "QuickSummary": {
       "type": "object",
       "properties": {
@@ -8770,6 +9660,35 @@
         }
       },
       "title": "QuickSummary"
+    },
+    "RegisterPushDeviceRequest": {
+      "type": "object",
+      "properties": {
+        "device_key": {
+          "type": "string"
+        },
+        "device_name": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ANDROID",
+            "IOS",
+            "WEB"
+          ]
+        },
+        "provider": {
+          "type": "string",
+          "enum": [
+            "FCM"
+          ]
+        },
+        "push_token": {
+          "type": "string"
+        }
+      },
+      "title": "RegisterPushDeviceRequest"
     },
     "SpendingSummary": {
       "type": "object",
@@ -8825,27 +9744,6 @@
       },
       "title": "SpendingSummary"
     },
-    "Summary": {
-      "type": "object",
-      "properties": {
-        "annual_expense_amount": {
-          "type": "number"
-        },
-        "previous_month_change_amount": {
-          "type": "number"
-        },
-        "previous_month_change_rate": {
-          "type": "number"
-        },
-        "previous_month_expense_amount": {
-          "type": "number"
-        },
-        "total_expense_amount": {
-          "type": "number"
-        }
-      },
-      "title": "Summary"
-    },
     "TimeCapsuleAccountResponse": {
       "type": "object",
       "properties": {
@@ -8866,14 +9764,32 @@
       "title": "TimeCapsuleAccountResponse",
       "description": "타임캡슐 연결 계좌 요약"
     },
+    "TimeCapsuleEntryDetailImageResponse": {
+      "type": "object",
+      "required": [
+        "expires_at",
+        "url"
+      ],
+      "properties": {
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "이미지 조회 URL 만료 시각"
+        },
+        "url": {
+          "type": "string",
+          "description": "화면 표시용 이미지 임시 조회 URL"
+        }
+      },
+      "title": "TimeCapsuleEntryDetailImageResponse"
+    },
     "TimeCapsuleEntryDetailResponse": {
       "type": "object",
+      "required": [
+        "image"
+      ],
       "properties": {
         "account_transaction_id": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "author_member_id": {
           "type": "integer",
           "format": "int64"
         },
@@ -8884,21 +9800,14 @@
         "contribution_amount": {
           "type": "number"
         },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
+        "entry_number": {
+          "type": "integer",
+          "format": "int32"
         },
-        "media": {
-          "$ref": "#/definitions/MediaResponse"
+        "image": {
+          "$ref": "#/definitions/TimeCapsuleEntryDetailImageResponse"
         },
         "message": {
-          "type": "string"
-        },
-        "sealed_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "status": {
           "type": "string"
         },
         "time_capsule_entry_id": {
@@ -8911,6 +9820,10 @@
         },
         "title": {
           "type": "string"
+        },
+        "total_entry_count": {
+          "type": "integer",
+          "format": "int32"
         }
       },
       "title": "TimeCapsuleEntryDetailResponse"
@@ -9340,11 +10253,53 @@
         "items": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Item"
+            "$ref": "#/definitions/NotificationPreferenceUpdateItemRequest"
           }
         }
       },
       "title": "UpdateNotificationPreferencesRequest"
+    },
+    "UpdateTimeCapsuleReleaseDateRequest": {
+      "type": "object",
+      "required": [
+        "release_date"
+      ],
+      "properties": {
+        "release_date": {
+          "type": "string",
+          "format": "date",
+          "example": "2027-08-08",
+          "description": "변경할 공개일. 오늘 이후 날짜만 설정할 수 있습니다."
+        }
+      },
+      "title": "UpdateTimeCapsuleReleaseDateRequest",
+      "description": "타임캡슐 공개일 변경 요청"
+    },
+    "UpdateTimeCapsuleReleaseDateResponse": {
+      "type": "object",
+      "properties": {
+        "d_day": {
+          "type": "integer",
+          "format": "int64",
+          "example": 352
+        },
+        "release_date": {
+          "type": "string",
+          "format": "date",
+          "example": "2027-08-08"
+        },
+        "status": {
+          "type": "string",
+          "example": "COLLECTING"
+        },
+        "time_capsule_id": {
+          "type": "integer",
+          "format": "int64",
+          "example": 3
+        }
+      },
+      "title": "UpdateTimeCapsuleReleaseDateResponse",
+      "description": "타임캡슐 공개일 변경 응답"
     }
   }
 }

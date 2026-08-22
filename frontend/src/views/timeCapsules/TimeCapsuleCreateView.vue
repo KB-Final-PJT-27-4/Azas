@@ -44,6 +44,8 @@ const canPreview = computed(() =>
     && Boolean(letter.value.trim()),
 )
 const formattedAmount = computed(() => `${(selectedTransfer.value?.amount ?? 0).toLocaleString('ko-KR')}원`)
+const formatAccountDetails = (account: { bank: string; number: string }) =>
+  [account.bank, account.number].filter(Boolean).join(' · ')
 
 const selectAccount = (id: number) => {
   selectedAccountId.value = id
@@ -152,7 +154,10 @@ const createTimeCapsule = async () => {
     await api.sealTimeCapsuleEntryUsingPATCH(entryId)
     hasCreated.value = true
     isPageLeaving.value = true
-    await router.push(`/time-capsules/${selectedAccountId.value}/${entryId}`)
+    await router.push({
+      name: 'TimeCapsuleList',
+      params: { capsuleListId: String(selectedAccountId.value) },
+    })
     showToast('저장되었습니다.', 'success', 2200, 'above-actions')
   } catch (error) {
     hasCreated.value = false
@@ -181,16 +186,18 @@ watch(selectedAccountId, () => void loadTransfers())
 onMounted(async () => {
   try {
     const childId = await resolveCurrentChildId()
-    const [{ data: capsules }, { data: childAccounts }] = await Promise.all([
+    const [{ data: capsules }, { data: childAccounts }, { data: parentAccounts }] = await Promise.all([
       api.getTimeCapsulesUsingGET(childId),
       api.getChildAccountsUsingGET(childId),
+      api.getMyAccountsUsingGET(),
     ])
+    const linkedAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
     accounts.value = (capsules.time_capsules ?? []).map((capsule) => {
-      const linked = childAccounts.accounts.find(({ account_id }) => account_id === capsule.account_id)
+      const linked = linkedAccounts.find(({ account_id }) => account_id === capsule.account_id)
       return {
         id: capsule.time_capsule_id ?? 0,
         accountId: capsule.account_id ?? 0,
-        bank: '',
+        bank: linked ? 'KB국민은행' : '',
         name: capsule.title ?? linked?.account_name ?? '타임캡슐',
         number: linked?.account_number ?? '',
       }
@@ -253,8 +260,11 @@ onBeforeUnmount(() => {
             </span>
             <span class="min-w-0 flex-1">
               <strong class="block truncate text-sm">{{ selectedAccount.name }}</strong>
-              <span class="mt-0.5 block text-[11px] text-[var(--color-text-secondary)]">
-                {{ selectedAccount.bank }} · {{ selectedAccount.number }}
+              <span
+                v-if="formatAccountDetails(selectedAccount)"
+                class="mt-0.5 block text-[11px] text-[var(--color-text-secondary)]"
+              >
+                {{ formatAccountDetails(selectedAccount) }}
               </span>
             </span>
             <ChevronDown
@@ -285,7 +295,12 @@ onBeforeUnmount(() => {
                 >
                   <span class="min-w-0 flex-1">
                     <strong class="block truncate text-[13px]">{{ item.name }}</strong>
-                    <span class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]">{{ item.bank }} · {{ item.number }}</span>
+                    <span
+                      v-if="formatAccountDetails(item)"
+                      class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]"
+                    >
+                      {{ formatAccountDetails(item) }}
+                    </span>
                   </span>
                   <span
                     class="grid size-6 shrink-0 place-items-center rounded-full border"
@@ -443,7 +458,7 @@ onBeforeUnmount(() => {
           aria-label="연결된 저축 정보"
         >
           <div class="min-w-0">
-            <strong class="mt-1 block truncate text-[15ㅇpx] text-[var(--color-text-primary)]">
+            <strong class="mt-1 block truncate text-[15px] text-[var(--color-text-primary)]">
               {{ selectedTransfer.name }}
             </strong>
           </div>

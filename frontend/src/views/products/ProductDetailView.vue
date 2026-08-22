@@ -12,15 +12,28 @@ const props = defineProps<{
 }>()
 const router = useRouter()
 const { showToast } = useToast()
+const isLoadingProduct = ref(true)
 const productName = ref('금융 상품')
 const bankName = ref('')
 const summary = ref('')
 const maxRate = ref<number | undefined>()
 const baseRate = ref<number | undefined>()
-const periodMonths = ref(12)
+const periodMonths = ref<number | undefined>()
 const monthlyMax = ref<number | undefined>()
+const monthlyMin = ref<number | undefined>()
+const periodMinMonths = ref<number | undefined>()
+const renewalDescription = ref('')
+const productSubtype = ref('')
+const rateReference = ref('')
+const interestPaymentLabel = ref('')
+const joinTerminationMethod = ref('')
+const productBadges = ref<string[]>([])
+const curationReason = ref('')
+const currentChildId = ref<number | null>(null)
+const childName = ref('아이')
 
 const isFavorite = ref(false)
+const isFavoriteUpdating = ref(false)
 const isBasicInfoOpen = ref(true)
 const isRateInfoOpen = ref(true)
 const isBenefitsOpen = ref(true)
@@ -28,68 +41,69 @@ const isMaturityOpen = ref(true)
 const isNoticeOpen = ref(true)
 const monthlySavingAmount = ref(300000)
 
-const productTypeValue = ref('SAVINGS')
-const productType = computed(() => productTypeValue.value === 'DEMAND_DEPOSIT' ? '입출금계좌' : '적금')
+const productTypeValue = ref('SAVING')
+const isDemandDeposit = computed(() =>
+  ['ACCOUNT', 'DEMAND_DEPOSIT', 'DEPOSIT'].includes(productTypeValue.value.toUpperCase()),
+)
+const productType = computed(() => isDemandDeposit.value ? '입출금계좌' : '적금')
+const displayBadges = computed(() =>
+  Array.from(new Set([...productBadges.value, productType.value])),
+)
 
-const basicInformation = [
-  { label: '가입 대상', value: '만 19세 미만 실명의 개인, 1인 1계좌' },
-  { label: '상품 유형', value: '자유적립식 예금' },
-  { label: '계약 기간', value: '1년, 신청 시 1년 단위 자동 재예치' },
-  { label: '저축 금액', value: '신규 가입 시 1만원~300만원\n2회차부터 월 1천원~300만원' },
-  { label: '이자 지급', value: '만기일시지급식' },
-  {
-    label: '가입·해지 방법',
-    value: '영업점 또는 KB스타뱅킹\n법정대리인이 비대면으로 신규한 경우 해지는 영업점 방문 필요',
-  },
-]
+type DetailItem = { label?: string; content?: string; description?: string; rate?: number | string }
+const eligibilityConditions = ref<DetailItem[]>([])
+const preferentialConditions = ref<DetailItem[]>([])
+const additionalBenefits = ref<DetailItem[]>([])
+const cautionItems = ref<DetailItem[]>([])
 
-const preferentialRates = [
-  {
-    title: '가족사랑 우대',
-    description: 'KB국민은행 가족고객 등록 가족이 3인 이상',
-    rate: '+0.20%p',
-  },
-  { title: '자동이체 우대', description: 'KB 계좌 간 자동이체 입금 8회 이상', rate: '+0.10%p' },
-  {
-    title: '아동수당 우대',
-    description: 'KB Young Youth 통장으로 아동수당 3회 이상 수령',
-    rate: '+0.10%p',
-  },
-  {
-    title: '주택청약종합저축 우대',
-    description: '신규 가입 및 만기일 기준 보유 조건',
-    rate: '최대 +0.40%p',
-  },
-  {
-    title: '성장축하·재등록률 우대',
-    description: '만 0·7·13·16·19세 가입 또는 사진자료등록 조건',
-    rate: '최대 +0.50%p',
-  },
-]
+const toDetailItems = (value: object | undefined): DetailItem[] =>
+  Array.isArray(value) ? value.filter((item): item is DetailItem => Boolean(item && typeof item === 'object')) : []
 
-const benefits = [
-  {
-    icon: ShieldCheck,
-    title: '무료 보험가입 서비스',
-    description:
-      '가입 동의 고객에게 어린이·청소년 단체보험을 제공하며, 연령별 보장 항목이 달라집니다.',
-  },
-  {
-    icon: CheckCircle2,
-    title: '1년 단위 자동 재예치',
-    description: '신청한 계약기간까지 계속 구조로 활용할 수 있습니다.',
-  },
-  {
-    icon: Sparkles,
-    title: '재예치 계약 일부 인출',
-    description: '원금 범위 내에서 재예치 기간 중 일부 인출이 가능합니다.',
-  },
-  {
-    icon: Gift,
-    title: '예금자보호',
-    description: '동일 은행 보호상품과 합산해 1인당 최고 보호한도까지 보호됩니다.',
-  },
-]
+const formatPeriod = () => {
+  if (isDemandDeposit.value && !periodMinMonths.value && !periodMonths.value) return '제한 없음'
+  if (periodMinMonths.value && periodMonths.value && periodMinMonths.value !== periodMonths.value) {
+    return `${periodMinMonths.value}~${periodMonths.value}개월`
+  }
+  return periodMonths.value ? `${periodMonths.value}개월` : '상품별 안내 확인'
+}
+
+const formatDepositRange = () => {
+  if (monthlyMin.value != null && monthlyMax.value != null) {
+    return `월 ${formatWon(monthlyMin.value)}~${formatWon(monthlyMax.value)}`
+  }
+  if (monthlyMax.value != null) return `월 최대 ${formatWon(monthlyMax.value)}`
+  if (monthlyMin.value != null) return `월 ${formatWon(monthlyMin.value)}부터`
+  return isDemandDeposit.value ? '자유롭게 입출금' : '상품별 안내 확인'
+}
+
+const basicInformation = computed(() => [
+  ...eligibilityConditions.value.map((item) => ({
+    label: item.label || '가입 대상',
+    value: item.content || item.description || '상품별 안내 확인',
+  })),
+  { label: '상품 유형', value: productSubtype.value || productType.value },
+  { label: '계약 기간', value: [formatPeriod(), renewalDescription.value].filter(Boolean).join(' · ') },
+  { label: isDemandDeposit.value ? '입출금 조건' : '저축 금액', value: formatDepositRange() },
+  ...(interestPaymentLabel.value
+    ? [{ label: '이자 지급', value: interestPaymentLabel.value }]
+    : []),
+  ...(joinTerminationMethod.value
+    ? [{ label: '가입·해지 방법', value: joinTerminationMethod.value }]
+    : []),
+])
+
+const preferentialRates = computed(() => preferentialConditions.value.map((item) => ({
+  title: item.label || '우대 조건',
+  description: item.content || item.description || '상품별 세부 조건을 확인해 주세요.',
+  rate: item.rate == null ? '' : `+${Number(item.rate).toFixed(2)}%p`,
+})))
+
+const benefitIcons = [ShieldCheck, CheckCircle2, Sparkles, Gift]
+const benefits = computed(() => additionalBenefits.value.map((item, index) => ({
+  icon: benefitIcons[index % benefitIcons.length],
+  title: item.label || '추가 혜택',
+  description: item.content || item.description || '상품별 상세 혜택을 확인해 주세요.',
+})))
 
 const principalAmount = ref(0)
 const expectedInterest = ref(0)
@@ -102,28 +116,47 @@ const updateMonthlyAmount = (event: Event) => {
 }
 
 const toggleFavorite = async () => {
+  if (isFavoriteUpdating.value) return
+  const financialProductId = Number(props.productId)
+  if (!Number.isInteger(financialProductId) || financialProductId < 1) {
+    showToast('상품 정보를 확인할 수 없습니다.', 'error')
+    return
+  }
+
+  isFavoriteUpdating.value = true
+  const previousFavoriteState = isFavorite.value
+  const nextFavoriteState = !previousFavoriteState
+  isFavorite.value = nextFavoriteState
   try {
-    const next = !isFavorite.value
-    const childId = await resolveCurrentChildId()
-    await api.updateBookmarkUsingPUT(childId, Number(props.productId), { is_bookmarked: next })
-    isFavorite.value = next
+    const childId = currentChildId.value ?? (await resolveCurrentChildId())
+    currentChildId.value = childId
+    const response = await api.updateBookmarkUsingPUT(childId, financialProductId, {
+      is_bookmarked: nextFavoriteState,
+    })
+    if (typeof response.data?.is_bookmarked === 'boolean') {
+      isFavorite.value = response.data.is_bookmarked
+    }
+    showToast(isFavorite.value ? '관심상품에 저장했어요.' : '관심상품에서 해제했어요.', 'success')
   } catch (error) {
+    isFavorite.value = previousFavoriteState
     showToast(getApiErrorMessage(error, '관심상품을 변경하지 못했습니다.'), 'error')
+  } finally {
+    isFavoriteUpdating.value = false
   }
 }
 
 const estimateMaturity = async () => {
-  if (!monthlySavingAmount.value) return
+  if (isDemandDeposit.value || !monthlySavingAmount.value) return
   try {
     const { data } = await api.estimateMaturityUsingPOST(Number(props.productId), {
       monthly_amount: monthlySavingAmount.value,
-      period_months: periodMonths.value,
+      period_months: periodMonths.value ?? 12,
     })
     principalAmount.value = data.principal_amount ?? 0
     expectedInterest.value = data.estimated_interest_after_tax ?? data.estimated_interest_before_tax ?? 0
     expectedMaturityAmount.value = data.estimated_maturity_amount ?? 0
   } catch {
-    principalAmount.value = monthlySavingAmount.value * periodMonths.value
+    principalAmount.value = monthlySavingAmount.value * (periodMonths.value ?? 12)
   }
 }
 
@@ -156,19 +189,39 @@ watch(monthlySavingAmount, () => {
 onMounted(async () => {
   try {
     const childId = await resolveCurrentChildId()
-    const { data } = await api.getProductDetailUsingGET(Number(props.productId), undefined, childId)
+    currentChildId.value = childId
+    const [{ data }, { data: child }] = await Promise.all([
+      api.getProductDetailUsingGET(Number(props.productId), undefined, childId),
+      api.getChildUsingGET(childId),
+    ])
+    childName.value = child.name?.trim() || '아이'
     productName.value = data.name ?? '금융 상품'
     bankName.value = data.bank_name ?? ''
     summary.value = data.summary ?? data.curation_reason ?? ''
-    productTypeValue.value = data.product_type ?? 'SAVINGS'
+    productTypeValue.value = data.product_type ?? 'SAVING'
+    productSubtype.value = data.product_subtype ?? ''
+    productBadges.value = (data.badges ?? []).flatMap(({ label }) => label ? [label] : [])
+    curationReason.value = data.curation_reason ?? ''
     maxRate.value = data.interest_rate?.max_rate
     baseRate.value = data.interest_rate?.base_rate
-    periodMonths.value = data.contract_period?.max_months ?? 12
+    rateReference.value = data.interest_rate?.reference ?? ''
+    periodMinMonths.value = data.contract_period?.min_months
+    periodMonths.value = data.contract_period?.max_months
+    renewalDescription.value = data.contract_period?.renewal_description ?? ''
+    monthlyMin.value = data.monthly_deposit?.min_amount
     monthlyMax.value = data.monthly_deposit?.max_amount
+    interestPaymentLabel.value = data.interest_payment_method?.label ?? ''
+    joinTerminationMethod.value = data.join_termination_method ?? ''
+    eligibilityConditions.value = toDetailItems(data.eligibility_conditions)
+    preferentialConditions.value = toDetailItems(data.preferential_conditions)
+    additionalBenefits.value = toDetailItems(data.additional_benefits)
+    cautionItems.value = toDetailItems(data.cautions)
     isFavorite.value = data.is_bookmarked ?? false
-    await estimateMaturity()
+    if (!isDemandDeposit.value) await estimateMaturity()
   } catch (error) {
     showToast(getApiErrorMessage(error, '상품 정보를 불러오지 못했습니다.'), 'error')
+  } finally {
+    isLoadingProduct.value = false
   }
 })
 </script>
@@ -177,24 +230,59 @@ onMounted(async () => {
   <main
     class="min-h-[calc(100dvh-var(--app-header-height))] bg-[var(--color-app-background)] px-[18px] pt-4 pb-6 text-[var(--color-text-primary)]"
   >
+    <section v-if="isLoadingProduct" aria-label="상품 상세 정보를 불러오는 중" aria-busy="true">
+      <div
+        class="animate-pulse rounded-[18px] bg-[var(--color-brand-secondary)] p-4"
+        aria-hidden="true"
+      >
+        <div class="flex gap-1.5">
+          <span class="h-6 w-16 rounded-full bg-white/70"></span>
+          <span class="h-6 w-24 rounded-full bg-white/70"></span>
+          <span class="h-6 w-12 rounded-full bg-white/70"></span>
+        </div>
+        <span class="mt-5 block h-7 w-[58%] rounded-lg bg-white/75"></span>
+        <span class="mt-3 block h-4 w-24 rounded-md bg-white/60"></span>
+        <span class="mt-4 block h-3 w-full rounded-full bg-white/55"></span>
+        <span class="mt-2 block h-3 w-[76%] rounded-full bg-white/55"></span>
+
+        <div class="mt-5 grid grid-cols-2 gap-2">
+          <div v-for="index in 4" :key="index" class="h-[72px] rounded-[12px] bg-white/80 p-3">
+            <span class="block h-3 w-14 rounded bg-[#e9eef0]"></span>
+            <span class="mt-3 block h-5 w-20 rounded-md bg-[#dfe7ea]"></span>
+          </div>
+        </div>
+        <span class="mt-3 block h-11 rounded-[11px] bg-[#b9dded]"></span>
+        <span class="mt-2 block h-10 rounded-[11px] bg-white/80"></span>
+      </div>
+
+      <div
+        v-for="index in 4"
+        :key="`detail-skeleton-${index}`"
+        class="mt-3 flex h-14 animate-pulse items-center justify-between rounded-[18px] border border-[#e2e9ed] bg-white px-4"
+        aria-hidden="true"
+      >
+        <span class="h-4 w-28 rounded-md bg-[#e7edf0]"></span>
+        <span class="size-5 rounded-full bg-[#edf1f3]"></span>
+      </div>
+    </section>
+
+    <template v-else>
     <section class="rounded-[18px] bg-[var(--color-brand-secondary)] p-4">
       <div class="flex flex-wrap gap-1.5">
         <span
-          class="rounded-full bg-[var(--color-brand-primary)] px-3 py-1 text-[10px] font-semibold text-[var(--color-text-inverse)]"
-          >특별 추천</span
-        >
-        <span
-          class="rounded-full bg-[var(--color-surface)] px-3 py-1 text-[10px] font-semibold text-[var(--color-text-secondary)]"
-          >어린이·청소년 전용</span
-        >
-        <span
+          v-for="(badge, index) in displayBadges"
+          :key="badge"
           class="rounded-full px-3 py-1 text-[10px] font-semibold"
           :class="
-            productType === '입출금계좌'
-              ? 'bg-[#fff4cf] text-[#a67d18]'
-              : 'bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+            badge === productType
+              ? productType === '입출금계좌'
+                ? 'bg-[#edae32] text-white shadow-[0_3px_8px_rgb(190_129_15_/_18%)]'
+                : 'bg-[var(--color-selected-background)] text-[var(--color-selected-text)]'
+              : index === 0
+                ? 'bg-[var(--color-brand-primary)] text-[var(--color-text-inverse)]'
+                : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)]'
           "
-          >{{ productType }}</span
+          >{{ badge }}</span
         >
       </div>
 
@@ -210,26 +298,28 @@ onMounted(async () => {
         >
           <dt class="text-[10px] text-[var(--color-text-secondary)]">최고 금리</dt>
           <dd class="mt-1 mb-0 text-[15px] font-semibold text-[var(--color-selected-text)]">
-            {{ maxRate === undefined ? '-' : `연 ${maxRate}%` }}
+            {{ maxRate === undefined ? '상품별 안내' : `연 ${maxRate.toFixed(2)}%` }}
           </dd>
         </div>
         <div
           class="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3"
         >
           <dt class="text-[10px] text-[var(--color-text-secondary)]">기본 금리</dt>
-          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ baseRate === undefined ? '-' : `연 ${baseRate}%` }}</dd>
+          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ baseRate === undefined ? '상품별 안내' : `연 ${baseRate.toFixed(2)}%` }}</dd>
         </div>
         <div
           class="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3"
         >
           <dt class="text-[10px] text-[var(--color-text-secondary)]">계약 기간</dt>
-          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ periodMonths }}개월</dd>
+          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ formatPeriod() }}</dd>
         </div>
         <div
           class="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3"
         >
-          <dt class="text-[10px] text-[var(--color-text-secondary)]">월 저축 한도</dt>
-          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ monthlyMax === undefined ? '-' : `최대 ${formatWon(monthlyMax)}` }}</dd>
+          <dt class="text-[10px] text-[var(--color-text-secondary)]">
+            {{ isDemandDeposit ? '입출금 조건' : '월 저축 한도' }}
+          </dt>
+          <dd class="mt-1 mb-0 text-[15px] font-semibold">{{ formatDepositRange() }}</dd>
         </div>
       </dl>
 
@@ -241,13 +331,24 @@ onMounted(async () => {
         가입하기
       </button>
       <button
-        class="mt-2 flex h-10 w-full items-center justify-center gap-1 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]"
+        class="mt-2 flex h-10 w-full items-center justify-center gap-1.5 rounded-[11px] border text-[12px] font-bold transition duration-200 active:scale-[0.99]"
+        :class="
+          isFavorite
+            ? 'border-[#ffc8cf] bg-[#fff4f5] text-[#e94355]'
+            : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] active:bg-[var(--color-surface-muted)]'
+        "
         type="button"
         :aria-pressed="isFavorite"
+        :aria-busy="isFavoriteUpdating"
+        :disabled="isFavoriteUpdating"
         @click="toggleFavorite"
       >
-        <Heart :size="15" :class="isFavorite ? 'fill-[#ff001b] text-[#ff001b]' : ''" />
-        {{ isFavorite ? '관심상품 저장됨' : '관심상품 저장' }}
+        <Heart
+          :size="16"
+          class="transition duration-200"
+          :class="isFavorite ? 'scale-110 fill-[#ff4d5f] text-[#ff4d5f]' : ''"
+        />
+        {{ isFavorite ? '관심상품에 저장됨' : '관심상품 저장' }}
       </button>
     </section>
 
@@ -259,16 +360,11 @@ onMounted(async () => {
         >
           <Sparkles :size="17" />
         </span>
-        <h2 class="m-0 text-[14px] font-bold">깨비에게 추천하는 이유</h2>
+        <h2 class="m-0 text-[14px] font-bold">{{ childName }}에게 추천하는 이유</h2>
       </div>
       <p class="mt-3 mb-0 text-[11px] leading-[1.65] text-[var(--color-text-secondary)]">
-        깨비는 현재 만 0세이므로 가입 시 성장축하 우대금리 대상이 될 수 있어요. 아동수당 수령, 가족
-        등록, 자동이체 조건도 함께 확인해보세요.
+        {{ curationReason || `${childName}의 자산관리 목적에 맞춰 살펴볼 수 있는 상품이에요.` }}
       </p>
-      <div class="mt-4 flex items-end justify-between border-t border-[var(--color-border)] pt-3">
-        <span class="text-[11px] font-bold text-[var(--color-selected-text)]">목표 적합도</span>
-        <strong class="text-[22px] text-[var(--color-selected-text)]">92%</strong>
-      </div>
     </section>
 
     <section class="mt-3 overflow-hidden rounded-[18px] border border-[#e2e9ed] bg-white shadow-sm">
@@ -330,10 +426,12 @@ onMounted(async () => {
       >
         <div v-if="isRateInfoOpen" class="border-t border-[#e5ebef] px-4 pb-4">
           <div class="mt-4 rounded-[12px] bg-[#e8f8ff] px-3 py-4">
-            <span class="text-[10px] text-[var(--color-text-secondary)]"
-              >12개월 기준 · 세금공제 전</span
-            >
-            <strong class="mt-1 block text-[22px] text-[#2babe8]">최고 연 3.40%</strong>
+            <span class="text-[10px] text-[var(--color-text-secondary)]">
+              {{ rateReference || '상품 공시 기준' }}
+            </span>
+            <strong class="mt-1 block text-[22px] text-[#2babe8]">
+              {{ maxRate === undefined ? '금리 상세 안내 확인' : `최고 연 ${maxRate.toFixed(2)}%` }}
+            </strong>
           </div>
           <ul class="mt-3 mb-0 grid list-none gap-2 p-0">
             <li
@@ -354,7 +452,10 @@ onMounted(async () => {
       </Transition>
     </section>
 
-    <section class="mt-3 overflow-hidden rounded-[18px] border border-[#e2e9ed] bg-white shadow-sm">
+    <section
+      v-if="benefits.length"
+      class="mt-3 overflow-hidden rounded-[18px] border border-[#e2e9ed] bg-white shadow-sm"
+    >
       <button
         class="flex h-14 w-full items-center justify-between px-4 text-left"
         type="button"
@@ -395,7 +496,10 @@ onMounted(async () => {
       </Transition>
     </section>
 
-    <section class="mt-3 overflow-hidden rounded-[18px] border border-[#e2e9ed] bg-white shadow-sm">
+    <section
+      v-if="!isDemandDeposit"
+      class="mt-3 overflow-hidden rounded-[18px] border border-[#e2e9ed] bg-white shadow-sm"
+    >
       <button
         class="flex h-14 w-full items-center justify-between px-4 text-left"
         type="button"
@@ -421,7 +525,7 @@ onMounted(async () => {
           >
           <input
             id="monthly-saving-amount"
-            :value="monthlySavingAmount"
+            :value="monthlySavingAmount.toLocaleString('ko-KR')"
             class="mt-2 h-11 w-full rounded-[11px] border border-[#dfe7ec] px-3 text-[13px] outline-none focus:border-[#2babe8]"
             type="text"
             inputmode="numeric"
@@ -431,7 +535,7 @@ onMounted(async () => {
           <div
             class="mt-2 flex h-11 items-center rounded-[11px] border border-[#dfe7ec] px-3 text-[13px]"
           >
-            최고금리 연 3.40%
+            {{ maxRate === undefined ? '상품별 금리 안내 확인' : `최고금리 연 ${maxRate.toFixed(2)}%` }}
           </div>
           <dl class="mt-4 rounded-[13px] bg-[#fff8dd] px-4 py-4 text-[11px]">
             <div class="flex justify-between gap-3">
@@ -476,12 +580,24 @@ onMounted(async () => {
         leave-to-class="-translate-y-1 opacity-0"
       >
         <div v-if="isNoticeOpen" class="border-t border-[#e5ebef] px-4 pb-4">
-          <p
-            class="mt-4 mb-0 rounded-[12px] bg-[#f7f8fa] px-4 py-4 text-[10px] leading-[1.65] text-[#798693]"
-          >
-            최고금리는 모든 우대조건을 충족하고 만기 해지할 때 적용됩니다. 중도해지 시 더 낮은
-            이율이 적용될 수 있으며, 납입 혜택은 가입 동의와 재예치 조건 등에 따라 달라집니다.
-          </p>
+          <div class="mt-4 grid gap-2">
+            <p
+              v-for="(caution, index) in cautionItems"
+              :key="`${caution.label}-${index}`"
+              class="m-0 rounded-[12px] bg-[#f7f8fa] px-4 py-4 text-[10px] leading-[1.65] text-[#798693]"
+            >
+              <strong v-if="caution.label" class="mb-1 block text-[11px] text-[var(--color-text-primary)]">
+                {{ caution.label }}
+              </strong>
+              {{ caution.content || caution.description || '상품 가입 전 상세 조건을 확인해 주세요.' }}
+            </p>
+            <p
+              v-if="!cautionItems.length"
+              class="m-0 rounded-[12px] bg-[#f7f8fa] px-4 py-4 text-[10px] leading-[1.65] text-[#798693]"
+            >
+              상품 가입 전 최신 상품설명서와 약관을 확인해 주세요.
+            </p>
+          </div>
           <p class="mt-3 mb-0 text-[9px] leading-[1.5] text-[#9ba5b0]">
             상품정보 기준: KB국민은행 공식 상품공시. 실제 가입 전 최신 상품설명서와 약관을
             확인해주세요.
@@ -489,5 +605,6 @@ onMounted(async () => {
         </div>
       </Transition>
     </section>
+    </template>
   </main>
 </template>

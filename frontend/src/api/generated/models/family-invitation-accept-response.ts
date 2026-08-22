@@ -20,6 +20,8 @@ import type { FamilyInvitationChildResponse } from './family-invitation-child-re
 export interface FamilyInvitationAcceptResponse {
     'accepted_at'?: string;
     'child'?: FamilyInvitationChildResponse;
+    'child_count'?: number;
+    'children'?: Array<FamilyInvitationChildResponse>;
     'family_invitation_id'?: number;
     'invitee_type'?: FamilyInvitationAcceptResponseInviteeTypeEnum;
     'relation_type'?: FamilyInvitationAcceptResponseRelationTypeEnum;

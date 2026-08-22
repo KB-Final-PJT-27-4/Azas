@@ -5,7 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**accounts** | [**Array&lt;LinkedAccountResponse&gt;**](LinkedAccountResponse.md) |  | [optional] [default to undefined]
+**accounts** | [**Array&lt;FinancialAccountLinkedAccountResponse&gt;**](FinancialAccountLinkedAccountResponse.md) |  | [optional] [default to undefined]
 **goal_setup_account_ids** | **Array&lt;number&gt;** |  | [optional] [default to undefined]
 **linked_count** | **number** |  | [optional] [default to undefined]
 

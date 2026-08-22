@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **financial_goal_id** | **number** |  | [optional] [default to undefined]
 **financial_goal_template_id** | **number** |  | [optional] [default to undefined]
 **linked_account_count** | **number** |  | [optional] [default to undefined]
-**linked_accounts** | [**Array&lt;LinkedAccountResponse&gt;**](LinkedAccountResponse.md) |  | [optional] [default to undefined]
+**linked_accounts** | [**Array&lt;FinancialGoalCreateLinkedAccountResponse&gt;**](FinancialGoalCreateLinkedAccountResponse.md) |  | [optional] [default to undefined]
 **monthly_saving_amount** | **number** |  | [optional] [default to undefined]
 **remaining_amount** | **number** |  | [optional] [default to undefined]
 **status** | **string** |  | [optional] [default to undefined]
