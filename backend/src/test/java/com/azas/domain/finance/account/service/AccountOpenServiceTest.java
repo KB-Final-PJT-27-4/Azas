@@ -147,22 +147,21 @@ class AccountOpenServiceTest {
     }
 
     @Test
-    void rejectsParentOpeningChildTargetProduct() {
+    void opensParentAccountForChildTargetProduct() {
         AccountOpenRequest request = request("PARENT", null, 1L);
+        when(accountMapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
         FinancialProduct product = product(1L, "SAVING", 12);
         product.setTargetOwnerType("CHILD");
         when(productMapper.findActiveProductById(1L)).thenReturn(product);
+        prepareNumber();
+        assignAccountId(31L);
 
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> service.open(1L, request)
-        );
+        AccountOpenResult result = service.open(1L, request);
 
-        assertEquals(
-                ErrorCode.INVALID_ACCOUNT_OPEN_REQUEST,
-                exception.getErrorCode()
-        );
-        verify(accountMapper, never()).insertOpenedAccount(any());
+        assertEquals(31L, result.getAccountId());
+        assertEquals("PARENT", result.getOwnerType());
+        assertEquals("SAVINGS", result.getAccountProductType());
+        verify(accountMapper).insertOpenedAccount(any());
     }
 
     @Test
