@@ -993,6 +993,7 @@ onMounted(async () => {
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
   gap: 11px;
 }
 
@@ -1058,9 +1059,13 @@ onMounted(async () => {
 }
 
 .note-card {
-  min-height: 88px;
-  padding: 15px 12px 12px;
+  display: flex;
+  aspect-ratio: 1 / 1.1;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 13px 10px 10px;
   box-shadow: 0 8px 16px rgba(42, 43, 36, 0.09);
+  overflow: hidden;
 }
 
 .note-card b,
@@ -1072,24 +1077,25 @@ onMounted(async () => {
 
 .note-card b {
   color: #7d8277;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
+  line-height: 1.35;
 }
 
 .note-card span {
-  margin-top: 9px;
+  margin-top: 6px;
   color: #5f675f;
   word-break: keep-all;
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.42;
 }
 
 .note-card small {
-  margin-top: 9px;
+  margin-top: 6px;
   color: #8c948e;
   text-align: right;
-  font-size: 8px;
+  font-size: 7px;
 }
 
 .note-1 {

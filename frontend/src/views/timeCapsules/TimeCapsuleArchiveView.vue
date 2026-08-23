@@ -88,6 +88,11 @@ const UNLOCK_WHITE_FLASH_MS = 700
 const UNLOCK_REVEAL_FADE_MS = 800
 const UNLOCK_SEEN_STORAGE_PREFIX = 'azas_time_capsule_unlock_seen'
 const OPEN_FLASH_STORAGE_KEY = 'azas_time_capsule_open_flash'
+const UNLOCK_LONG_PRESS_MS = 2000
+const unlockLongPressState = {
+  timer: null as number | null,
+  didTrigger: false,
+}
 
 const isUnlockOverlayOpen = computed(() => unlockPhase.value !== 'idle')
 const shouldShowUnlockReplayButton = computed(() => import.meta.env.DEV)
@@ -273,6 +278,32 @@ const resetUnlockFlow = () => {
   isUnlockCardCentered.value = false
 }
 
+const clearUnlockLongPressTimer = () => {
+  if (unlockLongPressState.timer === null) return
+  window.clearTimeout(unlockLongPressState.timer)
+  unlockLongPressState.timer = null
+}
+
+const startUnlockLongPress = (capsule: CapsuleAccount, event: PointerEvent) => {
+  clearUnlockLongPressTimer()
+  unlockLongPressState.didTrigger = false
+
+  const currentTarget = event.currentTarget as HTMLElement | null
+  if (!currentTarget) return
+  if (capsule.isFree && capsule.createdAt === '오픈 날짜 설정') return
+
+  unlockLongPressState.timer = window.setTimeout(() => {
+    unlockLongPressState.timer = null
+    unlockLongPressState.didTrigger = true
+    window.localStorage.removeItem(getUnlockSeenStorageKey(capsule.id))
+    startUnlockFlowFromElement(capsule, currentTarget)
+  }, UNLOCK_LONG_PRESS_MS)
+}
+
+const cancelUnlockLongPress = () => {
+  clearUnlockLongPressTimer()
+}
+
 const getUnlockSeenStorageKey = (capsuleId: number) =>
   `${UNLOCK_SEEN_STORAGE_PREFIX}_${capsuleId}`
 
@@ -373,10 +404,9 @@ const openFreeCapsuleList = (freeCapsule: { id: number; createdAt: string }) => 
   })
 }
 
-const startUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
+const startUnlockFlowFromElement = (capsule: CapsuleAccount, currentTarget: HTMLElement) => {
   if (isUnlockOverlayOpen.value) return
 
-  const currentTarget = event.currentTarget as HTMLElement
   const sourceElement = currentTarget.closest('article') ?? currentTarget
   const rect = sourceElement.getBoundingClientRect()
   const targetCardWidth = Math.min(window.innerWidth * 0.88, window.innerHeight * 0.48, 420)
@@ -424,6 +454,12 @@ const startUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
   )
 }
 
+const startUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
+  const currentTarget = event.currentTarget as HTMLElement | null
+  if (!currentTarget) return
+  startUnlockFlowFromElement(capsule, currentTarget)
+}
+
 const replayUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
   event.stopPropagation()
   if (typeof window !== 'undefined') {
@@ -454,6 +490,12 @@ const completeUnlockFlow = async () => {
 }
 
 const openCapsule = (capsule: CapsuleAccount, event: MouseEvent) => {
+  if (unlockLongPressState.didTrigger) {
+    event.preventDefault()
+    unlockLongPressState.didTrigger = false
+    return
+  }
+
   if (!capsule.isFree) {
     if (isCapsuleReleased(capsule)) {
       if (hasSeenUnlockAnimation(capsule)) {
@@ -589,7 +631,10 @@ onMounted(async () => {
   }
 })
 
-onBeforeUnmount(resetUnlockFlow)
+onBeforeUnmount(() => {
+  resetUnlockFlow()
+  clearUnlockLongPressTimer()
+})
 </script>
 
 <template>
@@ -780,8 +825,13 @@ onBeforeUnmount(resetUnlockFlow)
           "
         >
         <button
-          class="block w-full text-left transition-transform active:scale-[0.98]"
+          class="block w-full touch-manipulation select-none text-left transition-transform active:scale-[0.98]"
           type="button"
+          @pointerdown="startUnlockLongPress(capsule, $event)"
+          @pointerup="cancelUnlockLongPress"
+          @pointercancel="cancelUnlockLongPress"
+          @pointerleave="cancelUnlockLongPress"
+          @contextmenu.prevent
           @click="openCapsule(capsule, $event)"
         >
           <span
