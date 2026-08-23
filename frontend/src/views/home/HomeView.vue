@@ -31,7 +31,7 @@ type HomeGuideStep = {
   eyebrow: string
   title: string
   description: string
-  target: 'goal' | 'checklist' | 'timeCapsule'
+  target: 'goal' | 'checklist' | 'timeCapsule' | 'mypage'
 }
 
 const childName = ref('우리 아이')
@@ -77,6 +77,12 @@ const guideSteps = computed<HomeGuideStep[]>(() => [
     title: '필요한 준비를 하나씩 확인해요',
     description: '아이의 성장 시기에 맞춰 지금 챙겨야 할 금융 준비 항목을 확인하고 완료할 수 있어요.',
     target: 'checklist',
+  },
+  {
+    eyebrow: '마이페이지',
+    title: '가족과 함께 아이의 금융생활을 관리해요',
+    description: '가족을 초대하면 함께 용돈을 보내고 미션을 만들어 아이의 즐거운 금융 습관을 키울 수 있어요.',
+    target: 'mypage',
   },
 ])
 const currentGuideStep = computed(() => guideSteps.value[guideStepIndex.value]!)

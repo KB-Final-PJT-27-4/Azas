@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import AppSubHeader from '@/components/layout/AppSubHeader.vue'
 import AiRecommendationModal from '@/components/goals/AiRecommendationModal.vue'
@@ -14,8 +14,19 @@ import { useToast } from '@/composables/useToast'
 import { toFinancialGoalApiDate } from '@/utils/financialGoalDate'
 
 type GoalSetting = { amount: number; targetDate: string }
+type GoalSetupDraft = {
+  childId: number | null
+  selectedGoals: string[]
+  customGoal: string
+  amount: number
+  targetDate: string
+  linkedSavings: Record<string, string[]>
+}
+
+const GOAL_SETUP_DRAFT_KEY = 'azas_goal_setup_draft'
 
 const router = useRouter()
+const route = useRoute()
 const { showToast } = useToast()
 const childId = ref<number | null>(null)
 const savingsAccounts = ref<Array<{ id: string; name: string; number: string; balance: number; rate: string; maturity: string }>>([])
@@ -29,6 +40,31 @@ const linkedSavings = reactive<Record<string, string[]>>({})
 const isRecommendationOpen = ref(false)
 const slideDirection = ref<'forward' | 'backward'>('forward')
 const goalTemplateIds = ref<Record<string, number>>({})
+const goalTemplateOrder = ref<string[]>([])
+const isGoalTemplatesLoading = ref(true)
+
+const readGoalSetupDraft = (): GoalSetupDraft | null => {
+  try {
+    const storedDraft = sessionStorage.getItem(GOAL_SETUP_DRAFT_KEY)
+    if (!storedDraft) return null
+    return JSON.parse(storedDraft) as GoalSetupDraft
+  } catch {
+    sessionStorage.removeItem(GOAL_SETUP_DRAFT_KEY)
+    return null
+  }
+}
+
+const restoreGoalSetupDraft = (draft: GoalSetupDraft) => {
+  selectedGoals.value = Array.isArray(draft.selectedGoals) ? draft.selectedGoals : []
+  customGoal.value = typeof draft.customGoal === 'string' ? draft.customGoal : ''
+  setting.amount = Number.isFinite(draft.amount) ? draft.amount : 0
+  setting.targetDate = typeof draft.targetDate === 'string' ? draft.targetDate : ''
+  Object.entries(draft.linkedSavings ?? {}).forEach(([goalId, accountIds]) => {
+    linkedSavings[goalId] = Array.isArray(accountIds) ? accountIds : []
+  })
+}
+
+const clearGoalSetupDraft = () => sessionStorage.removeItem(GOAL_SETUP_DRAFT_KEY)
 
 const goalTemplateNameByGoalId: Record<string, string> = {
   education: '대학자금',
@@ -36,6 +72,10 @@ const goalTemplateNameByGoalId: Record<string, string> = {
   marriage: '결혼자금',
   'lump-sum': '목돈 마련',
 }
+
+const goalIdByTemplateName = Object.fromEntries(
+  Object.entries(goalTemplateNameByGoalId).map(([goalId, templateName]) => [templateName, goalId]),
+) as Record<string, string>
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
@@ -115,7 +155,18 @@ const goBack = () => {
 }
 
 const goToSavingsRecommendation = () => {
-  router.push({ name: 'SavingsRecommendation' })
+  const draft: GoalSetupDraft = {
+    childId: childId.value,
+    selectedGoals: [...selectedGoals.value],
+    customGoal: customGoal.value,
+    amount: setting.amount,
+    targetDate: setting.targetDate,
+    linkedSavings: Object.fromEntries(
+      Object.entries(linkedSavings).map(([goalId, accountIds]) => [goalId, [...accountIds]]),
+    ),
+  }
+  sessionStorage.setItem(GOAL_SETUP_DRAFT_KEY, JSON.stringify(draft))
+  router.push({ name: 'SavingsRecommendation', query: { from: 'goal-setup' } })
 }
 
 const goNext = async () => {
@@ -126,14 +177,14 @@ const goNext = async () => {
     }
     try {
       await api.createGoalUsingPOST(childId.value, {
-        title: currentGoalName.value,
         target_amount: setting.amount,
         target_date: toFinancialGoalApiDate(setting.targetDate),
         account_ids: (linkedSavings[currentGoalId.value] ?? []).map(Number).filter(Number.isFinite),
         ...(currentGoalTemplateId.value
           ? { financial_goal_template_id: currentGoalTemplateId.value }
-          : {}),
+          : { title: currentGoalName.value }),
       })
+      clearGoalSetupDraft()
       showToast('목표를 만들었어요.', 'success')
       await router.push({ name: 'MypageGoals' })
     } catch (error) {
@@ -154,6 +205,14 @@ const goNext = async () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
+    const savedDraft = readGoalSetupDraft()
+    const shouldResumeGoalSetup = route.query.resumeGoal === 'true'
+    if (shouldResumeGoalSetup && savedDraft?.childId === childId.value) {
+      restoreGoalSetupDraft(savedDraft)
+      clearGoalSetupDraft()
+    } else if (savedDraft) {
+      clearGoalSetupDraft()
+    }
     const [{ data: childAccounts }, { data: parentAccounts }, { data: goals }] = await Promise.all([
       api.getChildAccountsUsingGET(childId.value),
       api.getMyAccountsUsingGET(),
@@ -161,11 +220,19 @@ onMounted(async () => {
     ])
     try {
       const { data: templates } = await api.getTemplatesUsingGET()
+      const orderedTemplates = [...(templates.templates ?? [])].sort(
+        (left, right) =>
+          (left.display_order ?? Number.MAX_SAFE_INTEGER)
+          - (right.display_order ?? Number.MAX_SAFE_INTEGER),
+      )
       const templatesByName = new Map(
-        (templates.templates ?? [])
+        orderedTemplates
           .filter((template) => template.name && template.financial_goal_template_id != null)
           .map((template) => [template.name!, template.financial_goal_template_id!] as const),
       )
+      goalTemplateOrder.value = orderedTemplates
+        .map((template) => goalIdByTemplateName[template.name ?? ''])
+        .filter((goalId): goalId is string => Boolean(goalId))
       goalTemplateIds.value = Object.fromEntries(
         Object.entries(goalTemplateNameByGoalId)
           .map(([goalId, templateName]) => [goalId, templatesByName.get(templateName)] as const)
@@ -173,6 +240,9 @@ onMounted(async () => {
       )
     } catch {
       goalTemplateIds.value = {}
+      goalTemplateOrder.value = []
+    } finally {
+      isGoalTemplatesLoading.value = false
     }
     unavailableSavingsIds.value = [
       ...new Set(
@@ -204,6 +274,7 @@ onMounted(async () => {
   } catch (error) {
     showToast(getApiErrorMessage(error, '계좌 정보를 불러오지 못했습니다.'), 'error')
   } finally {
+    isGoalTemplatesLoading.value = false
     isSavingsLoading.value = false
   }
 })
@@ -224,6 +295,8 @@ onMounted(async () => {
             <GoalSelectionStep
               :selected-goals="selectedGoals"
               :custom-goal="customGoal"
+              :goal-order="goalTemplateOrder"
+              :is-loading="isGoalTemplatesLoading"
               single-selection
               @toggle="selectGoal"
               @update:custom-goal="customGoal = $event"

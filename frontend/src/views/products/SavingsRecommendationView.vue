@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ArrowUpRight, LoaderCircle, PiggyBank, RotateCw } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api, getApiErrorMessage } from '@/api'
 import { hasParentDemandDepositAccount, resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
+import { addOpenedSavingsToGoalSetupDraft } from '@/utils/goalSetupDraft'
 
 const router = useRouter()
+const route = useRoute()
 const { showToast } = useToast()
 const selectedProductName = ref<string | null>(null)
 const selectedProductId = ref<number | null>(null)
@@ -74,13 +76,20 @@ const openSelectedProduct = async () => {
     }
     const ownerType = selectedProductOwnerType.value
     const childId = ownerType === 'CHILD' ? await resolveCurrentChildId() : undefined
-    await api.openUsingPOST(undefined, {
+    const { data: openedAccount } = await api.openUsingPOST(undefined, {
       child_id: childId,
       financial_product_id: selectedProductId.value,
       initial_deposit_amount: 0,
       owner_type: ownerType,
     })
-    await router.push({ name: 'SavingsOpenComplete', query: { product: selectedProductName.value } })
+    addOpenedSavingsToGoalSetupDraft(openedAccount.account_id)
+    await router.push({
+      name: 'SavingsOpenComplete',
+      query: {
+        product: selectedProductName.value,
+        ...(route.query.from === 'goal-setup' ? { resumeGoal: 'true' } : {}),
+      },
+    })
   } catch (error) {
     showToast(getApiErrorMessage(error, '적금을 등록하지 못했습니다.'), 'error')
   } finally {
