@@ -6,6 +6,8 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **action** | **string** |  | [optional] [default to undefined]
+**destination_account_id** | **number** |  | [optional] [default to undefined]
+**source_account_id** | **number** |  | [optional] [default to undefined]
 
 ## Example
 
@@ -14,6 +16,8 @@ import { UpdateAllowanceRequestStatus } from './api';
 
 const instance: UpdateAllowanceRequestStatus = {
     action,
+    destination_account_id,
+    source_account_id,
 };
 ```
 
