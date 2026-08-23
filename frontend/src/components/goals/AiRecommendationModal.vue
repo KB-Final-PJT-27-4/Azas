@@ -1,9 +1,19 @@
 <script setup lang="ts">
 import { Check, X } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+
+import { api, getApiErrorMessage } from '@/api'
+
+type AmountRecommendation = {
+  code: string
+  label: string
+  amount: number
+  items: string[]
+}
 
 const props = defineProps<{
   selectedAmount?: number
+  financialGoalTemplateId: number
 }>()
 
 const emit = defineEmits<{
@@ -28,15 +38,33 @@ const sheetStyle = computed(() => ({
   transition: isDragging.value ? 'none' : undefined,
 }))
 
-const recommendations = [
-  { label: '기본 준비안', amount: 30_000_000, items: ['등록금', '교재 및 학습비'] },
-  { label: '균형 준비안', amount: 50_000_000, items: ['등록금', '생활비', '취업 준비'] },
-  {
-    label: '장기 준비안',
-    amount: 100_000_000,
-    items: ['등록금', '생활비', '주거비', '사회초년 자금'],
-  },
-]
+const recommendations = ref<AmountRecommendation[]>([])
+const isLoading = ref(true)
+const errorMessage = ref('')
+
+const loadRecommendations = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    const { data } = await api.getAmountRecommendationsUsingGET(props.financialGoalTemplateId)
+    recommendations.value = (data.recommendations ?? [])
+      .filter((recommendation) => Number.isFinite(recommendation.target_amount) && (recommendation.target_amount ?? 0) > 0)
+      .sort((left, right) => (left.display_order ?? 0) - (right.display_order ?? 0))
+      .map((recommendation) => ({
+        code: recommendation.recommendation_code ?? String(recommendation.display_order ?? recommendation.target_amount),
+        label: recommendation.title ?? '목표 금액 가이드',
+        amount: recommendation.target_amount ?? 0,
+        items: recommendation.coverage_items ?? [],
+      }))
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '목표 금액 가이드를 불러오지 못했습니다.')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(loadRecommendations)
 
 const toggleRecommendation = (amount: number) => {
   if (pendingAmount.value === amount) {
@@ -158,10 +186,13 @@ const cancelDrag = () => {
 
           <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
 
-            <div class="mt-5 grid gap-3">
+            <div
+              v-if="!isLoading && !errorMessage && recommendations.length > 0"
+              class="mt-5 grid gap-3"
+            >
               <button
                 v-for="option in recommendations"
-                :key="option.label"
+                :key="option.code"
                 class="relative w-full rounded-2xl border p-4 pr-16 text-left transition-all"
                 :class="
                   pendingAmount === option.amount
@@ -207,13 +238,32 @@ const cancelDrag = () => {
                 </span>
               </button>
             </div>
+
+            <p
+              v-if="isLoading"
+              class="mt-5 rounded-2xl bg-[var(--color-surface-muted)] px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]"
+            >
+              목표 금액 가이드를 불러오는 중이에요.
+            </p>
+            <p
+              v-else-if="errorMessage"
+              class="mt-5 rounded-2xl bg-[#fff4f4] px-4 py-6 text-center text-sm text-[#d85a5a]"
+            >
+              {{ errorMessage }}
+            </p>
+            <p
+              v-else-if="recommendations.length === 0"
+              class="mt-5 rounded-2xl bg-[var(--color-surface-muted)] px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]"
+            >
+              등록된 목표 금액 가이드가 없어요.
+            </p>
           </div>
 
           <div class="shrink-0 px-6 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
             <button
               class="h-14 w-full rounded-2xl bg-[var(--color-brand-primary)] text-base font-bold text-[var(--color-text-inverse)] shadow-[0_6px_16px_rgb(52_176_230_/_22%)] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
-              :disabled="pendingAmount === null"
+              :disabled="pendingAmount === null || isLoading || Boolean(errorMessage)"
               @click="applyRecommendation"
             >
               추천 금액 적용하기
