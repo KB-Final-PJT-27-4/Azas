@@ -139,6 +139,18 @@ const routes: RouteRecordRaw[] = [
     meta: timeCapsuleHeaderMeta,
   },
   {
+    path: '/time-capsules/local',
+    name: 'LocalTimeCapsuleList',
+    component: () => import('@/views/timeCapsules/TimeCapsuleListView.vue'),
+    meta: { ...timeCapsuleHeaderMeta, requiresAuth: false },
+  },
+  {
+    path: '/time-capsules/local/open',
+    name: 'LocalTimeCapsuleOpen',
+    component: () => import('@/views/timeCapsules/TimeCapsuleOpenView.vue'),
+    meta: { requiresAuth: false, hideNavigation: true },
+  },
+  {
     path: '/time-capsules/:capsuleListId',
     name: 'TimeCapsuleList',
     component: () => import('@/views/timeCapsules/TimeCapsuleListView.vue'),
