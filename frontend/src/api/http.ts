@@ -10,6 +10,7 @@ import { apiBaseUrl } from '@/api/config'
 export const ACCESS_TOKEN_STORAGE_KEY = 'azas_access_token'
 export const REFRESH_TOKEN_STORAGE_KEY = 'azas_refresh_token'
 export const AUTH_MEMBER_STORAGE_KEY = 'azas_auth_member'
+export const CURRENT_CHILD_STORAGE_KEY = 'azas_current_child_id'
 export const AUTH_EXPIRED_EVENT = 'azas:auth-expired'
 export const AUTH_SESSION_CHANGED_EVENT = 'azas:auth-session-changed'
 
@@ -32,6 +33,7 @@ export const clearTokenPair = () => {
 export const clearAuthSessionStorage = () => {
   clearTokenPair()
   sessionStorage.removeItem(AUTH_MEMBER_STORAGE_KEY)
+  sessionStorage.removeItem(CURRENT_CHILD_STORAGE_KEY)
   dispatchAuthSessionChanged()
 }
 export const getAuthorizationHeader = () => {
