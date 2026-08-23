@@ -2,7 +2,18 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import memorySheetUrl from '@/assets/images/timeCapsules/open/memory-sheet.png'
-import memorySheet2024Url from '@/assets/images/timeCapsules/open/memory-sheet-2024.png'
+import memory202401Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-01.png'
+import memory202402Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-02.png'
+import memory202403Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-03.png'
+import memory202404Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-04.png'
+import memory202405Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-05.png'
+import memory202406Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-06.png'
+import memory202407Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-07.png'
+import memory202408Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-08.png'
+import memory202409Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-09.png'
+import memory202410Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-10.png'
+import memory202411Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-11.png'
+import memory202412Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-12.png'
 import { api } from '@/api'
 
 type Memory = {
@@ -26,6 +37,20 @@ const elementaryShortMessages = [
   '혼자서도 반짝이는 네 하루를 기억할게',
   '조금 더 넓어진 세상에서도 우리는 네 편이야',
   '네가 고른 꿈을 천천히 응원할게',
+] as const
+const memory2024PhotoUrls = [
+  memory202401Url,
+  memory202402Url,
+  memory202403Url,
+  memory202404Url,
+  memory202405Url,
+  memory202406Url,
+  memory202407Url,
+  memory202408Url,
+  memory202409Url,
+  memory202410Url,
+  memory202411Url,
+  memory202412Url,
 ] as const
 const memoryTitlesByYear: Record<number, string[]> = {
   2023: [
@@ -146,12 +171,21 @@ const galleryRows = computed(() => {
 
 const getPhotoStyle = (index: number) => {
   const memory = allMemories.value[index]
+  if (memory?.year === 2024) {
+    const photoUrl = memory2024PhotoUrls[(memory.month - 1) % memory2024PhotoUrls.length]
+
+    return {
+      backgroundImage: `url(${photoUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }
+  }
+
   const column = index % 3
   const row = Math.floor(index / 3) % 4
-  const sheetUrl = memory?.year === 2024 ? memorySheet2024Url : memorySheetUrl
 
   return {
-    backgroundImage: `url(${sheetUrl})`,
+    backgroundImage: `url(${memorySheetUrl})`,
     backgroundSize: '300% 400%',
     backgroundPosition: `${column * 50}% ${row * (100 / 3)}%`,
   }

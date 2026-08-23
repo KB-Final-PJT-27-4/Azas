@@ -88,6 +88,7 @@ const UNLOCK_SEEN_STORAGE_PREFIX = 'azas_time_capsule_unlock_seen'
 const OPEN_FLASH_STORAGE_KEY = 'azas_time_capsule_open_flash'
 
 const isUnlockOverlayOpen = computed(() => unlockPhase.value !== 'idle')
+const shouldShowUnlockReplayButton = computed(() => import.meta.env.DEV)
 const unlockStatusText = computed(() => '자물쇠를 눌러보세요')
 const unlockCardStyle = computed(() => {
   if (!unlockCardRect.value) return undefined
@@ -424,6 +425,14 @@ const startUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
     },
     UNLOCK_CARD_CENTER_MS + UNLOCK_LOCK_EMERGE_MS + UNLOCK_WHITE_FLASH_MS + UNLOCK_REVEAL_FADE_MS,
   )
+}
+
+const replayUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
+  event.stopPropagation()
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(getUnlockSeenStorageKey(capsule.id))
+  }
+  startUnlockFlow(capsule, event)
 }
 
 const completeUnlockFlow = async () => {
@@ -803,6 +812,14 @@ onBeforeUnmount(resetUnlockFlow)
           <p class="mt-3 text-xs font-bold text-[var(--color-selected-text)]">
             저축 금액 {{ capsule.savedAmount.toLocaleString('ko-KR') }}원
           </p>
+        </button>
+        <button
+          v-if="shouldShowUnlockReplayButton && isCapsuleReleased(capsule)"
+          class="unlock-replay-button mt-3"
+          type="button"
+          @click="replayUnlockFlow(capsule, $event)"
+        >
+          자물쇠 애니메이션 다시보기
         </button>
       </article>
       </template>
@@ -1227,6 +1244,30 @@ onBeforeUnmount(resetUnlockFlow)
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   filter: drop-shadow(0 0 4px rgb(174 218 241 / 32%));
+}
+
+.unlock-replay-button {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 34px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cfe8f7;
+  border-radius: 11px;
+  background: #f6fcff;
+  color: #4d9ed7;
+  font-size: 11px;
+  font-weight: 800;
+  transition:
+    background-color 120ms ease,
+    transform 120ms ease;
+}
+
+.unlock-replay-button:active {
+  background: #e9f8ff;
+  transform: scale(0.985);
 }
 
 @keyframes silver-border-shimmer {
