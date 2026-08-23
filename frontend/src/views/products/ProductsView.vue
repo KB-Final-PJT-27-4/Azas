@@ -106,13 +106,9 @@ const loadProducts = async () => {
         API_PAGE_SIZE,
       )
       const items = (data.items ?? []) as unknown as ProductApiItem[]
-      const childEligibleItems = items.filter(
-        ({ target_owner_type }) =>
-          !target_owner_type || target_owner_type === 'CHILD' || target_owner_type === 'BOTH',
-      )
 
       const productsWithDetails = await Promise.all(
-        childEligibleItems.map(async (product) => {
+        items.map(async (product) => {
           if (!product.financial_product_id) return product
 
           try {
