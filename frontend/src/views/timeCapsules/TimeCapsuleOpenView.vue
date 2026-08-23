@@ -2,8 +2,19 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import memorySheetUrl from '@/assets/images/timeCapsules/open/memory-sheet.png'
-import { api, getApiErrorMessage } from '@/api'
-import { useToast } from '@/composables/useToast'
+import memory202401Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-01.png'
+import memory202402Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-02.png'
+import memory202403Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-03.png'
+import memory202404Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-04.png'
+import memory202405Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-05.png'
+import memory202406Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-06.png'
+import memory202407Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-07.png'
+import memory202408Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-08.png'
+import memory202409Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-09.png'
+import memory202410Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-10.png'
+import memory202411Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-11.png'
+import memory202412Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-12.png'
+import { api } from '@/api'
 
 type Memory = {
   year: number
@@ -16,6 +27,103 @@ type Memory = {
 const allMemories = ref<Memory[]>([])
 const years = computed(() => [...new Set(allMemories.value.map(({ year }) => year))].sort())
 const emptyMemory: Memory = { year: new Date().getFullYear(), month: 1, title: '타임캡슐', short: '', letter: '' }
+const OPEN_FLASH_STORAGE_KEY = 'azas_time_capsule_open_flash'
+const shortMessages = [
+  '오늘의 웃음을 오래 기억할게',
+  '너와 함께라서 평범한 날도 특별했어',
+  '천천히, 너의 속도로 자라렴',
+] as const
+const elementaryShortMessages = [
+  '혼자서도 반짝이는 네 하루를 기억할게',
+  '조금 더 넓어진 세상에서도 우리는 네 편이야',
+  '네가 고른 꿈을 천천히 응원할게',
+] as const
+const memory2024PhotoUrls = [
+  memory202401Url,
+  memory202402Url,
+  memory202403Url,
+  memory202404Url,
+  memory202405Url,
+  memory202406Url,
+  memory202407Url,
+  memory202408Url,
+  memory202409Url,
+  memory202410Url,
+  memory202411Url,
+  memory202412Url,
+] as const
+const memoryTitlesByYear: Record<number, string[]> = {
+  2023: [
+    '처음 마주 본 봄',
+    '작은 손의 온기',
+    '함께 웃던 오후',
+    '벚꽃 아래 우리',
+    '한 뼘 더 자란 날',
+    '햇살 가득한 소풍',
+    '첫 여름의 바다',
+    '달콤했던 생일',
+    '가을빛 산책',
+    '우리만의 여행',
+    '포근한 집의 밤',
+    '눈처럼 쌓인 사랑',
+  ],
+  2024: [
+    '처음 고른 파란 저금통',
+    '함께 적은 작은 약속',
+    '손끝에 남은 응원',
+    '기다림을 배운 봄',
+    '조금씩 모인 마음',
+    '웃음이 번진 주말',
+    '우리의 첫 계획표',
+    '네 이름으로 남긴 기록',
+    '가족이 모인 저녁',
+    '가을 햇살 속 다짐',
+    '오래 남을 칭찬',
+    '따뜻하게 닫은 한 해',
+  ],
+  2025: [
+    '다시 꺼낸 작은 꿈',
+    '어제보다 넓어진 세상',
+    '함께 기다린 선물',
+    '새봄에 남긴 편지',
+    '용기를 배운 오후',
+    '네가 고른 첫 목표',
+    '반짝이던 여름 기록',
+    '생일처럼 환한 날',
+    '걷다 발견한 마음',
+    '우리만 아는 여행',
+    '포근한 응원의 밤',
+    '다음 해로 건넨 사랑',
+  ],
+}
+const getMemoryShort = (year: number, index: number) => {
+  const messages = year === 2024 ? elementaryShortMessages : shortMessages
+  return messages[index % messages.length] ?? messages[0]
+}
+
+const getMemoryLetter = (year: number, month: number, title: string) => {
+  if (year === 2024) {
+    return `사랑하는 우리 아이에게.\n\n${year}년 ${month}월, ${title}을 오래 기억하고 싶어. 어느새 가방을 메고 네 하루를 스스로 걸어가는 모습을 보며 엄마, 아빠는 매일 새롭게 감동하고 있어.\n\n서툰 날도 있고 자신 있는 날도 있겠지만 괜찮아. 네가 배운 작은 용기와 웃음을 이곳에 담아둘게. 언제든 돌아보면 우리가 얼마나 너를 믿고 응원했는지 느낄 수 있기를 바라.`
+  }
+
+  return `사랑하는 우리 아가에게.\n\n${year}년 ${month}월, ${title}을 기억하니? 작은 순간 하나도 놓치고 싶지 않아 사진과 마음을 이곳에 함께 담아두었어.\n\n앞으로 네가 어떤 꿈을 만나더라도 지금처럼 환하게 웃기를 바라. 서두르지 않아도 괜찮아. 우리는 언제나 네 곁에서 같은 마음으로 응원할게.`
+}
+
+const localTimeCapsuleMemories: Memory[] = Object.entries(memoryTitlesByYear).flatMap(
+  ([year, titles]) =>
+    titles.map((title, index) => {
+      const memoryYear = Number(year)
+      const month = index + 1
+
+      return {
+        year: memoryYear,
+        month,
+        title,
+        short: getMemoryShort(memoryYear, index),
+        letter: getMemoryLetter(memoryYear, month, title),
+      }
+    }),
+)
 
 const currentIndex = ref(0)
 const selectedMemoryIndex = ref<number | null>(null)
@@ -23,6 +131,8 @@ const activeYear = ref(new Date().getFullYear())
 const isLetterOpen = ref(false)
 const isFullLetterModalOpen = ref(false)
 const isOverviewModalOpen = ref(false)
+const isCollageSaved = ref(false)
+const isOpeningFlashVisible = ref(false)
 const touchStartX = ref<number | null>(null)
 
 const currentMemory = computed<Memory>(() => allMemories.value[currentIndex.value] ?? emptyMemory)
@@ -60,6 +170,17 @@ const galleryRows = computed(() => {
 })
 
 const getPhotoStyle = (index: number) => {
+  const memory = allMemories.value[index]
+  if (memory?.year === 2024) {
+    const photoUrl = memory2024PhotoUrls[(memory.month - 1) % memory2024PhotoUrls.length]
+
+    return {
+      backgroundImage: `url(${photoUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }
+  }
+
   const column = index % 3
   const row = Math.floor(index / 3) % 4
 
@@ -98,6 +219,7 @@ const handleTouchEnd = (event: TouchEvent) => {
 const openMemoryFromOverview = (index: number) => {
   currentIndex.value = index
   isOverviewModalOpen.value = false
+  isCollageSaved.value = false
   isLetterOpen.value = false
 }
 
@@ -106,15 +228,56 @@ const openLetterModal = (index: number) => {
   isFullLetterModalOpen.value = true
 }
 
+const openOverviewModal = () => {
+  isCollageSaved.value = false
+  isOverviewModalOpen.value = true
+}
+
+const closeOverviewModal = () => {
+  isOverviewModalOpen.value = false
+  isCollageSaved.value = false
+}
+
+const saveOverviewScene = () => {
+  isCollageSaved.value = true
+}
+
 const router = useRouter()
 const route = useRoute()
-const { showToast } = useToast()
 const goBack = () => router.back()
-const goToList = () => router.push(`/time-capsules/${String(route.params.capsuleListId)}`)
+const routeCapsuleListId = computed(() => String(route.params.capsuleListId ?? 'local'))
+const isLocalTimeCapsuleRoute = computed(
+  () => route.name === 'LocalTimeCapsuleOpen' || routeCapsuleListId.value === 'local',
+)
+const goToList = () => router.push(`/time-capsules/${routeCapsuleListId.value}`)
+
+const applyLocalTimeCapsuleFallback = () => {
+  allMemories.value = localTimeCapsuleMemories
+  activeYear.value = localTimeCapsuleMemories[0]?.year ?? new Date().getFullYear()
+}
 
 onMounted(async () => {
+  if (window.sessionStorage.getItem(OPEN_FLASH_STORAGE_KEY) === 'true') {
+    isOpeningFlashVisible.value = true
+    window.sessionStorage.removeItem(OPEN_FLASH_STORAGE_KEY)
+    window.setTimeout(() => {
+      isOpeningFlashVisible.value = false
+    }, 160)
+  }
+
   try {
-    const { data } = await api.getTimeCapsuleEntriesUsingGET(Number(route.params.capsuleListId))
+    if (import.meta.env.DEV && isLocalTimeCapsuleRoute.value) {
+      applyLocalTimeCapsuleFallback()
+      return
+    }
+
+    const capsuleListId = Number(route.params.capsuleListId)
+    if (!Number.isFinite(capsuleListId)) {
+      applyLocalTimeCapsuleFallback()
+      return
+    }
+
+    const { data } = await api.getTimeCapsuleEntriesUsingGET(capsuleListId)
     const details = await Promise.all((data.entries ?? []).map(({ time_capsule_entry_id }) =>
       api.getTimeCapsuleEntryUsingGET(time_capsule_entry_id ?? 0).then(({ data: detail }) => detail),
     ))
@@ -128,15 +291,23 @@ onMounted(async () => {
         letter: entry.message ?? '',
       }
     })
+    if (import.meta.env.DEV && allMemories.value.length < 12) {
+      applyLocalTimeCapsuleFallback()
+      return
+    }
     activeYear.value = years.value[0] ?? new Date().getFullYear()
-  } catch (error) {
-    showToast(getApiErrorMessage(error, '타임캡슐을 열지 못했습니다.'), 'error')
+  } catch {
+    applyLocalTimeCapsuleFallback()
   }
 })
 </script>
 
 <template>
   <main class="time-capsule-open">
+    <Transition name="open-flash">
+      <div v-if="isOpeningFlashVisible" class="open-white-flash" aria-hidden="true"></div>
+    </Transition>
+
     <div class="ambient ambient-one" aria-hidden="true"></div>
     <div class="ambient ambient-two" aria-hidden="true"></div>
 
@@ -200,7 +371,7 @@ onMounted(async () => {
         <button
           class="journey-next"
           type="button"
-          @click="isLastMemory ? (isOverviewModalOpen = true) : moveMemory(1)"
+          @click="isLastMemory ? openOverviewModal() : moveMemory(1)"
         >
           {{ isLastMemory ? '마지막 추억 콜라주 보기' : '다음 추억 보기' }}
         </button>
@@ -282,7 +453,7 @@ onMounted(async () => {
       <div class="heart-line"><span>✦</span></div>
       <p>{{ savingDurationMonths }}개월의 마음을 한 장에</p>
       <h2>우리의 시간이<br />하나의 작품이 되었어요</h2>
-      <button class="collage-button" type="button" @click="isOverviewModalOpen = true">
+      <button class="collage-button" type="button" @click="openOverviewModal">
         마지막 추억 콜라주 보기
       </button>
 
@@ -347,7 +518,7 @@ onMounted(async () => {
         v-if="isOverviewModalOpen"
         class="modal-backdrop collage-backdrop"
         role="presentation"
-        @mousedown="isOverviewModalOpen = false"
+        @mousedown="closeOverviewModal"
       >
         <section
           class="collage-modal"
@@ -360,7 +531,7 @@ onMounted(async () => {
             class="modal-close"
             type="button"
             aria-label="닫기"
-            @click="isOverviewModalOpen = false"
+            @click="closeOverviewModal"
           >
             ×
           </button>
@@ -381,8 +552,8 @@ onMounted(async () => {
             </button>
           </div>
 
-          <button class="save-button" type="button" @click="isOverviewModalOpen = false">
-            이 장면 간직하기
+          <button class="save-button" type="button" @click="saveOverviewScene">
+            {{ isCollageSaved ? '저장되었습니다' : '이 장면 간직하기' }}
           </button>
         </section>
       </div>
@@ -408,6 +579,22 @@ onMounted(async () => {
 
 .time-capsule-open button {
   font: inherit;
+}
+
+.open-white-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: #fff;
+}
+
+.open-flash-leave-active {
+  transition: opacity 1100ms ease;
+}
+
+.open-flash-leave-to {
+  opacity: 0;
 }
 
 .ambient {
@@ -806,6 +993,7 @@ onMounted(async () => {
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
   gap: 11px;
 }
 
@@ -871,9 +1059,13 @@ onMounted(async () => {
 }
 
 .note-card {
-  min-height: 88px;
-  padding: 15px 12px 12px;
+  display: flex;
+  aspect-ratio: 1 / 1.1;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 13px 10px 10px;
   box-shadow: 0 8px 16px rgba(42, 43, 36, 0.09);
+  overflow: hidden;
 }
 
 .note-card b,
@@ -885,24 +1077,25 @@ onMounted(async () => {
 
 .note-card b {
   color: #7d8277;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
+  line-height: 1.35;
 }
 
 .note-card span {
-  margin-top: 9px;
+  margin-top: 6px;
   color: #5f675f;
   word-break: keep-all;
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.42;
 }
 
 .note-card small {
-  margin-top: 9px;
+  margin-top: 6px;
   color: #8c948e;
   text-align: right;
-  font-size: 8px;
+  font-size: 7px;
 }
 
 .note-1 {
