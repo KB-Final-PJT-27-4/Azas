@@ -11,6 +11,7 @@ public class DiscoveredAccountRow {
 
     private Long accountId;
     private String bankName;
+    private String accountName;
     private byte[] accountNumberCiphertext;
     private String accountProductType;
     private BigDecimal balance;

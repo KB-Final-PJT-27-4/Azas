@@ -4,6 +4,7 @@ import com.azas.domain.finance.account.dto.ChildAvailableAmountAccountRow;
 import com.azas.domain.finance.account.dto.ChildAvailableAmountResult;
 import com.azas.domain.finance.account.entity.ChildUsageMode;
 import com.azas.domain.finance.account.mapper.FinancialAccountMapper;
+import com.azas.domain.child.service.ChildFeaturePermissionService;
 import com.azas.domain.member.entity.Member;
 import com.azas.domain.member.entity.MemberType;
 import com.azas.domain.member.mapper.MemberMapper;
@@ -23,16 +24,19 @@ public class ChildAvailableAmountService {
 
     private final FinancialAccountMapper financialAccountMapper;
     private final MemberMapper memberMapper;
+    private final ChildFeaturePermissionService childFeaturePermissionService;
     private final Clock clock;
 
     @Autowired
     public ChildAvailableAmountService(
             FinancialAccountMapper financialAccountMapper,
-            MemberMapper memberMapper
+            MemberMapper memberMapper,
+            ChildFeaturePermissionService childFeaturePermissionService
     ) {
         this(
                 financialAccountMapper,
                 memberMapper,
+                childFeaturePermissionService,
                 Clock.systemUTC()
         );
     }
@@ -40,10 +44,12 @@ public class ChildAvailableAmountService {
     ChildAvailableAmountService(
             FinancialAccountMapper financialAccountMapper,
             MemberMapper memberMapper,
+            ChildFeaturePermissionService childFeaturePermissionService,
             Clock clock
     ) {
         this.financialAccountMapper = financialAccountMapper;
         this.memberMapper = memberMapper;
+        this.childFeaturePermissionService = childFeaturePermissionService;
         this.clock = clock;
     }
 
@@ -61,6 +67,9 @@ public class ChildAvailableAmountService {
                     ErrorCode.CHILD_NOT_FOUND
             );
         }
+
+        childFeaturePermissionService
+                .validateUsageLimitViewEnabled(childId);
 
         ChildAvailableAmountAccountRow account =
                 financialAccountMapper

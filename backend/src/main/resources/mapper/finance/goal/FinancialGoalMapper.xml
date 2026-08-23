@@ -121,6 +121,7 @@
         SELECT
             fa.financial_account_id AS accountId,
             fa.owner_type AS ownerType,
+            fa.owner_member_id AS ownerMemberId,
             fa.child_id AS childId,
             fa.bank_name AS bankName,
             fa.account_name AS accountName,

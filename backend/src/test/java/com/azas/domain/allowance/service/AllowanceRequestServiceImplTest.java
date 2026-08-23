@@ -1,10 +1,13 @@
 package com.azas.domain.allowance.service;
 
 import com.azas.domain.allowance.dto.AllowanceRequestInsertCommand;
+import com.azas.domain.allowance.dto.AllowanceRequestDetailRow;
 import com.azas.domain.allowance.dto.AllowanceRequestResponse;
 import com.azas.domain.allowance.dto.CreateAllowanceRequest;
+import com.azas.domain.allowance.dto.UpdateAllowanceRequestStatus;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
+import com.azas.domain.child.service.ChildFeaturePermissionService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
@@ -21,7 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +39,9 @@ class AllowanceRequestServiceImplTest {
 
     @Mock
     private AllowanceRequestMapper allowanceRequestMapper;
+
+    @Mock
+    private ChildFeaturePermissionService childFeaturePermissionService;
 
     @InjectMocks
     private AllowanceRequestServiceImpl allowanceRequestService;
@@ -89,6 +97,58 @@ class AllowanceRequestServiceImplTest {
                 "친구 생일 선물을 사려고 해요!",
                 captor.getValue().getMessage()
         );
+        verify(allowanceRequestMapper)
+                .insertAllowanceRequestedNotification(
+                        eq(41L),
+                        eq(CHILD_ID),
+                        eq(new BigDecimal("10000")),
+                        eq("친구 생일 선물을 사려고 해요!"),
+                        any()
+                );
+    }
+
+    @Test
+    void notifiesChildWhenParentApprovesAllowanceRequest() {
+        AllowanceRequestDetailRow pending = new AllowanceRequestDetailRow(
+                41L,
+                CHILD_ID,
+                new BigDecimal("10000"),
+                "친구 생일 선물을 사려고 해요!",
+                AllowanceRequestStatus.PENDING,
+                java.time.LocalDateTime.now()
+        );
+        AllowanceRequestDetailRow approved = new AllowanceRequestDetailRow(
+                41L,
+                CHILD_ID,
+                new BigDecimal("10000"),
+                "친구 생일 선물을 사려고 해요!",
+                AllowanceRequestStatus.APPROVED,
+                java.time.LocalDateTime.now()
+        );
+        when(allowanceRequestMapper.findAllowanceRequestDetail(41L))
+                .thenReturn(pending, approved);
+        when(allowanceRequestMapper.countAllowanceRequestParentAccess(
+                MEMBER_ID, CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.updateAllowanceRequestStatus(
+                eq(41L), eq(AllowanceRequestStatus.APPROVED), any()
+        )).thenReturn(1);
+
+        allowanceRequestService.updateAllowanceRequestStatus(
+                MEMBER_ID,
+                41L,
+                updateRequest("APPROVE")
+        );
+
+        verify(allowanceRequestMapper)
+                .insertAllowanceStatusNotification(
+                        eq(41L),
+                        eq(CHILD_ID),
+                        eq("ALLOWANCE_APPROVED"),
+                        eq("용돈 요청이 승인되었어요"),
+                        eq("10,000원 요청이 승인되었어요."),
+                        any()
+                );
     }
 
     @Test
@@ -106,6 +166,31 @@ class AllowanceRequestServiceImplTest {
 
         assertEquals(
                 ErrorCode.CHILD_MEMBER_ACCESS_REQUIRED,
+                exception.getErrorCode()
+        );
+        verify(allowanceRequestMapper, never())
+                .insertAllowanceRequest(any());
+    }
+
+    @Test
+    void rejectsAllowanceRequestWhenPermissionIsDisabled() {
+        when(allowanceRequestMapper.findActiveChildIdByMemberId(MEMBER_ID))
+                .thenReturn(CHILD_ID);
+        doThrow(new BusinessException(
+                ErrorCode.ALLOWANCE_REQUEST_DISABLED
+        )).when(childFeaturePermissionService)
+                .validateAllowanceRequestEnabled(CHILD_ID);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> allowanceRequestService.createAllowanceRequest(
+                        MEMBER_ID,
+                        request("10000", "용돈을 요청합니다.")
+                )
+        );
+
+        assertEquals(
+                ErrorCode.ALLOWANCE_REQUEST_DISABLED,
                 exception.getErrorCode()
         );
         verify(allowanceRequestMapper, never())
@@ -174,6 +259,13 @@ class AllowanceRequestServiceImplTest {
                 new BigDecimal(amount)
         );
         ReflectionTestUtils.setField(request, "message", message);
+        return request;
+    }
+
+    private UpdateAllowanceRequestStatus updateRequest(String action) {
+        UpdateAllowanceRequestStatus request =
+                new UpdateAllowanceRequestStatus();
+        ReflectionTestUtils.setField(request, "action", action);
         return request;
     }
 }

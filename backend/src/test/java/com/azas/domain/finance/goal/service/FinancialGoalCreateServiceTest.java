@@ -87,6 +87,27 @@ class FinancialGoalCreateServiceTest {
     }
 
     @Test
+    void createsGoalWithRequestingParentAndChildSavingsAccounts() {
+        givenAccess();
+        template();
+        when(goalMapper.findAccountTargetsForUpdate(List.of(11L, 14L)))
+                .thenReturn(List.of(
+                        parentAccount(14L, "Parent savings", "200000", null),
+                        account(11L, 6L, "Child savings", "100000", null)));
+        generateGoalId(33L);
+        when(goalMapper.insertFinancialGoalAccount(33L, 11L)).thenReturn(1);
+        when(goalMapper.insertFinancialGoalAccount(33L, 14L)).thenReturn(1);
+        when(goalMapper.insertFinancialGoalCheckpoint(any())).thenReturn(1);
+
+        FinancialGoalCreateResult result = service.create(8L, 6L,
+                command(1L, null, "1000000", List.of(11L, 14L)));
+
+        assertEquals(new BigDecimal("300000"), result.getCurrentAmount());
+        verify(goalMapper).insertFinancialGoalAccount(33L, 11L);
+        verify(goalMapper).insertFinancialGoalAccount(33L, 14L);
+    }
+
+    @Test
     void rejectsDuplicateAccountIds() {
         givenAccess();
         BusinessException exception = assertThrows(BusinessException.class,
@@ -177,6 +198,16 @@ class FinancialGoalCreateServiceTest {
         row.setAccountStatus("ACTIVE");
         row.setLinkStatus("ACTIVE");
         row.setFinancialGoalId(goalId);
+        return row;
+    }
+
+    private FinancialGoalAccountTargetRow parentAccount(long id, String name,
+                                                         String balance,
+                                                         Long goalId) {
+        FinancialGoalAccountTargetRow row = account(id, 0L, name, balance, goalId);
+        row.setOwnerType("PARENT");
+        row.setChildId(null);
+        row.setOwnerMemberId(8L);
         return row;
     }
 }
