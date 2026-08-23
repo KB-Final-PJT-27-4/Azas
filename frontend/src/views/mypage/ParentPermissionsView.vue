@@ -23,6 +23,7 @@ const isLoading = ref(true)
 const children = ref<ChildProfile[]>([])
 const selectedChildId = ref(0)
 const selectedAccountId = ref<number | null>(null)
+const usageMode = ref<'CO_MANAGED' | 'UNRESTRICTED'>('CO_MANAGED')
 const isChildSheetOpen = ref(false)
 const sheetTouchStartY = ref<number | null>(null)
 const sheetDragOffset = ref(0)
@@ -62,15 +63,20 @@ const setMonthlyLimit = (amount: number) => {
 }
 
 const savePermissions = async () => {
-  if (!selectedAccountId.value) return
   try {
-    const usageMode = permissions.value.find(({ id }) => id === 'limit')?.enabled
-      ? 'CO_MANAGED'
-      : 'UNRESTRICTED'
-    await api.updateUsagePolicyUsingPATCH(selectedAccountId.value, {
-      child_usage_mode: usageMode,
-      child_monthly_budget_amount: usageMode === 'CO_MANAGED' ? monthlyLimit.value : undefined,
+    await api.updatePermissionUsingPATCH(selectedChildId.value, {
+      allowance_request_enabled: permissions.value.find(({ id }) => id === 'allowance')?.enabled ?? false,
+      usage_limit_view_enabled: permissions.value.find(({ id }) => id === 'limit')?.enabled ?? false,
     })
+
+    if (selectedAccountId.value) {
+      await api.updateUsagePolicyUsingPATCH(selectedAccountId.value, {
+        child_usage_mode: usageMode.value,
+        child_monthly_budget_amount: usageMode.value === 'CO_MANAGED'
+          ? monthlyLimit.value
+          : undefined,
+      })
+    }
     showToast('아이 이용 권한이 저장되었습니다.', 'success')
   } catch (error) {
     showToast(getApiErrorMessage(error, '권한 설정을 저장하지 못했습니다.'), 'error')
@@ -103,7 +109,7 @@ const endSheetDrag = () => {
 const selectChild = (child: ChildProfile) => {
   selectedChildId.value = child.id
   isChildSheetOpen.value = false
-  void loadUsagePolicy(child.id)
+  void loadChildSettings(child.id)
 }
 
 const loadUsagePolicy = async (childId: number) => {
@@ -118,8 +124,28 @@ const loadUsagePolicy = async (childId: number) => {
     }
     const { data } = await api.getUsagePolicyUsingGET(selectedAccountId.value)
     monthlyLimit.value = data.child_monthly_budget_amount ?? 0
-    const limitPermission = permissions.value.find(({ id }) => id === 'limit')
-    if (limitPermission) limitPermission.enabled = data.child_usage_mode === 'CO_MANAGED'
+    usageMode.value = data.child_usage_mode === 'UNRESTRICTED'
+      ? 'UNRESTRICTED'
+      : 'CO_MANAGED'
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '권한 설정을 불러오지 못했습니다.'), 'error')
+  }
+}
+
+const loadFeaturePermissions = async (childId: number) => {
+  const { data } = await api.getPermissionUsingGET(childId)
+  const allowancePermission = permissions.value.find(({ id }) => id === 'allowance')
+  const usageLimitPermission = permissions.value.find(({ id }) => id === 'limit')
+  if (allowancePermission) allowancePermission.enabled = data.allowance_request_enabled ?? false
+  if (usageLimitPermission) usageLimitPermission.enabled = data.usage_limit_view_enabled ?? false
+}
+
+const loadChildSettings = async (childId: number) => {
+  try {
+    await Promise.all([
+      loadFeaturePermissions(childId),
+      loadUsagePolicy(childId),
+    ])
   } catch (error) {
     showToast(getApiErrorMessage(error, '권한 설정을 불러오지 못했습니다.'), 'error')
   }
@@ -135,7 +161,7 @@ onMounted(async () => {
       schoolLevel: child.age && child.age >= 14 ? '중학생 이상' : '초등학생',
     }))
     selectedChildId.value = children.value[0]?.id ?? 0
-    if (selectedChildId.value) await loadUsagePolicy(selectedChildId.value)
+    if (selectedChildId.value) await loadChildSettings(selectedChildId.value)
   } catch (error) {
     showToast(getApiErrorMessage(error, '자녀 목록을 불러오지 못했습니다.'), 'error')
   } finally {
