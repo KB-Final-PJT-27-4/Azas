@@ -428,7 +428,7 @@ onMounted(async () => {
             <img
               class="pregnancy-growth-card__image absolute right-0 bottom-7 h-[142px] w-[116px] object-contain object-bottom"
               :src="pregnancyGrowth.image"
-              :alt="`${pregnancyGrowth.fruit} 깨비`"
+              :alt="`${pregnancyGrowth.fruit} ${archiveChildName}`"
             />
           </aside>
 

@@ -6,12 +6,13 @@ import { BaseBottomSheet } from '@/components/feedback'
 import { useToast } from '@/composables/useToast'
 import missionPigUrl from '@/assets/images/home/mission-pig.png'
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
+import { getCurrentChild, resolveCurrentChildId } from '@/api/context'
 
 type MissionStatus = 'progress' | 'review' | 'completed' | 'canceled'
 type Mission = { id: number; title: string; description: string; reward: number; status: MissionStatus }
 const childMissions = ref<Mission[]>([])
 const childId = ref<number | null>(null)
+const childName = ref('아이')
 const rewardSourceAccountId = ref<number | undefined>()
 const rewardDestinationAccountId = ref<number | undefined>()
 
@@ -186,7 +187,7 @@ const createMission = async () => {
     })
     closeCreateSheet()
     selectedFilter.value = 'all'
-    showToast('깨비에게 새로운 용돈 미션을 보냈어요.', 'success')
+    showToast(`${childName.value}에게 새로운 용돈 미션을 보냈어요.`, 'success')
   } catch (error) {
     showToast(getApiErrorMessage(error, '미션을 만들지 못했습니다.'), 'error')
   }
@@ -195,11 +196,13 @@ const createMission = async () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const [{ data }, { data: parentAccounts }, { data: childAccounts }] = await Promise.all([
+    const [{ data }, { data: parentAccounts }, { data: childAccounts }, child] = await Promise.all([
       api.getMissionsUsingGET(childId.value),
       api.getMyAccountsUsingGET(),
       api.getChildAccountsUsingGET(childId.value),
+      getCurrentChild(),
     ])
+    childName.value = child.name?.trim() || '아이'
     rewardSourceAccountId.value = parentAccounts.accounts[0]?.account_id
     rewardDestinationAccountId.value = childAccounts.accounts[0]?.account_id
     childMissions.value = (data.items ?? []).map((mission) => ({
@@ -229,7 +232,7 @@ onMounted(async () => {
             ><Baby :size="25" :stroke-width="2.2"
           /></span>
           <div class="grid gap-0.5">
-            <strong class="text-base">깨비</strong>
+            <strong class="text-base">{{ childName }}</strong>
           </div>
         </div>
         <span
@@ -243,14 +246,14 @@ onMounted(async () => {
           작은 실천이 좋은 금융 습관이 되도록
         </p>
         <h1 class="m-0 text-2xl leading-[1.38] font-extrabold tracking-[-0.04em]">
-          깨비에게 용돈 미션을<br />만들어 주세요
+          {{ childName }}에게 용돈 미션을<br />만들어 주세요
         </h1>
       </div>
 
       <img
         class="pointer-events-none absolute top-[78px] right-3 h-[132px] w-[120px] object-contain"
         :src="missionPigUrl"
-        alt="미션을 확인하는 깨비"
+        :alt="`미션을 확인하는 ${childName}`"
       />
 
       <div

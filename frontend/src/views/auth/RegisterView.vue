@@ -105,7 +105,7 @@ const declineInvitation = () => router.push({ name: 'Login' })
             <span class="text-[var(--color-selected-text)]">{{ inviterName }}</span>님이<br />공동 보호자로 초대했어요
           </h1>
           <p class="mt-3 text-base text-[var(--color-text-secondary)]">
-            가족 정보를 확인하고 깨비와 함께할 관계를 선택해주세요.
+            가족 정보를 확인하고 함께할 관계를 선택해주세요.
           </p>
         </template>
 
@@ -227,7 +227,7 @@ const declineInvitation = () => router.push({ name: 'Login' })
             class="h-14 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-lg outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-brand-primary-pressed)] focus:ring-2 focus:ring-[var(--color-selected-background)] disabled:cursor-not-allowed disabled:border-[var(--color-disabled-border)] disabled:bg-[var(--color-disabled-background)] disabled:text-[var(--color-unselected-text)]"
             type="text"
             autocomplete="name"
-            placeholder="김깨비"
+            placeholder="자녀 이름"
             :disabled="isGuardianInvitation"
           />
         </label>

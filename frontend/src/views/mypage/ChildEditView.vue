@@ -129,7 +129,7 @@ onMounted(async () => {
     <form v-else class="mt-3 flex flex-1 flex-col" @submit.prevent="saveChild">
       <section class="flex items-center gap-4 rounded-[24px] border border-[#cfe8f3] bg-[#eaf8fe] p-4" aria-label="자녀 프로필">
         <span class="size-[70px] shrink-0 overflow-hidden rounded-full bg-white">
-          <img :src="childProfileUrl" alt="깨비 프로필" class="size-full object-cover" />
+          <img :src="childProfileUrl" :alt="`${name || '아이'} 프로필`" class="size-full object-cover" />
         </span>
         <div class="min-w-0 flex-1">
           <span class="text-xs font-semibold text-[var(--color-selected-text)]">함께 관리 중인 아이</span>
