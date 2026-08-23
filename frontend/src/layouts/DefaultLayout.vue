@@ -3,6 +3,7 @@ import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
 import ChildBottomNavigation from '@/components/child/ChildBottomNavigation.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSubHeader from '@/components/layout/AppSubHeader.vue'
+import HeaderNotificationPopover from '@/components/layout/HeaderNotificationPopover.vue'
 import { BaseToast } from '@/components/feedback'
 import { useToast } from '@/composables/useToast'
 import { computed } from 'vue'
@@ -81,6 +82,7 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
       </div>
       <AppBottomNavigation v-if="!hideBottomNavigation" />
       <ChildBottomNavigation v-if="showChildBottomNavigation" />
+      <HeaderNotificationPopover />
       <Transition name="global-toast">
         <BaseToast
           v-if="toastMessage"
