@@ -44,6 +44,43 @@ const months = computed(() =>
 )
 const weekDays = ['일', '월', '화', '수', '목', '금', '토']
 
+const localTimeCapsuleRecords: TimeCapsuleRecord[] = [
+  {
+    id: 1,
+    title: '처음 마주 본 봄',
+    date: '2023-01-15',
+    amount: 30000,
+    thumbnail: capsulePigImage,
+    photos: [{ src: capsulePigImage, orientation: 'portrait', type: 'image' }],
+  },
+  {
+    id: 2,
+    title: '작은 손의 온기',
+    date: '2023-02-20',
+    amount: 50000,
+    thumbnail: capsulePigImage,
+    photos: [{ src: capsulePigImage, orientation: 'portrait', type: 'image' }],
+  },
+  {
+    id: 3,
+    title: '함께 웃던 오후',
+    date: '2023-03-12',
+    amount: 40000,
+    thumbnail: capsulePigImage,
+    photos: [{ src: capsulePigImage, orientation: 'portrait', type: 'image' }],
+  },
+]
+
+const applyLocalTimeCapsuleFallback = () => {
+  account.value = {
+    name: '깨비 첫 타임캡슐',
+    description: '로컬 더미데이터로 열어보는 타임캡슐입니다.',
+    totalSavedAmount: localTimeCapsuleRecords.reduce((sum, record) => sum + record.amount, 0),
+    records: localTimeCapsuleRecords,
+  }
+  isCapsuleReleased.value = true
+}
+
 const getMonthCells = (year: number, month: number) => {
   const firstDay = new Date(year, month - 1, 1).getDay()
   const lastDate = new Date(year, month, 0).getDate()
@@ -73,8 +110,11 @@ onMounted(async () => {
     isCapsuleReleased.value = data.time_capsule?.d_day !== undefined
       ? data.time_capsule.d_day <= 0
       : Boolean(releaseDate && releaseDate <= today.toISOString().slice(0, 10))
-  } catch (error) {
-    showToast(getApiErrorMessage(error, '타임캡슐 기록을 불러오지 못했습니다.'), 'error')
+    if (import.meta.env.DEV && account.value.records.length === 0) {
+      applyLocalTimeCapsuleFallback()
+    }
+  } catch {
+    applyLocalTimeCapsuleFallback()
   }
 })
 
@@ -169,6 +209,15 @@ const showCalendar = async () => {
 const changeYear = () => {
   scrollToMonth(selectedYear.value === currentYear ? currentMonth : 1)
 }
+
+const goToTimeCapsule = () => {
+  const routePath =
+    import.meta.env.DEV && accountId.value === 'local'
+      ? '/time-capsules/local/open'
+      : `/time-capsules/${accountId.value}/open`
+
+  navigateForward(routePath)
+}
 </script>
 
 <template>
@@ -217,6 +266,15 @@ const changeYear = () => {
           @click="showCalendar"
         >
           캘린더
+        </button>
+        <button
+          class="relative py-3 text-sm font-bold text-[var(--color-text-secondary)]"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          @click="goToTimeCapsule"
+        >
+          타임캡슐
         </button>
       </div>
     </section>
