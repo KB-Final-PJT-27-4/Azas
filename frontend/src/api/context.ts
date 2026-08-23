@@ -1,7 +1,7 @@
 import { api } from '@/api'
 import { getAuthMember } from '@/api/auth'
 import { CURRENT_CHILD_STORAGE_KEY, getAuthorizationHeader } from '@/api/http'
-import type { ChildSummaryResponse } from '@/api/generated'
+import type { ChildResponse, ChildSummaryResponse } from '@/api/generated'
 
 export const setCurrentChildId = (childId: number) => {
   sessionStorage.setItem(CURRENT_CHILD_STORAGE_KEY, String(childId))
@@ -41,6 +41,12 @@ export const resolveCurrentChildId = async () => {
   if (!childId) throw new Error('등록된 자녀가 없어요.')
   setCurrentChildId(childId)
   return childId
+}
+
+export const getCurrentChild = async (): Promise<ChildResponse> => {
+  const childId = await resolveCurrentChildId()
+  const { data } = await api.getChildUsingGET(childId)
+  return data
 }
 
 export const requireAuthorizationHeader = () => {
