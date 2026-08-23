@@ -9,6 +9,7 @@ import { api } from '@/api'
 import {
   AUTH_MEMBER_STORAGE_KEY,
   clearAuthSessionStorage,
+  CURRENT_CHILD_STORAGE_KEY,
   getRefreshToken,
   notifyAuthSessionChanged,
   saveTokenPair,
@@ -43,6 +44,9 @@ export const loginWithOAuthCode = async (
 }
 
 export const saveAuthSession = (response: OAuthLoginResponse) => {
+  // 계정을 전환해도 이전 보호자/자녀의 선택 상태가 남으면 다른 자녀 ID로
+  // API를 요청할 수 있으므로, 새 인증 세션을 저장하기 전에 제거한다.
+  sessionStorage.removeItem(CURRENT_CHILD_STORAGE_KEY)
   saveTokenPair(response.access_token, response.refresh_token)
   sessionStorage.setItem(AUTH_MEMBER_STORAGE_KEY, JSON.stringify(response.member))
   notifyAuthSessionChanged()
