@@ -5,6 +5,7 @@ import { CheckCircle2, ChevronDown, Gift, Heart, ShieldCheck, Sparkles } from 'l
 import { api, getApiErrorMessage } from '@/api'
 import { hasParentDemandDepositAccount, resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
+import { addOpenedSavingsToGoalSetupDraft } from '@/utils/goalSetupDraft'
 import { useRouter } from 'vue-router'
 
 const props = defineProps<{
@@ -168,12 +169,13 @@ const openProduct = async () => {
       return
     }
     const childId = await resolveCurrentChildId()
-    await api.openUsingPOST(undefined, {
+    const { data: openedAccount } = await api.openUsingPOST(undefined, {
       child_id: childId,
       financial_product_id: Number(props.productId),
       initial_deposit_amount: 0,
       owner_type: 'CHILD',
     })
+    addOpenedSavingsToGoalSetupDraft(openedAccount.account_id)
     await router.push({ name: 'SavingsOpenComplete', query: { product: productName.value } })
   } catch (error) {
     showToast(getApiErrorMessage(error, '상품에 가입하지 못했습니다.'), 'error')

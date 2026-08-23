@@ -9,19 +9,15 @@ import ChildAccountProductSelection, {
   type ChildAccountProduct,
 } from '@/components/child/ChildAccountProductSelection.vue'
 import { api, getApiErrorMessage } from '@/api'
+import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
-
-type Child = {
-  id: number
-  name: string
-}
-
-const children = ref<Child[]>([])
 
 const router = useRouter()
 const { showToast } = useToast()
 const selectedChildId = ref<number | null>(null)
-const step = ref<1 | 2 | 3 | 4>(1)
+const selectedChildName = ref('아이')
+const isChildLoading = ref(true)
+const step = ref<1 | 2 | 3>(1)
 const selectedAuthMethod = ref<'kakao' | 'sms' | null>(null)
 const isAuthDialogOpen = ref(false)
 const isAuthenticated = ref(false)
@@ -46,9 +42,6 @@ const openedAccount = ref<{
   bankName: string
 } | null>(null)
 
-const selectedChildName = computed(
-  () => children.value.find(({ id }) => id === selectedChildId.value)?.name ?? '아이',
-)
 const selectedProduct = computed(() =>
   accountProducts.value.find(({ id }) => id === selectedProductId.value),
 )
@@ -68,16 +61,6 @@ const timerText = computed(() => {
 const canCompleteAuthentication = computed(
   () => selectedAuthMethod.value === 'kakao' || isVerificationCodeConfirmed.value,
 )
-
-const selectChild = (childId: number) => {
-  selectedChildId.value = childId
-}
-
-const goNext = () => {
-  if (selectedChildId.value === null) return
-
-  step.value = 2
-}
 
 const selectAuthMethod = (method: 'kakao' | 'sms') => {
   selectedAuthMethod.value = method
@@ -191,7 +174,7 @@ const completeAuthentication = () => {
 
 const continueAfterAuthentication = async () => {
   if (!isAuthenticated.value) return
-  step.value = 3
+  step.value = 2
   if (accountProducts.value.length > 0 || isProductsLoading.value) return
 
   isProductsLoading.value = true
@@ -244,7 +227,7 @@ const openSelectedAccount = async () => {
       balance: data.balance ?? 0,
       bankName: data.bank_name ?? selectedProduct.value?.bankName ?? 'KB국민은행',
     }
-    step.value = 4
+    step.value = 3
   } catch (error) {
     showToast(getApiErrorMessage(error, '아이 통장을 개설하지 못했습니다.'), 'error')
   } finally {
@@ -263,10 +246,13 @@ onMounted(async () => {
       await router.replace({ name: 'Accounts', query: { next: '/child/accounts' } })
       return
     }
-    const { data } = await api.getChildrenUsingGET()
-    children.value = (data.items ?? []).map((child) => ({ id: child.child_id ?? 0, name: child.name ?? '아이' }))
+    selectedChildId.value = await resolveCurrentChildId()
+    const { data: child } = await api.getChildUsingGET(selectedChildId.value)
+    selectedChildName.value = child.name?.trim() || '아이'
   } catch (error) {
     showToast(getApiErrorMessage(error, '자녀 목록을 불러오지 못했습니다.'), 'error')
+  } finally {
+    isChildLoading.value = false
   }
 })
 
@@ -278,7 +264,7 @@ onBeforeUnmount(stopVerificationTimer)
     class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col bg-white text-[var(--color-text-primary)]"
   >
     <section class="flex flex-1 flex-col overflow-x-hidden px-5 pt-5 pb-[max(32px,env(safe-area-inset-bottom))]">
-      <div v-if="step !== 4" class="grid grid-cols-3 gap-2" aria-label="아이 계좌 만들기 진행 단계">
+      <div v-if="step !== 3" class="grid grid-cols-2 gap-2" aria-label="아이 계좌 만들기 진행 단계">
         <span
           class="child-progress-step h-1 rounded-full"
           :class="step === 1 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
@@ -289,67 +275,33 @@ onBeforeUnmount(stopVerificationTimer)
           :class="step === 2 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
           :aria-current="step === 2 ? 'step' : undefined"
         ></span>
-        <span
-          class="child-progress-step h-1 rounded-full"
-          :class="step === 3 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
-          :aria-current="step === 3 ? 'step' : undefined"
-        ></span>
       </div>
 
       <Transition name="child-step-slide" mode="out-in">
         <div :key="step" class="flex flex-1 flex-col">
       <template v-if="step === 1">
-        <h1 class="mt-8 text-[26px] leading-[1.2] font-extrabold tracking-[-0.04em]">
-          어떤 자녀의<br />
-          계좌를 만들까요?
-        </h1>
+        <div
+          v-if="isChildLoading"
+          class="mt-6 flex min-h-[72px] animate-pulse items-center gap-3 rounded-[18px] border border-[#dcecf4] bg-[#f4fbff] px-4 py-3.5"
+          aria-label="계좌를 만들 아이 정보 불러오는 중"
+          aria-busy="true"
+        >
+          <span class="size-11 shrink-0 rounded-full bg-[#e3edf2]"></span>
+          <span class="grid flex-1 gap-2">
+            <span class="h-3 w-24 rounded-full bg-[#dce8ee]"></span>
+            <span class="h-4 w-20 rounded-full bg-[#d5e3ea]"></span>
+          </span>
+        </div>
+        <div v-else class="mt-6 flex min-h-[72px] items-center gap-3 rounded-[18px] border border-[#dcecf4] bg-[#f4fbff] px-4 py-3.5">
+          <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full bg-white" aria-hidden="true">
+            <img class="h-[29px] w-[44px] object-contain" :src="babyImage" alt="" />
+          </span>
+          <span class="min-w-0">
+            <span class="block text-[11px] font-bold text-[var(--color-selected-text)]">계좌를 만들 아이</span>
+            <strong class="mt-0.5 block truncate text-base">{{ selectedChildName }}</strong>
+          </span>
+        </div>
 
-        <form class="mt-9 flex flex-1 flex-col" @submit.prevent="goNext">
-          <fieldset>
-            <legend class="sr-only">계좌를 만들 자녀 선택</legend>
-            <div class="grid gap-4">
-              <button
-                v-for="child in children"
-                :key="child.id"
-                class="child-option flex min-h-[72px] w-full items-center rounded-[18px] border px-4 text-left"
-                :class="
-                  selectedChildId === child.id
-                    ? 'border-[var(--color-brand-primary)] bg-[#f1faff] ring-1 ring-[var(--color-brand-primary)]'
-                    : 'border-[var(--color-border)] bg-white active:bg-[var(--color-surface-muted)]'
-                "
-                type="button"
-                :aria-pressed="selectedChildId === child.id"
-                @click="selectChild(child.id)"
-              >
-                <span
-                  class="mr-4 grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#eef7fa]"
-                  aria-hidden="true"
-                >
-                  <img class="h-[32px] w-[49px] object-contain" :src="babyImage" alt="" />
-                </span>
-                <span class="text-lg font-medium tracking-[-0.02em]">{{ child.name }}</span>
-                <span
-                  v-if="selectedChildId === child.id"
-                  class="ml-auto grid size-6 shrink-0 place-items-center rounded-full bg-[var(--color-brand-primary)] text-white"
-                  aria-label="선택됨"
-                >
-                  <Check :size="14" :stroke-width="3" aria-hidden="true" />
-                </span>
-              </button>
-            </div>
-          </fieldset>
-
-          <button
-            class="primary-action mt-auto min-h-[56px] w-full rounded-[16px] bg-[var(--color-brand-primary)] text-base font-bold text-white disabled:cursor-not-allowed disabled:bg-[#cbd8df]"
-            type="submit"
-            :disabled="selectedChildId === null"
-          >
-            다음
-          </button>
-        </form>
-      </template>
-
-      <template v-else-if="step === 2">
         <div class="mt-8">
           <h1 class="text-[26px] leading-[1.2] font-extrabold tracking-[-0.04em]">
             법정 대리인 확인이<br />
@@ -418,7 +370,7 @@ onBeforeUnmount(stopVerificationTimer)
       </template>
 
       <ChildAccountProductSelection
-        v-else-if="step === 3"
+        v-else-if="step === 2"
         :products="accountProducts"
         :selected-product-id="selectedProductId"
         :child-name="selectedChildName"

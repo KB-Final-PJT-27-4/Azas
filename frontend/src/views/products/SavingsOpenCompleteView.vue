@@ -55,8 +55,8 @@ onMounted(async () => {
         </div>
       </div>
 
-      <button class="min-h-14 w-full rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]" type="button" @click="router.push('/mypage/goals')">
-        목표 관리하기
+      <button class="min-h-14 w-full rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]" type="button" @click="router.push({ name: 'Goals', query: route.query.resumeGoal === 'true' ? { resumeGoal: 'true' } : {} })">
+        목표 이어서 설정하기
       </button>
     </section>
   </main>
