@@ -29,6 +29,15 @@ public class AutoTransferScheduleController {
     private final AccessTokenMemberResolver accessTokenMemberResolver;
 
     @ApiOperation("자동이체 일정 등록")
+    @ApiResponses({
+            @ApiResponse(code = 201, message = "자동이체 일정 등록 성공"),
+            @ApiResponse(code = 400, message = "요청 형식 또는 멱등성 키 오류"),
+            @ApiResponse(code = 401, message = "인증 오류"),
+            @ApiResponse(code = 403, message = "계좌 또는 자녀 접근 권한 없음"),
+            @ApiResponse(code = 404, message = "계좌를 찾을 수 없음"),
+            @ApiResponse(code = 409, message = "중복 일정"),
+            @ApiResponse(code = 422, message = "일정 또는 계좌 조건 오류")
+    })
     @PostMapping("/auto-transfer-schedules")
     public ResponseEntity<AutoTransferScheduleResponse> createSchedule(
             @RequestHeader(

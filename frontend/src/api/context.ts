@@ -1,9 +1,7 @@
 import { api } from '@/api'
 import { getAuthMember } from '@/api/auth'
-import { getAuthorizationHeader } from '@/api/http'
+import { CURRENT_CHILD_STORAGE_KEY, getAuthorizationHeader } from '@/api/http'
 import type { ChildSummaryResponse } from '@/api/generated'
-
-const CURRENT_CHILD_STORAGE_KEY = 'azas_current_child_id'
 
 export const setCurrentChildId = (childId: number) => {
   sessionStorage.setItem(CURRENT_CHILD_STORAGE_KEY, String(childId))

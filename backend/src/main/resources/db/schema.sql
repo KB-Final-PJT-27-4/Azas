@@ -215,6 +215,8 @@ CREATE TABLE child
     birth_date                   DATE            NULL COMMENT '실제 생년월일',
     gender                       VARCHAR(20)     NULL COMMENT 'MALE, FEMALE, UNKNOWN',
     profile_image_url            VARCHAR(1000)   NULL COMMENT '자녀 프로필 이미지',
+    allowance_request_enabled    TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '자녀 용돈 요청 권한',
+    usage_limit_view_enabled     TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '자녀 사용 금액 한도 조회 권한',
     created_at                   DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성일',
     updated_at                   DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정일',
     status                       VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE, DELETED',
@@ -310,6 +312,23 @@ CREATE TABLE family_invitation
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='가족 초대링크';
+
+CREATE TABLE family_invitation_child
+(
+    family_invitation_id BIGINT UNSIGNED NOT NULL COMMENT '가족 초대 ID',
+    child_id             BIGINT UNSIGNED NOT NULL COMMENT '초대 대상 자녀 ID',
+    created_at           DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '대상 스냅샷 생성 시각',
+    PRIMARY KEY (family_invitation_id, child_id),
+    KEY idx_family_invitation_child_child_id (child_id),
+    CONSTRAINT fk_family_invitation_child_invitation
+        FOREIGN KEY (family_invitation_id)
+            REFERENCES family_invitation (family_invitation_id),
+    CONSTRAINT fk_family_invitation_child_target
+        FOREIGN KEY (child_id)
+            REFERENCES child (child_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='가족 초대 대상 자녀 스냅샷';
 
 CREATE TABLE checklist_item_template
 (
@@ -923,10 +942,10 @@ CREATE TABLE financial_transfer
 CREATE TABLE auto_transfer_schedule
 (
     auto_transfer_schedule_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '자동이체 일정 ID',
-    child_id                  BIGINT UNSIGNED NOT NULL COMMENT '자동이체 대상 자녀',
+    child_id                  BIGINT UNSIGNED NULL COMMENT '자동이체 대상 자녀(자녀 적금인 경우)',
     member_id                 BIGINT UNSIGNED NOT NULL COMMENT '일정 등록 회원 ID',
     request_idempotency_key   CHAR(36)        NOT NULL COMMENT '일정 등록 멱등성 키',
-    financial_goal_id         BIGINT UNSIGNED NOT NULL COMMENT '대상 금융 목표 ID',
+    financial_goal_id         BIGINT UNSIGNED NULL COMMENT '연결 금융 목표 ID(있는 경우)',
     source_account_id         BIGINT UNSIGNED NOT NULL COMMENT '출금 계좌 ID',
     destination_account_id    BIGINT UNSIGNED NOT NULL COMMENT '입금 계좌 ID',
     amount                    DECIMAL(19, 2)  NOT NULL COMMENT '회차별 이체 금액',

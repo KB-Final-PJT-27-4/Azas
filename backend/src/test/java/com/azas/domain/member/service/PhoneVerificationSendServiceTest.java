@@ -15,8 +15,6 @@ import org.springframework.core.env.Profiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -215,8 +213,7 @@ class PhoneVerificationSendServiceTest {
         );
 
         assertEquals(
-                savedVerification.getCreatedAt()
-                        .plusSeconds(60),
+                savedVerification.getCreatedAt(),
                 result.getResendAvailableAt()
         );
 
@@ -260,91 +257,24 @@ class PhoneVerificationSendServiceTest {
     }
 
     @Test
-    void rejectsMemberResendDuringCooldown() {
-        when(
-                phoneNumberNormalizer.normalize(
+    void allowsImmediateResendWithoutCheckingPreviousRequests() {
+        prepareSuccessfulDependencies(
+                new byte[]{1, 2, 3}
+        );
+
+        PhoneVerificationSendResult result =
+                service.send(
+                        MEMBER_ID,
                         RAW_PHONE_NUMBER
-                )
-        ).thenReturn(NORMALIZED_PHONE_NUMBER);
+                );
 
-        when(
-                phoneVerificationHasher
-                        .hashPhoneNumber(
-                                NORMALIZED_PHONE_NUMBER
-                        )
-        ).thenReturn(PHONE_NUMBER_HASH);
-
-        PhoneVerification latestVerification =
-                recentVerification();
-
-        when(
-                phoneVerificationStore
-                        .findLatestByMemberId(MEMBER_ID)
-        ).thenReturn(
-                Optional.of(latestVerification)
-        );
-
-        BusinessException exception =
-                org.junit.jupiter.api.Assertions
-                        .assertThrows(
-                                BusinessException.class,
-                                () -> service.send(
-                                        MEMBER_ID,
-                                        RAW_PHONE_NUMBER
-                                )
-                        );
-
-        assertEquals(
-                ErrorCode
-                        .PHONE_VERIFICATION_RESEND_NOT_ALLOWED,
-                exception.getErrorCode()
-        );
-    }
-
-    @Test
-    void rejectsPhoneNumberResendDuringCooldown() {
-        when(
-                phoneNumberNormalizer.normalize(
-                        RAW_PHONE_NUMBER
-                )
-        ).thenReturn(NORMALIZED_PHONE_NUMBER);
-
-        when(
-                phoneVerificationHasher
-                        .hashPhoneNumber(
-                                NORMALIZED_PHONE_NUMBER
-                        )
-        ).thenReturn(PHONE_NUMBER_HASH);
-
-        when(
-                phoneVerificationStore
-                        .findLatestByMemberId(MEMBER_ID)
-        ).thenReturn(Optional.empty());
-
-        when(
-                phoneVerificationStore
-                        .findLatestByPhoneNumberHash(
-                                PHONE_NUMBER_HASH
-                        )
-        ).thenReturn(
-                Optional.of(recentVerification())
-        );
-
-        BusinessException exception =
-                org.junit.jupiter.api.Assertions
-                        .assertThrows(
-                                BusinessException.class,
-                                () -> service.send(
-                                        MEMBER_ID,
-                                        RAW_PHONE_NUMBER
-                                )
-                        );
-
-        assertEquals(
-                ErrorCode
-                        .PHONE_VERIFICATION_RESEND_NOT_ALLOWED,
-                exception.getErrorCode()
-        );
+        assertEquals(10L, result.getVerificationId());
+        verify(phoneVerificationStore, never())
+                .findLatestByMemberId(MEMBER_ID);
+        verify(phoneVerificationStore, never())
+                .findLatestByPhoneNumberHash(
+                        PHONE_NUMBER_HASH
+                );
     }
 
     @Test
@@ -393,18 +323,6 @@ class PhoneVerificationSendServiceTest {
         ).thenReturn(PHONE_NUMBER_HASH);
 
         when(
-                phoneVerificationStore
-                        .findLatestByMemberId(MEMBER_ID)
-        ).thenReturn(Optional.empty());
-
-        when(
-                phoneVerificationStore
-                        .findLatestByPhoneNumberHash(
-                                PHONE_NUMBER_HASH
-                        )
-        ).thenReturn(Optional.empty());
-
-        when(
                 verificationCodeGenerator.generate()
         ).thenReturn(VERIFICATION_CODE);
 
@@ -436,20 +354,6 @@ class PhoneVerificationSendServiceTest {
             return null;
         }).when(phoneVerificationStore)
                 .save(any(PhoneVerification.class));
-    }
-
-    private PhoneVerification recentVerification() {
-        LocalDateTime now =
-                LocalDateTime.now(ZoneOffset.UTC);
-
-        return PhoneVerification.issue(
-                MEMBER_ID,
-                new byte[]{1, 2, 3},
-                PHONE_NUMBER_HASH,
-                VERIFICATION_CODE_HASH,
-                now.plusMinutes(3),
-                now
-        );
     }
 
     private void configureDemoVerification(

@@ -21,6 +21,10 @@ public class DiscoveredAccountResponse {
     @JsonProperty("bank_name")
     private final String bankName;
 
+    @ApiModelProperty(value = "계좌 상품명", required = true, example = "KB Young Youth 적금")
+    @JsonProperty("account_name")
+    private final String accountName;
+
     @ApiModelProperty(value = "전체 계좌번호", required = true, example = "1234-567-890123")
     @JsonProperty("account_number")
     private final String accountNumber;
@@ -36,6 +40,7 @@ public class DiscoveredAccountResponse {
         return new DiscoveredAccountResponse(
                 result.getAccountId(),
                 result.getBankName(),
+                result.getAccountName(),
                 result.getAccountNumber(),
                 result.getAccountProductType(),
                 result.getBalance()

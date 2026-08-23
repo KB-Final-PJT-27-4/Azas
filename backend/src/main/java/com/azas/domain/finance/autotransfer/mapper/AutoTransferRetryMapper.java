@@ -37,6 +37,13 @@ public interface AutoTransferRetryMapper {
             @Param("amount") BigDecimal amount
     );
 
+    int insertDestinationBalanceSnapshot(
+            @Param("accountId") Long accountId,
+            @Param("childId") Long childId,
+            @Param("balance") BigDecimal balance,
+            @Param("observedAt") LocalDateTime observedAt
+    );
+
     int insertTransaction(
             TransferTransactionInsertCommand command
     );
