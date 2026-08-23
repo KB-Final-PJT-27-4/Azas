@@ -75,6 +75,10 @@ public interface FinancialAccountMapper {
             @Param("memberId") long memberId
     );
 
+    int countActiveChildDemandDeposit(
+            @Param("childId") long childId
+    );
+
     List<AccountLinkTargetRow> findAccountLinkTargetsForUpdate(
             @Param("accountIds") List<Long> accountIds
     );

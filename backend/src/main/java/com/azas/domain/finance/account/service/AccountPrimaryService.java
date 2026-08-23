@@ -15,6 +15,7 @@ public class AccountPrimaryService {
     private static final String PARENT = "PARENT";
     private static final String CHILD = "CHILD";
     private static final String ACTIVE = "ACTIVE";
+    private static final String DEMAND_DEPOSIT = "DEMAND_DEPOSIT";
 
     private final FinancialAccountMapper financialAccountMapper;
 
@@ -80,6 +81,11 @@ public class AccountPrimaryService {
                 || !ACTIVE.equals(target.getLinkStatus())) {
             throw new BusinessException(
                     ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND
+            );
+        }
+        if (!DEMAND_DEPOSIT.equals(target.getAccountProductType())) {
+            throw new BusinessException(
+                    ErrorCode.INELIGIBLE_PRIMARY_ACCOUNT
             );
         }
     }

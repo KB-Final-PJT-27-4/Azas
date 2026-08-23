@@ -266,6 +266,35 @@ class AccountOpenServiceTest {
         );
     }
 
+    @Test
+    void makesFirstChildDemandPrimary() {
+        AccountOpenRequest request = request("CHILD", 6L, 2L);
+        prepareChildScope();
+        when(productMapper.findActiveProductById(2L))
+                .thenReturn(product(2L, "ACCOUNT", null));
+        prepareNumber();
+        assignAccountId(13L);
+
+        AccountOpenResult result = service.open(1L, request);
+
+        assertTrue(result.isPrimary());
+    }
+
+    @Test
+    void doesNotMakeLaterChildDemandPrimary() {
+        AccountOpenRequest request = request("CHILD", 6L, 2L);
+        prepareChildScope();
+        when(accountMapper.countActiveChildDemandDeposit(6L)).thenReturn(1);
+        when(productMapper.findActiveProductById(2L))
+                .thenReturn(product(2L, "ACCOUNT", null));
+        prepareNumber();
+        assignAccountId(14L);
+
+        AccountOpenResult result = service.open(1L, request);
+
+        assertEquals(false, result.isPrimary());
+    }
+
     private void prepareChildScope() {
         when(accountMapper.countActiveChildById(6L)).thenReturn(1);
         when(accountMapper.countActiveParentAccess(1L, 6L)).thenReturn(1);
