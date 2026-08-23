@@ -16,5 +16,7 @@
 
 export interface UpdateAllowanceRequestStatus {
     'action'?: string;
+    'destination_account_id'?: number;
+    'source_account_id'?: number;
 }
 

@@ -23,6 +23,7 @@ export interface NotificationListResponse {
     'items'?: Array<NotificationListItemResponse>;
     'next_cursor'?: number;
     'poll_cursor'?: number;
+    'recommended_poll_interval_seconds'?: number;
     'unread_count'?: number;
 }
 

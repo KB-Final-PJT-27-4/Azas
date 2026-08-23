@@ -14,21 +14,46 @@
 
 
 
+/**
+ * 자동이체 일정 등록 요청
+ */
 export interface CreateAutoTransferScheduleRequest {
-    'amount'?: number;
+    /**
+     * 회차별 이체 금액
+     */
+    'amount': number;
+    /**
+     * 받는 계좌 소유 자녀 ID
+     */
     'child_id'?: number;
-    'destination_account_id'?: number;
+    /**
+     * 부모 또는 현재 자녀의 활성 입출금·적금 계좌 ID
+     */
+    'destination_account_id': number;
+    /**
+     * 종료일(생략 가능)
+     */
     'end_date'?: string;
-    'frequency'?: CreateAutoTransferScheduleRequestFrequencyEnum;
-    'source_account_id'?: number;
-    'start_date'?: string;
-    'transfer_day'?: number;
+    /**
+     * 이체 주기
+     */
+    'frequency': CreateAutoTransferScheduleRequestFrequencyEnum;
+    /**
+     * 로그인 부모의 활성 입출금 계좌 ID
+     */
+    'source_account_id': number;
+    /**
+     * 최초 이체 가능일
+     */
+    'start_date': string;
+    /**
+     * 매월 이체일(1~28)
+     */
+    'transfer_day': number;
 }
 
 export const CreateAutoTransferScheduleRequestFrequencyEnum = {
-    Daily: 'DAILY',
     Monthly: 'MONTHLY',
-    Weekly: 'WEEKLY',
 } as const;
 
 export type CreateAutoTransferScheduleRequestFrequencyEnum = typeof CreateAutoTransferScheduleRequestFrequencyEnum[keyof typeof CreateAutoTransferScheduleRequestFrequencyEnum];

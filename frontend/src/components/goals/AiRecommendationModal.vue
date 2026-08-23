@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, X } from 'lucide-vue-next'
+import { Check, ChevronDown, ExternalLink, Info, X } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 
 import { api, getApiErrorMessage } from '@/api'
@@ -9,6 +9,18 @@ type AmountRecommendation = {
   label: string
   amount: number
   items: string[]
+}
+
+type RecommendationBasis = {
+  organization: string
+  datasetName: string
+  referenceYear?: number
+  metricName: string
+  metricValue?: number
+  metricUnit: string
+  sourceUrl: string
+  description: string
+  disclaimer: string
 }
 
 const props = defineProps<{
@@ -39,8 +51,36 @@ const sheetStyle = computed(() => ({
 }))
 
 const recommendations = ref<AmountRecommendation[]>([])
+const recommendationBasis = ref<RecommendationBasis | null>(null)
+const isBasisOpen = ref(false)
 const isLoading = ref(true)
 const errorMessage = ref('')
+
+const formatAmount = (amount: number) => {
+  if (amount >= 100_000_000) {
+    const eok = Math.floor(amount / 100_000_000)
+    const remainder = amount % 100_000_000
+    if (remainder === 0) return `${eok.toLocaleString('ko-KR')}억`
+    if (remainder % 10_000 === 0) {
+      return `${eok.toLocaleString('ko-KR')}억 ${(remainder / 10_000).toLocaleString('ko-KR')}만원`
+    }
+    return `${eok.toLocaleString('ko-KR')}억 ${remainder.toLocaleString('ko-KR')}원`
+  }
+  if (amount >= 10_000 && amount % 10_000 === 0) {
+    return `${(amount / 10_000).toLocaleString('ko-KR')}만원`
+  }
+  return `${amount.toLocaleString('ko-KR')}원`
+}
+
+const formatMetric = (basis: RecommendationBasis) => {
+  if (basis.metricValue == null) return basis.metricUnit
+  return basis.metricUnit.startsWith('원')
+    ? `${formatAmount(basis.metricValue)}${basis.metricUnit.slice(1)}`
+    : `${basis.metricValue.toLocaleString('ko-KR')} ${basis.metricUnit}`
+}
+
+const normalizeSourceUrl = (value: string) =>
+  value.match(/https?:\/\/[^\s\])]+/)?.[0] ?? ''
 
 const loadRecommendations = async () => {
   isLoading.value = true
@@ -57,6 +97,20 @@ const loadRecommendations = async () => {
         amount: recommendation.target_amount ?? 0,
         items: recommendation.coverage_items ?? [],
       }))
+    const reference = data.reference_data
+    recommendationBasis.value = reference
+      ? {
+          organization: reference.organization ?? '',
+          datasetName: reference.dataset_name ?? '',
+          referenceYear: reference.reference_year,
+          metricName: reference.metric_name ?? '',
+          metricValue: reference.metric_value,
+          metricUnit: reference.metric_unit ?? '',
+          sourceUrl: normalizeSourceUrl(reference.source_url ?? ''),
+          description: data.description ?? '',
+          disclaimer: data.disclaimer ?? '',
+        }
+      : null
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error, '목표 금액 가이드를 불러오지 못했습니다.')
   } finally {
@@ -207,7 +261,7 @@ const cancelDrag = () => {
                   <span>
                     <strong class="block text-sm">{{ option.label }}</strong>
                     <strong class="mt-1 block text-xl text-[var(--color-selected-text)]">
-                      {{ (option.amount / 10_000).toLocaleString('ko-KR') }}만원
+                      {{ formatAmount(option.amount) }}
                     </strong>
                   </span>
                   <span
@@ -237,6 +291,71 @@ const cancelDrag = () => {
                   </span>
                 </span>
               </button>
+
+              <section
+                v-if="recommendationBasis"
+                class="order-first overflow-hidden rounded-2xl border border-[#dce8ee] bg-white"
+                aria-labelledby="recommendation-basis-title"
+              >
+                <button
+                  class="flex w-full items-center gap-3 px-4 py-3.5 text-left"
+                  type="button"
+                  :aria-expanded="isBasisOpen"
+                  @click="isBasisOpen = !isBasisOpen"
+                >
+                  <span class="grid size-8 shrink-0 place-items-center rounded-full bg-[#eaf8ff] text-[var(--color-selected-text)]">
+                    <Info :size="17" :stroke-width="2.3" aria-hidden="true" />
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <strong id="recommendation-basis-title" class="block text-[13px]">추천 기준과 출처</strong>
+                    <span class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]">
+                      {{ recommendationBasis.organization }} · {{ recommendationBasis.referenceYear }}년 자료
+                    </span>
+                  </span>
+                  <ChevronDown
+                    class="shrink-0 text-[var(--color-text-secondary)] transition-transform"
+                    :class="isBasisOpen ? 'rotate-180' : ''"
+                    :size="19"
+                    aria-hidden="true"
+                  />
+                </button>
+
+                <Transition name="basis-expand">
+                  <div v-if="isBasisOpen" class="border-t border-[#edf1f3] px-4 pt-4 pb-5">
+                    <span class="inline-flex rounded-full bg-[#f1f7fa] px-2.5 py-1 text-[10px] font-bold text-[var(--color-text-secondary)]">
+                      {{ recommendationBasis.datasetName }}
+                    </span>
+                    <dl class="mt-3 grid gap-2 rounded-xl bg-[#f7fafb] px-3.5 py-3 text-[11px]">
+                      <div class="flex items-start justify-between gap-3">
+                        <dt class="shrink-0 text-[var(--color-text-secondary)]">참고 지표</dt>
+                        <dd class="m-0 text-right font-bold">{{ recommendationBasis.metricName }}</dd>
+                      </div>
+                      <div class="flex items-center justify-between gap-3">
+                        <dt class="text-[var(--color-text-secondary)]">기준값</dt>
+                        <dd class="m-0 font-extrabold text-[var(--color-selected-text)]">
+                          {{ formatMetric(recommendationBasis) }}
+                        </dd>
+                      </div>
+                    </dl>
+                    <p class="mt-3 mb-0 text-[11px] leading-[1.65] text-[var(--color-text-secondary)]">
+                      {{ recommendationBasis.description }}
+                    </p>
+                    <a
+                      v-if="recommendationBasis.sourceUrl"
+                      class="mt-3 inline-flex items-center gap-1 text-[11px] font-bold !text-[var(--color-selected-text)] underline underline-offset-2"
+                      :href="recommendationBasis.sourceUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      원문 자료 확인하기
+                      <ExternalLink :size="13" :stroke-width="2.3" aria-hidden="true" />
+                    </a>
+                    <p class="mt-4 mb-0 rounded-xl bg-[#fff9e8] px-3 py-2.5 text-[10px] leading-[1.55] text-[#8b6b20]">
+                      {{ recommendationBasis.disclaimer }}
+                    </p>
+                  </div>
+                </Transition>
+              </section>
             </div>
 
             <p
@@ -308,5 +427,16 @@ const cancelDrag = () => {
 
 .sheet-handle:active {
   cursor: grabbing;
+}
+
+.basis-expand-enter-active,
+.basis-expand-leave-active {
+  transition: opacity 160ms ease, transform 180ms ease;
+}
+
+.basis-expand-enter-from,
+.basis-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
 }
 </style>

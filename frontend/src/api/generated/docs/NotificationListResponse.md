@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 **items** | [**Array&lt;NotificationListItemResponse&gt;**](NotificationListItemResponse.md) |  | [optional] [default to undefined]
 **next_cursor** | **number** |  | [optional] [default to undefined]
 **poll_cursor** | **number** |  | [optional] [default to undefined]
+**recommended_poll_interval_seconds** | **number** |  | [optional] [default to undefined]
 **unread_count** | **number** |  | [optional] [default to undefined]
 
 ## Example
@@ -23,6 +24,7 @@ const instance: NotificationListResponse = {
     items,
     next_cursor,
     poll_cursor,
+    recommended_poll_interval_seconds,
     unread_count,
 };
 ```
