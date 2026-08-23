@@ -26,6 +26,7 @@ const isMypageRoute = (path: string) => path === '/mypage' && route.path.startsW
       class="grid min-w-0 place-items-center gap-[3px] text-[11px] leading-none font-medium whitespace-nowrap !text-[var(--color-unselected-text)] [&.bottom-nav-item--active]:font-semibold [&.bottom-nav-item--active]:!text-[var(--color-selected-text)] [&.router-link-active]:font-semibold [&.router-link-active]:!text-[var(--color-selected-text)]"
       :class="{ 'bottom-nav-item--active': isMypageRoute(item.path) }"
       :to="item.path"
+      :data-home-guide="item.path === '/mypage' ? 'mypage' : undefined"
     >
       <component :is="item.icon" class="block" :size="22" :stroke-width="2.5" />
       <span>{{ item.label }}</span>

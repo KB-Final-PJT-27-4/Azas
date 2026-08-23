@@ -19,9 +19,11 @@ const props = withDefaults(
   defineProps<{
     selectedGoals: string[]
     customGoal: string
+    goalOrder?: string[]
+    isLoading?: boolean
     singleSelection?: boolean
   }>(),
-  { singleSelection: false },
+  { goalOrder: () => [], isLoading: false, singleSelection: false },
 )
 
 const emit = defineEmits<{
@@ -57,7 +59,7 @@ const goals: GoalOption[] = [
     title: '결혼자금',
     description: '미래 자녀의 결혼을 위한 자금',
   },
-    {
+  {
     id: 'lump-sum',
     icon: goalLumpSumIcon,
     title: '목돈 마련',
@@ -71,7 +73,21 @@ const goals: GoalOption[] = [
   },
 ]
 
-const selectedGoal = computed(() => goals.find(({ id }) => id === props.selectedGoals[0]))
+const orderedGoals = computed(() => {
+  if (!props.goalOrder.length) return goals
+
+  const orderByGoalId = new Map(props.goalOrder.map((goalId, index) => [goalId, index]))
+  return [...goals].sort((left, right) => {
+    if (left.id === 'custom') return 1
+    if (right.id === 'custom') return -1
+
+    const leftOrder = orderByGoalId.get(left.id) ?? Number.MAX_SAFE_INTEGER
+    const rightOrder = orderByGoalId.get(right.id) ?? Number.MAX_SAFE_INTEGER
+    return leftOrder - rightOrder
+  })
+})
+
+const selectedGoal = computed(() => orderedGoals.value.find(({ id }) => id === props.selectedGoals[0]))
 
 const selectedGoalCardStyle = computed(() => {
   const styles: Record<string, string> = {
@@ -105,8 +121,22 @@ const selectedGoalCardStyle = computed(() => {
       class="goal-list"
       :class="singleSelection && selectedGoal ? 'goal-list--selected' : 'mt-7'"
     >
+      <template v-if="isLoading">
+        <div
+          v-for="index in 5"
+          :key="`goal-skeleton-${index}`"
+          class="mb-3 flex min-h-[74px] animate-pulse items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-4 last:mb-0"
+          aria-hidden="true"
+        >
+          <span class="size-11 shrink-0 rounded-xl bg-[#edf2f5]"></span>
+          <span class="grid flex-1 gap-2">
+            <span class="h-4 w-24 rounded-full bg-[#e8eef2]"></span>
+            <span class="h-3 w-40 max-w-[70%] rounded-full bg-[#f0f3f5]"></span>
+          </span>
+        </div>
+      </template>
       <button
-        v-for="goal in goals"
+        v-for="goal in isLoading ? [] : orderedGoals"
         :key="goal.id"
         class="goal-option mb-3 flex min-h-[74px] w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 text-left last:mb-0"
         :class="[
