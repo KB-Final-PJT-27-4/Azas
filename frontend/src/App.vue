@@ -28,11 +28,12 @@ onUnmounted(() => {
   <DefaultLayout>
     <div class="route-page-viewport">
       <RouterView v-slot="{ Component, route }">
-        <Transition
-          :name="route.meta.disableRouteTransition ? undefined : 'route-page'"
-          :css="!route.meta.disableRouteTransition"
-          mode="out-in"
-        >
+        <template v-if="route.meta.disableRouteTransition">
+          <div :key="route.path" class="route-page-frame">
+            <component :is="Component" />
+          </div>
+        </template>
+        <Transition v-else name="route-page" mode="out-in">
           <div :key="route.path" class="route-page-frame">
             <component :is="Component" />
           </div>

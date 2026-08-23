@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Check, Plus, X } from 'lucide-vue-next'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
@@ -448,13 +448,11 @@ const completeUnlockFlow = async () => {
 
   markUnlockAnimationSeen(capsule)
   window.sessionStorage.setItem(OPEN_FLASH_STORAGE_KEY, 'true')
-  resetUnlockFlow()
-  await nextTick()
 
   try {
     await router.push(getOpenRoute(capsule))
   } catch {
-    // Keep the archive usable if navigation is interrupted.
+    resetUnlockFlow()
   }
 }
 
@@ -842,14 +840,13 @@ onBeforeUnmount(resetUnlockFlow)
     </Teleport>
 
     <Teleport to="body">
-      <Transition name="unlock-overlay">
-        <div
-          v-if="isUnlockOverlayOpen"
-          class="time-capsule-unlock fixed inset-0 z-[var(--z-index-overlay)] overflow-hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="unlock-title"
-        >
+      <div
+        v-if="isUnlockOverlayOpen"
+        class="time-capsule-unlock fixed inset-0 z-[var(--z-index-overlay)] overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="unlock-title"
+      >
           <div
             class="time-capsule-unlock__backdrop absolute inset-0"
             :class="isUnlockCardCentered ? 'time-capsule-unlock__backdrop--active' : ''"
@@ -1007,8 +1004,7 @@ onBeforeUnmount(resetUnlockFlow)
               </div>
             </section>
           </Transition>
-        </div>
-      </Transition>
+      </div>
     </Teleport>
 
     <Teleport to="body">
@@ -1348,7 +1344,7 @@ onBeforeUnmount(resetUnlockFlow)
 
 .unlock-panel {
   --unlock-size: min(94vw, 58dvh, 520px);
-  --unlock-x: -55%;
+  --unlock-x: -58%;
 
   z-index: 2;
   cursor: default;
