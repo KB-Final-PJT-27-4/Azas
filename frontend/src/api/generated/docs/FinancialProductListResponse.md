@@ -6,7 +6,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **has_next** | **boolean** |  | [optional] [default to undefined]
-**items** | [**Array&lt;Item&gt;**](Item.md) |  | [optional] [default to undefined]
+**items** | [**Array&lt;FinancialProductListItemResponse&gt;**](FinancialProductListItemResponse.md) |  | [optional] [default to undefined]
 **next_cursor** | **string** |  | [optional] [default to undefined]
 
 ## Example

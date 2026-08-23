@@ -13,9 +13,14 @@
  */
 
 
+// May contain unused imports in some cases
+// @ts-ignore
+import type { FamilyInvitationChildResponse } from './family-invitation-child-response';
 
 export interface FamilyInvitationCreateResponse {
+    'child_count'?: number;
     'child_id'?: number;
+    'children'?: Array<FamilyInvitationChildResponse>;
     'created_at'?: string;
     'expires_at'?: string;
     'family_invitation_id'?: number;

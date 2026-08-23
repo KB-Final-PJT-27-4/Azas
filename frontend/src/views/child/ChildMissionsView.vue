@@ -4,10 +4,19 @@ import { CheckSquare } from 'lucide-vue-next'
 
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
+import { useToast } from '@/composables/useToast'
 
 type ChildMission = { id: number; title: string; description: string; reward: number; status: 'progress' | 'review' | 'completed' }
 const childMissions = ref<ChildMission[]>([])
 const errorMessage = ref('')
+const submittingMissionId = ref<number | null>(null)
+const { showToast } = useToast()
+
+const resolveMissionStatus = (status?: string): ChildMission['status'] => {
+  if (status === 'APPROVED') return 'completed'
+  if (status === 'SUBMITTED') return 'review'
+  return 'progress'
+}
 
 const missions = computed(() =>
   [...childMissions.value].sort((current, next) => {
@@ -28,7 +37,7 @@ onMounted(async () => {
       title: mission.title ?? '용돈 미션',
       description: mission.description ?? '',
       reward: mission.reward_amount ?? 0,
-      status: mission.status === 'APPROVED' ? 'completed' : mission.status === 'SUBMITTED' ? 'review' : 'progress',
+      status: resolveMissionStatus(mission.status),
     }))
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error, '미션을 불러오지 못했습니다.')
@@ -38,7 +47,7 @@ onMounted(async () => {
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const getStatusLabel = (status: string) => {
   if (status === 'completed') return '완료됨'
-  if (status === 'review') return '확인 필요'
+  if (status === 'review') return '승인 대기'
   return '진행 중'
 }
 const getStatusBadgeClass = (status: string) => {
@@ -57,6 +66,21 @@ const activeRewardTotal = computed(() =>
     .filter((mission) => mission.status !== 'completed')
     .reduce((total, mission) => total + mission.reward, 0),
 )
+
+const requestMissionCompletion = async (mission: ChildMission) => {
+  if (mission.status !== 'progress' || submittingMissionId.value !== null) return
+
+  submittingMissionId.value = mission.id
+  try {
+    const { data } = await api.updateMissionStatusUsingPATCH(mission.id, { action: 'SUBMIT' })
+    mission.status = resolveMissionStatus(data.status)
+    showToast('완료 요청을 보냈어요. 부모님 확인을 기다려 주세요.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '완료 요청을 보내지 못했습니다.'), 'error')
+  } finally {
+    submittingMissionId.value = null
+  }
+}
 </script>
 
 <template>
@@ -111,7 +135,7 @@ const activeRewardTotal = computed(() =>
           <span class="text-[11px] font-medium text-[var(--color-text-secondary)]">완료</span>
         </div>
         <div class="grid place-items-center gap-1">
-          <strong class="text-[17px] leading-none font-extrabold text-[var(--color-brand-primary)]">
+          <strong class="mission-summary-reward text-[17px] leading-none font-extrabold text-[var(--color-brand-primary)]">
             {{ formatCurrency(activeRewardTotal) }}
           </strong>
           <span class="text-[11px] font-medium text-[var(--color-text-secondary)]">예상 보상</span>
@@ -171,7 +195,7 @@ const activeRewardTotal = computed(() =>
 
           <div class="mission-ticket__reward">
             <strong
-              class="text-[18px] leading-tight font-extrabold"
+              class="mission-ticket__reward-amount font-extrabold"
               :class="
                 mission.status === 'completed'
                   ? 'text-[#9aa4ad]'
@@ -180,6 +204,15 @@ const activeRewardTotal = computed(() =>
             >
               {{ formatCurrency(mission.reward) }}
             </strong>
+            <button
+              v-if="mission.status === 'progress'"
+              type="button"
+              class="mission-ticket__request-button"
+              :disabled="submittingMissionId === mission.id"
+              @click="requestMissionCompletion(mission)"
+            >
+              {{ submittingMissionId === mission.id ? '요청 중' : '완료 요청' }}
+            </button>
           </div>
         </article>
       </div>
@@ -192,7 +225,7 @@ const activeRewardTotal = computed(() =>
 .mission-ticket {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 94px;
+  grid-template-columns: minmax(0, 1fr) minmax(112px, 30%);
   min-height: 92px;
   overflow: hidden;
   border: 1px solid #dce8ee;
@@ -218,10 +251,40 @@ const activeRewardTotal = computed(() =>
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 9px;
+  gap: 10px;
   min-width: 0;
-  padding: 16px 12px;
+  padding: 16px 10px;
   background: transparent;
+}
+
+.mission-summary-reward,
+.mission-ticket__reward-amount {
+  white-space: nowrap;
+  word-break: keep-all;
+  letter-spacing: 0;
+}
+
+.mission-ticket__reward-amount {
+  font-size: clamp(14px, 4vw, 18px);
+  line-height: 1;
+}
+
+.mission-ticket__request-button {
+  min-width: 78px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-brand-primary);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.mission-ticket__request-button:disabled {
+  opacity: 0.62;
 }
 
 .mission-ticket__reward::before {

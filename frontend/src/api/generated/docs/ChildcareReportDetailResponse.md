@@ -9,10 +9,10 @@ Name | Type | Description | Notes
 **calculated_at** | **string** |  | [optional] [default to undefined]
 **child_id** | **number** |  | [optional] [default to undefined]
 **monthly_flow** | [**Array&lt;MonthlyFlowItem&gt;**](MonthlyFlowItem.md) |  | [optional] [default to undefined]
-**period** | [**Period**](Period.md) |  | [optional] [default to undefined]
+**period** | [**ChildcareReportPeriodResponse**](ChildcareReportPeriodResponse.md) |  | [optional] [default to undefined]
 **report_month** | **number** |  | [optional] [default to undefined]
 **report_year** | **number** |  | [optional] [default to undefined]
-**summary** | [**Summary**](Summary.md) |  | [optional] [default to undefined]
+**summary** | [**ChildcareReportSummaryResponse**](ChildcareReportSummaryResponse.md) |  | [optional] [default to undefined]
 
 ## Example
 

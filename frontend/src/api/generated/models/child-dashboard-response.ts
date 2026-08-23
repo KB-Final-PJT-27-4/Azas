@@ -18,13 +18,13 @@
 import type { ActivitySummary } from './activity-summary';
 // May contain unused imports in some cases
 // @ts-ignore
-import type { ChildInfo } from './child-info';
+import type { ChildDashboardChildInfoResponse } from './child-dashboard-child-info-response';
+// May contain unused imports in some cases
+// @ts-ignore
+import type { ChildDashboardNotificationSummaryResponse } from './child-dashboard-notification-summary-response';
 // May contain unused imports in some cases
 // @ts-ignore
 import type { MissionSummary } from './mission-summary';
-// May contain unused imports in some cases
-// @ts-ignore
-import type { NotificationSummary } from './notification-summary';
 // May contain unused imports in some cases
 // @ts-ignore
 import type { SpendingSummary } from './spending-summary';
@@ -34,9 +34,9 @@ import type { SpendingSummary } from './spending-summary';
  */
 export interface ChildDashboardResponse {
     'activity_summary'?: ActivitySummary;
-    'child'?: ChildInfo;
+    'child'?: ChildDashboardChildInfoResponse;
     'mission_summary'?: MissionSummary;
-    'notification_summary'?: NotificationSummary;
+    'notification_summary'?: ChildDashboardNotificationSummaryResponse;
     'spending_summary'?: SpendingSummary;
 }
 

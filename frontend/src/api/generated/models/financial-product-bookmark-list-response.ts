@@ -15,10 +15,10 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { Item } from './item';
+import type { FinancialProductBookmarkListItemResponse } from './financial-product-bookmark-list-item-response';
 
 export interface FinancialProductBookmarkListResponse {
-    'content'?: Array<Item>;
+    'content'?: Array<FinancialProductBookmarkListItemResponse>;
     'has_next'?: boolean;
     'page'?: number;
     'size'?: number;

@@ -84,7 +84,7 @@ const updateAmount = (event: Event) => {
             type="button"
             @click.stop="emit('openRecommendation')"
           >
-            AI 추천 ⓘ
+            목표 금액 가이드 ⓘ
           </button>
         </span>
         <div

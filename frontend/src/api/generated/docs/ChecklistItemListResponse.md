@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **child_id** | **number** |  | [optional] [default to undefined]
 **completed_count** | **number** |  | [optional] [default to undefined]
-**items** | [**Array&lt;Item&gt;**](Item.md) |  | [optional] [default to undefined]
+**items** | [**Array&lt;ChecklistItemListItemResponse&gt;**](ChecklistItemListItemResponse.md) |  | [optional] [default to undefined]
 **lifecycle_stage** | **string** |  | [optional] [default to undefined]
 **progress_percent** | **number** |  | [optional] [default to undefined]
 **stage_completed** | **boolean** |  | [optional] [default to undefined]

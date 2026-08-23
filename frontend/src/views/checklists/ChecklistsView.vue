@@ -12,15 +12,26 @@ import { useToast } from '@/composables/useToast'
 type ChecklistInfoItem = { title: string; description: string; actionLabel: string; externalUrl?: string; detail?: string }
 type ChecklistItem = { id: string; stageId: string; category: 'service'; title: string; description: string; completed: boolean; actionType: 'info' | 'route'; route?: string; externalUrl?: string; infoTitle?: string; infoDescription?: string; infoItems?: ChecklistInfoItem[]; infoNotice?: string }
 const lifecycleStages = [
-  { id: 'prenatal', ageRange: '임신 중~출산 전', title: '미래 준비', description: '출산 전 금융 준비를 시작해보세요.' },
-  { id: 'baby', ageRange: '출생~1세', title: '첫 금융 시작', description: '아이의 금융생활을 준비해요.' },
-  { id: 'toddler', ageRange: '2~4세', title: '자산 기반 형성', description: '저축 습관의 씨앗을 만들어요.' },
-  { id: 'preschool', ageRange: '5~7세', title: '금융 습관 형성', description: '소비와 저축을 함께 배워요.' },
-  { id: 'childhood', ageRange: '8~10세', title: '금융 이해 확장', description: '돈의 흐름을 알려줘요.' },
-  { id: 'earlyTeen', ageRange: '11~13세', title: '금융 경험 시작', description: '직접 관리하는 경험을 시작해요.' },
-  { id: 'teen', ageRange: '14~16세', title: '자산 성장', description: '장기 목표를 이해해요.' },
-  { id: 'future', ageRange: '17~19세', title: '미래 자산 완성', description: '독립 전 자산 준비를 마무리해요.' },
+  { id: 'PREGNANCY', ageRange: '임신 중~출산 전', title: '미래 준비', description: '출산 전 금융 준비를 시작해보세요.' },
+  { id: 'AGE_0_TO_1', ageRange: '출생~1세', title: '첫 금융 시작', description: '아이의 금융생활을 준비해요.' },
+  { id: 'AGE_2_TO_4', ageRange: '2~4세', title: '자산 기반 형성', description: '저축 습관의 씨앗을 만들어요.' },
+  { id: 'AGE_5_TO_7', ageRange: '5~7세', title: '금융 습관 형성', description: '소비와 저축을 함께 배워요.' },
+  { id: 'AGE_8_TO_10', ageRange: '8~10세', title: '금융 이해 확장', description: '돈의 흐름을 알려줘요.' },
+  { id: 'AGE_11_TO_13', ageRange: '11~13세', title: '금융 경험 시작', description: '직접 관리하는 경험을 시작해요.' },
+  { id: 'AGE_14_TO_16', ageRange: '14~16세', title: '자산 성장', description: '장기 목표를 이해해요.' },
+  { id: 'AGE_17_TO_19', ageRange: '17~19세', title: '미래 자산 완성', description: '독립 전 자산 준비를 마무리해요.' },
 ]
+
+const resolveLifecycleStage = (birthStatus?: string, age = 0) => {
+  if (birthStatus === 'EXPECTED') return 'PREGNANCY'
+  if (age <= 1) return 'AGE_0_TO_1'
+  if (age <= 4) return 'AGE_2_TO_4'
+  if (age <= 7) return 'AGE_5_TO_7'
+  if (age <= 10) return 'AGE_8_TO_10'
+  if (age <= 13) return 'AGE_11_TO_13'
+  if (age <= 16) return 'AGE_14_TO_16'
+  return 'AGE_17_TO_19'
+}
 
 const router = useRouter()
 const { showToast } = useToast()
@@ -28,6 +39,7 @@ const checkedItemIds = ref(new Set<string>())
 const checklistItems = ref<ChecklistItem[]>([])
 const childId = ref<number | null>(null)
 const authorization = ref('')
+const hasInitializedChecklist = ref(false)
 const isChecklistItemCompleted = (item: ChecklistItem) => checkedItemIds.value.has(item.id)
 const toggleChecklistItem = async (item: ChecklistItem) => {
   const completed = !checkedItemIds.value.has(item.id)
@@ -37,6 +49,14 @@ const toggleChecklistItem = async (item: ChecklistItem) => {
     if (completed) next.add(item.id)
     else next.delete(item.id)
     checkedItemIds.value = next
+
+    if (
+      completed &&
+      currentStageItems.value.length > 0 &&
+      currentStageItems.value.every((stageItem) => next.has(stageItem.id))
+    ) {
+      openCompleteSheet()
+    }
   } catch (error) {
     showToast(getApiErrorMessage(error, '체크 상태를 변경하지 못했습니다.'), 'error')
   }
@@ -46,7 +66,7 @@ const selectedInfoItem = ref<ChecklistItem | null>(null)
 const selectedDetailInfo = ref<ChecklistInfoItem | null>(null)
 const pendingRouteItem = ref<ChecklistItem | null>(null)
 const isCompleteSheetOpen = ref(false)
-const selectedStageId = ref('prenatal')
+const selectedStageId = ref('PREGNANCY')
 const draggingSheet = ref<'info' | 'complete' | null>(null)
 const sheetDragStartY = ref<number | null>(null)
 const sheetDragOffsetY = ref(0)
@@ -93,11 +113,20 @@ const loadChecklist = async (stage?: string) => {
 onMounted(async () => {
   childId.value = await resolveCurrentChildId()
   authorization.value = requireAuthorizationHeader()
-  await loadChecklist()
+  let stage = selectedStageId.value
+  try {
+    const { data: child } = await api.getChildUsingGET(childId.value)
+    stage = resolveLifecycleStage(child.birth_status, child.age)
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자녀 생애주기 정보를 불러오지 못했습니다.'), 'error')
+  }
+  selectedStageId.value = stage
+  await loadChecklist(stage)
+  hasInitializedChecklist.value = true
 })
 
 watch(selectedStageId, (stage, previous) => {
-  if (stage !== previous && childId.value) void loadChecklist(stage)
+  if (hasInitializedChecklist.value && stage !== previous && childId.value) void loadChecklist(stage)
 })
 
 const completedCount = computed(
@@ -271,28 +300,7 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
       </section>
 
       <div v-else key="checklist">
-    <section class="px-5 pt-6 pb-5" aria-label="생애주기 로드맵">
-      <div
-        class="flex gap-2 overflow-x-auto rounded-[22px] border border-[#dce8f0] bg-[#f4f9fc] p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        <button
-          v-for="stage in lifecycleStages"
-          :key="stage.id"
-          class="shrink-0 rounded-[16px] border-0 px-3 py-2 text-[12px] font-bold whitespace-nowrap"
-          :class="
-            stage.id === currentStage.id
-              ? 'bg-white text-[var(--color-selected-text)] shadow-[0_8px_18px_rgb(85_192_244_/_16%)]'
-              : 'bg-transparent text-[var(--color-text-secondary)]'
-          "
-          type="button"
-          @click="selectedStageId = stage.id"
-        >
-          {{ stage.ageRange }}
-        </button>
-      </div>
-    </section>
-
-    <section class="px-5 pb-5">
+    <section class="px-5 pt-6 pb-5">
       <article
         class="rounded-[22px] border border-[#d5e8f8] bg-[#EBFAFF] px-5 py-5 shadow-[0_14px_34px_rgb(31_72_97_/_7%),inset_0_0_0_1px_rgb(255_255_255_/_70%)]"
       >
@@ -411,13 +419,6 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
         </li>
       </ul>
 
-      <button
-        class="mt-5 h-12 w-full rounded-[16px] border border-[#55C0F4] bg-[#55C0F4] text-[15px] font-bold text-white"
-        type="button"
-        @click="openCompleteSheet"
-      >
-        완료 화면 보기
-      </button>
     </section>
 
     <Teleport to="body">
