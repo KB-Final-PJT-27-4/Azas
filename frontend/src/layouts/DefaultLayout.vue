@@ -8,6 +8,7 @@ import { useToast } from '@/composables/useToast'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
+import { useInAppNotificationPolling } from '@/services/inAppNotificationPolling'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,14 +30,16 @@ const showChildBottomNavigation = computed(() =>
 const headerTitle = computed(() => String(route.meta.headerTitle ?? ''))
 const showHeaderBack = computed(() => route.meta.showHeaderBack === true)
 const showHeaderNotification = computed(() => route.meta.showHeaderNotification !== false)
-const notificationCount = computed(() => Number(route.meta.notificationCount ?? 0))
+const { unreadCount: notificationCount } = useInAppNotificationPolling()
 const isHome = computed(() => route.name === 'Home')
 const pageBackgroundColor = computed(() => String(route.meta.pageBackgroundColor ?? ''))
 const headerBackgroundColor = computed(() =>
   String(route.meta.headerBackgroundColor ?? pageBackgroundColor.value),
 )
 const hideHeaderDivider = computed(() => route.meta.hideHeaderDivider === true || isHome.value)
-const changeHeaderOnScroll = computed(() => route.meta.changeHeaderOnScroll === true || isHome.value)
+const changeHeaderOnScroll = computed(
+  () => route.meta.changeHeaderOnScroll === true || isHome.value,
+)
 const pageBackgroundStyle = computed(() =>
   pageBackgroundColor.value ? { backgroundColor: pageBackgroundColor.value } : undefined,
 )

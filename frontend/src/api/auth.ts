@@ -1,11 +1,16 @@
 import axios from 'axios'
 
-import type { ApiErrorResponse, OAuthLoginMemberResponse, OAuthLoginResponse } from '@/api/generated'
+import type {
+  ApiErrorResponse,
+  OAuthLoginMemberResponse,
+  OAuthLoginResponse,
+} from '@/api/generated'
 import { api } from '@/api'
 import {
   AUTH_MEMBER_STORAGE_KEY,
   clearAuthSessionStorage,
   getRefreshToken,
+  notifyAuthSessionChanged,
   saveTokenPair,
 } from '@/api/http'
 
@@ -20,11 +25,18 @@ export const loginWithOAuthCode = async (
   invitation?: { inviteToken: string; inviteeType: 'PARENT' | 'CHILD' },
 ) => {
   const request = { authorization_code: authorizationCode, redirect_uri: redirectUri }
-  const { data } = invitation?.inviteeType === 'CHILD'
-    ? await api.loginWithChildInviteUsingPOST(provider, { ...request, invite_token: invitation.inviteToken })
-    : invitation?.inviteeType === 'PARENT'
-      ? await api.loginWithParentInviteUsingPOST(provider, { ...request, invite_token: invitation.inviteToken })
-      : await api.loginUsingPOST(provider, request)
+  const { data } =
+    invitation?.inviteeType === 'CHILD'
+      ? await api.loginWithChildInviteUsingPOST(provider, {
+          ...request,
+          invite_token: invitation.inviteToken,
+        })
+      : invitation?.inviteeType === 'PARENT'
+        ? await api.loginWithParentInviteUsingPOST(provider, {
+            ...request,
+            invite_token: invitation.inviteToken,
+          })
+        : await api.loginUsingPOST(provider, request)
 
   saveAuthSession(data)
   return data
@@ -33,6 +45,7 @@ export const loginWithOAuthCode = async (
 export const saveAuthSession = (response: OAuthLoginResponse) => {
   saveTokenPair(response.access_token, response.refresh_token)
   sessionStorage.setItem(AUTH_MEMBER_STORAGE_KEY, JSON.stringify(response.member))
+  notifyAuthSessionChanged()
 }
 
 export const clearAuthSession = () => {
