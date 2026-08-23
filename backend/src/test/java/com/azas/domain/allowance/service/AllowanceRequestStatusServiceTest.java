@@ -5,6 +5,9 @@ import com.azas.domain.allowance.dto.AllowanceRequestDetailRow;
 import com.azas.domain.allowance.dto.UpdateAllowanceRequestStatus;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
+import com.azas.domain.finance.transfer.dto.CreateTransferRequest;
+import com.azas.domain.finance.transfer.dto.TransferCreateResponse;
+import com.azas.domain.finance.transfer.service.TransferService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
@@ -20,7 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,21 +36,28 @@ class AllowanceRequestStatusServiceTest {
     private static final long CHILD_MEMBER_ID = 30L;
     private static final long CHILD_ID = 6L;
     private static final long REQUEST_ID = 41L;
+    private static final long SOURCE_ACCOUNT_ID = 101L;
+    private static final long DESTINATION_ACCOUNT_ID = 202L;
+    private static final long TRANSFER_ID = 303L;
 
     @Mock
     private AllowanceRequestMapper allowanceRequestMapper;
+
+    @Mock
+    private TransferService transferService;
 
     @InjectMocks
     private AllowanceRequestServiceImpl allowanceRequestService;
 
     @Test
     void parentApprovesPendingRequest() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
+                REQUEST_ID
+        )).thenReturn(row(AllowanceRequestStatus.PENDING));
+
         when(allowanceRequestMapper.findAllowanceRequestDetail(
                 REQUEST_ID
-        )).thenReturn(
-                row(AllowanceRequestStatus.PENDING),
-                row(AllowanceRequestStatus.APPROVED)
-        );
+        )).thenReturn(row(AllowanceRequestStatus.APPROVED));
 
         when(allowanceRequestMapper
                 .countAllowanceRequestParentAccess(
@@ -53,6 +65,27 @@ class AllowanceRequestStatusServiceTest {
                         CHILD_ID
                 ))
                 .thenReturn(1);
+
+        when(allowanceRequestMapper.countAllowanceDestinationAccount(
+                CHILD_ID,
+                DESTINATION_ACCOUNT_ID
+        )).thenReturn(1);
+
+        TransferCreateResponse transferResponse =
+                mock(TransferCreateResponse.class);
+        when(transferResponse.getFinancialTransferId())
+                .thenReturn(TRANSFER_ID);
+        when(transferService.createTransfer(
+                eq(PARENT_ID),
+                any(String.class),
+                any(CreateTransferRequest.class)
+        )).thenReturn(transferResponse);
+
+        when(allowanceRequestMapper.linkAllowanceTransfer(
+                TRANSFER_ID,
+                REQUEST_ID,
+                PARENT_ID
+        )).thenReturn(1);
 
         when(allowanceRequestMapper.updateAllowanceRequestStatus(
                 org.mockito.ArgumentMatchers.eq(REQUEST_ID),
@@ -73,16 +106,38 @@ class AllowanceRequestStatusServiceTest {
                 AllowanceRequestStatus.APPROVED,
                 response.getStatus()
         );
+
+        verify(transferService).createTransfer(
+                eq(PARENT_ID),
+                any(String.class),
+                org.mockito.ArgumentMatchers.argThat(transfer ->
+                        transfer.getSourceAccountId().equals(
+                                SOURCE_ACCOUNT_ID
+                        )
+                                && transfer.getDestinationAccountId().equals(
+                                DESTINATION_ACCOUNT_ID
+                        )
+                                && transfer.getAmount().compareTo(
+                                new BigDecimal("10000")
+                        ) == 0
+                )
+        );
+        verify(allowanceRequestMapper).linkAllowanceTransfer(
+                TRANSFER_ID,
+                REQUEST_ID,
+                PARENT_ID
+        );
     }
 
     @Test
     void parentRejectsPendingRequest() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
+                REQUEST_ID
+        )).thenReturn(row(AllowanceRequestStatus.PENDING));
+
         when(allowanceRequestMapper.findAllowanceRequestDetail(
                 REQUEST_ID
-        )).thenReturn(
-                row(AllowanceRequestStatus.PENDING),
-                row(AllowanceRequestStatus.REJECTED)
-        );
+        )).thenReturn(row(AllowanceRequestStatus.REJECTED));
 
         when(allowanceRequestMapper
                 .countAllowanceRequestParentAccess(
@@ -120,16 +175,22 @@ class AllowanceRequestStatusServiceTest {
                         eq("10,000원 요청이 거절되었어요."),
                         any(LocalDateTime.class)
                 );
+        verify(transferService, never()).createTransfer(
+                any(),
+                any(),
+                any()
+        );
     }
 
     @Test
     void childCancelsOwnPendingRequest() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
+                REQUEST_ID
+        )).thenReturn(row(AllowanceRequestStatus.PENDING));
+
         when(allowanceRequestMapper.findAllowanceRequestDetail(
                 REQUEST_ID
-        )).thenReturn(
-                row(AllowanceRequestStatus.PENDING),
-                row(AllowanceRequestStatus.CANCELED)
-        );
+        )).thenReturn(row(AllowanceRequestStatus.CANCELED));
 
         when(allowanceRequestMapper
                 .countAllowanceRequestChildAccess(
@@ -187,14 +248,14 @@ class AllowanceRequestStatusServiceTest {
         );
 
         verify(allowanceRequestMapper, never())
-                .findAllowanceRequestDetail(
+                .findAllowanceRequestDetailForUpdate(
                         org.mockito.ArgumentMatchers.anyLong()
                 );
     }
 
     @Test
     void rejectsParentCancelAction() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
         )).thenReturn(row(AllowanceRequestStatus.PENDING));
 
@@ -223,7 +284,7 @@ class AllowanceRequestStatusServiceTest {
 
     @Test
     void rejectsChildApproveAction() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
         )).thenReturn(row(AllowanceRequestStatus.PENDING));
 
@@ -252,7 +313,7 @@ class AllowanceRequestStatusServiceTest {
 
     @Test
     void rejectsAlreadyProcessedRequest() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
         )).thenReturn(row(AllowanceRequestStatus.APPROVED));
 
@@ -288,7 +349,7 @@ class AllowanceRequestStatusServiceTest {
 
     @Test
     void rejectsConcurrentStatusChange() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
         )).thenReturn(row(AllowanceRequestStatus.PENDING));
 
@@ -298,6 +359,8 @@ class AllowanceRequestStatusServiceTest {
                         CHILD_ID
                 ))
                 .thenReturn(1);
+
+        stubSuccessfulTransfer();
 
         when(allowanceRequestMapper.updateAllowanceRequestStatus(
                 org.mockito.ArgumentMatchers.eq(REQUEST_ID),
@@ -323,14 +386,136 @@ class AllowanceRequestStatusServiceTest {
         );
     }
 
+    @Test
+    void rejectsApprovalWithoutTransferAccounts() {
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> allowanceRequestService
+                        .updateAllowanceRequestStatus(
+                                PARENT_ID,
+                                REQUEST_ID,
+                                new UpdateAllowanceRequestStatus(
+                                        "APPROVE",
+                                        null,
+                                        null
+                                )
+                        )
+        );
+
+        assertEquals(
+                ErrorCode.INVALID_ALLOWANCE_ACTION,
+                exception.getErrorCode()
+        );
+        verify(allowanceRequestMapper, never())
+                .findAllowanceRequestDetailForUpdate(any());
+    }
+
+    @Test
+    void rejectsDestinationAccountOwnedByAnotherChild() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
+                REQUEST_ID
+        )).thenReturn(row(AllowanceRequestStatus.PENDING));
+        when(allowanceRequestMapper.countAllowanceRequestParentAccess(
+                PARENT_ID,
+                CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.countAllowanceDestinationAccount(
+                CHILD_ID,
+                DESTINATION_ACCOUNT_ID
+        )).thenReturn(0);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> allowanceRequestService
+                        .updateAllowanceRequestStatus(
+                                PARENT_ID,
+                                REQUEST_ID,
+                                request("APPROVE")
+                        )
+        );
+
+        assertEquals(
+                ErrorCode.INVALID_TRANSFER_REQUEST,
+                exception.getErrorCode()
+        );
+        verify(transferService, never()).createTransfer(
+                any(),
+                any(),
+                any()
+        );
+        verify(allowanceRequestMapper, never())
+                .updateAllowanceRequestStatus(any(), any(), any());
+    }
+
+    @Test
+    void doesNotApproveWhenTransferFails() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
+                REQUEST_ID
+        )).thenReturn(row(AllowanceRequestStatus.PENDING));
+        when(allowanceRequestMapper.countAllowanceRequestParentAccess(
+                PARENT_ID,
+                CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.countAllowanceDestinationAccount(
+                CHILD_ID,
+                DESTINATION_ACCOUNT_ID
+        )).thenReturn(1);
+        doThrow(new BusinessException(
+                ErrorCode.INSUFFICIENT_ACCOUNT_BALANCE
+        )).when(transferService).createTransfer(
+                eq(PARENT_ID),
+                any(String.class),
+                any(CreateTransferRequest.class)
+        );
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> allowanceRequestService
+                        .updateAllowanceRequestStatus(
+                                PARENT_ID,
+                                REQUEST_ID,
+                                request("APPROVE")
+                        )
+        );
+
+        assertEquals(
+                ErrorCode.INSUFFICIENT_ACCOUNT_BALANCE,
+                exception.getErrorCode()
+        );
+        verify(allowanceRequestMapper, never())
+                .updateAllowanceRequestStatus(any(), any(), any());
+    }
+
     private UpdateAllowanceRequestStatus request(String action) {
-        UpdateAllowanceRequestStatus request =
-                new UpdateAllowanceRequestStatus();
+        boolean approve = "APPROVE".equals(action);
+        return new UpdateAllowanceRequestStatus(
+                action,
+                approve ? SOURCE_ACCOUNT_ID : null,
+                approve ? DESTINATION_ACCOUNT_ID : null
+        );
+    }
 
-        org.springframework.test.util.ReflectionTestUtils
-                .setField(request, "action", action);
+    private void stubSuccessfulTransfer() {
+        when(allowanceRequestMapper.countAllowanceDestinationAccount(
+                CHILD_ID,
+                DESTINATION_ACCOUNT_ID
+        )).thenReturn(1);
 
-        return request;
+        TransferCreateResponse transferResponse =
+                mock(TransferCreateResponse.class);
+        when(transferResponse.getFinancialTransferId())
+                .thenReturn(TRANSFER_ID);
+        when(transferService.createTransfer(
+                eq(PARENT_ID),
+                any(String.class),
+                any(CreateTransferRequest.class)
+        )).thenReturn(transferResponse);
+
+        when(allowanceRequestMapper.linkAllowanceTransfer(
+                TRANSFER_ID,
+                REQUEST_ID,
+                PARENT_ID
+        )).thenReturn(1);
     }
 
     private AllowanceRequestDetailRow row(

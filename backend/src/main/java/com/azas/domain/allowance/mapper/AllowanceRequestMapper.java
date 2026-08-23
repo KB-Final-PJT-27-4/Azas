@@ -58,6 +58,10 @@ public interface AllowanceRequestMapper {
             @Param("allowanceRequestId") Long allowanceRequestId
     );
 
+    AllowanceRequestDetailRow findAllowanceRequestDetailForUpdate(
+            @Param("allowanceRequestId") Long allowanceRequestId
+    );
+
     int countAllowanceRequestParentAccess(
             @Param("memberId") Long memberId,
             @Param("childId") Long childId
@@ -72,5 +76,16 @@ public interface AllowanceRequestMapper {
             @Param("allowanceRequestId") Long allowanceRequestId,
             @Param("status") AllowanceRequestStatus status,
             @Param("updatedAt") LocalDateTime updatedAt
+    );
+
+    int countAllowanceDestinationAccount(
+            @Param("childId") Long childId,
+            @Param("accountId") Long accountId
+    );
+
+    int linkAllowanceTransfer(
+            @Param("transferId") Long transferId,
+            @Param("allowanceRequestId") Long allowanceRequestId,
+            @Param("memberId") Long memberId
     );
 }

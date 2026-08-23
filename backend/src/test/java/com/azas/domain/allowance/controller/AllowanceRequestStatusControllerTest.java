@@ -95,7 +95,9 @@ class AllowanceRequestStatusControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "action": "APPROVE"
+                                  "action": "APPROVE",
+                                  "source_account_id": 101,
+                                  "destination_account_id": 202
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -145,7 +147,9 @@ class AllowanceRequestStatusControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "action": "APPROVE"
+                                  "action": "APPROVE",
+                                  "source_account_id": 101,
+                                  "destination_account_id": 202
                                 }
                                 """))
                 .andExpect(status().isConflict())
@@ -181,7 +185,9 @@ class AllowanceRequestStatusControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "action": "APPROVE"
+                                  "action": "APPROVE",
+                                  "source_account_id": 101,
+                                  "destination_account_id": 202
                                 }
                                 """))
                 .andExpect(status().isForbidden())
