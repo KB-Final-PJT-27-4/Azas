@@ -1,33 +1,46 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AccountConnectionMethod from '@/components/accounts/AccountConnectionMethod.vue'
+import AccountImportEmptyGuide from '@/components/accounts/AccountImportEmptyGuide.vue'
 import AccountImportSelection from '@/components/accounts/AccountImportSelection.vue'
 import AccountRegistrationComplete from '@/components/accounts/AccountRegistrationComplete.vue'
 import AccountRegistrationForm from '@/components/accounts/AccountRegistrationForm.vue'
 import AccountRegistrationConfirmation from '@/components/accounts/AccountRegistrationConfirmation.vue'
 import BankSelectionSheet from '@/components/accounts/BankSelectionSheet.vue'
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const route = useRoute()
 const { showToast } = useToast()
 const currentChildId = ref<number | null>(null)
+const accountOwnerType = ref<'PARENT' | 'CHILD'>('CHILD')
 const isBankSelectorOpen = ref(false)
-const registrationStep = ref<'method' | 'import' | 'empty' | 'form' | 'confirmation' | 'complete'>('method')
+const registrationStep = ref<
+  'method' | 'import' | 'import-empty' | 'empty' | 'form' | 'confirmation' | 'complete'
+>('method')
 const selectedBank = ref('')
 const accountNumber = ref('')
 const accountAlias = ref('')
 const slideDirection = ref<'forward' | 'backward'>('forward')
-const importedAccounts = ref<{ id: number; bank: string; number: string; balance: number }[]>([])
+const importedAccounts = ref<
+  {
+    id: number
+    bank: string
+    number: string
+    balance: number
+    productType: string
+    accountName?: string
+  }[]
+>([])
 const registeredAccounts = ref<
   { bank: string; accountNumber: string; accountName: string; balance: number }[]
 >([])
 
 const startAccountImport = () => {
   slideDirection.value = 'forward'
-  registrationStep.value = 'import'
+  registrationStep.value = importedAccounts.value.length > 0 ? 'import' : 'import-empty'
 }
 
 const showAccountOpeningGuide = () => {
@@ -38,16 +51,24 @@ const showAccountOpeningGuide = () => {
 const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[number][]) => {
   const [primaryAccount] = accounts
   if (!primaryAccount) return
+  if (
+    accountOwnerType.value === 'PARENT' &&
+    !accounts.some(({ productType }) => productType === 'DEMAND_DEPOSIT')
+  ) {
+    showToast('자녀 계좌보다 먼저 부모 입출금계좌를 연결해 주세요.', 'error')
+    return
+  }
   try {
     const { data } = await api.linkUsingPOST(undefined, {
       account_ids: accounts.map(({ id }) => id),
-      child_id: currentChildId.value ?? undefined,
-      owner_type: 'CHILD',
+      child_id: accountOwnerType.value === 'CHILD' ? currentChildId.value ?? undefined : undefined,
+      owner_type: accountOwnerType.value,
     })
     registeredAccounts.value = (data.accounts ?? []).map((account, index) => ({
       bank: account.bank_name ?? accounts[index]?.bank ?? '',
-      accountNumber: accounts[index]?.number ?? '',
-      accountName: account.account_name ?? `${account.bank_name ?? '연결'} 계좌`,
+      accountNumber: account.account_number ?? accounts[index]?.number ?? '',
+      accountName:
+        account.account_name ?? accounts[index]?.accountName ?? `${account.bank_name ?? '연결'} 계좌`,
       balance: account.balance ?? 0,
     }))
     slideDirection.value = 'forward'
@@ -57,21 +78,18 @@ const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[
   }
 }
 
-const createKbAccount = async () => {
+const createKbAccount = async (product: { id: number; name: string; bankName: string }) => {
   try {
-    const products = await api.getProductsUsingGET(undefined, undefined, 'SAVINGS', 1)
-    const product = (products.data.items?.[0] ?? {}) as unknown as { financial_product_id?: number }
-    if (!product.financial_product_id) throw new Error('개설 가능한 상품을 찾을 수 없어요.')
     const { data } = await api.openUsingPOST(undefined, {
-      child_id: currentChildId.value ?? undefined,
-      financial_product_id: product.financial_product_id,
+      child_id: accountOwnerType.value === 'CHILD' ? currentChildId.value ?? undefined : undefined,
+      financial_product_id: product.id,
       initial_deposit_amount: 0,
-      owner_type: 'CHILD',
+      owner_type: accountOwnerType.value,
     })
     registeredAccounts.value = [{
-      bank: data.bank_name ?? 'KB국민은행',
+      bank: data.bank_name ?? product.bankName,
       accountNumber: data.account_number ?? '',
-      accountName: data.account_name ?? '자녀 계좌',
+      accountName: product.name,
       balance: data.balance ?? 0,
     }]
     slideDirection.value = 'forward'
@@ -110,21 +128,35 @@ const completeRegistration = async () => {
 
 const loadDiscoveredAccounts = async () => {
   try {
-    currentChildId.value = await resolveCurrentChildId()
+    accountOwnerType.value = 'PARENT'
+    currentChildId.value = null
     const { data } = await api.getDiscoveredAccountsUsingGET(
-      'CHILD',
+      'PARENT',
       undefined,
-      currentChildId.value,
+      undefined,
     )
     importedAccounts.value = data.accounts.map((account) => ({
       id: account.account_id,
       bank: account.bank_name,
       number: account.account_number,
       balance: account.balance,
+      productType: account.account_product_type,
+      accountName:
+        account.account_product_type === 'SAVINGS'
+          ? `${account.bank_name.replace(/은행$/, '')} 적금`
+          : `${account.bank_name.replace(/은행$/, '')} 입출금통장`,
     }))
   } catch (error) {
     showToast(getApiErrorMessage(error, '연결 가능한 계좌를 불러오지 못했어요.'), 'error')
   }
+}
+
+const leaveRegistration = () => {
+  const next =
+    typeof route.query.next === 'string' && route.query.next.startsWith('/')
+      ? route.query.next
+      : '/home'
+  void router.push(next)
 }
 
 onMounted(loadDiscoveredAccounts)
@@ -153,16 +185,24 @@ onMounted(loadDiscoveredAccounts)
         <AccountImportSelection
           v-else-if="registrationStep === 'import'"
           :accounts="importedAccounts"
+          :owner-type="accountOwnerType"
           @connect="connectImportedAccount"
           @create-account="createKbAccount"
-          @later="router.push('/home')"
+          @later="leaveRegistration"
+        />
+
+        <AccountImportEmptyGuide
+          v-else-if="registrationStep === 'import-empty'"
+          @create="showAccountOpeningGuide"
+          @later="leaveRegistration"
         />
 
         <AccountImportSelection
           v-else-if="registrationStep === 'empty'"
           :accounts="[]"
+          :owner-type="accountOwnerType"
           @create-account="createKbAccount"
-          @later="router.push('/home')"
+          @later="leaveRegistration"
         />
 
         <AccountRegistrationConfirmation
@@ -177,7 +217,7 @@ onMounted(loadDiscoveredAccounts)
         <AccountRegistrationComplete
           v-else
           :accounts="registeredAccounts"
-          @home="router.push('/home')"
+          @home="leaveRegistration"
         />
       </div>
     </Transition>

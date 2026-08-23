@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
-import { ChevronDown } from 'lucide-vue-next'
+import { ChevronDown, EllipsisVertical, Trash2, X } from 'lucide-vue-next'
 import capsulePigImage from '@/assets/images/timeCapsules/archive/list-capsule-pig.png'
 import { api, getApiErrorMessage } from '@/api'
 import { useToast } from '@/composables/useToast'
@@ -15,9 +15,22 @@ const today = new Date()
 const currentYear = today.getFullYear()
 const currentMonth = today.getMonth() + 1
 const selectedYear = ref(currentYear)
+const isCapsuleReleased = ref(false)
+
+type TimeCapsuleRecord = {
+  id: number
+  title: string
+  date: string
+  amount: number
+  thumbnail: string
+  photos: Array<{ src: string; orientation: 'portrait'; type: 'image' }>
+}
 
 const accountId = computed(() => String(route.params.capsuleListId ?? '1'))
-const account = ref({ name: '타임캡슐', description: '아이의 성장 순간과 금융 기록을 모아보세요.', totalSavedAmount: 0, records: [] as Array<{ id: number; title: string; date: string; amount: number; thumbnail: string; photos: Array<{ src: string; orientation: 'portrait'; type: 'image' }> }> })
+const account = ref({ name: '타임캡슐', description: '아이의 성장 순간과 금융 기록을 모아보세요.', totalSavedAmount: 0, records: [] as TimeCapsuleRecord[] })
+const recordToDelete = ref<TimeCapsuleRecord | null>(null)
+const isDeletingRecord = ref(false)
+const openRecordMenuId = ref<number | null>(null)
 const listRecords = computed(() =>
   [...account.value.records].sort((a, b) => b.date.localeCompare(a.date)),
 )
@@ -56,6 +69,10 @@ onMounted(async () => {
         photos: entry.thumbnail_url ? [{ src: entry.thumbnail_url, orientation: 'portrait', type: 'image' }] : [],
       })),
     }
+    const releaseDate = data.time_capsule?.release_date
+    isCapsuleReleased.value = data.time_capsule?.d_day !== undefined
+      ? data.time_capsule.d_day <= 0
+      : Boolean(releaseDate && releaseDate <= today.toISOString().slice(0, 10))
   } catch (error) {
     showToast(getApiErrorMessage(error, '타임캡슐 기록을 불러오지 못했습니다.'), 'error')
   }
@@ -83,8 +100,13 @@ const navigateForward = async (to: RouteLocationRaw) => {
   }
 }
 
-const openRecord = (recordId: number) =>
-  navigateForward(`/time-capsules/${accountId.value}/${recordId}`)
+const openRecord = (recordId: number) => {
+  if (!isCapsuleReleased.value) {
+    showToast('타임캡슐 기록은 공개일 이후에 확인할 수 있어요.', 'error')
+    return
+  }
+  return navigateForward(`/time-capsules/${accountId.value}/${recordId}`)
+}
 
 const createFirstRecord = () =>
   navigateForward({
@@ -94,6 +116,40 @@ const createFirstRecord = () =>
       ...(typeof route.query.openDate === 'string' ? { openDate: route.query.openDate } : {}),
     },
   })
+
+const requestRecordDeletion = (record: TimeCapsuleRecord) => {
+  openRecordMenuId.value = null
+  recordToDelete.value = record
+}
+
+const closeRecordMenuOnFocusOut = (event: FocusEvent) => {
+  const menu = event.currentTarget as HTMLElement
+  if (event.relatedTarget instanceof Node && menu.contains(event.relatedTarget)) return
+  openRecordMenuId.value = null
+}
+
+const closeDeleteSheet = () => {
+  if (isDeletingRecord.value) return
+  recordToDelete.value = null
+}
+
+const deleteRecord = async () => {
+  const record = recordToDelete.value
+  if (!record || isDeletingRecord.value) return
+
+  isDeletingRecord.value = true
+  try {
+    await api.deleteTimeCapsuleEntryUsingDELETE(record.id)
+    account.value.records = account.value.records.filter(({ id }) => id !== record.id)
+    account.value.totalSavedAmount = Math.max(0, account.value.totalSavedAmount - record.amount)
+    recordToDelete.value = null
+    showToast('타임캡슐 기록을 삭제했습니다.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐 기록을 삭제하지 못했습니다.'), 'error')
+  } finally {
+    isDeletingRecord.value = false
+  }
+}
 
 const scrollToMonth = async (month: number) => {
   await nextTick()
@@ -197,23 +253,66 @@ const changeYear = () => {
           {{ account.totalSavedAmount.toLocaleString('ko-KR') }}원
         </strong>
       </button>
-      <button
+      <article
         v-for="record in listRecords"
         :key="record.id"
-        class="flex min-h-16 w-full items-center rounded-xl border border-[var(--color-border)] bg-white px-4 text-left active:bg-[var(--color-unselected-background)]"
-        type="button"
-        @click="openRecord(record.id)"
+        class="relative flex min-h-16 w-full items-center rounded-xl border border-[var(--color-border)] bg-white px-3 shadow-[0_4px_14px_rgb(55_96_118_/_4%)]"
       >
-        <span class="min-w-0 flex-1">
-          <strong class="block truncate text-sm">{{ record.title }}</strong>
-          <time class="mt-1 block text-xs text-[var(--color-text-secondary)]">{{
-            formatDate(record.date)
-          }}</time>
-        </span>
-        <strong class="ml-3 shrink-0 text-sm text-[var(--color-selected-text)]">
-          {{ record.amount.toLocaleString('ko-KR') }}원
-        </strong>
-      </button>
+        <button
+          class="flex min-h-16 min-w-0 flex-1 items-center text-left active:bg-[var(--color-unselected-background)]"
+          type="button"
+          @click="openRecord(record.id)"
+        >
+          <span class="min-w-0 flex-1">
+            <strong class="block truncate text-sm">{{ record.title }}</strong>
+            <time class="mt-1 block text-xs text-[var(--color-text-secondary)]">{{
+              formatDate(record.date)
+            }}</time>
+          </span>
+          <strong class="ml-3 shrink-0 text-sm text-[var(--color-selected-text)]">
+            {{ record.amount.toLocaleString('ko-KR') }}원
+          </strong>
+        </button>
+        <div
+          v-if="!isCapsuleReleased"
+          class="relative shrink-0"
+          @focusout="closeRecordMenuOnFocusOut"
+        >
+          <button
+            class="grid size-7 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-black/5"
+            type="button"
+            :aria-label="`${record.title} 관리 메뉴`"
+            :aria-expanded="openRecordMenuId === record.id"
+            aria-haspopup="menu"
+            @click="openRecordMenuId = openRecordMenuId === record.id ? null : record.id"
+          >
+            <EllipsisVertical :size="18" :stroke-width="2.3" aria-hidden="true" />
+          </button>
+
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="-translate-y-1 opacity-0"
+            leave-active-class="transition duration-100 ease-in"
+            leave-to-class="-translate-y-1 opacity-0"
+          >
+            <div
+              v-if="openRecordMenuId === record.id"
+              class="absolute top-[calc(100%+4px)] right-0 z-20 w-[128px] overflow-hidden rounded-[12px] border border-[#dce8ee] bg-white p-1.5 shadow-[0_10px_28px_rgba(45,77,94,0.16)]"
+              role="menu"
+            >
+              <button
+                class="flex h-10 w-full items-center gap-2 rounded-[8px] px-2.5 text-left text-[12px] font-bold text-[#ef4f5f] active:bg-[#fff1f3]"
+                type="button"
+                role="menuitem"
+                @click="requestRecordDeletion(record)"
+              >
+                <Trash2 :size="15" :stroke-width="2.1" aria-hidden="true" />
+                기록 삭제
+              </button>
+            </div>
+          </Transition>
+        </div>
+      </article>
 
       <div
         v-if="listRecords.length === 0"
@@ -306,6 +405,71 @@ const changeYear = () => {
         </article>
       </div>
     </section>
+
+    <Teleport to="body">
+      <Transition name="delete-sheet">
+        <div
+          v-if="recordToDelete"
+          class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/35"
+          role="presentation"
+          @click.self="closeDeleteSheet"
+        >
+          <section
+            class="max-h-[calc(100dvh-16px)] w-full max-w-[var(--app-max-width)] overflow-y-auto overscroll-contain rounded-t-[28px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-[0_-14px_38px_rgb(0_0_0_/_14%)]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-record-title"
+          >
+            <span class="mx-auto block h-1 w-10 rounded-full bg-[#d8e0e4]" aria-hidden="true"></span>
+            <header class="mt-3 flex items-center justify-between">
+              <div>
+                <p class="text-xs font-bold text-[#e95762]">기록 삭제</p>
+                <h2 id="delete-record-title" class="mt-1 text-xl font-extrabold">
+                  이 기록을 삭제할까요?
+                </h2>
+              </div>
+              <button
+                class="grid size-9 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f6]"
+                type="button"
+                aria-label="삭제 창 닫기"
+                @click="closeDeleteSheet"
+              >
+                <X :size="20" aria-hidden="true" />
+              </button>
+            </header>
+
+            <div class="mt-5 rounded-2xl bg-[#f6f8f9] px-4 py-4">
+              <strong class="block truncate text-sm">{{ recordToDelete.title }}</strong>
+              <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">
+                {{ formatDate(recordToDelete.date) }} · {{ recordToDelete.amount.toLocaleString('ko-KR') }}원
+              </span>
+            </div>
+            <p class="mt-3 text-xs leading-5 text-[var(--color-text-secondary)]">
+              사진과 편지를 포함한 기록이 영구 삭제되며 다시 복구할 수 없어요.
+            </p>
+
+            <div class="mt-5 grid grid-cols-2 gap-3">
+              <button
+                class="h-[52px] rounded-xl border border-[var(--color-border)] bg-white text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f5f7f8]"
+                type="button"
+                :disabled="isDeletingRecord"
+                @click="closeDeleteSheet"
+              >
+                취소
+              </button>
+              <button
+                class="h-[52px] rounded-xl bg-[#e95762] text-sm font-bold text-white active:bg-[#d84854] disabled:opacity-50"
+                type="button"
+                :disabled="isDeletingRecord"
+                @click="deleteRecord"
+              >
+                {{ isDeletingRecord ? '삭제 중...' : '삭제하기' }}
+              </button>
+            </div>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
   </main>
 </template>
 
@@ -316,6 +480,26 @@ const changeYear = () => {
   transition:
     transform 150ms cubic-bezier(0.25, 0.8, 0.25, 1),
     opacity 120ms ease-out;
+}
+
+.delete-sheet-enter-active,
+.delete-sheet-leave-active {
+  transition: background-color 180ms ease;
+}
+
+.delete-sheet-enter-active > section,
+.delete-sheet-leave-active > section {
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.delete-sheet-enter-from,
+.delete-sheet-leave-to {
+  background-color: transparent;
+}
+
+.delete-sheet-enter-from > section,
+.delete-sheet-leave-to > section {
+  transform: translateY(100%);
 }
 
 @media (prefers-reduced-motion: reduce) {

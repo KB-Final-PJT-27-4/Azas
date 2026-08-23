@@ -11,7 +11,7 @@ Name | Type | Description | Notes
 **financial_goal_template_id** | **number** |  | [optional] [default to undefined]
 **icon_key** | **string** |  | [optional] [default to undefined]
 **linked_account_count** | **number** |  | [optional] [default to undefined]
-**linked_accounts** | [**Array&lt;LinkedAccountResponse&gt;**](LinkedAccountResponse.md) |  | [optional] [default to undefined]
+**linked_accounts** | [**Array&lt;FinancialGoalListLinkedAccountResponse&gt;**](FinancialGoalListLinkedAccountResponse.md) |  | [optional] [default to undefined]
 **remaining_amount** | **number** |  | [optional] [default to undefined]
 **status** | **string** |  | [optional] [default to undefined]
 **target_amount** | **number** |  | [optional] [default to undefined]

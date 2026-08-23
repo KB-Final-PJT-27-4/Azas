@@ -6,7 +6,6 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **expires_in_hours** | **number** |  | [optional] [default to undefined]
-**invitee_type** | **string** |  | [optional] [default to undefined]
 
 ## Example
 
@@ -15,7 +14,6 @@ import { FamilyInvitationCreateRequest } from './api';
 
 const instance: FamilyInvitationCreateRequest = {
     expires_in_hours,
-    invitee_type,
 };
 ```
 

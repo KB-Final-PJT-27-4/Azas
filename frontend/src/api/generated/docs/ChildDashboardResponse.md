@@ -7,9 +7,9 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **activity_summary** | [**ActivitySummary**](ActivitySummary.md) |  | [optional] [default to undefined]
-**child** | [**ChildInfo**](ChildInfo.md) |  | [optional] [default to undefined]
+**child** | [**ChildDashboardChildInfoResponse**](ChildDashboardChildInfoResponse.md) |  | [optional] [default to undefined]
 **mission_summary** | [**MissionSummary**](MissionSummary.md) |  | [optional] [default to undefined]
-**notification_summary** | [**NotificationSummary**](NotificationSummary.md) |  | [optional] [default to undefined]
+**notification_summary** | [**ChildDashboardNotificationSummaryResponse**](ChildDashboardNotificationSummaryResponse.md) |  | [optional] [default to undefined]
 **spending_summary** | [**SpendingSummary**](SpendingSummary.md) |  | [optional] [default to undefined]
 
 ## Example

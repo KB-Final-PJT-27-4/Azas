@@ -45,6 +45,7 @@ const checklistTotalCount = ref(0)
 const checklistProgress = ref(0)
 const nearestTimeCapsuleDay = ref<number | null>(null)
 const errorMessage = ref('')
+const isLoading = ref(true)
 const isGuideOpen = ref(false)
 const guideStepIndex = ref(0)
 const guideTargetRect = ref({ top: 0, left: 0, width: 0, height: 0 })
@@ -56,6 +57,7 @@ let goalCarouselTimer: ReturnType<typeof window.setInterval> | null = null
 let guidePositionFrame: number | null = null
 let previousBodyOverflow = ''
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+
 
 const guideSteps = computed<HomeGuideStep[]>(() => [
   {
@@ -238,18 +240,21 @@ const restartGoalCarousel = () => {
 }
 
 const loadHome = async () => {
+  isLoading.value = true
   try {
     errorMessage.value = ''
     const childId = await resolveCurrentChildId()
     const authorization = requireAuthorizationHeader()
-    const [childResponse, dashboardResponse, goalsResponse, checklistResponse] = await Promise.all([
-      api.getChildUsingGET(childId),
+    const childResponse = await api.getChildUsingGET(childId, authorization).catch(() => null)
+    childName.value = childResponse?.data.name?.trim() || childName.value
+
+    const [dashboardResponse, goalsResponse, checklistResponse] = await Promise.all([
       api.getDashboardUsingGET1(authorization, childId),
-      api.getGoalsUsingGET(childId),
+      api.getGoalsUsingGET(childId, authorization),
       api.getChecklistItemsUsingGET(authorization, childId),
     ])
     const dashboard = dashboardResponse.data
-    childName.value = childResponse.data.name?.trim() || dashboard.child?.name?.trim() || '우리 아이'
+    childName.value = childResponse?.data.name?.trim() || dashboard.child?.name?.trim() || '우리 아이'
     currentAssetAmount.value = dashboard.asset_summary?.total_asset_amount ?? 0
     currentAssetChangeAmount.value = dashboard.asset_summary?.total_asset_change_amount ?? 0
     nearestTimeCapsuleDay.value = dashboard.quick_summary?.nearest_time_capsule?.dday ?? null
@@ -283,6 +288,8 @@ const loadHome = async () => {
     startGoalCarousel()
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error, '홈 정보를 불러오지 못했어요.')
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -317,6 +324,70 @@ onBeforeUnmount(() => {
   <main
     class="home-shell min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height))] px-[18px] pt-4 pb-7 text-[var(--color-text-primary)]"
   >
+    <template v-if="isLoading">
+      <section class="home-hero" aria-label="홈 정보 불러오는 중" aria-busy="true">
+        <div class="home-hero-copy gap-2.5">
+          <span class="home-skeleton block h-3 w-28 rounded-full"></span>
+          <span class="home-skeleton block h-5 w-36 rounded-full"></span>
+          <span class="home-skeleton block h-5 w-24 rounded-full"></span>
+        </div>
+        <div class="absolute right-2 bottom-1 size-[112px] rounded-full bg-white/35 p-3">
+          <span class="home-skeleton block size-full rounded-full"></span>
+        </div>
+      </section>
+
+      <section class="overflow-hidden rounded-[20px] border border-[#dbe8ef] bg-white/80">
+        <div class="min-h-[138px] px-5 py-4">
+          <span class="home-skeleton block h-3 w-12 rounded-full"></span>
+          <span class="home-skeleton mt-3 block h-7 w-36 rounded-lg"></span>
+          <span class="home-skeleton mt-3 block h-3 w-28 rounded-full"></span>
+          <div class="mt-3 flex justify-end gap-2">
+            <span class="home-skeleton block h-12 w-5 rounded-t-md"></span>
+            <span class="home-skeleton block h-16 w-5 rounded-t-md"></span>
+            <span class="home-skeleton block h-20 w-5 rounded-t-md"></span>
+          </div>
+        </div>
+        <div class="flex min-h-[92px] items-center gap-3 border-t border-[#e4edf2] px-5 py-3.5">
+          <span class="home-skeleton block size-10 shrink-0 rounded-full"></span>
+          <span class="min-w-0 flex-1">
+            <span class="home-skeleton block h-4 w-28 rounded-full"></span>
+            <span class="home-skeleton mt-2 block h-3 w-40 max-w-full rounded-full"></span>
+            <span class="home-skeleton mt-3 block h-1.5 w-full rounded-full"></span>
+          </span>
+        </div>
+      </section>
+
+      <section class="home-quick-grid" aria-label="빠른 메뉴 불러오는 중">
+        <div
+          v-for="index in 3"
+          :key="index"
+          class="grid min-h-[132px] place-items-center content-center rounded-[17px] border border-[#dfe9ef] bg-white px-3"
+        >
+          <span class="home-skeleton block size-9 rounded-xl"></span>
+          <span class="home-skeleton mt-3 block h-3.5 w-16 rounded-full"></span>
+          <span class="home-skeleton mt-2 block h-2.5 w-12 rounded-full"></span>
+        </div>
+      </section>
+
+      <section class="mt-4 overflow-hidden rounded-[20px] border border-[#dce8ee] bg-white">
+        <div class="px-5 pt-5 pb-4">
+          <span class="home-skeleton block h-3 w-24 rounded-full"></span>
+          <div class="mt-3 flex items-center justify-between">
+            <span class="home-skeleton block h-6 w-28 rounded-md"></span>
+            <span class="home-skeleton block h-7 w-12 rounded-full"></span>
+          </div>
+          <span class="home-skeleton mt-4 block h-2 w-full rounded-full"></span>
+        </div>
+        <div class="border-t border-[#e7eef2] px-5 py-2">
+          <div v-for="index in 3" :key="index" class="flex min-h-14 items-center gap-3 border-b border-[#edf2f5] last:border-0">
+            <span class="home-skeleton block size-4.5 shrink-0 rounded-full"></span>
+            <span class="home-skeleton block h-3.5 rounded-full" :class="index === 2 ? 'w-32' : 'w-44'"></span>
+          </div>
+        </div>
+      </section>
+    </template>
+
+    <template v-else>
     <section class="home-hero" aria-labelledby="home-title">
       <div class="home-hero-copy">
         <p class="m-0 text-[12px] font-medium text-[var(--color-text-secondary)]">
@@ -571,6 +642,7 @@ onBeforeUnmount(() => {
         </RouterLink>
       </div>
     </section>
+    </template>
   </main>
 
   <Teleport to="body">
@@ -696,6 +768,33 @@ onBeforeUnmount(() => {
 
 .home-shell {
   background: linear-gradient(180deg, #eef9ff 0%, #f6fbfe 58%, #eef9ff 100%);
+}
+
+.home-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e6eef2;
+}
+
+.home-skeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 72%), transparent);
+  content: '';
+  transform: translateX(-100%);
+  animation: home-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes home-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-skeleton::after {
+    animation: none;
+  }
 }
 
 .home-hero {

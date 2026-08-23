@@ -5,7 +5,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**child_count** | **number** |  | [optional] [default to undefined]
 **child_name** | **string** |  | [optional] [default to undefined]
+**children** | [**Array&lt;FamilyInvitationChildResponse&gt;**](FamilyInvitationChildResponse.md) |  | [optional] [default to undefined]
 **expires_at** | **string** |  | [optional] [default to undefined]
 **invitee_type** | **string** |  | [optional] [default to undefined]
 **inviter_name** | **string** |  | [optional] [default to undefined]
@@ -17,7 +19,9 @@ Name | Type | Description | Notes
 import { FamilyInvitationInfoResponse } from './api';
 
 const instance: FamilyInvitationInfoResponse = {
+    child_count,
     child_name,
+    children,
     expires_at,
     invitee_type,
     inviter_name,

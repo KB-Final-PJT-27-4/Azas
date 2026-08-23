@@ -16,14 +16,5 @@
 
 export interface FamilyInvitationCreateRequest {
     'expires_in_hours'?: number;
-    'invitee_type'?: FamilyInvitationCreateRequestInviteeTypeEnum;
 }
-
-export const FamilyInvitationCreateRequestInviteeTypeEnum = {
-    Child: 'CHILD',
-    Parent: 'PARENT',
-} as const;
-
-export type FamilyInvitationCreateRequestInviteeTypeEnum = typeof FamilyInvitationCreateRequestInviteeTypeEnum[keyof typeof FamilyInvitationCreateRequestInviteeTypeEnum];
-
 

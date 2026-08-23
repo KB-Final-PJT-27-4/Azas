@@ -19,6 +19,13 @@ export const getChildren = async (): Promise<ChildSummaryResponse[]> => {
   return data.items ?? []
 }
 
+export const hasParentDemandDepositAccount = async () => {
+  const { data } = await api.getMyAccountsUsingGET()
+  return data.accounts.some(
+    ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
+  )
+}
+
 export const resolveCurrentChildId = async () => {
   const storedChildId = getStoredCurrentChildId()
   if (storedChildId) return storedChildId

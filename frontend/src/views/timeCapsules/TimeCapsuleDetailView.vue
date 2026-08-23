@@ -92,12 +92,12 @@ onMounted(async () => {
     const { data } = await api.getTimeCapsuleEntryUsingGET(Number(recordId.value))
     record.value = {
       title: data.title ?? '타임캡슐',
-      date: data.contributed_at?.slice(0, 10) ?? data.created_at?.slice(0, 10) ?? '',
+      date: data.contributed_at?.slice(0, 10) ?? '',
       amount: data.contribution_amount ?? 0,
       letter: data.message ?? '',
-      photos: data.media?.download_url ? [{
-        src: data.media.download_url,
-        type: data.media.media_type === 'VIDEO' ? 'video' : 'image',
+      photos: data.image?.url ? [{
+        src: data.image.url,
+        type: 'image',
         orientation: 'portrait',
       }] : [],
     }

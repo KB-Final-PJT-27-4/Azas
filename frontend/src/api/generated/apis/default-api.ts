@@ -40,11 +40,11 @@ import type { AccountTransactionDetailResponse } from '../models';
 // @ts-ignore
 import type { AccountTransactionListResponse } from '../models';
 // @ts-ignore
+import type { AllowancePlanRequestResponse } from '../models';
+// @ts-ignore
 import type { AllowanceRequestDetailResponse } from '../models';
 // @ts-ignore
 import type { AllowanceRequestListResponse } from '../models';
-// @ts-ignore
-import type { AllowanceRequestResponse } from '../models';
 // @ts-ignore
 import type { AssetReportDetailResponse } from '../models';
 // @ts-ignore
@@ -75,6 +75,10 @@ import type { ChildAvailableAmountResponse } from '../models';
 import type { ChildCreateRequest } from '../models';
 // @ts-ignore
 import type { ChildDashboardResponse } from '../models';
+// @ts-ignore
+import type { ChildFeaturePermissionRequest } from '../models';
+// @ts-ignore
+import type { ChildFeaturePermissionResponse } from '../models';
 // @ts-ignore
 import type { ChildInviteOAuthRequest } from '../models';
 // @ts-ignore
@@ -127,6 +131,8 @@ import type { FamilyInvitationCreateRequest } from '../models';
 import type { FamilyInvitationCreateResponse } from '../models';
 // @ts-ignore
 import type { FamilyInvitationInfoResponse } from '../models';
+// @ts-ignore
+import type { FinancialGoalAmountRecommendationResponse } from '../models';
 // @ts-ignore
 import type { FinancialGoalCreateRequest } from '../models';
 // @ts-ignore
@@ -196,6 +202,10 @@ import type { PhoneVerificationSendResponse } from '../models';
 // @ts-ignore
 import type { PregnancyStatusResponse } from '../models';
 // @ts-ignore
+import type { PushDeviceResponse } from '../models';
+// @ts-ignore
+import type { RegisterPushDeviceRequest } from '../models';
+// @ts-ignore
 import type { TimeCapsuleEntryDetailResponse } from '../models';
 // @ts-ignore
 import type { TimeCapsuleEntryListResponse } from '../models';
@@ -225,6 +235,10 @@ import type { UpdateAutoTransferScheduleRequest } from '../models';
 import type { UpdateMissionStatusRequest } from '../models';
 // @ts-ignore
 import type { UpdateNotificationPreferencesRequest } from '../models';
+// @ts-ignore
+import type { UpdateTimeCapsuleReleaseDateRequest } from '../models';
+// @ts-ignore
+import type { UpdateTimeCapsuleReleaseDateResponse } from '../models';
 /**
  * DefaultApi - axios parameter creator
  */
@@ -434,6 +448,47 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
+         * 
+         * @summary 자녀 계정 연결 초대코드 발급
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {FamilyInvitationCreateRequest} [request] request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createChildFamilyInvitationUsingPOST: async (childId: number, authorization?: string, request?: FamilyInvitationCreateRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('createChildFamilyInvitationUsingPOST', 'childId', childId)
+            const localVarPath = `/api/v1/children/{child_id}/family-invitations`
+                .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 부모가 자녀 프로필을 등록합니다.
          * @summary 자녀 프로필 등록
          * @param {ChildCreateRequest} request request
@@ -473,50 +528,7 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
-         * 
-         * @summary 가족/아이 초대코드 발급
-         * @param {number} childId child_id
-         * @param {FamilyInvitationCreateRequest} request request
-         * @param {string} [authorization] Authorization
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        createFamilyInvitationUsingPOST: async (childId: number, request: FamilyInvitationCreateRequest, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'childId' is not null or undefined
-            assertParamExists('createFamilyInvitationUsingPOST', 'childId', childId)
-            // verify required parameter 'request' is not null or undefined
-            assertParamExists('createFamilyInvitationUsingPOST', 'request', request)
-            const localVarPath = `/api/v1/children/{child_id}/family-invitations`
-                .replace('{child_id}', encodeURIComponent(String(childId)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-            localVarHeaderParameter['Accept'] = '*/*';
-
-            if (authorization != null) {
-                localVarHeaderParameter['Authorization'] = String(authorization);
-            }
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * 부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+         * 부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
          * @summary GOAL-2 자녀 금융 목표 생성
          * @param {number} childId child_id
          * @param {FinancialGoalCreateRequest} request request
@@ -617,6 +629,43 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             assertParamExists('createMissionUsingPOST', 'request', request)
             const localVarPath = `/api/v1/children/{child_id}/missions`
                 .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 보호자 초대코드 발급
+         * @param {string} [authorization] Authorization
+         * @param {FamilyInvitationCreateRequest} [request] request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createParentFamilyInvitationUsingPOST: async (authorization?: string, request?: FamilyInvitationCreateRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/v1/family-invitations`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -893,8 +942,8 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
-         * 작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다.
-         * @summary TC-13 타임캡슐 엔트리 삭제
+         * 작성자 본인의 공개 전 DRAFT 또는 SEALED 엔트리를 삭제합니다. DB 엔트리와 미디어는 삭제 상태로 변경하고 S3 원본 객체를 제거합니다.
+         * @summary TIMECAPSULE-13 타임캡슐 엔트리 삭제
          * @param {number} entryId 타임캡슐 엔트리 ID
          * @param {string} [authorization] Authorization
          * @param {*} [options] Override http request option.
@@ -1139,6 +1188,44 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
+         * 선택한 기본 금융 목표에 대해 공공 통계를 참고하여 서비스가 구성한 4단계 추천 금액과 산정 근거를 조회합니다.
+         * @summary GOAL-2 목표 금액 추천 조회
+         * @param {number} financialGoalTemplateId financial_goal_template_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAmountRecommendationsUsingGET: async (financialGoalTemplateId: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'financialGoalTemplateId' is not null or undefined
+            assertParamExists('getAmountRecommendationsUsingGET', 'financialGoalTemplateId', financialGoalTemplateId)
+            const localVarPath = `/api/v1/financial-goal-templates/{financial_goal_template_id}/amount-recommendations`
+                .replace('{financial_goal_template_id}', encodeURIComponent(String(financialGoalTemplateId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
          * @summary 월간 자산 리포트 상세 조회
          * @param {number} childId child_id
@@ -1338,7 +1425,7 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
          * @summary 생애주기 체크리스트 조회
          * @param {string} authorization Authorization
          * @param {number} childId 자녀 프로필 ID
-         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7
+         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7, AGE_8_TO_10, AGE_11_TO_13, AGE_14_TO_16, AGE_17_TO_19
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -2274,6 +2361,44 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
+         * 
+         * @summary 자녀 이용 권한 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getPermissionUsingGET: async (childId: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('getPermissionUsingGET', 'childId', childId)
+            const localVarPath = `/api/v1/children/{child_id}/feature-permissions`
+                .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 출산 예정일과 현재 날짜를 기준으로 임신 주차와 캐릭터를 조회합니다.
          * @summary 임신 주차 및 캐릭터 조회
          * @param {number} childId child_id
@@ -2613,8 +2738,8 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
-         * 부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다.
-         * @summary TC-14 타임캡슐 엔트리 상세 조회
+         * 공개일이 도래한 타임캡슐의 봉인된 엔트리를 연결된 보호자 또는 자녀 본인이 조회합니다. 편지, 기여 정보, 엔트리 순번과 화면 표시용 단일 이미지 임시 조회 URL을 반환합니다.
+         * @summary TIMECAPSULE-14 공개된 타임캡슐 엔트리 상세 조회
          * @param {number} entryId 타임캡슐 엔트리 ID
          * @param {string} [authorization] Authorization
          * @param {*} [options] Override http request option.
@@ -3217,6 +3342,45 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             };
         },
         /**
+         * 동일한 device_key가 이미 있으면 FCM 토큰과 기기 정보를 갱신합니다.
+         * @summary 푸시 기기 등록 또는 토큰 갱신
+         * @param {RegisterPushDeviceRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        registerUsingPOST: async (request: RegisterPushDeviceRequest, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'request' is not null or undefined
+            assertParamExists('registerUsingPOST', 'request', request)
+            const localVarPath = `/api/v1/push-devices`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 가장 최근 실패한 자동이체 회차를 다시 실행합니다.
          * @summary 자동이체 실패 회차 수동 재시도
          * @param {number} scheduleId schedule_id
@@ -3385,6 +3549,43 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             assertParamExists('unlinkAccountUsingDELETE', 'accountId', accountId)
             const localVarPath = `/api/v1/accounts/{account_id}`
                 .replace('{account_id}', encodeURIComponent(String(accountId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 로그아웃하거나 푸시 권한을 해제한 기기를 비활성화합니다.
+         * @summary 푸시 기기 해제
+         * @param {number} pushDeviceId push_device_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        unregisterUsingDELETE: async (pushDeviceId: number, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'pushDeviceId' is not null or undefined
+            assertParamExists('unregisterUsingDELETE', 'pushDeviceId', pushDeviceId)
+            const localVarPath = `/api/v1/push-devices/{push_device_id}`
+                .replace('{push_device_id}', encodeURIComponent(String(pushDeviceId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -3753,6 +3954,49 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
         },
         /**
          * 
+         * @summary 자녀 이용 권한 수정
+         * @param {number} childId child_id
+         * @param {ChildFeaturePermissionRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updatePermissionUsingPATCH: async (childId: number, request: ChildFeaturePermissionRequest, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'childId' is not null or undefined
+            assertParamExists('updatePermissionUsingPATCH', 'childId', childId)
+            // verify required parameter 'request' is not null or undefined
+            assertParamExists('updatePermissionUsingPATCH', 'request', request)
+            const localVarPath = `/api/v1/children/{child_id}/feature-permissions`
+                .replace('{child_id}', encodeURIComponent(String(childId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary 자동이체 일정 수정·일시정지·재개
          * @param {number} scheduleId schedule_id
          * @param {UpdateAutoTransferScheduleRequest} request request
@@ -3767,6 +4011,49 @@ export const DefaultApiAxiosParamCreator = function (configuration?: Configurati
             assertParamExists('updateScheduleUsingPATCH', 'request', request)
             const localVarPath = `/api/v1/auto-transfer-schedules/{schedule_id}`
                 .replace('{schedule_id}', encodeURIComponent(String(scheduleId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = '*/*';
+
+            if (authorization != null) {
+                localVarHeaderParameter['Authorization'] = String(authorization);
+            }
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(request, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 부모는 연결된 입출금계좌 타임캡슐의 공개일을 오늘 이후 날짜로 설정하거나 변경할 수 있습니다. 적금 타임캡슐은 계좌 만기일을 공개일로 사용하므로 변경할 수 없습니다.
+         * @summary TIMECAPSULE-16 타임캡슐 공개일 설정·변경
+         * @param {number} timeCapsuleId 타임캡슐 보관함 ID
+         * @param {UpdateTimeCapsuleReleaseDateRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateTimeCapsuleReleaseDateUsingPATCH: async (timeCapsuleId: number, request: UpdateTimeCapsuleReleaseDateRequest, authorization?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'timeCapsuleId' is not null or undefined
+            assertParamExists('updateTimeCapsuleReleaseDateUsingPATCH', 'timeCapsuleId', timeCapsuleId)
+            // verify required parameter 'request' is not null or undefined
+            assertParamExists('updateTimeCapsuleReleaseDateUsingPATCH', 'request', request)
+            const localVarPath = `/api/v1/time-capsules/{time_capsule_id}/release-date`
+                .replace('{time_capsule_id}', encodeURIComponent(String(timeCapsuleId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -3946,10 +4233,25 @@ export const DefaultApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async createAllowanceRequestUsingPOST(request: CreateAllowanceRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AllowanceRequestResponse>> {
+        async createAllowanceRequestUsingPOST(request: CreateAllowanceRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AllowancePlanRequestResponse>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.createAllowanceRequestUsingPOST(request, authorization, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.createAllowanceRequestUsingPOST']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary 자녀 계정 연결 초대코드 발급
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {FamilyInvitationCreateRequest} [request] request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createChildFamilyInvitationUsingPOST(childId: number, authorization?: string, request?: FamilyInvitationCreateRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FamilyInvitationCreateResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createChildFamilyInvitationUsingPOST(childId, authorization, request, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.createChildFamilyInvitationUsingPOST']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -3967,22 +4269,7 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * 
-         * @summary 가족/아이 초대코드 발급
-         * @param {number} childId child_id
-         * @param {FamilyInvitationCreateRequest} request request
-         * @param {string} [authorization] Authorization
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async createFamilyInvitationUsingPOST(childId: number, request: FamilyInvitationCreateRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FamilyInvitationCreateResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.createFamilyInvitationUsingPOST(childId, request, authorization, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['DefaultApi.createFamilyInvitationUsingPOST']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * 부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+         * 부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
          * @summary GOAL-2 자녀 금융 목표 생성
          * @param {number} childId child_id
          * @param {FinancialGoalCreateRequest} request request
@@ -4024,6 +4311,20 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.createMissionUsingPOST(childId, request, authorization, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.createMissionUsingPOST']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary 보호자 초대코드 발급
+         * @param {string} [authorization] Authorization
+         * @param {FamilyInvitationCreateRequest} [request] request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createParentFamilyInvitationUsingPOST(authorization?: string, request?: FamilyInvitationCreateRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FamilyInvitationCreateResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createParentFamilyInvitationUsingPOST(authorization, request, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.createParentFamilyInvitationUsingPOST']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -4115,8 +4416,8 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * 작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다.
-         * @summary TC-13 타임캡슐 엔트리 삭제
+         * 작성자 본인의 공개 전 DRAFT 또는 SEALED 엔트리를 삭제합니다. DB 엔트리와 미디어는 삭제 상태로 변경하고 S3 원본 객체를 제거합니다.
+         * @summary TIMECAPSULE-13 타임캡슐 엔트리 삭제
          * @param {number} entryId 타임캡슐 엔트리 ID
          * @param {string} [authorization] Authorization
          * @param {*} [options] Override http request option.
@@ -4203,6 +4504,20 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * 선택한 기본 금융 목표에 대해 공공 통계를 참고하여 서비스가 구성한 4단계 추천 금액과 산정 근거를 조회합니다.
+         * @summary GOAL-2 목표 금액 추천 조회
+         * @param {number} financialGoalTemplateId financial_goal_template_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getAmountRecommendationsUsingGET(financialGoalTemplateId: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FinancialGoalAmountRecommendationResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAmountRecommendationsUsingGET(financialGoalTemplateId, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getAmountRecommendationsUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
          * @summary 월간 자산 리포트 상세 조회
          * @param {number} childId child_id
@@ -4272,7 +4587,7 @@ export const DefaultApiFp = function(configuration?: Configuration) {
          * @summary 생애주기 체크리스트 조회
          * @param {string} authorization Authorization
          * @param {number} childId 자녀 프로필 ID
-         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7
+         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7, AGE_8_TO_10, AGE_11_TO_13, AGE_14_TO_16, AGE_17_TO_19
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -4592,6 +4907,20 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * 
+         * @summary 자녀 이용 권한 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getPermissionUsingGET(childId: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChildFeaturePermissionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getPermissionUsingGET(childId, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.getPermissionUsingGET']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 출산 예정일과 현재 날짜를 기준으로 임신 주차와 캐릭터를 조회합니다.
          * @summary 임신 주차 및 캐릭터 조회
          * @param {number} childId child_id
@@ -4711,8 +5040,8 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * 부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다.
-         * @summary TC-14 타임캡슐 엔트리 상세 조회
+         * 공개일이 도래한 타임캡슐의 봉인된 엔트리를 연결된 보호자 또는 자녀 본인이 조회합니다. 편지, 기여 정보, 엔트리 순번과 화면 표시용 단일 이미지 임시 조회 URL을 반환합니다.
+         * @summary TIMECAPSULE-14 공개된 타임캡슐 엔트리 상세 조회
          * @param {number} entryId 타임캡슐 엔트리 ID
          * @param {string} [authorization] Authorization
          * @param {*} [options] Override http request option.
@@ -4933,6 +5262,20 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * 동일한 device_key가 이미 있으면 FCM 토큰과 기기 정보를 갱신합니다.
+         * @summary 푸시 기기 등록 또는 토큰 갱신
+         * @param {RegisterPushDeviceRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async registerUsingPOST(request: RegisterPushDeviceRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PushDeviceResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.registerUsingPOST(request, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.registerUsingPOST']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 가장 최근 실패한 자동이체 회차를 다시 실행합니다.
          * @summary 자동이체 실패 회차 수동 재시도
          * @param {number} scheduleId schedule_id
@@ -5001,6 +5344,20 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.unlinkAccountUsingDELETE(accountId, authorization, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.unlinkAccountUsingDELETE']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 로그아웃하거나 푸시 권한을 해제한 기기를 비활성화합니다.
+         * @summary 푸시 기기 해제
+         * @param {number} pushDeviceId push_device_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async unregisterUsingDELETE(pushDeviceId: number, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.unregisterUsingDELETE(pushDeviceId, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.unregisterUsingDELETE']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -5124,6 +5481,21 @@ export const DefaultApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary 자녀 이용 권한 수정
+         * @param {number} childId child_id
+         * @param {ChildFeaturePermissionRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updatePermissionUsingPATCH(childId: number, request: ChildFeaturePermissionRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChildFeaturePermissionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updatePermissionUsingPATCH(childId, request, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.updatePermissionUsingPATCH']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @summary 자동이체 일정 수정·일시정지·재개
          * @param {number} scheduleId schedule_id
          * @param {UpdateAutoTransferScheduleRequest} request request
@@ -5135,6 +5507,21 @@ export const DefaultApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.updateScheduleUsingPATCH(scheduleId, request, authorization, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DefaultApi.updateScheduleUsingPATCH']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 부모는 연결된 입출금계좌 타임캡슐의 공개일을 오늘 이후 날짜로 설정하거나 변경할 수 있습니다. 적금 타임캡슐은 계좌 만기일을 공개일로 사용하므로 변경할 수 없습니다.
+         * @summary TIMECAPSULE-16 타임캡슐 공개일 설정·변경
+         * @param {number} timeCapsuleId 타임캡슐 보관함 ID
+         * @param {UpdateTimeCapsuleReleaseDateRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateTimeCapsuleReleaseDateUsingPATCH(timeCapsuleId: number, request: UpdateTimeCapsuleReleaseDateRequest, authorization?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<UpdateTimeCapsuleReleaseDateResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateTimeCapsuleReleaseDateUsingPATCH(timeCapsuleId, request, authorization, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['DefaultApi.updateTimeCapsuleReleaseDateUsingPATCH']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -5229,8 +5616,20 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createAllowanceRequestUsingPOST(request: CreateAllowanceRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<AllowanceRequestResponse> {
+        createAllowanceRequestUsingPOST(request: CreateAllowanceRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<AllowancePlanRequestResponse> {
             return localVarFp.createAllowanceRequestUsingPOST(request, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 자녀 계정 연결 초대코드 발급
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {FamilyInvitationCreateRequest} [request] request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createChildFamilyInvitationUsingPOST(childId: number, authorization?: string, request?: FamilyInvitationCreateRequest, options?: RawAxiosRequestConfig): AxiosPromise<FamilyInvitationCreateResponse> {
+            return localVarFp.createChildFamilyInvitationUsingPOST(childId, authorization, request, options).then((request) => request(axios, basePath));
         },
         /**
          * 부모가 자녀 프로필을 등록합니다.
@@ -5244,19 +5643,7 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.createChildUsingPOST(request, authorization, options).then((request) => request(axios, basePath));
         },
         /**
-         * 
-         * @summary 가족/아이 초대코드 발급
-         * @param {number} childId child_id
-         * @param {FamilyInvitationCreateRequest} request request
-         * @param {string} [authorization] Authorization
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        createFamilyInvitationUsingPOST(childId: number, request: FamilyInvitationCreateRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<FamilyInvitationCreateResponse> {
-            return localVarFp.createFamilyInvitationUsingPOST(childId, request, authorization, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * 부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+         * 부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
          * @summary GOAL-2 자녀 금융 목표 생성
          * @param {number} childId child_id
          * @param {FinancialGoalCreateRequest} request request
@@ -5290,6 +5677,17 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          */
         createMissionUsingPOST(childId: number, request: CreateMissionRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<MissionCreateResponse> {
             return localVarFp.createMissionUsingPOST(childId, request, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 보호자 초대코드 발급
+         * @param {string} [authorization] Authorization
+         * @param {FamilyInvitationCreateRequest} [request] request
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createParentFamilyInvitationUsingPOST(authorization?: string, request?: FamilyInvitationCreateRequest, options?: RawAxiosRequestConfig): AxiosPromise<FamilyInvitationCreateResponse> {
+            return localVarFp.createParentFamilyInvitationUsingPOST(authorization, request, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -5362,8 +5760,8 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.deleteGoalUsingDELETE(financialGoalId, authorization, options).then((request) => request(axios, basePath));
         },
         /**
-         * 작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다.
-         * @summary TC-13 타임캡슐 엔트리 삭제
+         * 작성자 본인의 공개 전 DRAFT 또는 SEALED 엔트리를 삭제합니다. DB 엔트리와 미디어는 삭제 상태로 변경하고 S3 원본 객체를 제거합니다.
+         * @summary TIMECAPSULE-13 타임캡슐 엔트리 삭제
          * @param {number} entryId 타임캡슐 엔트리 ID
          * @param {string} [authorization] Authorization
          * @param {*} [options] Override http request option.
@@ -5432,6 +5830,17 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.getAllowanceRequestsUsingGET(childId, authorization, cursor, size, status, options).then((request) => request(axios, basePath));
         },
         /**
+         * 선택한 기본 금융 목표에 대해 공공 통계를 참고하여 서비스가 구성한 4단계 추천 금액과 산정 근거를 조회합니다.
+         * @summary GOAL-2 목표 금액 추천 조회
+         * @param {number} financialGoalTemplateId financial_goal_template_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAmountRecommendationsUsingGET(financialGoalTemplateId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<FinancialGoalAmountRecommendationResponse> {
+            return localVarFp.getAmountRecommendationsUsingGET(financialGoalTemplateId, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
          * @summary 월간 자산 리포트 상세 조회
          * @param {number} childId child_id
@@ -5489,7 +5898,7 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          * @summary 생애주기 체크리스트 조회
          * @param {string} authorization Authorization
          * @param {number} childId 자녀 프로필 ID
-         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7
+         * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7, AGE_8_TO_10, AGE_11_TO_13, AGE_14_TO_16, AGE_17_TO_19
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -5743,6 +6152,17 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.getNotificationsUsingGET(afterId, authorization, category, childId, cursor, isRead, notificationType, size, options).then((request) => request(axios, basePath));
         },
         /**
+         * 
+         * @summary 자녀 이용 권한 조회
+         * @param {number} childId child_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getPermissionUsingGET(childId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<ChildFeaturePermissionResponse> {
+            return localVarFp.getPermissionUsingGET(childId, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 출산 예정일과 현재 날짜를 기준으로 임신 주차와 캐릭터를 조회합니다.
          * @summary 임신 주차 및 캐릭터 조회
          * @param {number} childId child_id
@@ -5838,8 +6258,8 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.getTimeCapsuleEntriesUsingGET(timeCapsuleId, authorization, options).then((request) => request(axios, basePath));
         },
         /**
-         * 부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다.
-         * @summary TC-14 타임캡슐 엔트리 상세 조회
+         * 공개일이 도래한 타임캡슐의 봉인된 엔트리를 연결된 보호자 또는 자녀 본인이 조회합니다. 편지, 기여 정보, 엔트리 순번과 화면 표시용 단일 이미지 임시 조회 URL을 반환합니다.
+         * @summary TIMECAPSULE-14 공개된 타임캡슐 엔트리 상세 조회
          * @param {number} entryId 타임캡슐 엔트리 ID
          * @param {string} [authorization] Authorization
          * @param {*} [options] Override http request option.
@@ -6012,6 +6432,17 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
             return localVarFp.refreshUsingPOST(request, options).then((request) => request(axios, basePath));
         },
         /**
+         * 동일한 device_key가 이미 있으면 FCM 토큰과 기기 정보를 갱신합니다.
+         * @summary 푸시 기기 등록 또는 토큰 갱신
+         * @param {RegisterPushDeviceRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        registerUsingPOST(request: RegisterPushDeviceRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<PushDeviceResponse> {
+            return localVarFp.registerUsingPOST(request, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 가장 최근 실패한 자동이체 회차를 다시 실행합니다.
          * @summary 자동이체 실패 회차 수동 재시도
          * @param {number} scheduleId schedule_id
@@ -6066,6 +6497,17 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          */
         unlinkAccountUsingDELETE(accountId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.unlinkAccountUsingDELETE(accountId, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 로그아웃하거나 푸시 권한을 해제한 기기를 비활성화합니다.
+         * @summary 푸시 기기 해제
+         * @param {number} pushDeviceId push_device_id
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        unregisterUsingDELETE(pushDeviceId: number, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.unregisterUsingDELETE(pushDeviceId, authorization, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -6164,6 +6606,18 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
         },
         /**
          * 
+         * @summary 자녀 이용 권한 수정
+         * @param {number} childId child_id
+         * @param {ChildFeaturePermissionRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updatePermissionUsingPATCH(childId: number, request: ChildFeaturePermissionRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<ChildFeaturePermissionResponse> {
+            return localVarFp.updatePermissionUsingPATCH(childId, request, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary 자동이체 일정 수정·일시정지·재개
          * @param {number} scheduleId schedule_id
          * @param {UpdateAutoTransferScheduleRequest} request request
@@ -6173,6 +6627,18 @@ export const DefaultApiFactory = function (configuration?: Configuration, basePa
          */
         updateScheduleUsingPATCH(scheduleId: number, request: UpdateAutoTransferScheduleRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<AutoTransferScheduleDetailResponse> {
             return localVarFp.updateScheduleUsingPATCH(scheduleId, request, authorization, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 부모는 연결된 입출금계좌 타임캡슐의 공개일을 오늘 이후 날짜로 설정하거나 변경할 수 있습니다. 적금 타임캡슐은 계좌 만기일을 공개일로 사용하므로 변경할 수 없습니다.
+         * @summary TIMECAPSULE-16 타임캡슐 공개일 설정·변경
+         * @param {number} timeCapsuleId 타임캡슐 보관함 ID
+         * @param {UpdateTimeCapsuleReleaseDateRequest} request request
+         * @param {string} [authorization] Authorization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateTimeCapsuleReleaseDateUsingPATCH(timeCapsuleId: number, request: UpdateTimeCapsuleReleaseDateRequest, authorization?: string, options?: RawAxiosRequestConfig): AxiosPromise<UpdateTimeCapsuleReleaseDateResponse> {
+            return localVarFp.updateTimeCapsuleReleaseDateUsingPATCH(timeCapsuleId, request, authorization, options).then((request) => request(axios, basePath));
         },
         /**
          * 부모가 자녀 명의의 활성 입출금 계좌에 월간 사용 관리 기준을 설정합니다. 이 정책은 실제 금융기관의 결제나 이체를 차단하지 않습니다.
@@ -6267,6 +6733,19 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
+     * 
+     * @summary 자녀 계정 연결 초대코드 발급
+     * @param {number} childId child_id
+     * @param {string} [authorization] Authorization
+     * @param {FamilyInvitationCreateRequest} [request] request
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public createChildFamilyInvitationUsingPOST(childId: number, authorization?: string, request?: FamilyInvitationCreateRequest, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).createChildFamilyInvitationUsingPOST(childId, authorization, request, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 부모가 자녀 프로필을 등록합니다.
      * @summary 자녀 프로필 등록
      * @param {ChildCreateRequest} request request
@@ -6279,20 +6758,7 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
-     * 
-     * @summary 가족/아이 초대코드 발급
-     * @param {number} childId child_id
-     * @param {FamilyInvitationCreateRequest} request request
-     * @param {string} [authorization] Authorization
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    public createFamilyInvitationUsingPOST(childId: number, request: FamilyInvitationCreateRequest, authorization?: string, options?: RawAxiosRequestConfig) {
-        return DefaultApiFp(this.configuration).createFamilyInvitationUsingPOST(childId, request, authorization, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * 부모가 자녀의 금융 목표를 생성하고 하나 이상의 활성 적금 계좌를 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
+     * 부모가 자녀의 금융 목표를 생성하고 요청 부모 본인 또는 대상 자녀의 활성 적금 계좌를 하나 이상 연결합니다. 하나의 적금 계좌는 하나의 활성 목표에만 연결할 수 있습니다.
      * @summary GOAL-2 자녀 금융 목표 생성
      * @param {number} childId child_id
      * @param {FinancialGoalCreateRequest} request request
@@ -6328,6 +6794,18 @@ export class DefaultApi extends BaseAPI {
      */
     public createMissionUsingPOST(childId: number, request: CreateMissionRequest, authorization?: string, options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).createMissionUsingPOST(childId, request, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary 보호자 초대코드 발급
+     * @param {string} [authorization] Authorization
+     * @param {FamilyInvitationCreateRequest} [request] request
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public createParentFamilyInvitationUsingPOST(authorization?: string, request?: FamilyInvitationCreateRequest, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).createParentFamilyInvitationUsingPOST(authorization, request, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -6407,8 +6885,8 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
-     * 작성자 본인이 DRAFT 엔트리와 연결된 미디어를 삭제합니다.
-     * @summary TC-13 타임캡슐 엔트리 삭제
+     * 작성자 본인의 공개 전 DRAFT 또는 SEALED 엔트리를 삭제합니다. DB 엔트리와 미디어는 삭제 상태로 변경하고 S3 원본 객체를 제거합니다.
+     * @summary TIMECAPSULE-13 타임캡슐 엔트리 삭제
      * @param {number} entryId 타임캡슐 엔트리 ID
      * @param {string} [authorization] Authorization
      * @param {*} [options] Override http request option.
@@ -6483,6 +6961,18 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
+     * 선택한 기본 금융 목표에 대해 공공 통계를 참고하여 서비스가 구성한 4단계 추천 금액과 산정 근거를 조회합니다.
+     * @summary GOAL-2 목표 금액 추천 조회
+     * @param {number} financialGoalTemplateId financial_goal_template_id
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getAmountRecommendationsUsingGET(financialGoalTemplateId: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getAmountRecommendationsUsingGET(financialGoalTemplateId, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 연결된 부모가 특정 연월의 자산 리포트, 목표별 달성률, 연결 적금 및 인사이트를 조회합니다.
      * @summary 월간 자산 리포트 상세 조회
      * @param {number} childId child_id
@@ -6544,7 +7034,7 @@ export class DefaultApi extends BaseAPI {
      * @summary 생애주기 체크리스트 조회
      * @param {string} authorization Authorization
      * @param {number} childId 자녀 프로필 ID
-     * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7
+     * @param {string} [stage] PREGNANCY, AGE_0_TO_1, AGE_2_TO_4, AGE_5_TO_7, AGE_8_TO_10, AGE_11_TO_13, AGE_14_TO_16, AGE_17_TO_19
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -6820,6 +7310,18 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
+     * 
+     * @summary 자녀 이용 권한 조회
+     * @param {number} childId child_id
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public getPermissionUsingGET(childId: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).getPermissionUsingGET(childId, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 출산 예정일과 현재 날짜를 기준으로 임신 주차와 캐릭터를 조회합니다.
      * @summary 임신 주차 및 캐릭터 조회
      * @param {number} childId child_id
@@ -6923,8 +7425,8 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
-     * 부모 또는 보호자가 편지와 활성 미디어를 임시 다운로드 URL로 조회합니다.
-     * @summary TC-14 타임캡슐 엔트리 상세 조회
+     * 공개일이 도래한 타임캡슐의 봉인된 엔트리를 연결된 보호자 또는 자녀 본인이 조회합니다. 편지, 기여 정보, 엔트리 순번과 화면 표시용 단일 이미지 임시 조회 URL을 반환합니다.
+     * @summary TIMECAPSULE-14 공개된 타임캡슐 엔트리 상세 조회
      * @param {number} entryId 타임캡슐 엔트리 ID
      * @param {string} [authorization] Authorization
      * @param {*} [options] Override http request option.
@@ -7113,6 +7615,18 @@ export class DefaultApi extends BaseAPI {
     }
 
     /**
+     * 동일한 device_key가 이미 있으면 FCM 토큰과 기기 정보를 갱신합니다.
+     * @summary 푸시 기기 등록 또는 토큰 갱신
+     * @param {RegisterPushDeviceRequest} request request
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public registerUsingPOST(request: RegisterPushDeviceRequest, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).registerUsingPOST(request, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 가장 최근 실패한 자동이체 회차를 다시 실행합니다.
      * @summary 자동이체 실패 회차 수동 재시도
      * @param {number} scheduleId schedule_id
@@ -7171,6 +7685,18 @@ export class DefaultApi extends BaseAPI {
      */
     public unlinkAccountUsingDELETE(accountId: number, authorization?: string, options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).unlinkAccountUsingDELETE(accountId, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 로그아웃하거나 푸시 권한을 해제한 기기를 비활성화합니다.
+     * @summary 푸시 기기 해제
+     * @param {number} pushDeviceId push_device_id
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public unregisterUsingDELETE(pushDeviceId: number, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).unregisterUsingDELETE(pushDeviceId, authorization, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -7278,6 +7804,19 @@ export class DefaultApi extends BaseAPI {
 
     /**
      * 
+     * @summary 자녀 이용 권한 수정
+     * @param {number} childId child_id
+     * @param {ChildFeaturePermissionRequest} request request
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public updatePermissionUsingPATCH(childId: number, request: ChildFeaturePermissionRequest, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).updatePermissionUsingPATCH(childId, request, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
      * @summary 자동이체 일정 수정·일시정지·재개
      * @param {number} scheduleId schedule_id
      * @param {UpdateAutoTransferScheduleRequest} request request
@@ -7287,6 +7826,19 @@ export class DefaultApi extends BaseAPI {
      */
     public updateScheduleUsingPATCH(scheduleId: number, request: UpdateAutoTransferScheduleRequest, authorization?: string, options?: RawAxiosRequestConfig) {
         return DefaultApiFp(this.configuration).updateScheduleUsingPATCH(scheduleId, request, authorization, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 부모는 연결된 입출금계좌 타임캡슐의 공개일을 오늘 이후 날짜로 설정하거나 변경할 수 있습니다. 적금 타임캡슐은 계좌 만기일을 공개일로 사용하므로 변경할 수 없습니다.
+     * @summary TIMECAPSULE-16 타임캡슐 공개일 설정·변경
+     * @param {number} timeCapsuleId 타임캡슐 보관함 ID
+     * @param {UpdateTimeCapsuleReleaseDateRequest} request request
+     * @param {string} [authorization] Authorization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public updateTimeCapsuleReleaseDateUsingPATCH(timeCapsuleId: number, request: UpdateTimeCapsuleReleaseDateRequest, authorization?: string, options?: RawAxiosRequestConfig) {
+        return DefaultApiFp(this.configuration).updateTimeCapsuleReleaseDateUsingPATCH(timeCapsuleId, request, authorization, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
