@@ -288,6 +288,11 @@ const getOpenRoute = (capsule: CapsuleAccount) =>
     ? '/time-capsules/local/open'
     : `/time-capsules/${capsule.id}/open`
 
+const getListRoute = (capsule: CapsuleAccount) =>
+  import.meta.env.DEV && capsule.id === 1 && capsule.name === '깨비 첫 타임캡슐'
+    ? '/time-capsules/local'
+    : `/time-capsules/${capsule.id}`
+
 const startFreeCapsuleSheetDrag = (event: PointerEvent) => {
   if (event.button !== 0) return
   freeCapsuleDragStartY = event.clientY
@@ -434,15 +439,19 @@ const completeUnlockFlow = async () => {
 
   markUnlockAnimationSeen(capsule)
   window.sessionStorage.setItem(OPEN_FLASH_STORAGE_KEY, 'true')
-  resetUnlockFlow()
-  await navigateForward(getOpenRoute(capsule))
+
+  try {
+    await router.push(getOpenRoute(capsule))
+  } catch {
+    resetUnlockFlow()
+  }
 }
 
 const openCapsule = (capsule: CapsuleAccount, event: MouseEvent) => {
   if (!capsule.isFree) {
     if (isCapsuleReleased(capsule)) {
       if (hasSeenUnlockAnimation(capsule)) {
-        navigateForward(getOpenRoute(capsule))
+        navigateForward(getListRoute(capsule))
         return
       }
 
@@ -826,13 +835,6 @@ onBeforeUnmount(resetUnlockFlow)
             class="time-capsule-unlock__backdrop absolute inset-0"
             :class="isUnlockCardCentered ? 'time-capsule-unlock__backdrop--active' : ''"
           ></div>
-          <div
-            v-if="unlockPhase === 'flashing' || unlockPhase === 'revealing'"
-            class="unlock-white-flash absolute inset-0"
-            :class="unlockPhase === 'revealing' ? 'unlock-white-flash--leaving' : ''"
-            aria-hidden="true"
-          ></div>
-
           <article
             v-if="unlockSelectedCapsule && unlockCardStyle"
             class="unlock-card-copy"
@@ -1303,7 +1305,7 @@ onBeforeUnmount(resetUnlockFlow)
 
 .unlock-panel {
   --unlock-size: min(94vw, 58dvh, 520px);
-  --unlock-x: -64%;
+  --unlock-x: -50%;
 
   z-index: 2;
   cursor: default;

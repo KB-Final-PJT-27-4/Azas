@@ -148,7 +148,7 @@ const routes: RouteRecordRaw[] = [
     path: '/time-capsules/local/open',
     name: 'LocalTimeCapsuleOpen',
     component: () => import('@/views/timeCapsules/TimeCapsuleOpenView.vue'),
-    meta: { requiresAuth: false, hideNavigation: true },
+    meta: { requiresAuth: false, hideNavigation: true, disableRouteTransition: true },
   },
   {
     path: '/time-capsules/:capsuleListId',
@@ -162,7 +162,7 @@ const routes: RouteRecordRaw[] = [
     name: 'TimeCapsuleOpen',
     component: () => import('@/views/timeCapsules/TimeCapsuleOpenView.vue'),
     props: true,
-    meta: { requiresAuth: true, hideNavigation: true },
+    meta: { requiresAuth: true, hideNavigation: true, disableRouteTransition: true },
   },
   {
     path: '/time-capsules/:capsuleListId/:capsuleId',

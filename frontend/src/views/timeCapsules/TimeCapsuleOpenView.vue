@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import memorySheetUrl from '@/assets/images/timeCapsules/open/memory-sheet.png'
+import memorySheet2024Url from '@/assets/images/timeCapsules/open/memory-sheet-2024.png'
 import { api } from '@/api'
 
 type Memory = {
@@ -20,6 +21,11 @@ const shortMessages = [
   '오늘의 웃음을 오래 기억할게',
   '너와 함께라서 평범한 날도 특별했어',
   '천천히, 너의 속도로 자라렴',
+] as const
+const elementaryShortMessages = [
+  '혼자서도 반짝이는 네 하루를 기억할게',
+  '조금 더 넓어진 세상에서도 우리는 네 편이야',
+  '네가 고른 꿈을 천천히 응원할게',
 ] as const
 const memoryTitlesByYear: Record<number, string[]> = {
   2023: [
@@ -65,6 +71,19 @@ const memoryTitlesByYear: Record<number, string[]> = {
     '다음 해로 건넨 사랑',
   ],
 }
+const getMemoryShort = (year: number, index: number) => {
+  const messages = year === 2024 ? elementaryShortMessages : shortMessages
+  return messages[index % messages.length] ?? messages[0]
+}
+
+const getMemoryLetter = (year: number, month: number, title: string) => {
+  if (year === 2024) {
+    return `사랑하는 우리 아이에게.\n\n${year}년 ${month}월, ${title}을 오래 기억하고 싶어. 어느새 가방을 메고 네 하루를 스스로 걸어가는 모습을 보며 엄마, 아빠는 매일 새롭게 감동하고 있어.\n\n서툰 날도 있고 자신 있는 날도 있겠지만 괜찮아. 네가 배운 작은 용기와 웃음을 이곳에 담아둘게. 언제든 돌아보면 우리가 얼마나 너를 믿고 응원했는지 느낄 수 있기를 바라.`
+  }
+
+  return `사랑하는 우리 아가에게.\n\n${year}년 ${month}월, ${title}을 기억하니? 작은 순간 하나도 놓치고 싶지 않아 사진과 마음을 이곳에 함께 담아두었어.\n\n앞으로 네가 어떤 꿈을 만나더라도 지금처럼 환하게 웃기를 바라. 서두르지 않아도 괜찮아. 우리는 언제나 네 곁에서 같은 마음으로 응원할게.`
+}
+
 const localTimeCapsuleMemories: Memory[] = Object.entries(memoryTitlesByYear).flatMap(
   ([year, titles]) =>
     titles.map((title, index) => {
@@ -75,8 +94,8 @@ const localTimeCapsuleMemories: Memory[] = Object.entries(memoryTitlesByYear).fl
         year: memoryYear,
         month,
         title,
-        short: shortMessages[index % shortMessages.length] ?? shortMessages[0],
-        letter: `사랑하는 우리 아가에게.\n\n${memoryYear}년 ${month}월, ${title}을 기억하니? 작은 순간 하나도 놓치고 싶지 않아 사진과 마음을 이곳에 함께 담아두었어.\n\n앞으로 네가 어떤 꿈을 만나더라도 지금처럼 환하게 웃기를 바라. 서두르지 않아도 괜찮아. 우리는 언제나 네 곁에서 같은 마음으로 응원할게.`,
+        short: getMemoryShort(memoryYear, index),
+        letter: getMemoryLetter(memoryYear, month, title),
       }
     }),
 )
@@ -126,11 +145,13 @@ const galleryRows = computed(() => {
 })
 
 const getPhotoStyle = (index: number) => {
+  const memory = allMemories.value[index]
   const column = index % 3
   const row = Math.floor(index / 3) % 4
+  const sheetUrl = memory?.year === 2024 ? memorySheet2024Url : memorySheetUrl
 
   return {
-    backgroundImage: `url(${memorySheetUrl})`,
+    backgroundImage: `url(${sheetUrl})`,
     backgroundSize: '300% 400%',
     backgroundPosition: `${column * 50}% ${row * (100 / 3)}%`,
   }
