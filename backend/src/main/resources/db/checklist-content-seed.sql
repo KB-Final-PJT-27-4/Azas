@@ -844,6 +844,7 @@ VALUES
         1
     )
 ON DUPLICATE KEY UPDATE
+    template_key = VALUES(template_key),
     lifecycle_stage = VALUES(lifecycle_stage),
     category = VALUES(category),
     title = VALUES(title),

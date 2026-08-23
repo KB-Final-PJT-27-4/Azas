@@ -25,6 +25,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 100;
+    private static final int RECOMMENDED_POLL_INTERVAL_SECONDS = 15;
 
     private final NotificationMapper notificationMapper;
     private final ObjectMapper objectMapper;
@@ -112,14 +113,15 @@ public class NotificationServiceImpl implements NotificationService {
         } else {
             hasNext = hasExtra;
 
-            if (!pageRows.isEmpty()) {
-                if (cursorId == null) {
-                    // 최초 조회 시 프론트가 이후 폴링에 사용할 값
-                    pollCursor = pageRows
-                            .get(0)
-                            .getNotificationId();
-                }
+            if (cursorId == null) {
+                // 알림이 아직 없는 회원도 after_id=0으로 바로 폴링을
+                // 시작할 수 있게 최초 커서를 항상 제공한다.
+                pollCursor = pageRows.isEmpty()
+                        ? 0L
+                        : pageRows.get(0).getNotificationId();
+            }
 
+            if (!pageRows.isEmpty()) {
                 if (hasNext) {
                     nextCursor = pageRows
                             .get(pageRows.size() - 1)
@@ -142,7 +144,8 @@ public class NotificationServiceImpl implements NotificationService {
                 hasNext,
                 pollCursor,
                 hasMoreNew,
-                unreadCount
+                unreadCount,
+                RECOMMENDED_POLL_INTERVAL_SECONDS
         );
     }
 

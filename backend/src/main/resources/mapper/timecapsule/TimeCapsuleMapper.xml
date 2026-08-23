@@ -30,6 +30,7 @@
         <result property="childId" column="child_id"/>
         <result property="accountName" column="account_name"/>
         <result property="accountProductType" column="account_product_type"/>
+        <result property="maturityDate" column="maturity_date"/>
         <result property="accountStatus" column="account_status"/>
         <result property="linkStatus" column="link_status"/>
     </resultMap>
@@ -73,6 +74,7 @@
             fa.child_id,
             fa.account_name,
             fa.account_product_type,
+            fa.maturity_date,
             fa.account_status,
             fa.link_status
         FROM financial_account fa
@@ -136,6 +138,13 @@
             #{expectedReleaseAt}
         )
     </insert>
+
+    <update id="updateExpectedReleaseAt">
+        UPDATE time_capsule
+        SET expected_release_at = #{expectedReleaseAt},
+            updated_at = UTC_TIMESTAMP(6)
+        WHERE time_capsule_id = #{timeCapsuleId}
+    </update>
 
     <select id="findById"
             resultMap="timeCapsuleResultMap">

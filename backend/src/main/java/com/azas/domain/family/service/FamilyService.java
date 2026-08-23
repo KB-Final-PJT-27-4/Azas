@@ -15,7 +15,12 @@ public interface FamilyService {
 
     ChildMemberLinkResponse getChildMemberLink(Long memberId, Long childId);
 
-    FamilyInvitationCreateResponse createFamilyInvitation(
+    FamilyInvitationCreateResponse createParentFamilyInvitation(
+            Long memberId,
+            FamilyInvitationCreateRequest request
+    );
+
+    FamilyInvitationCreateResponse createChildFamilyInvitation(
             Long memberId,
             Long childId,
             FamilyInvitationCreateRequest request

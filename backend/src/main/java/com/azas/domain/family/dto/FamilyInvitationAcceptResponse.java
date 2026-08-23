@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 @AllArgsConstructor
@@ -25,6 +26,11 @@ public class FamilyInvitationAcceptResponse {
     private final Instant acceptedAt;
 
     private final FamilyInvitationChildResponse child;
+
+    private final List<FamilyInvitationChildResponse> children;
+
+    @JsonProperty("child_count")
+    private final int childCount;
 
     @JsonProperty("relation_type")
     private final RelationType relationType;

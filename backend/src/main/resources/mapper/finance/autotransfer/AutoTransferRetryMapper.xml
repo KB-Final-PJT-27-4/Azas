@@ -114,6 +114,20 @@
           AND link_status = 'ACTIVE'
     </update>
 
+    <insert id="insertDestinationBalanceSnapshot">
+        INSERT INTO account_balance_snapshot (
+            financial_account_id,
+            child_id,
+            balance,
+            observed_at
+        ) VALUES (
+            #{accountId},
+            #{childId},
+            #{balance},
+            #{observedAt}
+        )
+    </insert>
+
     <insert id="insertTransaction"
             useGeneratedKeys="true"
             keyProperty="accountTransactionId"

@@ -12,8 +12,10 @@ import com.azas.domain.child.entity.ChildStatus;
 import com.azas.domain.child.entity.RelationType;
 import com.azas.domain.family.dto.ChildMemberLinkResponse;
 import com.azas.domain.family.dto.FamilyInvitationAcceptRequest;
+import com.azas.domain.family.dto.FamilyInvitationAcceptResponse;
 import com.azas.domain.family.dto.FamilyInvitationCreateRequest;
 import com.azas.domain.family.dto.FamilyInvitationCreateResponse;
+import com.azas.domain.family.dto.FamilyInvitationChildResponse;
 import com.azas.domain.family.dto.FamilyInvitationInfoProjection;
 import com.azas.domain.family.mapper.FamilyMapper;
 import com.azas.domain.member.entity.Member;
@@ -31,7 +33,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.ZoneOffset;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -39,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,24 +72,30 @@ class FamilyInvitationServiceImplTest {
                 "defaultExpirationHours",
                 24
         );
+        lenient().when(familyMapper.findActiveChildrenManagedByMember(any()))
+                .thenReturn(List.of(invitationChild(10L)));
+        lenient().when(familyMapper.findInvitationChildren(any()))
+                .thenReturn(List.of(invitationChild(10L)));
+        lenient().when(familyMapper.insertFamilyInvitationChildren(any(), any()))
+                .thenAnswer(invocation ->
+                        ((List<?>) invocation.getArgument(1)).size()
+                );
+        lenient().when(parentInviteMapper.findActiveChildById(any()))
+                .thenReturn(child(10L, null));
+        lenient().when(parentInviteMapper.insertChildParentRelations(
+                any(), any(), any()
+        )).thenAnswer(invocation ->
+                ((List<?>) invocation.getArgument(0)).size()
+        );
     }
 
     @Test
     void createsParentInvitationAfterExpiringOldPendingInvitation() {
-        when(familyMapper.lockActiveChild(10L)).thenReturn(10L);
-        when(familyMapper.countChildAccess(10L, 7L)).thenReturn(1);
-        when(familyMapper.countUsableFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.PARENT), any()
-        )).thenReturn(0);
         when(tokenHashEncoder.encode(any())).thenReturn("token-hash");
         assignInvitationIdOnInsert(30L);
 
         FamilyInvitationCreateResponse response =
-                familyService.createFamilyInvitation(
-                        7L,
-                        10L,
-                        createRequest(FamilyInviteeType.PARENT, null)
-                );
+                familyService.createParentFamilyInvitation(7L, createRequest(null));
 
         assertEquals(30L, response.getFamilyInvitationId());
         assertEquals(FamilyInviteeType.PARENT, response.getInviteeType());
@@ -96,7 +107,10 @@ class FamilyInvitationServiceImplTest {
                 response.getInviteUrl()
         );
         verify(familyMapper).expirePendingFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.PARENT), any()
+                eq(10L), eq(7L), eq(FamilyInviteeType.PARENT), any()
+        );
+        verify(familyMapper).expireUsableFamilyInvitations(
+                eq(10L), eq(7L), eq(FamilyInviteeType.PARENT), any()
         );
     }
 
@@ -104,20 +118,13 @@ class FamilyInvitationServiceImplTest {
     void allowsChildInvitationWhenParentInvitationExists() {
         when(familyMapper.lockActiveChild(10L)).thenReturn(10L);
         when(familyMapper.countChildAccess(10L, 7L)).thenReturn(1);
-        when(familyMapper.countUsableFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.CHILD), any()
-        )).thenReturn(0);
         when(familyMapper.findChildMemberLinkByChildId(10L))
                 .thenReturn(childMemberLink(false));
         when(tokenHashEncoder.encode(any())).thenReturn("token-hash");
         assignInvitationIdOnInsert(31L);
 
         FamilyInvitationCreateResponse response =
-                familyService.createFamilyInvitation(
-                        7L,
-                        10L,
-                        createRequest(FamilyInviteeType.CHILD, 24)
-                );
+                familyService.createChildFamilyInvitation(7L, 10L, createRequest(24));
 
         assertEquals(31L, response.getFamilyInvitationId());
         assertEquals(FamilyInviteeType.CHILD, response.getInviteeType());
@@ -130,10 +137,10 @@ class FamilyInvitationServiceImplTest {
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> familyService.createFamilyInvitation(
+                () -> familyService.createChildFamilyInvitation(
                         7L,
                         10L,
-                        createRequest(FamilyInviteeType.PARENT, 24)
+                        createRequest(24)
                 )
         );
 
@@ -147,10 +154,10 @@ class FamilyInvitationServiceImplTest {
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> familyService.createFamilyInvitation(
+                () -> familyService.createChildFamilyInvitation(
                         7L,
                         10L,
-                        createRequest(FamilyInviteeType.PARENT, 24)
+                        createRequest(24)
                 )
         );
 
@@ -159,45 +166,55 @@ class FamilyInvitationServiceImplTest {
     }
 
     @Test
-    void rejectsDuplicateUsableInvitationOfSameType() {
-        when(familyMapper.lockActiveChild(10L)).thenReturn(10L);
-        when(familyMapper.countChildAccess(10L, 7L)).thenReturn(1);
-        when(familyMapper.countUsableFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.PARENT), any()
-        )).thenReturn(1);
+    void reissuesInvitationWhenUsableInvitationOfSameTypeExists() {
+        when(tokenHashEncoder.encode(any())).thenReturn("new-token-hash");
+        assignInvitationIdOnInsert(32L);
 
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> familyService.createFamilyInvitation(
-                        7L,
-                        10L,
-                        createRequest(FamilyInviteeType.PARENT, 24)
-                )
-        );
+        FamilyInvitationCreateResponse response =
+                familyService.createParentFamilyInvitation(7L, createRequest(24));
 
-        assertEquals(
-                ErrorCode.FAMILY_INVITATION_ALREADY_EXISTS,
-                exception.getErrorCode()
+        assertEquals(32L, response.getFamilyInvitationId());
+        assertEquals(FamilyInvitationStatus.PENDING, response.getStatus());
+        verify(familyMapper).expireUsableFamilyInvitations(
+                eq(10L), eq(7L), eq(FamilyInviteeType.PARENT), any()
         );
-        verify(familyMapper, never()).insertFamilyInvitation(any());
+        verify(familyMapper).insertFamilyInvitation(any());
+    }
+
+    @Test
+    void createsParentInvitationForEveryChildManagedAtIssuance() {
+        List<FamilyInvitationChildResponse> targets = List.of(
+                invitationChild(10L),
+                invitationChild(20L)
+        );
+        when(familyMapper.findActiveChildrenManagedByMember(7L))
+                .thenReturn(targets);
+        when(tokenHashEncoder.encode(any())).thenReturn("token-hash");
+        assignInvitationIdOnInsert(33L);
+
+        FamilyInvitationCreateResponse response =
+                familyService.createParentFamilyInvitation(7L, createRequest(24));
+
+        assertEquals(2, response.getChildCount());
+        assertEquals(List.of(10L, 20L), response.getChildren().stream()
+                .map(FamilyInvitationChildResponse::getChildId)
+                .collect(Collectors.toList()));
+        verify(familyMapper).insertFamilyInvitationChildren(33L, targets);
     }
 
     @Test
     void rejectsChildInvitationWhenChildMemberAlreadyLinked() {
         when(familyMapper.lockActiveChild(10L)).thenReturn(10L);
         when(familyMapper.countChildAccess(10L, 7L)).thenReturn(1);
-        when(familyMapper.countUsableFamilyInvitations(
-                eq(10L), eq(FamilyInviteeType.CHILD), any()
-        )).thenReturn(0);
         when(familyMapper.findChildMemberLinkByChildId(10L))
                 .thenReturn(childMemberLink(true));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> familyService.createFamilyInvitation(
+                () -> familyService.createChildFamilyInvitation(
                         7L,
                         10L,
-                        createRequest(FamilyInviteeType.CHILD, 24)
+                        createRequest(24)
                 )
         );
 
@@ -206,6 +223,12 @@ class FamilyInvitationServiceImplTest {
                 exception.getErrorCode()
         );
         verify(familyMapper, never()).insertFamilyInvitation(any());
+        verify(familyMapper, never()).expirePendingFamilyInvitations(
+                eq(10L), eq(7L), eq(FamilyInviteeType.CHILD), any()
+        );
+        verify(familyMapper, never()).expireUsableFamilyInvitations(
+                eq(10L), eq(7L), eq(FamilyInviteeType.CHILD), any()
+        );
     }
 
     @Test
@@ -296,8 +319,8 @@ class FamilyInvitationServiceImplTest {
                 .thenReturn(child(10L, null));
         when(parentInviteMapper.countChildParentRelation(10L, 8L))
                 .thenReturn(0);
-        when(parentInviteMapper.insertChildParentRelation(
-                10L, 8L, RelationType.FATHER
+        when(parentInviteMapper.insertChildParentRelations(
+                List.of(10L), 8L, RelationType.FATHER
         )).thenReturn(1);
         when(familyInvitationStore.acceptIfPending(
                 eq(30L), eq(8L), eq(RelationType.FATHER), any()
@@ -312,6 +335,44 @@ class FamilyInvitationServiceImplTest {
         assertEquals(FamilyInvitationStatus.ACCEPTED, response.getStatus());
         assertEquals(RelationType.FATHER, response.getRelationType());
         assertEquals(10L, response.getChild().getChildId());
+    }
+
+    @Test
+    void acceptsParentInvitationAndCreatesRelationsForAllInvitationChildren() {
+        FamilyInvitation invitation = pendingInvitation(FamilyInviteeType.PARENT);
+        List<FamilyInvitationChildResponse> targets = List.of(
+                invitationChild(10L),
+                invitationChild(20L)
+        );
+
+        when(tokenHashEncoder.encode("parent-token")).thenReturn("token-hash");
+        when(familyInvitationStore.findByInviteTokenHash("token-hash"))
+                .thenReturn(Optional.of(invitation));
+        when(memberMapper.findById(8L)).thenReturn(parentMember(8L));
+        when(familyMapper.findInvitationChildren(30L)).thenReturn(targets);
+        when(parentInviteMapper.countChildParentRelation(10L, 8L)).thenReturn(0);
+        when(parentInviteMapper.countChildParentRelation(20L, 8L)).thenReturn(0);
+        when(parentInviteMapper.insertChildParentRelations(
+                List.of(10L, 20L), 8L, RelationType.FATHER
+        )).thenReturn(2);
+        when(familyInvitationStore.acceptIfPending(
+                eq(30L), eq(8L), eq(RelationType.FATHER), any()
+        )).thenReturn(true);
+
+        FamilyInvitationAcceptResponse response =
+                familyService.acceptFamilyInvitation(
+                        8L,
+                        "parent-token",
+                        acceptRequest(RelationType.FATHER)
+                );
+
+        assertEquals(2, response.getChildCount());
+        assertEquals(List.of(10L, 20L), response.getChildren().stream()
+                .map(FamilyInvitationChildResponse::getChildId)
+                .collect(Collectors.toList()));
+        verify(parentInviteMapper).insertChildParentRelations(
+                List.of(10L, 20L), 8L, RelationType.FATHER
+        );
     }
 
     @Test
@@ -495,8 +556,8 @@ class FamilyInvitationServiceImplTest {
         setUpParentAcceptance("parent-token", parentMember(8L));
         when(parentInviteMapper.countChildParentRelation(10L, 8L))
                 .thenReturn(0);
-        when(parentInviteMapper.insertChildParentRelation(
-                10L, 8L, RelationType.FATHER
+        when(parentInviteMapper.insertChildParentRelations(
+                List.of(10L), 8L, RelationType.FATHER
         )).thenReturn(1);
         when(familyInvitationStore.acceptIfPending(
                 eq(30L), eq(8L), eq(RelationType.FATHER), any()
@@ -519,8 +580,8 @@ class FamilyInvitationServiceImplTest {
         setUpParentAcceptance("parent-token", parentMember(8L));
         when(parentInviteMapper.countChildParentRelation(10L, 8L))
                 .thenReturn(0);
-        when(parentInviteMapper.insertChildParentRelation(
-                10L, 8L, RelationType.FATHER
+        when(parentInviteMapper.insertChildParentRelations(
+                List.of(10L), 8L, RelationType.FATHER
         )).thenThrow(new DuplicateKeyException("duplicate"));
 
         BusinessException exception = assertThrows(
@@ -571,13 +632,9 @@ class FamilyInvitationServiceImplTest {
         });
     }
 
-    private FamilyInvitationCreateRequest createRequest(
-            FamilyInviteeType inviteeType,
-            Integer expiresInHours
-    ) {
+    private FamilyInvitationCreateRequest createRequest(Integer expiresInHours) {
         FamilyInvitationCreateRequest request =
                 new FamilyInvitationCreateRequest();
-        ReflectionTestUtils.setField(request, "inviteeType", inviteeType);
         ReflectionTestUtils.setField(
                 request,
                 "expiresInHours",
@@ -610,6 +667,7 @@ class FamilyInvitationServiceImplTest {
             LocalDateTime expiresAt
     ) {
         return new FamilyInvitationInfoProjection(
+                30L,
                 childName,
                 inviterName,
                 inviteeType,
@@ -624,6 +682,10 @@ class FamilyInvitationServiceImplTest {
                 FamilyInvitationStatus.PENDING,
                 LocalDateTime.now().plusHours(1)
         );
+    }
+
+    private FamilyInvitationChildResponse invitationChild(Long childId) {
+        return new FamilyInvitationChildResponse(childId, "깨비");
     }
 
     private FamilyInvitation invitation(

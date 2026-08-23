@@ -42,6 +42,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -94,7 +95,29 @@ public class FamilyServiceImpl implements FamilyService {
 
     @Override
     @Transactional
-    public FamilyInvitationCreateResponse createFamilyInvitation(
+    public FamilyInvitationCreateResponse createParentFamilyInvitation(
+            Long memberId,
+            FamilyInvitationCreateRequest request
+    ) {
+        List<FamilyInvitationChildResponse> invitationChildren =
+                familyMapper.findActiveChildrenManagedByMember(memberId);
+
+        if (invitationChildren.isEmpty()) {
+            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
+        }
+
+        return createFamilyInvitation(
+                memberId,
+                invitationChildren.get(0).getChildId(),
+                FamilyInviteeType.PARENT,
+                invitationChildren,
+                request
+        );
+    }
+
+    @Override
+    @Transactional
+    public FamilyInvitationCreateResponse createChildFamilyInvitation(
             Long memberId,
             Long childId,
             FamilyInvitationCreateRequest request
@@ -109,36 +132,54 @@ public class FamilyServiceImpl implements FamilyService {
             throw new BusinessException(ErrorCode.CHILD_ACCESS_DENIED);
         }
 
+        ChildMemberLinkResponse memberLink =
+                familyMapper.findChildMemberLinkByChildId(childId);
+
+        if (memberLink != null && Boolean.TRUE.equals(memberLink.getLinked())) {
+            throw new BusinessException(
+                    ErrorCode.FAMILY_MEMBER_ALREADY_LINKED
+            );
+        }
+
+        return createFamilyInvitation(
+                memberId,
+                childId,
+                FamilyInviteeType.CHILD,
+                List.of(new FamilyInvitationChildResponse(
+                        childId,
+                        findActiveChildName(childId)
+                )),
+                request
+        );
+    }
+
+    private FamilyInvitationCreateResponse createFamilyInvitation(
+            Long memberId,
+            Long childId,
+            FamilyInviteeType inviteeType,
+            List<FamilyInvitationChildResponse> invitationChildren,
+            FamilyInvitationCreateRequest request
+    ) {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         familyMapper.expirePendingFamilyInvitations(
                 childId,
-                request.getInviteeType(),
+                memberId,
+                inviteeType,
                 now
         );
 
-        if (familyMapper.countUsableFamilyInvitations(
+        // Invite tokens are stored only as hashes, so an existing raw URL cannot
+        // be recovered safely. Reissuing invalidates any usable prior link and
+        // gives the requester a fresh URL that can be displayed immediately.
+        familyMapper.expireUsableFamilyInvitations(
                 childId,
-                request.getInviteeType(),
+                memberId,
+                inviteeType,
                 now
-        ) > 0) {
-            throw new BusinessException(
-                    ErrorCode.FAMILY_INVITATION_ALREADY_EXISTS
-            );
-        }
+        );
 
-        if (request.getInviteeType() == FamilyInviteeType.CHILD) {
-            ChildMemberLinkResponse memberLink =
-                    familyMapper.findChildMemberLinkByChildId(childId);
-
-            if (memberLink != null && Boolean.TRUE.equals(memberLink.getLinked())) {
-                throw new BusinessException(
-                        ErrorCode.FAMILY_MEMBER_ALREADY_LINKED
-                );
-            }
-        }
-
-        int expirationHours = request.getExpiresInHours() == null
+        int expirationHours = request == null || request.getExpiresInHours() == null
                 ? defaultExpirationHours
                 : request.getExpiresInHours();
 
@@ -150,7 +191,7 @@ public class FamilyServiceImpl implements FamilyService {
                         null,
                         childId,
                         memberId,
-                        request.getInviteeType(),
+                        inviteeType,
                         tokenHashEncoder.encode(inviteToken),
                         expiresAt
                 );
@@ -159,10 +200,19 @@ public class FamilyServiceImpl implements FamilyService {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
+        if (familyMapper.insertFamilyInvitationChildren(
+                command.getFamilyInvitationId(),
+                invitationChildren
+        ) != invitationChildren.size()) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
         return new FamilyInvitationCreateResponse(
                 command.getFamilyInvitationId(),
                 childId,
-                request.getInviteeType(),
+                invitationChildren,
+                invitationChildren.size(),
+                inviteeType,
                 inviteToken,
                 buildInvitationUrl(inviteToken),
                 FamilyInvitationStatus.PENDING,
@@ -195,8 +245,15 @@ public class FamilyServiceImpl implements FamilyService {
             throw new BusinessException(ErrorCode.FAMILY_INVITATION_GONE);
         }
 
+        List<FamilyInvitationChildResponse> invitationChildren =
+                familyMapper.findInvitationChildren(
+                        invitation.getFamilyInvitationId()
+                );
+
         return new FamilyInvitationInfoResponse(
                 invitation.getChildName(),
+                invitationChildren,
+                invitationChildren.size(),
                 invitation.getInviterName(),
                 invitation.getInviteeType(),
                 invitation.getStatus(),
@@ -234,12 +291,20 @@ public class FamilyServiceImpl implements FamilyService {
         }
 
         Child child = findActiveChild(invitation);
+        List<FamilyInvitationChildResponse> invitationChildren =
+                familyMapper.findInvitationChildren(
+                        invitation.getFamilyInvitationId()
+                );
+
+        if (invitationChildren.isEmpty()) {
+            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
+        }
         RelationType relationType = request == null
                 ? null
                 : request.getRelationType();
 
         if (invitation.getInviteeType() == FamilyInviteeType.PARENT) {
-            acceptParentInvitation(child, member, relationType);
+            acceptParentInvitation(invitationChildren, member, relationType);
         } else {
             acceptChildInvitation(child, member, relationType);
         }
@@ -264,12 +329,14 @@ public class FamilyServiceImpl implements FamilyService {
                         child.getChildId(),
                         child.getName()
                 ),
+                invitationChildren,
+                invitationChildren.size(),
                 relationType
         );
     }
 
     private void acceptParentInvitation(
-            Child child,
+            List<FamilyInvitationChildResponse> invitationChildren,
             Member member,
             RelationType relationType
     ) {
@@ -283,23 +350,29 @@ public class FamilyServiceImpl implements FamilyService {
             throw new BusinessException(ErrorCode.MEMBER_TYPE_CONFLICT);
         }
 
-        if (parentInviteMapper.countChildParentRelation(
-                child.getChildId(),
-                member.getMemberId()
-        ) > 0) {
-            throw new BusinessException(
-                    ErrorCode.FAMILY_MEMBER_ALREADY_LINKED
-            );
+        List<Long> childIds = invitationChildren.stream()
+                .map(FamilyInvitationChildResponse::getChildId)
+                .collect(Collectors.toList());
+
+        for (Long childId : childIds) {
+            if (parentInviteMapper.countChildParentRelation(
+                    childId,
+                    member.getMemberId()
+            ) > 0) {
+                throw new BusinessException(
+                        ErrorCode.FAMILY_MEMBER_ALREADY_LINKED
+                );
+            }
         }
 
         try {
-            int insertedCount = parentInviteMapper.insertChildParentRelation(
-                    child.getChildId(),
+            int insertedCount = parentInviteMapper.insertChildParentRelations(
+                    childIds,
                     member.getMemberId(),
                     relationType
             );
 
-            if (insertedCount != 1) {
+            if (insertedCount != childIds.size()) {
                 throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
         } catch (DuplicateKeyException exception) {
@@ -349,6 +422,16 @@ public class FamilyServiceImpl implements FamilyService {
         }
 
         return child;
+    }
+
+    private String findActiveChildName(Long childId) {
+        Child child = parentInviteMapper.findActiveChildById(childId);
+
+        if (child == null) {
+            throw new BusinessException(ErrorCode.CHILD_NOT_FOUND);
+        }
+
+        return child.getName();
     }
 
     private void validateChildAccess(Long memberId, Long childId) {
