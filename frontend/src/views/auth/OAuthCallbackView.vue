@@ -4,8 +4,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { LoaderCircle } from 'lucide-vue-next'
 
 import { api } from '@/api'
+import type { ChildInviteOAuthResponse } from '@/api/generated'
 import { getOAuthErrorMessage, loginWithOAuthCode } from '@/api/auth'
 import logoPigUrl from '@/assets/images/login/logo-pig.png'
+import { setCurrentChildId } from '@/api/context'
 import { consumeOAuthInvitation, consumeOAuthState, getOAuthRedirectUri, isOAuthProvider } from '@/utils/oauth'
 
 const route = useRoute()
@@ -40,7 +42,11 @@ onMounted(async () => {
     const invitation = consumeOAuthInvitation(provider)
     const response = await loginWithOAuthCode(provider, code, getOAuthRedirectUri(provider), invitation)
     const isChildInvitation = invitation?.inviteeType === 'CHILD'
-    if (isChildInvitation) await api.acceptFamilyInvitationUsingPOST(invitation.inviteToken)
+    if (isChildInvitation) {
+      await api.acceptFamilyInvitationUsingPOST(invitation.inviteToken)
+      const childId = (response as ChildInviteOAuthResponse).child?.child_id
+      if (childId) setCurrentChildId(childId)
+    }
 
     const isChildMember = response.member?.member_type === 'CHILD'
     const nextRouteName = response.is_new_member && !invitation
