@@ -74,14 +74,23 @@ public class AccountLinkService {
         LocalDateTime linkedAt = LocalDateTime.ofInstant(
                 clock.instant(), ZoneOffset.UTC
         );
+        boolean hasActiveScopeDemand = ownerType == FinancialAccountOwnerType.PARENT
+                ? hasActiveParentDemand
+                : financialAccountMapper.countActiveChildDemandDeposit(
+                        request.getChildId()
+                ) > 0;
+        OptionalLong firstScopeDemand = targets.stream()
+                .filter(row -> "DEMAND_DEPOSIT".equals(row.getAccountProductType()))
+                .mapToLong(AccountLinkTargetRow::getAccountId)
+                .min();
         List<LinkedAccountResult> results = new ArrayList<>();
         List<Long> goalIds = new ArrayList<>();
         for (AccountLinkTargetRow target : targets.stream()
                 .sorted(Comparator.comparing(AccountLinkTargetRow::getAccountId))
                 .toList()) {
-            boolean primary = !hasActiveParentDemand
-                    && firstParentDemand.isPresent()
-                    && target.getAccountId() == firstParentDemand.getAsLong();
+            boolean primary = !hasActiveScopeDemand
+                    && firstScopeDemand.isPresent()
+                    && target.getAccountId() == firstScopeDemand.getAsLong();
             if (financialAccountMapper.linkAccount(
                     target.getAccountId(), linkedAt, primary
             ) != 1) {

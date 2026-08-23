@@ -83,6 +83,27 @@ class AccountLinkServiceTest {
     }
 
     @Test
+    void linksFirstChildDemandAsPrimary() {
+        AccountLinkRequest request = request("CHILD", 6L, List.of(31L));
+        AccountLinkTargetRow demand = target(31L, "CHILD", 9L, 6L,
+                "DEMAND_DEPOSIT", "DISCOVERED");
+        when(memberMapper.findById(1L)).thenReturn(parent());
+        when(mapper.countActiveChildById(6L)).thenReturn(1);
+        when(mapper.countActiveParentAccess(1L, 6L)).thenReturn(1);
+        when(mapper.countActiveParentDemandDeposit(1L)).thenReturn(1);
+        when(mapper.countActiveChildDemandDeposit(6L)).thenReturn(0);
+        when(mapper.findAccountLinkTargetsForUpdate(List.of(31L)))
+                .thenReturn(List.of(demand));
+        when(mapper.linkAccount(31L, java.time.LocalDateTime.of(
+                2026, 8, 13, 5, 0), true)).thenReturn(1);
+        when(protector.decrypt(new byte[]{1})).thenReturn("123-456");
+
+        AccountLinkResult result = service.link(1L, request);
+
+        assertEquals(true, result.getAccounts().get(0).isPrimary());
+    }
+
+    @Test
     void rejectsDuplicateIds() {
         when(memberMapper.findById(1L)).thenReturn(parent());
         BusinessException exception = assertThrows(
