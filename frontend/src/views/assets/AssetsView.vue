@@ -20,7 +20,7 @@ import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
-type AccountType = '적금' | '입출금'
+type AccountType = '적금' | '입출금' | '청약'
 type AssetsTab = 'accounts' | 'autoTransfers'
 
 type LinkedAccount = {
@@ -77,7 +77,9 @@ const accountOptions = computed(() => accountGroups.value.flatMap((group) =>
   })),
 ))
 const sourceAccountOptions = computed(() =>
-  accountOptions.value.filter(({ tag, type }) => tag === '부모' && type === '입출금'),
+  accountOptions.value.filter(
+    ({ tag, type }) => tag === '부모' && (type === '입출금' || type === '적금'),
+  ),
 )
 const defaultSourceAccount = computed(() =>
   accountOptions.value.find(({ type }) => type === '입출금') ?? accountOptions.value[0],
@@ -283,7 +285,7 @@ const retryTransfer = () => {
 }
 
 const mapAccountType = (value: string): AccountType =>
-  value === 'SAVINGS' || value === 'SUBSCRIPTION' ? '적금' : '입출금'
+  value === 'SAVINGS' ? '적금' : value === 'SUBSCRIPTION' ? '청약' : '입출금'
 
 const loadAssets = async () => {
   try {

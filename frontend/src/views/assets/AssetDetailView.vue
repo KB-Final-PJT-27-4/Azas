@@ -20,7 +20,7 @@ const account = ref({
   accountNumber: '',
   bankName: '',
   ownerName: '',
-  type: '입출금' as '적금' | '입출금',
+  type: '입출금' as '적금' | '입출금' | '청약',
   balance: 0,
   ownerType: 'PARENT',
 })
@@ -140,7 +140,12 @@ const loadAccount = async () => {
       accountNumber: detail.account_number,
       bankName: detail.bank_name,
       ownerName: detail.account_holder_name,
-      type: detail.account_product_type === 'DEMAND_DEPOSIT' ? '입출금' : '적금',
+      type:
+        detail.account_product_type === 'DEMAND_DEPOSIT'
+          ? '입출금'
+          : detail.account_product_type === 'SAVINGS'
+            ? '적금'
+            : '청약',
       balance: detail.balance,
       ownerType: detail.owner_type,
     }
@@ -169,7 +174,9 @@ const loadAccount = async () => {
       })),
     ]
     sourceTransferAccounts.value = parentResponse.data.accounts
-      .filter(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')
+      .filter(({ account_product_type }) =>
+        account_product_type === 'DEMAND_DEPOSIT' || account_product_type === 'SAVINGS',
+      )
       .map((item) => ({
         id: String(item.account_id),
         name: item.account_name,
@@ -321,7 +328,7 @@ onMounted(loadAccount)
               {{ account.accountNumber }}
             </p>
             <button
-              v-if="account.type === '입출금'"
+              v-if="account.type !== '청약'"
               class="h-8 w-[64px] -translate-y-[9px] shrink-0 rounded-full text-[11px] font-bold text-white shadow-[0_4px_10px_rgba(255,177,0,0.15)] active:opacity-80"
               :class="isParentAccount ? 'bg-[var(--color-brand-primary)]' : 'bg-[#ffb000]'"
               type="button"
