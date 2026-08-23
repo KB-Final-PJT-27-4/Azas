@@ -17,6 +17,7 @@ const router = useRouter()
 const { showToast } = useToast()
 const isRecommendationOpen = ref(false)
 const selectedRecommendationAmount = ref<number>()
+const financialGoalTemplateId = ref<number | null>(null)
 let previousHtmlBackground = ''
 let previousBodyBackground = ''
 
@@ -63,6 +64,7 @@ onMounted(async () => {
     form.name = data.title ?? '나의 목표'
     form.amount = data.target_amount ?? 0
     form.targetDate = toFinancialGoalMonth(data.target_date ?? '')
+    financialGoalTemplateId.value = data.financial_goal_template_id ?? null
   } catch (error) {
     showToast(getApiErrorMessage(error, '목표 정보를 불러오지 못했습니다.'), 'error')
   }
@@ -112,6 +114,7 @@ onBeforeUnmount(() => {
           :target-date="form.targetDate"
           :show-intro="false"
           appearance="management"
+          :has-recommendation="financialGoalTemplateId !== null"
           @update:amount="form.amount = $event"
           @update:target-date="form.targetDate = $event"
           @open-recommendation="isRecommendationOpen = true"
@@ -137,8 +140,9 @@ onBeforeUnmount(() => {
     </form>
 
     <AiRecommendationModal
-      v-if="isRecommendationOpen"
+      v-if="isRecommendationOpen && financialGoalTemplateId !== null"
       :selected-amount="selectedRecommendationAmount"
+      :financial-goal-template-id="financialGoalTemplateId"
       @close="isRecommendationOpen = false"
       @select="selectRecommendation"
     />

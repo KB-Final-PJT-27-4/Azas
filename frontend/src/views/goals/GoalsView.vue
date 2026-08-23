@@ -28,6 +28,14 @@ const setting = reactive<GoalSetting>({ amount: 0, targetDate: '' })
 const linkedSavings = reactive<Record<string, string[]>>({})
 const isRecommendationOpen = ref(false)
 const slideDirection = ref<'forward' | 'backward'>('forward')
+const goalTemplateIds = ref<Record<string, number>>({})
+
+const goalTemplateNameByGoalId: Record<string, string> = {
+  education: '대학자금',
+  housing: '주거자금',
+  marriage: '결혼자금',
+  'lump-sum': '목돈 마련',
+}
 
 const goalNames: Record<string, string> = {
   education: '대학자금',
@@ -42,6 +50,7 @@ const currentGoalName = computed(() =>
     ? customGoal.value.trim() || '직접 설정'
     : (goalNames[currentGoalId.value] ?? '목표'),
 )
+const currentGoalTemplateId = computed(() => goalTemplateIds.value[currentGoalId.value] ?? null)
 const hasGoalName = computed(
   () =>
     Boolean(currentGoalId.value) &&
@@ -121,6 +130,9 @@ const goNext = async () => {
         target_amount: setting.amount,
         target_date: toFinancialGoalApiDate(setting.targetDate),
         account_ids: (linkedSavings[currentGoalId.value] ?? []).map(Number).filter(Number.isFinite),
+        ...(currentGoalTemplateId.value
+          ? { financial_goal_template_id: currentGoalTemplateId.value }
+          : {}),
       })
       showToast('목표를 만들었어요.', 'success')
       await router.push({ name: 'MypageGoals' })
@@ -147,6 +159,21 @@ onMounted(async () => {
       api.getMyAccountsUsingGET(),
       api.getGoalsUsingGET(childId.value),
     ])
+    try {
+      const { data: templates } = await api.getTemplatesUsingGET()
+      const templatesByName = new Map(
+        (templates.templates ?? [])
+          .filter((template) => template.name && template.financial_goal_template_id != null)
+          .map((template) => [template.name!, template.financial_goal_template_id!] as const),
+      )
+      goalTemplateIds.value = Object.fromEntries(
+        Object.entries(goalTemplateNameByGoalId)
+          .map(([goalId, templateName]) => [goalId, templatesByName.get(templateName)] as const)
+          .filter((entry): entry is [string, number] => entry[1] != null),
+      )
+    } catch {
+      goalTemplateIds.value = {}
+    }
     unavailableSavingsIds.value = [
       ...new Set(
         goals.financial_goals.flatMap((goal) =>
@@ -213,6 +240,7 @@ onMounted(async () => {
                   :show-intro="false"
                   appearance="unified"
                   progressive
+                  :has-recommendation="currentGoalTemplateId !== null"
                   @update:amount="updateAmount"
                   @update:target-date="updateTargetDate"
                   @open-recommendation="isRecommendationOpen = true"
@@ -263,8 +291,9 @@ onMounted(async () => {
     </footer>
 
     <AiRecommendationModal
-      v-if="isRecommendationOpen"
+      v-if="isRecommendationOpen && currentGoalTemplateId !== null"
       :selected-amount="setting.amount"
+      :financial-goal-template-id="currentGoalTemplateId"
       @close="isRecommendationOpen = false"
       @select="updateAmount"
     />
