@@ -39,7 +39,9 @@ const sourceAccountId = ref('')
 const targetAccountId = ref('')
 const quickAmounts = [10000, 50000, 100000, 500000]
 
-const sourceAccounts = computed(() => props.sourceAccounts)
+const sourceAccounts = computed(() =>
+  props.sourceAccounts.filter(({ id }) => id !== targetAccountId.value),
+)
 const targetAccounts = computed(() =>
   props.targetAccounts.filter(({ id }) => id !== sourceAccountId.value),
 )
@@ -71,6 +73,13 @@ watch(sourceAccountId, () => {
   if (!props.open) return
   if (!targetAccounts.value.some(({ id }) => id === targetAccountId.value)) {
     targetAccountId.value = targetAccounts.value[0]?.id ?? ''
+  }
+})
+
+watch(targetAccountId, () => {
+  if (!props.open) return
+  if (!sourceAccounts.value.some(({ id }) => id === sourceAccountId.value)) {
+    sourceAccountId.value = sourceAccounts.value[0]?.id ?? ''
   }
 })
 
