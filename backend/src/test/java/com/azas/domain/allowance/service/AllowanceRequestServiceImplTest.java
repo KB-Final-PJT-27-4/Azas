@@ -8,6 +8,9 @@ import com.azas.domain.allowance.dto.UpdateAllowanceRequestStatus;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
 import com.azas.domain.child.service.ChildFeaturePermissionService;
+import com.azas.domain.finance.transfer.dto.CreateTransferRequest;
+import com.azas.domain.finance.transfer.dto.TransferCreateResponse;
+import com.azas.domain.finance.transfer.service.TransferService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
@@ -28,6 +31,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,12 +40,17 @@ class AllowanceRequestServiceImplTest {
 
     private static final long MEMBER_ID = 20L;
     private static final long CHILD_ID = 10L;
+    private static final long SOURCE_ACCOUNT_ID = 101L;
+    private static final long DESTINATION_ACCOUNT_ID = 202L;
 
     @Mock
     private AllowanceRequestMapper allowanceRequestMapper;
 
     @Mock
     private ChildFeaturePermissionService childFeaturePermissionService;
+
+    @Mock
+    private TransferService transferService;
 
     @InjectMocks
     private AllowanceRequestServiceImpl allowanceRequestService;
@@ -125,10 +134,26 @@ class AllowanceRequestServiceImplTest {
                 AllowanceRequestStatus.APPROVED,
                 java.time.LocalDateTime.now()
         );
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(41L))
+                .thenReturn(pending);
         when(allowanceRequestMapper.findAllowanceRequestDetail(41L))
-                .thenReturn(pending, approved);
+                .thenReturn(approved);
         when(allowanceRequestMapper.countAllowanceRequestParentAccess(
                 MEMBER_ID, CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.countAllowanceDestinationAccount(
+                CHILD_ID, DESTINATION_ACCOUNT_ID
+        )).thenReturn(1);
+        TransferCreateResponse transferResponse =
+                mock(TransferCreateResponse.class);
+        when(transferResponse.getFinancialTransferId()).thenReturn(51L);
+        when(transferService.createTransfer(
+                eq(MEMBER_ID),
+                any(String.class),
+                any(CreateTransferRequest.class)
+        )).thenReturn(transferResponse);
+        when(allowanceRequestMapper.linkAllowanceTransfer(
+                51L, 41L, MEMBER_ID
         )).thenReturn(1);
         when(allowanceRequestMapper.updateAllowanceRequestStatus(
                 eq(41L), eq(AllowanceRequestStatus.APPROVED), any()
@@ -263,9 +288,10 @@ class AllowanceRequestServiceImplTest {
     }
 
     private UpdateAllowanceRequestStatus updateRequest(String action) {
-        UpdateAllowanceRequestStatus request =
-                new UpdateAllowanceRequestStatus();
-        ReflectionTestUtils.setField(request, "action", action);
-        return request;
+        return new UpdateAllowanceRequestStatus(
+                action,
+                SOURCE_ACCOUNT_ID,
+                DESTINATION_ACCOUNT_ID
+        );
     }
 }

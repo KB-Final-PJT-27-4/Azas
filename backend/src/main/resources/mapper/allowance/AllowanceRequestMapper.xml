@@ -233,6 +233,23 @@
         WHERE ar.allowance_request_id = #{allowanceRequestId}
     </select>
 
+    <select id="findAllowanceRequestDetailForUpdate"
+            resultMap="allowanceRequestDetailRowMap">
+        SELECT
+            ar.allowance_request_id,
+            ar.child_id,
+            ar.requested_amount,
+            ar.message,
+            ar.status,
+            ar.requested_at
+        FROM allowance_request ar
+                 INNER JOIN child c
+                            ON c.child_id = ar.child_id
+                                AND c.status = 'ACTIVE'
+        WHERE ar.allowance_request_id = #{allowanceRequestId}
+        FOR UPDATE
+    </select>
+
     <resultMap id="allowanceRequestDetailRowMap"
                type="com.azas.domain.allowance.dto.AllowanceRequestDetailRow">
         <id property="allowanceRequestId"
@@ -283,5 +300,26 @@
             updated_at = #{updatedAt}
         WHERE allowance_request_id = #{allowanceRequestId}
           AND status = 'PENDING'
+    </update>
+
+    <select id="countAllowanceDestinationAccount"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM financial_account fa
+        WHERE fa.financial_account_id = #{accountId}
+          AND fa.child_id = #{childId}
+          AND fa.owner_type = 'CHILD'
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+    </select>
+
+    <update id="linkAllowanceTransfer">
+        UPDATE financial_transfer
+        SET origin_type = 'ALLOWANCE_REQUEST',
+            origin_id = #{allowanceRequestId}
+        WHERE financial_transfer_id = #{transferId}
+          AND requested_by_member_id = #{memberId}
+          AND status = 'SUCCEEDED'
     </update>
 </mapper>
