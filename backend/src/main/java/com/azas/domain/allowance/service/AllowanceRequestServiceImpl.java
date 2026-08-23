@@ -5,6 +5,9 @@ import com.azas.domain.allowance.entity.AllowanceRequestAction;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
 import com.azas.domain.child.service.ChildFeaturePermissionService;
+import com.azas.domain.finance.transfer.dto.CreateTransferRequest;
+import com.azas.domain.finance.transfer.dto.TransferCreateResponse;
+import com.azas.domain.finance.transfer.service.TransferService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -12,10 +15,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +29,7 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
 
     private final AllowanceRequestMapper allowanceRequestMapper;
     private final ChildFeaturePermissionService childFeaturePermissionService;
+    private final TransferService transferService;
     private static final int DEFAULT_LIST_SIZE = 20;
     private static final int MAX_LIST_SIZE = 100;
 
@@ -268,7 +274,7 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                 parseAllowanceRequestAction(request);
 
         AllowanceRequestDetailRow current =
-                allowanceRequestMapper.findAllowanceRequestDetail(
+                allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                         allowanceRequestId
                 );
 
@@ -288,6 +294,14 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                 != AllowanceRequestStatus.PENDING) {
             throw new BusinessException(
                     ErrorCode.INVALID_ALLOWANCE_STATUS_TRANSITION
+            );
+        }
+
+        if (action == AllowanceRequestAction.APPROVE) {
+            transferAllowance(
+                    memberId,
+                    current,
+                    request
             );
         }
 
@@ -383,16 +397,94 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
         }
 
         try {
-            return AllowanceRequestAction.valueOf(
+            AllowanceRequestAction action = AllowanceRequestAction.valueOf(
                     request.getAction()
                             .trim()
                             .toUpperCase(Locale.ROOT)
             );
+
+            validateTransferAccounts(request, action);
+            return action;
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(
                     ErrorCode.INVALID_ALLOWANCE_ACTION
             );
         }
+    }
+
+    private void validateTransferAccounts(
+            UpdateAllowanceRequestStatus request,
+            AllowanceRequestAction action
+    ) {
+        if (action == AllowanceRequestAction.APPROVE) {
+            if (request.getSourceAccountId() == null
+                    || request.getSourceAccountId() <= 0
+                    || request.getDestinationAccountId() == null
+                    || request.getDestinationAccountId() <= 0) {
+                throw new BusinessException(
+                        ErrorCode.INVALID_ALLOWANCE_ACTION
+                );
+            }
+            return;
+        }
+
+        if (request.getSourceAccountId() != null
+                || request.getDestinationAccountId() != null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_ALLOWANCE_ACTION
+            );
+        }
+    }
+
+    private void transferAllowance(
+            Long memberId,
+            AllowanceRequestDetailRow allowanceRequest,
+            UpdateAllowanceRequestStatus request
+    ) {
+        if (allowanceRequestMapper.countAllowanceDestinationAccount(
+                allowanceRequest.getChildId(),
+                request.getDestinationAccountId()
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_TRANSFER_REQUEST
+            );
+        }
+
+        CreateTransferRequest transferRequest =
+                new CreateTransferRequest(
+                        request.getSourceAccountId(),
+                        request.getDestinationAccountId(),
+                        allowanceRequest.getRequestedAmount(),
+                        "용돈 요청 지급"
+                );
+
+        TransferCreateResponse transferResponse =
+                transferService.createTransfer(
+                        memberId,
+                        createAllowanceTransferIdempotencyKey(
+                                allowanceRequest.getAllowanceRequestId()
+                        ),
+                        transferRequest
+                );
+
+        if (allowanceRequestMapper.linkAllowanceTransfer(
+                transferResponse.getFinancialTransferId(),
+                allowanceRequest.getAllowanceRequestId(),
+                memberId
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TRANSFER_PROCESSING_FAILED
+            );
+        }
+    }
+
+    private String createAllowanceTransferIdempotencyKey(
+            Long allowanceRequestId
+    ) {
+        return UUID.nameUUIDFromBytes(
+                ("ALLOWANCE_REQUEST:" + allowanceRequestId)
+                        .getBytes(StandardCharsets.UTF_8)
+        ).toString();
     }
 
     private void validateStatusChangeAccess(
