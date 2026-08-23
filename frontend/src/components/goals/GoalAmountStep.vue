@@ -11,11 +11,13 @@ const props = withDefaults(
     showIntro?: boolean
     appearance?: 'default' | 'management' | 'unified'
     progressive?: boolean
+    hasRecommendation?: boolean
   }>(),
   {
     showIntro: true,
     appearance: 'default',
     progressive: false,
+    hasRecommendation: true,
   },
 )
 
@@ -79,6 +81,7 @@ const updateAmount = (event: Event) => {
         <span class="flex min-w-0 items-center justify-between gap-3 text-sm font-bold">
           <label :for="amountInputId">목표 금액</label>
           <button
+            v-if="hasRecommendation"
             class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors active:bg-[#e8edf0]"
             :class="appearance === 'unified' ? 'bg-[#e7f7ff] text-[#239fd6]' : 'border border-[var(--color-border)]'"
             type="button"
