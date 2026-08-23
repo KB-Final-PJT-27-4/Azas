@@ -233,7 +233,7 @@ class AutoTransferScheduleServiceImplTest {
     }
 
     @Test
-    void 목표가_없는_입금계좌는_거절한다() {
+    void 자녀_입출금계좌로_자동이체_일정을_등록한다() {
         String key = UUID.randomUUID().toString();
 
         when(autoTransferScheduleMapper.findByIdempotencyKey(key))
@@ -243,25 +243,40 @@ class AutoTransferScheduleServiceImplTest {
         when(autoTransferScheduleMapper.findAccountForUpdate(1L))
                 .thenReturn(parentAccount(1L, 7L));
         when(autoTransferScheduleMapper.findAccountForUpdate(12L))
-                .thenReturn(childSavingsAccount(
+                .thenReturn(childAccount(
                         12L,
                         6L,
+                        "DEMAND_DEPOSIT",
                         null
                 ));
+        when(autoTransferScheduleMapper.countEquivalentSchedule(
+                7L,
+                6L,
+                1L,
+                12L,
+                new BigDecimal("80000"),
+                "MONTHLY",
+                10,
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2029, 2, 10)
+        )).thenReturn(0);
+        when(autoTransferScheduleMapper.insertSchedule(any()))
+                .thenAnswer(invocation -> {
+                    AutoTransferScheduleInsertCommand command =
+                            invocation.getArgument(0);
+                    command.setAutoTransferScheduleId(24L);
+                    return 1;
+                });
 
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> autoTransferScheduleService.createSchedule(
+        AutoTransferScheduleResponse response =
+                autoTransferScheduleService.createSchedule(
                         7L,
                         key,
                         createRequest()
-                )
-        );
+                );
 
-        assertEquals(
-                ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE,
-                exception.getErrorCode()
-        );
+        assertEquals(24L, response.getAutoTransferScheduleId());
+        assertEquals(null, response.getFinancialGoalId());
     }
 
     @Test
@@ -279,6 +294,207 @@ class AutoTransferScheduleServiceImplTest {
                 ErrorCode.BADREQUEST,
                 exception.getErrorCode()
         );
+    }
+
+    @Test
+    void 부모_적금으로_자동이체_일정을_등록할_수_있다() {
+        String key = UUID.randomUUID().toString();
+        CreateAutoTransferScheduleRequest request = createRequest();
+        ReflectionTestUtils.setField(request, "childId", null);
+        ReflectionTestUtils.setField(request, "destinationAccountId", 13L);
+
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
+                .thenReturn(null);
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
+                .thenReturn(parentAccount(1L, 7L));
+        when(autoTransferScheduleMapper.findAccountForUpdate(13L))
+                .thenReturn(parentSavingsAccount(13L, 7L));
+        when(autoTransferScheduleMapper.countEquivalentSchedule(
+                7L,
+                null,
+                1L,
+                13L,
+                new BigDecimal("80000"),
+                "MONTHLY",
+                10,
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2029, 2, 10)
+        )).thenReturn(0);
+        when(autoTransferScheduleMapper.insertSchedule(any()))
+                .thenAnswer(invocation -> {
+                    AutoTransferScheduleInsertCommand command =
+                            invocation.getArgument(0);
+                    command.setAutoTransferScheduleId(22L);
+                    return 1;
+                });
+
+        var response = autoTransferScheduleService.createSchedule(
+                7L,
+                key,
+                request
+        );
+
+        assertEquals(22L, response.getAutoTransferScheduleId());
+        assertEquals(null, response.getFinancialGoalId());
+    }
+
+    @Test
+    void 부모_입출금계좌를_받는계좌로_등록할_수_있다() {
+        String key = UUID.randomUUID().toString();
+        CreateAutoTransferScheduleRequest request = createRequest();
+        ReflectionTestUtils.setField(request, "destinationAccountId", 14L);
+
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
+                .thenReturn(null);
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
+                .thenReturn(parentAccount(1L, 7L));
+        when(autoTransferScheduleMapper.findAccountForUpdate(14L))
+                .thenReturn(parentAccount(14L, 7L));
+        when(autoTransferScheduleMapper.countEquivalentSchedule(
+                7L,
+                null,
+                1L,
+                14L,
+                new BigDecimal("80000"),
+                "MONTHLY",
+                10,
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2029, 2, 10)
+        )).thenReturn(0);
+        when(autoTransferScheduleMapper.insertSchedule(any()))
+                .thenAnswer(invocation -> {
+                    AutoTransferScheduleInsertCommand command =
+                            invocation.getArgument(0);
+                    command.setAutoTransferScheduleId(25L);
+                    return 1;
+                });
+
+        AutoTransferScheduleResponse response =
+                autoTransferScheduleService.createSchedule(
+                        7L,
+                        key,
+                        request
+                );
+
+        assertEquals(25L, response.getAutoTransferScheduleId());
+
+        ArgumentCaptor<AutoTransferScheduleInsertCommand> captor =
+                ArgumentCaptor.forClass(
+                        AutoTransferScheduleInsertCommand.class
+                );
+        verify(autoTransferScheduleMapper).insertSchedule(captor.capture());
+        assertEquals(null, captor.getValue().getChildId());
+    }
+
+    @Test
+    void 부모계좌_일정은_요청의_자녀ID를_무시하고_멱등하게_응답한다() {
+        String key = UUID.randomUUID().toString();
+        CreateAutoTransferScheduleRequest request = createRequest();
+        ReflectionTestUtils.setField(request, "destinationAccountId", 14L);
+
+        AutoTransferScheduleRow existing = existingSchedule(key);
+        existing.setChildId(null);
+        existing.setFinancialGoalId(null);
+        existing.setDestinationAccountId(14L);
+
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
+                .thenReturn(existing);
+
+        AutoTransferScheduleResponse response =
+                autoTransferScheduleService.createSchedule(
+                        7L,
+                        key,
+                        request
+                );
+
+        assertEquals(21L, response.getAutoTransferScheduleId());
+        verify(autoTransferScheduleMapper, never())
+                .findAccountForUpdate(anyLong());
+        verify(autoTransferScheduleMapper, never())
+                .insertSchedule(any());
+    }
+
+    @Test
+    void 청약계좌는_받는계좌로_등록할_수_없다() {
+        String key = UUID.randomUUID().toString();
+
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
+                .thenReturn(null);
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
+                .thenReturn(parentAccount(1L, 7L));
+        when(autoTransferScheduleMapper.findAccountForUpdate(12L))
+                .thenReturn(childAccount(
+                        12L,
+                        6L,
+                        "SUBSCRIPTION",
+                        null
+                ));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> autoTransferScheduleService.createSchedule(
+                        7L,
+                        key,
+                        createRequest()
+                )
+        );
+
+        assertEquals(
+                ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE,
+                exception.getErrorCode()
+        );
+        verify(autoTransferScheduleMapper, never())
+                .insertSchedule(any());
+    }
+
+    @Test
+    void 목표가_연결되지_않은_자녀_적금에도_일정을_등록한다() {
+        String key = UUID.randomUUID().toString();
+        CreateAutoTransferScheduleRequest request = createRequest();
+
+        when(autoTransferScheduleMapper.findByIdempotencyKey(key))
+                .thenReturn(null);
+        when(autoTransferScheduleMapper.findAccountForUpdate(1L))
+                .thenReturn(parentAccount(1L, 7L));
+        when(autoTransferScheduleMapper.findAccountForUpdate(12L))
+                .thenReturn(childSavingsAccount(12L, 6L, null));
+        when(autoTransferScheduleMapper.countChildAccess(6L, 7L))
+                .thenReturn(1);
+        when(autoTransferScheduleMapper.countEquivalentSchedule(
+                7L,
+                6L,
+                1L,
+                12L,
+                new BigDecimal("80000"),
+                "MONTHLY",
+                10,
+                LocalDate.of(2026, 9, 10),
+                LocalDate.of(2029, 2, 10)
+        )).thenReturn(0);
+        when(autoTransferScheduleMapper.insertSchedule(any()))
+                .thenAnswer(invocation -> {
+                    AutoTransferScheduleInsertCommand command =
+                            invocation.getArgument(0);
+                    command.setAutoTransferScheduleId(23L);
+                    return 1;
+                });
+
+        AutoTransferScheduleResponse response =
+                autoTransferScheduleService.createSchedule(
+                        7L,
+                        key,
+                        request
+                );
+
+        assertEquals(23L, response.getAutoTransferScheduleId());
+        assertEquals(null, response.getFinancialGoalId());
+
+        ArgumentCaptor<AutoTransferScheduleInsertCommand> captor =
+                ArgumentCaptor.forClass(
+                        AutoTransferScheduleInsertCommand.class
+                );
+        verify(autoTransferScheduleMapper).insertSchedule(captor.capture());
+        assertEquals(null, captor.getValue().getFinancialGoalId());
     }
 
     private CreateAutoTransferScheduleRequest createRequest() {
@@ -343,17 +559,45 @@ class AutoTransferScheduleServiceImplTest {
             Long childId,
             Long financialGoalId
     ) {
+        return childAccount(
+                accountId,
+                childId,
+                "SAVINGS",
+                financialGoalId
+        );
+    }
+
+    private AutoTransferAccountRow childAccount(
+            Long accountId,
+            Long childId,
+            String accountProductType,
+            Long financialGoalId
+    ) {
         AutoTransferAccountRow row =
                 new AutoTransferAccountRow();
 
         row.setFinancialAccountId(accountId);
         row.setOwnerType("CHILD");
         row.setChildId(childId);
-        row.setAccountProductType("SAVINGS");
+        row.setAccountProductType(accountProductType);
         row.setAccountStatus("ACTIVE");
         row.setLinkStatus("ACTIVE");
         row.setFinancialGoalId(financialGoalId);
 
+        return row;
+    }
+
+    private AutoTransferAccountRow parentSavingsAccount(
+            Long accountId,
+            Long memberId
+    ) {
+        AutoTransferAccountRow row = new AutoTransferAccountRow();
+        row.setFinancialAccountId(accountId);
+        row.setOwnerType("PARENT");
+        row.setOwnerMemberId(memberId);
+        row.setAccountProductType("SAVINGS");
+        row.setAccountStatus("ACTIVE");
+        row.setLinkStatus("ACTIVE");
         return row;
     }
 
@@ -418,6 +662,53 @@ class AutoTransferScheduleServiceImplTest {
                         .get(0)
                         .getAutoTransferScheduleId()
         );
+
+        ArgumentCaptor<AutoTransferScheduleListQuery> queryCaptor =
+                ArgumentCaptor.forClass(
+                        AutoTransferScheduleListQuery.class
+                );
+        verify(autoTransferScheduleMapper)
+                .findSchedules(queryCaptor.capture());
+
+        AutoTransferScheduleListQuery query = queryCaptor.getValue();
+        assertEquals(1L, query.getMemberId());
+        assertEquals(1L, query.getChildId());
+        assertEquals(
+                AutoTransferScheduleStatus.ACTIVE,
+                query.getStatus()
+        );
+        assertEquals(3, query.getLimit());
+    }
+
+    @Test
+    void 상태를_생략하면_활성_자동이체_일정만_조회한다() {
+        when(autoTransferScheduleMapper.countChildAccess(1L, 1L))
+                .thenReturn(1);
+        when(autoTransferScheduleMapper.findSchedules(any(
+                AutoTransferScheduleListQuery.class
+        ))).thenReturn(List.of());
+
+        autoTransferScheduleService.getSchedules(
+                1L,
+                1L,
+                null,
+                null,
+                null
+        );
+
+        ArgumentCaptor<AutoTransferScheduleListQuery> queryCaptor =
+                ArgumentCaptor.forClass(
+                        AutoTransferScheduleListQuery.class
+                );
+        verify(autoTransferScheduleMapper)
+                .findSchedules(queryCaptor.capture());
+
+        AutoTransferScheduleListQuery query = queryCaptor.getValue();
+        assertEquals(
+                AutoTransferScheduleStatus.ACTIVE,
+                query.getStatus()
+        );
+        assertEquals(21, query.getLimit());
     }
 
     @Test

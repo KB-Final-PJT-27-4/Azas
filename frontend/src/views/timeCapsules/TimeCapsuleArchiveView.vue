@@ -46,6 +46,7 @@ const demandAccountId = ref<number | null>(null)
 const capsuleAccounts = ref<
   Array<{
     id: number
+    accountId?: number
     name: string
     createdAt: string
     savedAmount: number
@@ -53,6 +54,7 @@ const capsuleAccounts = ref<
     isFree?: boolean
   }>
 >([])
+const selectedFreeCapsuleId = ref<number | null>(null)
 const archiveChildName = computed(() => registration.value?.childName.trim() || '아이')
 type CapsuleAccount = (typeof capsuleAccounts.value)[number]
 type UnlockPhase =
@@ -328,24 +330,22 @@ const confirmFreeCapsule = async () => {
     showToast('오픈 날짜를 선택해주세요.', 'error')
     return
   }
-  if (!childId.value || !demandAccountId.value) {
+  if (!childId.value || !demandAccountId.value || !selectedFreeCapsuleId.value) {
     showToast('연결된 입출금계좌가 필요합니다.', 'error')
     return
   }
   try {
-    const { data } = await api.createTimeCapsuleUsingPOST(childId.value, {
-      financial_account_id: demandAccountId.value,
-      release_date: freeCapsuleOpenDate.value,
-    })
-    capsuleAccounts.value.push({
-      id: data.time_capsule_id ?? 0,
-      name: data.title ?? '입출금계좌 타임캡슐',
-      createdAt: data.release_date?.replaceAll('-', '.') ?? formattedFreeOpenDate.value,
-      savedAmount: data.total_saved_amount ?? 0,
-      dDay: calculateDday(data.release_date ?? freeCapsuleOpenDate.value) ?? undefined,
-      isFree: true,
-    })
-    isFreeCapsuleCreated.value = true
+    const { data } = await api.updateTimeCapsuleReleaseDateUsingPATCH(
+      selectedFreeCapsuleId.value,
+      {
+        release_date: freeCapsuleOpenDate.value,
+      },
+    )
+    const capsule = capsuleAccounts.value.find(({ id }) => id === selectedFreeCapsuleId.value)
+    if (capsule) {
+      capsule.createdAt = data.release_date?.replaceAll('-', '.') ?? formattedFreeOpenDate.value
+      capsule.dDay = calculateDday(data.release_date ?? freeCapsuleOpenDate.value) ?? undefined
+    }
     closeFreeCapsuleSheet()
     showToast('입출금계좌의 오픈 날짜를 설정했습니다.', 'success')
   } catch (error) {
@@ -365,10 +365,7 @@ const navigateForward = async (to: RouteLocationRaw) => {
   }
 }
 
-const openFreeCapsuleList = () => {
-  const freeCapsule = capsuleAccounts.value.find(({ isFree }) => isFree)
-  if (!freeCapsule) return
-
+const openFreeCapsuleList = (freeCapsule: { id: number; createdAt: string }) => {
   navigateForward({
     name: 'TimeCapsuleList',
     params: { capsuleListId: String(freeCapsule.id) },
@@ -471,16 +468,19 @@ const openCapsule = (capsule: CapsuleAccount, event: MouseEvent) => {
     navigateForward(`/time-capsules/${capsule.id}`)
     return
   }
-  if (!isFreeCapsuleCreated.value) {
+  if (capsule.createdAt === '오픈 날짜 설정') {
+    demandAccountId.value = capsule.accountId ?? null
+    selectedFreeCapsuleId.value = capsule.id
+    freeCapsuleOpenDate.value = ''
     isFreeCapsuleSheetOpen.value = true
     return
   }
-  openFreeCapsuleList()
+  openFreeCapsuleList(capsule)
 }
 
 const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
   capsule.isFree
-    ? isFreeCapsuleCreated.value && isReleased(capsule.createdAt)
+    ? capsule.createdAt !== '오픈 날짜 설정' && isReleased(capsule.createdAt)
     : isReleased(capsule.createdAt)
 
 onMounted(async () => {
@@ -501,18 +501,28 @@ onMounted(async () => {
       birthDate: child.birth_date ?? child.expected_birth_date ?? '',
       childName: child.name ?? '아이',
     }
-    demandAccountId.value = childAccounts.accounts.find(
-      ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
-    )?.account_id ?? null
-
     const allAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
+    const demandAccountIds = new Set(
+      allAccounts
+        .filter(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')
+        .map(({ account_id }) => account_id),
+    )
     const activeAccountIds = new Set(allAccounts.map(({ account_id }) => account_id))
+    const eligibleAccountIds = [
+      ...new Set([
+        ...allAccounts
+          .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
+          .map(({ account_id }) => account_id),
+        ...demandAccountIds,
+      ]),
+    ]
+    const eligibleAccountIdSet = new Set(eligibleAccountIds)
     let capsuleItems = initialCapsules.time_capsules ?? []
     const orphanedCapsules = capsuleItems.filter(
       ({ account_id, time_capsule_id }) =>
         account_id != null &&
         time_capsule_id != null &&
-        !activeAccountIds.has(account_id),
+        (!activeAccountIds.has(account_id) || !eligibleAccountIdSet.has(account_id)),
     )
 
     if (orphanedCapsules.length > 0) {
@@ -528,25 +538,18 @@ onMounted(async () => {
       capsuleItems = capsulesAfterCleanup.time_capsules ?? []
     }
 
-    const savingsAccountIds = [
-      ...new Set(
-        allAccounts
-          .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
-          .map(({ account_id }) => account_id),
-      ),
-    ]
     const capsuleAccountIds = new Set(
       capsuleItems
         .map(({ account_id }) => account_id)
         .filter((accountId): accountId is number => accountId != null),
     )
-    const missingSavingsAccountIds = savingsAccountIds.filter(
+    const missingAccountIds = eligibleAccountIds.filter(
       (accountId) => !capsuleAccountIds.has(accountId),
     )
 
-    if (missingSavingsAccountIds.length > 0) {
+    if (missingAccountIds.length > 0) {
       await Promise.allSettled(
-        missingSavingsAccountIds.map((financialAccountId) =>
+        missingAccountIds.map((financialAccountId) =>
           api.createTimeCapsuleUsingPOST(childId.value!, {
             financial_account_id: financialAccountId,
           }),
@@ -560,24 +563,26 @@ onMounted(async () => {
           .map(({ account_id }) => account_id)
           .filter((accountId): accountId is number => accountId != null),
       )
-      if (missingSavingsAccountIds.some((accountId) => !refreshedAccountIds.has(accountId))) {
-        showToast('일부 적금의 타임캡슐을 만들지 못했습니다.', 'error')
+      if (missingAccountIds.some((accountId) => !refreshedAccountIds.has(accountId))) {
+        showToast('일부 계좌의 타임캡슐을 만들지 못했습니다.', 'error')
       }
     }
 
     capsuleAccounts.value = capsuleItems.map((capsule) => ({
       id: capsule.time_capsule_id ?? 0,
+      accountId: capsule.account_id,
       name: capsule.title ?? '타임캡슐',
       createdAt: capsule.release_date?.replaceAll('-', '.') ?? '오픈 날짜 설정',
       savedAmount: capsule.total_saved_amount ?? 0,
       dDay: capsule.d_day,
-      isFree: capsule.account_id === demandAccountId.value,
+      isFree: capsule.account_id != null && demandAccountIds.has(capsule.account_id),
     }))
     isFreeCapsuleCreated.value = capsuleAccounts.value.some(({ isFree }) => isFree)
     if (import.meta.env.DEV && capsuleAccounts.value.length === 0) {
       applyLocalTimeCapsuleFallback()
     }
-  } catch {
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '타임캡슐을 불러오지 못했습니다.'), 'error')
     applyLocalTimeCapsuleFallback()
   } finally {
     isLoading.value = false
@@ -651,7 +656,7 @@ onBeforeUnmount(resetUnlockFlow)
             <img
               class="pregnancy-growth-card__image absolute right-0 bottom-7 h-[142px] w-[116px] object-contain object-bottom"
               :src="pregnancyGrowth.image"
-              :alt="`${pregnancyGrowth.fruit} 깨비`"
+              :alt="`${pregnancyGrowth.fruit} ${archiveChildName}`"
             />
           </aside>
 
@@ -784,7 +789,7 @@ onBeforeUnmount(resetUnlockFlow)
             :class="isCapsuleReleased(capsule) ? 'bg-[#ecfaff]' : 'bg-[#f0f3f5]'"
           >
             <span
-              v-if="capsule.isFree && !isFreeCapsuleCreated"
+              v-if="capsule.isFree && capsule.createdAt === '오픈 날짜 설정'"
               class="open-date-alert absolute top-2 right-2 grid size-5 place-items-center rounded-full bg-[#ef5b5b] text-[15px] font-black leading-none text-white"
               aria-label="오픈 날짜 설정 필요"
             >
@@ -802,7 +807,7 @@ onBeforeUnmount(resetUnlockFlow)
           <time
             class="mt-1 block text-xs"
             :class="
-              capsule.isFree && !isFreeCapsuleCreated
+              capsule.isFree && capsule.createdAt === '오픈 날짜 설정'
                 ? 'font-bold text-[#ef5b5b]'
                 : 'text-[var(--color-text-secondary)]'
             "
@@ -847,27 +852,27 @@ onBeforeUnmount(resetUnlockFlow)
         aria-modal="true"
         aria-labelledby="unlock-title"
       >
-          <div
-            class="time-capsule-unlock__backdrop absolute inset-0"
-            :class="isUnlockCardCentered ? 'time-capsule-unlock__backdrop--active' : ''"
-          ></div>
-          <article
-            v-if="unlockSelectedCapsule && unlockCardStyle"
-            class="unlock-card-copy"
-            :class="[
-              isUnlockCardCentered ? 'unlock-card-copy--centered' : '',
-              unlockPhase === 'emerging' ||
-              unlockPhase === 'flashing' ||
-              unlockPhase === 'revealing'
-                ? 'unlock-card-copy--expanded'
-                : '',
-              unlockPhase !== 'centering' && unlockPhase !== 'emerging'
-                ? 'unlock-card-copy--soft-hidden'
-                : '',
-            ]"
-            :style="unlockCardStyle"
-            aria-hidden="true"
-          >
+        <div
+          class="time-capsule-unlock__backdrop absolute inset-0"
+          :class="isUnlockCardCentered ? 'time-capsule-unlock__backdrop--active' : ''"
+        ></div>
+        <article
+          v-if="unlockSelectedCapsule && unlockCardStyle"
+          class="unlock-card-copy"
+          :class="[
+            isUnlockCardCentered ? 'unlock-card-copy--centered' : '',
+            unlockPhase === 'emerging' ||
+            unlockPhase === 'flashing' ||
+            unlockPhase === 'revealing'
+              ? 'unlock-card-copy--expanded'
+              : '',
+            unlockPhase !== 'centering' && unlockPhase !== 'emerging'
+              ? 'unlock-card-copy--soft-hidden'
+              : '',
+          ]"
+          :style="unlockCardStyle"
+          aria-hidden="true"
+        >
             <span
               class="relative grid aspect-[4/3] place-items-center rounded-xl"
               :class="isCapsuleReleased(unlockSelectedCapsule) ? 'bg-[#ecfaff]' : 'bg-[#f0f3f5]'"
@@ -887,9 +892,9 @@ onBeforeUnmount(resetUnlockFlow)
             <p class="mt-3 text-xs font-bold text-[var(--color-selected-text)]">
               저축 금액 {{ unlockSelectedCapsule.savedAmount.toLocaleString('ko-KR') }}원
             </p>
-          </article>
+        </article>
 
-          <Transition name="unlock-lock">
+        <Transition name="unlock-lock">
             <section
               v-if="
                 unlockPhase !== 'centering' &&
@@ -1003,7 +1008,7 @@ onBeforeUnmount(resetUnlockFlow)
                 </p>
               </div>
             </section>
-          </Transition>
+        </Transition>
       </div>
     </Teleport>
 

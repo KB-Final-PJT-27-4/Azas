@@ -20,7 +20,7 @@ import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
-type AccountType = '적금' | '입출금'
+type AccountType = '적금' | '입출금' | '청약'
 type AssetsTab = 'accounts' | 'autoTransfers'
 
 type LinkedAccount = {
@@ -76,6 +76,23 @@ const accountOptions = computed(() => accountGroups.value.flatMap((group) =>
     type: account.type,
   })),
 ))
+const sourceAccountOptions = computed(() =>
+  accountOptions.value.filter(
+    ({ tag, type }) => tag === '부모' && (type === '입출금' || type === '적금'),
+  ),
+)
+const allowanceRequestId = computed(() => Number(route.query.allowanceRequest) || null)
+const requestedTargetAccountId = computed(() => String(route.query.targetAccountId ?? ''))
+const allowanceTargetAccountOptions = computed(() =>
+  accountOptions.value.filter(({ id, tag, type }) =>
+    tag === '자녀' &&
+    type === '입출금' &&
+    (!requestedTargetAccountId.value || id === requestedTargetAccountId.value),
+  ),
+)
+const transferTargetAccountOptions = computed(() =>
+  allowanceRequestId.value ? allowanceTargetAccountOptions.value : accountOptions.value,
+)
 const defaultSourceAccount = computed(() =>
   accountOptions.value.find(({ type }) => type === '입출금') ?? accountOptions.value[0],
 )
@@ -265,6 +282,11 @@ const completeTransfer = async ({
       memo,
       source_account_id: Number(sourceAccountId),
     })
+    if (allowanceRequestId.value) {
+      await api.updateAllowanceRequestStatusUsingPATCH(allowanceRequestId.value, {
+        action: 'APPROVE',
+      })
+    }
     isTransferSheetOpen.value = false
     transferResult.value = 'success'
     await loadAssets()
@@ -280,7 +302,7 @@ const retryTransfer = () => {
 }
 
 const mapAccountType = (value: string): AccountType =>
-  value === 'SAVINGS' || value === 'SUBSCRIPTION' ? '적금' : '입출금'
+  value === 'SAVINGS' ? '적금' : value === 'SUBSCRIPTION' ? '청약' : '입출금'
 
 const loadAssets = async () => {
   try {
@@ -763,8 +785,8 @@ onMounted(loadAssets)
       :target-account-number="requestedTargetNumber"
       :initial-amount="requestedTransferAmount"
       :initial-memo="requestedTransferMemo"
-      :source-accounts="accountOptions"
-      :target-accounts="accountOptions"
+      :source-accounts="sourceAccountOptions"
+      :target-accounts="transferTargetAccountOptions"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"
     />

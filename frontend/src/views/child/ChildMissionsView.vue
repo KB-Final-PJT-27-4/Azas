@@ -3,11 +3,12 @@ import { computed, onMounted, ref } from 'vue'
 import { CheckSquare } from 'lucide-vue-next'
 
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
+import { getCurrentChild, resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
 type ChildMission = { id: number; title: string; description: string; reward: number; status: 'progress' | 'review' | 'completed' }
 const childMissions = ref<ChildMission[]>([])
+const childName = ref('아이')
 const errorMessage = ref('')
 const submittingMissionId = ref<number | null>(null)
 const { showToast } = useToast()
@@ -31,7 +32,11 @@ const missions = computed(() =>
 onMounted(async () => {
   try {
     const childId = await resolveCurrentChildId()
-    const { data } = await api.getMissionsUsingGET(childId)
+    const [{ data }, child] = await Promise.all([
+      api.getMissionsUsingGET(childId),
+      getCurrentChild(),
+    ])
+    childName.value = child.name?.trim() || '아이'
     childMissions.value = (data.items ?? []).map((mission) => ({
       id: mission.mission_id ?? 0,
       title: mission.title ?? '용돈 미션',
@@ -99,7 +104,7 @@ const requestMissionCompletion = async (mission: ChildMission) => {
             >
               <CheckSquare :size="22" :stroke-width="2.4" aria-hidden="true" />
             </span>
-            <strong class="truncate text-[16px] font-extrabold">깨비</strong>
+            <strong class="truncate text-[16px] font-extrabold">{{ childName }}</strong>
           </div>
           <span
             class="rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--color-selected-text)]"
@@ -114,7 +119,7 @@ const requestMissionCompletion = async (mission: ChildMission) => {
         <h1
           class="mt-2 mb-0 text-[24px] leading-[1.35] font-extrabold tracking-[-0.025em] text-[var(--color-text-primary)]"
         >
-          깨비의 용돈 미션을<br />
+          {{ childName }}의 용돈 미션을<br />
           확인해요
         </h1>
       </div>

@@ -45,8 +45,8 @@ const props = withDefaults(
     scrollThreshold?: number
   }>(),
   {
-    title: '깨비',
-    profileName: '깨비',
+    title: '아이',
+    profileName: '아이',
     profileImage: defaultProfileImageUrl,
     profileEmoji: '👶',
     showBack: false,

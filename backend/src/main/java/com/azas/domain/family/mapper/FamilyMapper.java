@@ -5,6 +5,7 @@ import com.azas.domain.family.dto.ChildMemberLinkResponse;
 import com.azas.domain.family.dto.FamilyGuardianResponse;
 import com.azas.domain.family.dto.FamilyInvitationInfoProjection;
 import com.azas.domain.family.dto.FamilyInvitationInsertCommand;
+import com.azas.domain.family.dto.FamilyInvitationChildResponse;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -37,18 +38,33 @@ public interface FamilyMapper {
 
     int expirePendingFamilyInvitations(
             @Param("childId") Long childId,
+            @Param("inviterMemberId") Long inviterMemberId,
             @Param("inviteeType") FamilyInviteeType inviteeType,
             @Param("now") LocalDateTime now
     );
 
-    int countUsableFamilyInvitations(
+    int expireUsableFamilyInvitations(
             @Param("childId") Long childId,
+            @Param("inviterMemberId") Long inviterMemberId,
             @Param("inviteeType") FamilyInviteeType inviteeType,
             @Param("now") LocalDateTime now
     );
 
     int insertFamilyInvitation(
             FamilyInvitationInsertCommand command
+    );
+
+    List<FamilyInvitationChildResponse> findActiveChildrenManagedByMember(
+            @Param("memberId") Long memberId
+    );
+
+    int insertFamilyInvitationChildren(
+            @Param("familyInvitationId") Long familyInvitationId,
+            @Param("children") List<FamilyInvitationChildResponse> children
+    );
+
+    List<FamilyInvitationChildResponse> findInvitationChildren(
+            @Param("familyInvitationId") Long familyInvitationId
     );
 
     FamilyInvitationInfoProjection findFamilyInvitationInfoByTokenHash(

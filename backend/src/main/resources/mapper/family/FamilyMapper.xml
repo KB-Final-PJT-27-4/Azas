@@ -71,20 +71,33 @@
         UPDATE family_invitation
         SET status = 'EXPIRED',
             updated_at = CURRENT_TIMESTAMP(6)
-        WHERE child_id = #{childId}
-          AND invitee_type = #{inviteeType}
+        WHERE invitee_type = #{inviteeType}
+          AND (
+              (#{inviteeType} = 'PARENT'
+                  AND inviter_member_id = #{inviterMemberId})
+              OR
+              (#{inviteeType} = 'CHILD'
+                  AND child_id = #{childId})
+          )
           AND status = 'PENDING'
           AND expires_at &lt;= #{now}
     </update>
 
-    <select id="countUsableFamilyInvitations" resultType="int">
-        SELECT COUNT(*)
-        FROM family_invitation
-        WHERE child_id = #{childId}
-          AND invitee_type = #{inviteeType}
+    <update id="expireUsableFamilyInvitations">
+        UPDATE family_invitation
+        SET status = 'EXPIRED',
+            updated_at = CURRENT_TIMESTAMP(6)
+        WHERE invitee_type = #{inviteeType}
+          AND (
+              (#{inviteeType} = 'PARENT'
+                  AND inviter_member_id = #{inviterMemberId})
+              OR
+              (#{inviteeType} = 'CHILD'
+                  AND child_id = #{childId})
+          )
           AND status = 'PENDING'
           AND expires_at &gt; #{now}
-    </select>
+    </update>
 
     <insert id="insertFamilyInvitation"
             parameterType="com.azas.domain.family.dto.FamilyInvitationInsertCommand"
@@ -112,9 +125,49 @@
                  )
     </insert>
 
+    <select id="findActiveChildrenManagedByMember"
+            resultType="com.azas.domain.family.dto.FamilyInvitationChildResponse">
+        SELECT DISTINCT
+            CAST(c.child_id AS SIGNED) AS childId,
+            c.name AS name
+        FROM child c
+                 INNER JOIN child_parent cp ON cp.child_id = c.child_id
+        WHERE cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+        ORDER BY c.child_id ASC
+    </select>
+
+    <insert id="insertFamilyInvitationChildren">
+        INSERT INTO family_invitation_child (
+            family_invitation_id,
+            child_id,
+            created_at
+        ) VALUES
+        <foreach collection="children" item="child" separator=",">
+            (
+                #{familyInvitationId},
+                #{child.childId},
+                CURRENT_TIMESTAMP(6)
+            )
+        </foreach>
+    </insert>
+
+    <select id="findInvitationChildren"
+            resultType="com.azas.domain.family.dto.FamilyInvitationChildResponse">
+        SELECT
+            CAST(c.child_id AS SIGNED) AS childId,
+            c.name AS name
+        FROM family_invitation_child fic
+                 INNER JOIN child c ON c.child_id = fic.child_id
+        WHERE fic.family_invitation_id = #{familyInvitationId}
+          AND c.status = 'ACTIVE'
+        ORDER BY fic.child_id ASC
+    </select>
+
     <select id="findFamilyInvitationInfoByTokenHash"
             resultType="com.azas.domain.family.dto.FamilyInvitationInfoProjection">
         SELECT
+            fi.family_invitation_id AS familyInvitationId,
             c.name AS childName,
             inviter.name AS inviterName,
             fi.invitee_type AS inviteeType,

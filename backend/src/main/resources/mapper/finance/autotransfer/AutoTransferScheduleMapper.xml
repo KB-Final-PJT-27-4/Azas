@@ -62,7 +62,7 @@
         SELECT COUNT(*)
         FROM auto_transfer_schedule
         WHERE member_id = #{memberId}
-          AND child_id = #{childId}
+          AND child_id <![CDATA[<=>]]> #{childId}
           AND source_account_id = #{sourceAccountId}
           AND destination_account_id = #{destinationAccountId}
           AND amount = #{amount}
@@ -129,9 +129,10 @@
         ats.last_transferred_at AS lastTransferredAt,
         ats.status
         FROM auto_transfer_schedule ats
-        INNER JOIN financial_goal fg
+        LEFT JOIN financial_goal fg
         ON fg.financial_goal_id = ats.financial_goal_id
         WHERE ats.child_id = #{childId}
+          AND ats.member_id = #{memberId}
 
         <if test="status != null">
             AND ats.status = #{status}
@@ -150,6 +151,7 @@
         SELECT
             ats.auto_transfer_schedule_id AS autoTransferScheduleId,
             ats.child_id AS childId,
+            ats.member_id AS memberId,
             ats.financial_goal_id AS financialGoalId,
             fg.title AS goalTitle,
 
@@ -183,7 +185,7 @@
             ats.created_at AS createdAt,
             ats.updated_at AS updatedAt
         FROM auto_transfer_schedule ats
-                 INNER JOIN financial_goal fg
+                 LEFT JOIN financial_goal fg
                             ON fg.financial_goal_id = ats.financial_goal_id
                  INNER JOIN financial_account source_account
                             ON source_account.financial_account_id =
@@ -235,7 +237,7 @@
         FROM auto_transfer_schedule
         WHERE auto_transfer_schedule_id != #{scheduleId}
           AND member_id = #{memberId}
-          AND child_id = #{childId}
+          AND child_id <![CDATA[<=>]]> #{childId}
           AND source_account_id = #{sourceAccountId}
           AND destination_account_id = #{destinationAccountId}
           AND amount = #{amount}

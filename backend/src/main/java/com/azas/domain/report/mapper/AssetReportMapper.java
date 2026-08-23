@@ -1,6 +1,7 @@
 package com.azas.domain.report.mapper;
 
 import com.azas.domain.report.dto.AssetReportDetailRow;
+import com.azas.domain.report.dto.AssetReportGoalAccountRow;
 import com.azas.domain.report.dto.AssetReportListQuery;
 import com.azas.domain.report.dto.AssetReportListRow;
 import com.azas.domain.report.dto.AssetReportUpsertCommand;
@@ -49,6 +50,17 @@ public interface AssetReportMapper {
     BigDecimal findPreviousTotalAssetAmount(
             @Param("childId") Long childId,
             @Param("reportMonth") LocalDate reportMonth
+    );
+
+    BigDecimal findPreviousMonthlySavedAmount(
+            @Param("childId") Long childId,
+            @Param("reportMonth") LocalDate reportMonth
+    );
+
+    List<AssetReportGoalAccountRow> findGoalAccountSnapshots(
+            @Param("childId") Long childId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 
     int upsertAssetReport(

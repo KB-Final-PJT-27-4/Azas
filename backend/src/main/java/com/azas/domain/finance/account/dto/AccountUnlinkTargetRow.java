@@ -10,7 +10,9 @@ import java.time.LocalDateTime;
 public class AccountUnlinkTargetRow {
 
     private Long accountId;
+    private String ownerType;
     private Long ownerMemberId;
+    private Long childId;
     private String linkStatus;
     private LocalDateTime unlinkedAt;
 }

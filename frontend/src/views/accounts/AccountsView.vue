@@ -9,7 +9,6 @@ import AccountRegistrationForm from '@/components/accounts/AccountRegistrationFo
 import AccountRegistrationConfirmation from '@/components/accounts/AccountRegistrationConfirmation.vue'
 import BankSelectionSheet from '@/components/accounts/BankSelectionSheet.vue'
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
@@ -26,7 +25,14 @@ const accountNumber = ref('')
 const accountAlias = ref('')
 const slideDirection = ref<'forward' | 'backward'>('forward')
 const importedAccounts = ref<
-  { id: number; bank: string; number: string; balance: number; productType: string }[]
+  {
+    id: number
+    bank: string
+    number: string
+    balance: number
+    productType: string
+    accountName?: string
+  }[]
 >([])
 const registeredAccounts = ref<
   { bank: string; accountNumber: string; accountName: string; balance: number }[]
@@ -60,8 +66,9 @@ const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[
     })
     registeredAccounts.value = (data.accounts ?? []).map((account, index) => ({
       bank: account.bank_name ?? accounts[index]?.bank ?? '',
-      accountNumber: accounts[index]?.number ?? '',
-      accountName: account.account_name ?? `${account.bank_name ?? '연결'} 계좌`,
+      accountNumber: account.account_number ?? accounts[index]?.number ?? '',
+      accountName:
+        account.account_name ?? accounts[index]?.accountName ?? `${account.bank_name ?? '연결'} 계좌`,
       balance: account.balance ?? 0,
     }))
     slideDirection.value = 'forward'
@@ -71,19 +78,18 @@ const connectImportedAccount = async (accounts: (typeof importedAccounts.value)[
   }
 }
 
-const createKbAccount = async (financialProductId: number) => {
+const createKbAccount = async (product: { id: number; name: string; bankName: string }) => {
   try {
     const { data } = await api.openUsingPOST(undefined, {
       child_id: accountOwnerType.value === 'CHILD' ? currentChildId.value ?? undefined : undefined,
-      financial_product_id: financialProductId,
+      financial_product_id: product.id,
       initial_deposit_amount: 0,
       owner_type: accountOwnerType.value,
     })
     registeredAccounts.value = [{
-      bank: data.bank_name ?? 'KB국민은행',
+      bank: data.bank_name ?? product.bankName,
       accountNumber: data.account_number ?? '',
-      accountName:
-        data.account_name ?? (accountOwnerType.value === 'CHILD' ? '자녀 계좌' : '부모 계좌'),
+      accountName: product.name,
       balance: data.balance ?? 0,
     }]
     slideDirection.value = 'forward'
@@ -122,19 +128,12 @@ const completeRegistration = async () => {
 
 const loadDiscoveredAccounts = async () => {
   try {
-    const { data: parentAccounts } = await api.getMyAccountsUsingGET()
-    const hasParentDemandDeposit = parentAccounts.accounts.some(
-      ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
-    )
-    accountOwnerType.value = hasParentDemandDeposit ? 'CHILD' : 'PARENT'
-    currentChildId.value = hasParentDemandDeposit ? await resolveCurrentChildId() : null
-    if (!hasParentDemandDeposit) {
-      showToast('자녀 계좌 연결 전에 부모 입출금계좌를 먼저 등록해 주세요.', 'success')
-    }
+    accountOwnerType.value = 'PARENT'
+    currentChildId.value = null
     const { data } = await api.getDiscoveredAccountsUsingGET(
-      accountOwnerType.value,
+      'PARENT',
       undefined,
-      currentChildId.value ?? undefined,
+      undefined,
     )
     importedAccounts.value = data.accounts.map((account) => ({
       id: account.account_id,
@@ -142,6 +141,10 @@ const loadDiscoveredAccounts = async () => {
       number: account.account_number,
       balance: account.balance,
       productType: account.account_product_type,
+      accountName:
+        account.account_product_type === 'SAVINGS'
+          ? `${account.bank_name.replace(/은행$/, '')} 적금`
+          : `${account.bank_name.replace(/은행$/, '')} 입출금통장`,
     }))
   } catch (error) {
     showToast(getApiErrorMessage(error, '연결 가능한 계좌를 불러오지 못했어요.'), 'error')

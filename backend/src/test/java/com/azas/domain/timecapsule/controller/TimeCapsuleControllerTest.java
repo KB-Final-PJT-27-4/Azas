@@ -3,6 +3,7 @@ package com.azas.domain.timecapsule.controller;
 import com.azas.domain.timecapsule.dto.CreateTimeCapsuleResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleListResponse;
 import com.azas.domain.timecapsule.dto.TimeCapsuleSummaryResponse;
+import com.azas.domain.timecapsule.dto.UpdateTimeCapsuleReleaseDateResponse;
 import com.azas.domain.timecapsule.entity.TimeCapsule;
 import com.azas.domain.timecapsule.entity.TimeCapsuleAccount;
 import com.azas.global.security.AccessTokenMemberResolver;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -309,6 +311,55 @@ class TimeCapsuleControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(timeCapsuleService).deleteTimeCapsule(7L, 100L);
+    }
+
+    @Test
+    void updateTimeCapsuleReleaseDateReturnsUpdatedResponse()
+            throws Exception {
+        TimeCapsule timeCapsule = TimeCapsule.create(
+                10L,
+                1L,
+                "KB Young Youth 입출금통장",
+                LocalDate.now().plusMonths(6)
+        );
+        ReflectionTestUtils.setField(timeCapsule, "timeCapsuleId", 100L);
+        UpdateTimeCapsuleReleaseDateResponse response =
+                UpdateTimeCapsuleReleaseDateResponse.of(
+                        timeCapsule,
+                        LocalDate.now().plusMonths(6)
+                );
+        given(accessTokenMemberResolver.resolveMemberId(
+                "Bearer access-token"
+        )).willReturn(7L);
+        given(timeCapsuleService.updateReleaseDate(
+                eq(7L),
+                eq(100L),
+                any()
+        )).willReturn(response);
+
+        mockMvc.perform(
+                        patch(
+                                "/api/v1/time-capsules/{timeCapsuleId}/release-date",
+                                100L
+                        )
+                                .header(
+                                        "Authorization",
+                                        "Bearer access-token"
+                                )
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "release_date": "2030-07-23"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.time_capsule_id").value(100))
+                .andExpect(jsonPath("$.release_date")
+                        .value(LocalDate.now().plusMonths(6).toString()))
+                .andExpect(jsonPath("$.d_day").isNumber())
+                .andExpect(jsonPath("$.dday").doesNotExist())
+                .andExpect(jsonPath("$.status").value("COLLECTING"));
     }
 
     // [JMG] CAPSULE-1 테스트용 ERD 타임캡슐 응답 엔티티를 구성한다.
