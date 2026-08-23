@@ -1115,6 +1115,27 @@
             "schema": {
               "$ref": "#/definitions/AutoTransferScheduleResponse"
             }
+          },
+          "201": {
+            "description": "자동이체 일정 등록 성공"
+          },
+          "400": {
+            "description": "요청 형식 또는 멱등성 키 오류"
+          },
+          "401": {
+            "description": "인증 오류"
+          },
+          "403": {
+            "description": "계좌 또는 자녀 접근 권한 없음"
+          },
+          "404": {
+            "description": "계좌를 찾을 수 없음"
+          },
+          "409": {
+            "description": "중복 일정"
+          },
+          "422": {
+            "description": "일정 또는 계좌 조건 오류"
           }
         }
       }
@@ -6863,44 +6884,67 @@
     },
     "CreateAutoTransferScheduleRequest": {
       "type": "object",
+      "required": [
+        "amount",
+        "destination_account_id",
+        "frequency",
+        "source_account_id",
+        "start_date",
+        "transfer_day"
+      ],
       "properties": {
         "amount": {
-          "type": "number"
+          "type": "number",
+          "example": 100000,
+          "description": "회차별 이체 금액"
         },
         "child_id": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "example": 6,
+          "description": "받는 계좌 소유 자녀 ID"
         },
         "destination_account_id": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "example": 206,
+          "description": "부모 또는 현재 자녀의 활성 입출금·적금 계좌 ID"
         },
         "end_date": {
           "type": "string",
-          "format": "date"
+          "format": "date",
+          "example": "2027-08-28",
+          "description": "종료일(생략 가능)"
         },
         "frequency": {
           "type": "string",
+          "example": "MONTHLY",
+          "description": "이체 주기",
           "enum": [
-            "DAILY",
-            "MONTHLY",
-            "WEEKLY"
+            "MONTHLY"
           ]
         },
         "source_account_id": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "example": 101,
+          "description": "로그인 부모의 활성 입출금 계좌 ID"
         },
         "start_date": {
           "type": "string",
-          "format": "date"
+          "format": "date",
+          "example": "2026-08-28",
+          "description": "최초 이체 가능일"
         },
         "transfer_day": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "example": 28,
+          "description": "매월 이체일(1~28)"
         }
       },
-      "title": "CreateAutoTransferScheduleRequest"
+      "title": "CreateAutoTransferScheduleRequest",
+      "description": "자동이체 일정 등록 요청"
     },
     "CreateMissionRequest": {
       "type": "object",
@@ -7125,6 +7169,7 @@
       "type": "object",
       "required": [
         "account_id",
+        "account_name",
         "account_number",
         "account_product_type",
         "balance",
@@ -7136,6 +7181,11 @@
           "format": "int64",
           "example": 101,
           "description": "계좌 ID"
+        },
+        "account_name": {
+          "type": "string",
+          "example": "KB Young Youth 적금",
+          "description": "계좌 상품명"
         },
         "account_number": {
           "type": "string",
@@ -8908,6 +8958,10 @@
           "type": "integer",
           "format": "int64"
         },
+        "recommended_poll_interval_seconds": {
+          "type": "integer",
+          "format": "int32"
+        },
         "unread_count": {
           "type": "integer",
           "format": "int64"
@@ -10195,6 +10249,14 @@
       "properties": {
         "action": {
           "type": "string"
+        },
+        "destination_account_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "source_account_id": {
+          "type": "integer",
+          "format": "int64"
         }
       },
       "title": "UpdateAllowanceRequestStatus"

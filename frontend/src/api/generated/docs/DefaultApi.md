@@ -797,6 +797,13 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**200** | OK |  -  |
+|**201** | 자동이체 일정 등록 성공 |  -  |
+|**400** | 요청 형식 또는 멱등성 키 오류 |  -  |
+|**401** | 인증 오류 |  -  |
+|**403** | 계좌 또는 자녀 접근 권한 없음 |  -  |
+|**404** | 계좌를 찾을 수 없음 |  -  |
+|**409** | 중복 일정 |  -  |
+|**422** | 일정 또는 계좌 조건 오류 |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
