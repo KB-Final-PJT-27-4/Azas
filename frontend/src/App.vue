@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { RouterView } from 'vue-router'
-import { useToast } from '@/composables/useToast'
+import { useHeaderNotificationPopover } from '@/composables/useHeaderNotificationPopover'
 import type { NotificationListItemResponse } from '@/api/generated'
 import {
   IN_APP_NOTIFICATIONS_RECEIVED_EVENT,
@@ -11,7 +11,7 @@ import {
   stopInAppNotificationPolling,
 } from '@/services/inAppNotificationPolling'
 
-const { showToast } = useToast()
+const { showHeaderNotification } = useHeaderNotificationPopover()
 let unsubscribeFromPushMessages: (() => void) | null = null
 const recentlyShownNotificationIds = new Map<number, number>()
 const RECENT_NOTIFICATION_TTL_MS = 30_000
@@ -31,7 +31,7 @@ const showPolledNotification = (item: NotificationListItemResponse) => {
   if (!shouldShowNotification(item.notification_id)) return
   const title = item.title?.trim() || '새 알림'
   const body = item.content?.trim() || '새로운 알림이 도착했어요.'
-  showToast(`${title}: ${body}`, 'info', 5000)
+  showHeaderNotification({ title, message: body })
 }
 
 const handlePolledNotifications = (event: Event) => {
@@ -51,7 +51,10 @@ onMounted(() => {
         if (!shouldShowNotification(Number.isFinite(notificationId) ? notificationId : undefined)) {
           return
         }
-        showToast(`${message.title}: ${message.body}`, 'info', 5000)
+        showHeaderNotification({
+          title: message.title,
+          message: message.body,
+        })
       })
 
       return syncPushNotificationsIfPermitted()
