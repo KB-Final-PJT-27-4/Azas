@@ -26,6 +26,7 @@ const selectedAccount = computed(() => accounts.value.find(({ id }) => id === se
 const selectedTransfer = computed(() => transfers.value.find(({ id }) => id === selectedTransferId.value) ?? { id: 0, date: '', name: '거래를 선택해주세요', amount: 0 })
 const title = ref('')
 const letter = ref('')
+const childName = ref('아이')
 type MediaItem = {
   file: File
   url: string
@@ -186,11 +187,13 @@ watch(selectedAccountId, () => void loadTransfers())
 onMounted(async () => {
   try {
     const childId = await resolveCurrentChildId()
-    const [{ data: capsules }, { data: childAccounts }, { data: parentAccounts }] = await Promise.all([
+    const [{ data: capsules }, { data: childAccounts }, { data: parentAccounts }, { data: child }] = await Promise.all([
       api.getTimeCapsulesUsingGET(childId),
       api.getChildAccountsUsingGET(childId),
       api.getMyAccountsUsingGET(),
+      api.getChildUsingGET(childId),
     ])
+    childName.value = child.name?.trim() || '아이'
     const linkedAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
     accounts.value = (capsules.time_capsules ?? []).map((capsule) => {
       const linked = linkedAccounts.find(({ account_id }) => account_id === capsule.account_id)
@@ -390,7 +393,7 @@ onBeforeUnmount(() => {
             v-model="letter"
             class="min-h-[120px] w-full resize-none rounded-2xl border border-[#d6e3e9] bg-white px-4 py-3.5 text-sm leading-relaxed outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
             maxlength="300"
-            placeholder="오늘 깨비가 처음 걸었어요.&#10;앞으로도 건강하게 자라길 바래"
+            :placeholder="`${childName}의 첫걸음을 기록해요.\n앞으로도 건강하게 자라길 바라`"
             required
           ></textarea>
         </label>

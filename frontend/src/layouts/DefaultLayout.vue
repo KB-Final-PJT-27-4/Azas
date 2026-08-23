@@ -60,8 +60,8 @@ const { toastMessage, toastVariant, toastPlacement } = useToast()
       />
       <AppHeader
         v-else-if="!hideNavigation"
-        title="깨비"
-        profile-name="깨비"
+        title="아이"
+        profile-name="아이"
         :show-notification="showHeaderNotification"
         :show-guide="isHome"
         :notification-count="notificationCount"
