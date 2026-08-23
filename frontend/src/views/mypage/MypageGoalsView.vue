@@ -75,8 +75,35 @@ onMounted(async () => {
   document.body.style.backgroundColor = '#eef9fe'
   try {
     const childId = await resolveCurrentChildId()
-    const { data } = await api.getGoalsUsingGET(childId)
-    goals.value = data.financial_goals.map((goal) => ({
+    const [goalsResponse, parentAccountsResponse, childAccountsResponse] = await Promise.all([
+      api.getGoalsUsingGET(childId),
+      api.getMyAccountsUsingGET(),
+      api.getChildAccountsUsingGET(childId),
+    ])
+    const activeAccountIds = new Set([
+      ...parentAccountsResponse.data.accounts.map(({ account_id }) => account_id),
+      ...childAccountsResponse.data.accounts.map(({ account_id }) => account_id),
+    ])
+    const orphanGoalIds = goalsResponse.data.financial_goals.flatMap((goal) => {
+      const linkedAccountIds = (goal.linked_accounts ?? []).flatMap(({ account_id }) =>
+        account_id ? [account_id] : [],
+      )
+      return linkedAccountIds.length > 0 &&
+        linkedAccountIds.every((accountId) => !activeAccountIds.has(accountId)) &&
+        goal.financial_goal_id
+        ? [goal.financial_goal_id]
+        : []
+    })
+    const deleteResults = await Promise.allSettled(
+      orphanGoalIds.map((goalId) => api.deleteGoalUsingDELETE(goalId)),
+    )
+    const deletedGoalIds = new Set(
+      orphanGoalIds.filter((_, index) => deleteResults[index]?.status === 'fulfilled'),
+    )
+
+    goals.value = goalsResponse.data.financial_goals
+      .filter((goal) => !deletedGoalIds.has(goal.financial_goal_id ?? 0))
+      .map((goal) => ({
       id: goal.financial_goal_id ?? 0,
       name: goal.title ?? '금융 목표',
       targetAmount: goal.target_amount ?? 0,
@@ -91,7 +118,7 @@ onMounted(async () => {
         accountNumber: '',
         balance: account.balance ?? 0,
       })),
-    }))
+      }))
   } catch (error) {
     showToast(getApiErrorMessage(error, '목표 목록을 불러오지 못했습니다.'), 'error')
   }

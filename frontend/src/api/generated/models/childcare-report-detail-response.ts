@@ -15,13 +15,13 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
+import type { ChildcareReportPeriodResponse } from './childcare-report-period-response';
+// May contain unused imports in some cases
+// @ts-ignore
+import type { ChildcareReportSummaryResponse } from './childcare-report-summary-response';
+// May contain unused imports in some cases
+// @ts-ignore
 import type { MonthlyFlowItem } from './monthly-flow-item';
-// May contain unused imports in some cases
-// @ts-ignore
-import type { Period } from './period';
-// May contain unused imports in some cases
-// @ts-ignore
-import type { Summary } from './summary';
 
 /**
  * 월간 양육비 리포트 상세 응답
@@ -30,9 +30,9 @@ export interface ChildcareReportDetailResponse {
     'calculated_at'?: string;
     'child_id'?: number;
     'monthly_flow'?: Array<MonthlyFlowItem>;
-    'period'?: Period;
+    'period'?: ChildcareReportPeriodResponse;
     'report_month'?: number;
     'report_year'?: number;
-    'summary'?: Summary;
+    'summary'?: ChildcareReportSummaryResponse;
 }
 

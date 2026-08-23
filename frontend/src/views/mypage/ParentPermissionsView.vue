@@ -64,9 +64,12 @@ const setMonthlyLimit = (amount: number) => {
 const savePermissions = async () => {
   if (!selectedAccountId.value) return
   try {
+    const usageMode = permissions.value.find(({ id }) => id === 'limit')?.enabled
+      ? 'CO_MANAGED'
+      : 'UNRESTRICTED'
     await api.updateUsagePolicyUsingPATCH(selectedAccountId.value, {
-      child_usage_mode: permissions.value.find(({ id }) => id === 'limit')?.enabled ? 'CO_MANAGED' : 'UNRESTRICTED',
-      child_monthly_budget_amount: monthlyLimit.value,
+      child_usage_mode: usageMode,
+      child_monthly_budget_amount: usageMode === 'CO_MANAGED' ? monthlyLimit.value : undefined,
     })
     showToast('아이 이용 권한이 저장되었습니다.', 'success')
   } catch (error) {
@@ -106,8 +109,13 @@ const selectChild = (child: ChildProfile) => {
 const loadUsagePolicy = async (childId: number) => {
   try {
     const { data: accounts } = await api.getChildAccountsUsingGET(childId)
-    selectedAccountId.value = accounts.accounts[0]?.account_id ?? null
-    if (!selectedAccountId.value) return
+    selectedAccountId.value = accounts.accounts.find(
+      ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
+    )?.account_id ?? null
+    if (!selectedAccountId.value) {
+      showToast('이용 권한을 설정할 입출금계좌가 없습니다.', 'error')
+      return
+    }
     const { data } = await api.getUsagePolicyUsingGET(selectedAccountId.value)
     monthlyLimit.value = data.child_monthly_budget_amount ?? 0
     const limitPermission = permissions.value.find(({ id }) => id === 'limit')

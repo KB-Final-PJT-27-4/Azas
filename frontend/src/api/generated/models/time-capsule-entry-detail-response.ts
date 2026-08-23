@@ -15,20 +15,18 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { MediaResponse } from './media-response';
+import type { TimeCapsuleEntryDetailImageResponse } from './time-capsule-entry-detail-image-response';
 
 export interface TimeCapsuleEntryDetailResponse {
     'account_transaction_id'?: number;
-    'author_member_id'?: number;
     'contributed_at'?: string;
     'contribution_amount'?: number;
-    'created_at'?: string;
-    'media'?: MediaResponse;
+    'entry_number'?: number;
+    'image': TimeCapsuleEntryDetailImageResponse;
     'message'?: string;
-    'sealed_at'?: string;
-    'status'?: string;
     'time_capsule_entry_id'?: number;
     'time_capsule_id'?: number;
     'title'?: string;
+    'total_entry_count'?: number;
 }
 

@@ -18,7 +18,7 @@
 import type { CheckpointResponse } from './checkpoint-response';
 // May contain unused imports in some cases
 // @ts-ignore
-import type { LinkedAccountResponse } from './linked-account-response';
+import type { FinancialGoalDetailLinkedAccountResponse } from './financial-goal-detail-linked-account-response';
 
 /**
  * 자녀 금융 목표 상세 조회 응답
@@ -32,7 +32,7 @@ export interface FinancialGoalDetailResponse {
     'financial_goal_template_id'?: number;
     'icon_key'?: string;
     'linked_account_count'?: number;
-    'linked_accounts'?: Array<LinkedAccountResponse>;
+    'linked_accounts'?: Array<FinancialGoalDetailLinkedAccountResponse>;
     'monthly_saving_amount'?: number;
     'remaining_amount'?: number;
     'status'?: string;

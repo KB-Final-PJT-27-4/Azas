@@ -171,6 +171,7 @@ const goalCardStyles: Record<string, string> = {
           <span class="text-[var(--color-text-secondary)]">만기 {{ saving.maturity }}</span>
         </span>
         <span
+          v-if="!unavailableSavingsIds.includes(saving.id)"
           class="absolute top-1/2 right-4 grid size-6 -translate-y-1/2 place-items-center rounded-full border transition-colors"
           :class="
             selectedSavingsIds.includes(saving.id)

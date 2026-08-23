@@ -15,16 +15,16 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
+import type { AssetReportPeriodResponse } from './asset-report-period-response';
+// May contain unused imports in some cases
+// @ts-ignore
+import type { AssetReportSummaryResponse } from './asset-report-summary-response';
+// May contain unused imports in some cases
+// @ts-ignore
 import type { GoalSummary } from './goal-summary';
 // May contain unused imports in some cases
 // @ts-ignore
 import type { InsightItem } from './insight-item';
-// May contain unused imports in some cases
-// @ts-ignore
-import type { Period } from './period';
-// May contain unused imports in some cases
-// @ts-ignore
-import type { Summary } from './summary';
 
 /**
  * 월간 자산 리포트 상세 응답
@@ -35,10 +35,10 @@ export interface AssetReportDetailResponse {
     'created_at'?: string;
     'goal_summary'?: Array<GoalSummary>;
     'insight_items'?: Array<InsightItem>;
-    'period'?: Period;
+    'period'?: AssetReportPeriodResponse;
     'report_month'?: number;
     'report_year'?: number;
-    'summary'?: Summary;
+    'summary'?: AssetReportSummaryResponse;
     'updated_at'?: string;
 }
 

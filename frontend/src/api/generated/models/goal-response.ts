@@ -15,7 +15,7 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { LinkedAccountResponse } from './linked-account-response';
+import type { FinancialGoalListLinkedAccountResponse } from './financial-goal-list-linked-account-response';
 
 export interface GoalResponse {
     'achievement_rate'?: number;
@@ -24,7 +24,7 @@ export interface GoalResponse {
     'financial_goal_template_id'?: number;
     'icon_key'?: string;
     'linked_account_count'?: number;
-    'linked_accounts'?: Array<LinkedAccountResponse>;
+    'linked_accounts'?: Array<FinancialGoalListLinkedAccountResponse>;
     'remaining_amount'?: number;
     'status'?: string;
     'target_amount'?: number;

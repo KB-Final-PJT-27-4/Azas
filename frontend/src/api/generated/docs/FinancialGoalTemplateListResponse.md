@@ -5,7 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**templates** | [**Array&lt;Item&gt;**](Item.md) |  | [optional] [default to undefined]
+**templates** | [**Array&lt;FinancialGoalTemplateListItemResponse&gt;**](FinancialGoalTemplateListItemResponse.md) |  | [optional] [default to undefined]
 
 ## Example
 
