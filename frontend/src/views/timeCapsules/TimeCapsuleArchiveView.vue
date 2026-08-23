@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Check, Plus, X } from 'lucide-vue-next'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import calendarImage from '@/assets/images/timeCapsules/archive/calendar.png'
@@ -448,11 +448,13 @@ const completeUnlockFlow = async () => {
 
   markUnlockAnimationSeen(capsule)
   window.sessionStorage.setItem(OPEN_FLASH_STORAGE_KEY, 'true')
+  resetUnlockFlow()
+  await nextTick()
 
   try {
     await router.push(getOpenRoute(capsule))
   } catch {
-    resetUnlockFlow()
+    // Keep the archive usable if navigation is interrupted.
   }
 }
 
@@ -1346,7 +1348,7 @@ onBeforeUnmount(resetUnlockFlow)
 
 .unlock-panel {
   --unlock-size: min(94vw, 58dvh, 520px);
-  --unlock-x: -50%;
+  --unlock-x: -55%;
 
   z-index: 2;
   cursor: default;

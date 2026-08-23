@@ -245,7 +245,11 @@ const saveOverviewScene = () => {
 const router = useRouter()
 const route = useRoute()
 const goBack = () => router.back()
-const goToList = () => router.push(`/time-capsules/${String(route.params.capsuleListId ?? 'local')}`)
+const routeCapsuleListId = computed(() => String(route.params.capsuleListId ?? 'local'))
+const isLocalTimeCapsuleRoute = computed(
+  () => route.name === 'LocalTimeCapsuleOpen' || routeCapsuleListId.value === 'local',
+)
+const goToList = () => router.push(`/time-capsules/${routeCapsuleListId.value}`)
 
 const applyLocalTimeCapsuleFallback = () => {
   allMemories.value = localTimeCapsuleMemories
@@ -262,12 +266,18 @@ onMounted(async () => {
   }
 
   try {
-    if (import.meta.env.DEV && route.params.capsuleListId === 'local') {
+    if (import.meta.env.DEV && isLocalTimeCapsuleRoute.value) {
       applyLocalTimeCapsuleFallback()
       return
     }
 
-    const { data } = await api.getTimeCapsuleEntriesUsingGET(Number(route.params.capsuleListId))
+    const capsuleListId = Number(route.params.capsuleListId)
+    if (!Number.isFinite(capsuleListId)) {
+      applyLocalTimeCapsuleFallback()
+      return
+    }
+
+    const { data } = await api.getTimeCapsuleEntriesUsingGET(capsuleListId)
     const details = await Promise.all((data.entries ?? []).map(({ time_capsule_entry_id }) =>
       api.getTimeCapsuleEntryUsingGET(time_capsule_entry_id ?? 0).then(({ data: detail }) => detail),
     ))
