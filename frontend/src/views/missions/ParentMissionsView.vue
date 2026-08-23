@@ -413,7 +413,6 @@ onMounted(async () => {
               class="h-[49px] font-normal w-full rounded-[13px] border border-[var(--color-border)] bg-white pr-[42px] pl-3.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-primary)] focus:shadow-[0_0_0_3px_var(--color-selected-background)]"
               type="text"
               inputmode="numeric"
-              pattern="[0-9]*"
               placeholder="0"
               @input="updateMissionReward"
             />
