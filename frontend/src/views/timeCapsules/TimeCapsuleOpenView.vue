@@ -119,7 +119,7 @@ onMounted(async () => {
       api.getTimeCapsuleEntryUsingGET(time_capsule_entry_id ?? 0).then(({ data: detail }) => detail),
     ))
     allMemories.value = details.map((entry) => {
-      const date = new Date(entry.contributed_at ?? entry.created_at ?? Date.now())
+      const date = new Date(entry.contributed_at ?? Date.now())
       return {
         year: date.getFullYear(),
         month: date.getMonth() + 1,

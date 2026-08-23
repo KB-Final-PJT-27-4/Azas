@@ -5,7 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**content** | [**Array&lt;Item&gt;**](Item.md) |  | [optional] [default to undefined]
+**content** | [**Array&lt;FinancialProductBookmarkListItemResponse&gt;**](FinancialProductBookmarkListItemResponse.md) |  | [optional] [default to undefined]
 **has_next** | **boolean** |  | [optional] [default to undefined]
 **page** | **number** |  | [optional] [default to undefined]
 **size** | **number** |  | [optional] [default to undefined]

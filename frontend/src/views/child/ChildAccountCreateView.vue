@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Check, ContactRound, Smartphone, X } from 'lucide-vue-next'
+import { Check, ContactRound, Landmark, Smartphone, X } from 'lucide-vue-next'
 
 import babyImage from '@/assets/images/child/baby.png'
 import completePigUrl from '@/assets/images/accounts/complete-pig.png'
+import ChildAccountProductSelection, {
+  type ChildAccountProduct,
+} from '@/components/child/ChildAccountProductSelection.vue'
 import { api, getApiErrorMessage } from '@/api'
 import { useToast } from '@/composables/useToast'
 
@@ -18,7 +21,7 @@ const children = ref<Child[]>([])
 const router = useRouter()
 const { showToast } = useToast()
 const selectedChildId = ref<number | null>(null)
-const step = ref<1 | 2 | 3>(1)
+const step = ref<1 | 2 | 3 | 4>(1)
 const selectedAuthMethod = ref<'kakao' | 'sms' | null>(null)
 const isAuthDialogOpen = ref(false)
 const isAuthenticated = ref(false)
@@ -33,9 +36,21 @@ const authSheetDragOffset = ref(0)
 const isAuthSheetDragging = ref(false)
 let timerId: ReturnType<typeof setInterval> | null = null
 const verificationId = ref<number | null>(null)
+const accountProducts = ref<ChildAccountProduct[]>([])
+const selectedProductId = ref<number | null>(null)
+const isProductsLoading = ref(false)
+const isOpeningAccount = ref(false)
+const openedAccount = ref<{
+  accountNumber: string
+  balance: number
+  bankName: string
+} | null>(null)
 
 const selectedChildName = computed(
   () => children.value.find(({ id }) => id === selectedChildId.value)?.name ?? '아이',
+)
+const selectedProduct = computed(() =>
+  accountProducts.value.find(({ id }) => id === selectedProductId.value),
 )
 const normalizedPhoneNumber = computed(() => phoneNumber.value.replace(/\D/g, ''))
 const canRequestVerificationCode = computed(() => /^01\d{9}$/.test(normalizedPhoneNumber.value))
@@ -176,26 +191,78 @@ const completeAuthentication = () => {
 
 const continueAfterAuthentication = async () => {
   if (!isAuthenticated.value) return
-  if (!selectedChildId.value) return
+  step.value = 3
+  if (accountProducts.value.length > 0 || isProductsLoading.value) return
+
+  isProductsLoading.value = true
   try {
-    type ProductItem = { financial_product_id?: number; product_type?: string }
+    type ProductItem = {
+      financial_product_id?: number
+      bank_name?: string
+      name?: string
+      target_owner_type?: string
+      highlight_label?: string
+      summary?: string
+      hashtags?: string[]
+      max_interest_rate?: number
+    }
     const { data } = await api.getProductsUsingGET(undefined, undefined, 'DEMAND_DEPOSIT', 20)
-    const product = ((data.items ?? []) as unknown as ProductItem[])[0]
-    if (!product?.financial_product_id) throw new Error('개설 가능한 입출금 상품이 없습니다.')
-    await api.openUsingPOST(undefined, {
+    accountProducts.value = ((data.items ?? []) as unknown as ProductItem[]).flatMap((product) => {
+      if (
+        !product.financial_product_id ||
+        (product.target_owner_type !== 'CHILD' && product.target_owner_type !== 'BOTH')
+      ) return []
+      return [{
+        id: product.financial_product_id,
+        name: product.name ?? '아이 입출금통장',
+        bankName: product.bank_name ?? 'KB국민은행',
+        badge: product.highlight_label ?? '자녀 추천',
+        rate: product.max_interest_rate == null ? '금리 확인 필요' : `최고 연 ${product.max_interest_rate}%`,
+        description: product.summary ?? '용돈과 생활비를 편리하게 관리할 수 있는 아이 명의 계좌예요.',
+        tags: product.hashtags ?? [],
+      }]
+    })
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '계좌 상품을 불러오지 못했습니다.'), 'error')
+  } finally {
+    isProductsLoading.value = false
+  }
+}
+
+const openSelectedAccount = async () => {
+  if (!selectedChildId.value || !selectedProductId.value || isOpeningAccount.value) return
+  isOpeningAccount.value = true
+  try {
+    const { data } = await api.openUsingPOST(undefined, {
       child_id: selectedChildId.value,
-      financial_product_id: product.financial_product_id,
+      financial_product_id: selectedProductId.value,
       initial_deposit_amount: 0,
       owner_type: 'CHILD',
     })
-    step.value = 3
+    openedAccount.value = {
+      accountNumber: data.account_number ?? '',
+      balance: data.balance ?? 0,
+      bankName: data.bank_name ?? selectedProduct.value?.bankName ?? 'KB국민은행',
+    }
+    step.value = 4
   } catch (error) {
     showToast(getApiErrorMessage(error, '아이 통장을 개설하지 못했습니다.'), 'error')
+  } finally {
+    isOpeningAccount.value = false
   }
 }
 
 onMounted(async () => {
   try {
+    const { data: parentAccounts } = await api.getMyAccountsUsingGET()
+    const hasParentDemandDeposit = parentAccounts.accounts.some(
+      ({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT',
+    )
+    if (!hasParentDemandDeposit) {
+      showToast('아이 통장 개설 전에 부모 입출금계좌를 먼저 등록해 주세요.', 'error')
+      await router.replace({ name: 'Accounts', query: { next: '/child/accounts' } })
+      return
+    }
     const { data } = await api.getChildrenUsingGET()
     children.value = (data.items ?? []).map((child) => ({ id: child.child_id ?? 0, name: child.name ?? '아이' }))
   } catch (error) {
@@ -211,7 +278,7 @@ onBeforeUnmount(stopVerificationTimer)
     class="flex min-h-[calc(100dvh-var(--app-header-height)-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col bg-white text-[var(--color-text-primary)]"
   >
     <section class="flex flex-1 flex-col overflow-x-hidden px-5 pt-5 pb-[max(32px,env(safe-area-inset-bottom))]">
-      <div v-if="step !== 3" class="grid grid-cols-2 gap-2" aria-label="아이 계좌 만들기 진행 단계">
+      <div v-if="step !== 4" class="grid grid-cols-3 gap-2" aria-label="아이 계좌 만들기 진행 단계">
         <span
           class="child-progress-step h-1 rounded-full"
           :class="step === 1 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
@@ -221,6 +288,11 @@ onBeforeUnmount(stopVerificationTimer)
           class="child-progress-step h-1 rounded-full"
           :class="step === 2 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
           :aria-current="step === 2 ? 'step' : undefined"
+        ></span>
+        <span
+          class="child-progress-step h-1 rounded-full"
+          :class="step === 3 ? 'bg-[var(--color-brand-primary)]' : 'bg-[var(--color-border)]'"
+          :aria-current="step === 3 ? 'step' : undefined"
         ></span>
       </div>
 
@@ -345,6 +417,17 @@ onBeforeUnmount(stopVerificationTimer)
         </form>
       </template>
 
+      <ChildAccountProductSelection
+        v-else-if="step === 3"
+        :products="accountProducts"
+        :selected-product-id="selectedProductId"
+        :child-name="selectedChildName"
+        :loading="isProductsLoading"
+        :opening="isOpeningAccount"
+        @select="selectedProductId = $event"
+        @open="openSelectedAccount"
+      />
+
       <template v-else>
         <div class="flex flex-1 flex-col items-center text-center">
           <div class="child-complete-scene mt-[18dvh]" aria-label="아이 통장 개설 완료">
@@ -359,6 +442,30 @@ onBeforeUnmount(stopVerificationTimer)
           <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
             {{ selectedChildName }} 님의 통장이 만들어졌어요!
           </p>
+
+          <article
+            v-if="selectedProduct"
+            class="mt-7 flex w-full items-center rounded-[20px] border border-[var(--color-border)] bg-white px-4 py-4 text-left shadow-[0_5px_18px_rgba(43,83,105,0.05)]"
+            aria-label="개설한 계좌 정보"
+          >
+            <span
+              class="grid size-12 shrink-0 place-items-center rounded-full bg-[#eef7fb] text-[var(--color-selected-text)]"
+              aria-hidden="true"
+            >
+              <Landmark :size="23" :stroke-width="2" />
+            </span>
+            <div class="ml-3 min-w-0 flex-1">
+              <strong class="block truncate text-[15px] font-extrabold">
+                {{ selectedProduct.name }}
+              </strong>
+              <span class="mt-1 block text-xs text-[var(--color-text-secondary)]">
+                {{ openedAccount?.bankName }}<template v-if="openedAccount?.accountNumber"> · {{ openedAccount.accountNumber }}</template>
+              </span>
+            </div>
+            <strong class="ml-3 shrink-0 text-sm font-bold">
+              {{ (openedAccount?.balance ?? 0).toLocaleString('ko-KR') }}원
+            </strong>
+          </article>
 
           <div class="mt-auto grid w-full grid-cols-2 gap-3">
             <button

@@ -34,11 +34,11 @@ const isFreeCapsuleSheetDragging = ref(false)
 let freeCapsuleDragStartY = 0
 let freeCapsuleDragStartTime = 0
 const freeCapsuleOpenDate = ref('')
-const isFreeCapsuleCreated = ref(false)
 const registration = ref<{ birthDate: string; childName: string } | null>(null)
 const childId = ref<number | null>(null)
 const demandAccountId = ref<number | null>(null)
-const capsuleAccounts = ref<Array<{ id: number; name: string; createdAt: string; savedAmount: number; dDay?: number; isFree?: boolean }>>([])
+const selectedFreeCapsuleId = ref<number | null>(null)
+const capsuleAccounts = ref<Array<{ id: number; accountId?: number; name: string; createdAt: string; savedAmount: number; dDay?: number; isFree?: boolean }>>([])
 const archiveChildName = computed(() => registration.value?.childName.trim() || '아이')
 
 const pregnancyStages = [
@@ -195,24 +195,22 @@ const confirmFreeCapsule = async () => {
     showToast('오픈 날짜를 선택해주세요.', 'error')
     return
   }
-  if (!childId.value || !demandAccountId.value) {
+  if (!childId.value || !demandAccountId.value || !selectedFreeCapsuleId.value) {
     showToast('연결된 입출금계좌가 필요합니다.', 'error')
     return
   }
   try {
-    const { data } = await api.createTimeCapsuleUsingPOST(childId.value, {
-      financial_account_id: demandAccountId.value,
+    const { data } = await api.updateTimeCapsuleReleaseDateUsingPATCH(
+      selectedFreeCapsuleId.value,
+      {
       release_date: freeCapsuleOpenDate.value,
-    })
-    capsuleAccounts.value.push({
-      id: data.time_capsule_id ?? 0,
-      name: data.title ?? '입출금계좌 타임캡슐',
-      createdAt: data.release_date?.replaceAll('-', '.') ?? formattedFreeOpenDate.value,
-      savedAmount: data.total_saved_amount ?? 0,
-      dDay: calculateDday(data.release_date ?? freeCapsuleOpenDate.value) ?? undefined,
-      isFree: true,
-    })
-    isFreeCapsuleCreated.value = true
+      },
+    )
+    const capsule = capsuleAccounts.value.find(({ id }) => id === selectedFreeCapsuleId.value)
+    if (capsule) {
+      capsule.createdAt = data.release_date?.replaceAll('-', '.') ?? formattedFreeOpenDate.value
+      capsule.dDay = calculateDday(data.release_date ?? freeCapsuleOpenDate.value) ?? undefined
+    }
     closeFreeCapsuleSheet()
     showToast('입출금계좌의 오픈 날짜를 설정했습니다.', 'success')
   } catch (error) {
@@ -232,15 +230,15 @@ const navigateForward = async (to: RouteLocationRaw) => {
   }
 }
 
-const openFreeCapsuleList = () => {
+const openFreeCapsuleList = (freeCapsule: { id: number; createdAt: string }) => {
   navigateForward({
     name: 'TimeCapsuleList',
-    params: { capsuleListId: '3' },
-    query: { openDate: freeCapsuleOpenDate.value },
+    params: { capsuleListId: String(freeCapsule.id) },
+    query: { openDate: freeCapsule.createdAt.replaceAll('.', '-') },
   })
 }
 
-const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean }) => {
+const openCapsule = (capsule: { id: number; accountId?: number; createdAt: string; isFree?: boolean }) => {
   if (!capsule.isFree) {
     navigateForward(
       isCapsuleReleased(capsule)
@@ -249,40 +247,115 @@ const openCapsule = (capsule: { id: number; createdAt: string; isFree?: boolean 
     )
     return
   }
-  if (!isFreeCapsuleCreated.value) {
+  if (capsule.createdAt === '오픈 날짜 설정') {
+    demandAccountId.value = capsule.accountId ?? null
+    selectedFreeCapsuleId.value = capsule.id
+    freeCapsuleOpenDate.value = ''
     isFreeCapsuleSheetOpen.value = true
     return
   }
-  openFreeCapsuleList()
+  openFreeCapsuleList(capsule)
 }
 
 const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
   capsule.isFree
-    ? isFreeCapsuleCreated.value && isReleased(capsule.createdAt)
+    ? capsule.createdAt !== '오픈 날짜 설정' && isReleased(capsule.createdAt)
     : isReleased(capsule.createdAt)
 
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const [{ data: child }, { data: capsules }, { data: accounts }] = await Promise.all([
+    const [
+      { data: child },
+      { data: initialCapsules },
+      { data: childAccounts },
+      { data: parentAccounts },
+    ] = await Promise.all([
       api.getChildUsingGET(childId.value),
       api.getTimeCapsulesUsingGET(childId.value),
       api.getChildAccountsUsingGET(childId.value),
+      api.getMyAccountsUsingGET(),
     ])
     registration.value = {
       birthDate: child.birth_date ?? child.expected_birth_date ?? '',
       childName: child.name ?? '아이',
     }
-    demandAccountId.value = accounts.accounts.find(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')?.account_id ?? null
-    capsuleAccounts.value = (capsules.time_capsules ?? []).map((capsule) => ({
+    const allAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
+    const demandAccountIds = new Set(
+      allAccounts
+        .filter(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')
+        .map(({ account_id }) => account_id),
+    )
+    const activeAccountIds = new Set(allAccounts.map(({ account_id }) => account_id))
+    const eligibleAccountIds = [
+      ...new Set([
+        ...allAccounts
+          .filter(({ account_product_type }) => account_product_type === 'SAVINGS')
+          .map(({ account_id }) => account_id),
+        ...demandAccountIds,
+      ]),
+    ]
+    const eligibleAccountIdSet = new Set(eligibleAccountIds)
+    let capsuleItems = initialCapsules.time_capsules ?? []
+    const orphanedCapsules = capsuleItems.filter(
+      ({ account_id, time_capsule_id }) =>
+        account_id != null &&
+        time_capsule_id != null &&
+        (!activeAccountIds.has(account_id) || !eligibleAccountIdSet.has(account_id)),
+    )
+
+    if (orphanedCapsules.length > 0) {
+      const deleteResults = await Promise.allSettled(
+        orphanedCapsules.map(({ time_capsule_id }) =>
+          api.deleteTimeCapsuleUsingDELETE(time_capsule_id!),
+        ),
+      )
+      if (deleteResults.some(({ status }) => status === 'rejected')) {
+        showToast('삭제된 계좌의 일부 타임캡슐을 정리하지 못했습니다.', 'error')
+      }
+      const { data: capsulesAfterCleanup } = await api.getTimeCapsulesUsingGET(childId.value)
+      capsuleItems = capsulesAfterCleanup.time_capsules ?? []
+    }
+
+    const capsuleAccountIds = new Set(
+      capsuleItems
+        .map(({ account_id }) => account_id)
+        .filter((accountId): accountId is number => accountId != null),
+    )
+    const missingAccountIds = eligibleAccountIds.filter(
+      (accountId) => !capsuleAccountIds.has(accountId),
+    )
+
+    if (missingAccountIds.length > 0) {
+      await Promise.allSettled(
+        missingAccountIds.map((financialAccountId) =>
+          api.createTimeCapsuleUsingPOST(childId.value!, {
+            financial_account_id: financialAccountId,
+          }),
+        ),
+      )
+      const { data: refreshedCapsules } = await api.getTimeCapsulesUsingGET(childId.value)
+      capsuleItems = refreshedCapsules.time_capsules ?? []
+
+      const refreshedAccountIds = new Set(
+        capsuleItems
+          .map(({ account_id }) => account_id)
+          .filter((accountId): accountId is number => accountId != null),
+      )
+      if (missingAccountIds.some((accountId) => !refreshedAccountIds.has(accountId))) {
+        showToast('일부 계좌의 타임캡슐을 만들지 못했습니다.', 'error')
+      }
+    }
+
+    capsuleAccounts.value = capsuleItems.map((capsule) => ({
       id: capsule.time_capsule_id ?? 0,
+      accountId: capsule.account_id,
       name: capsule.title ?? '타임캡슐',
       createdAt: capsule.release_date?.replaceAll('-', '.') ?? '오픈 날짜 설정',
       savedAmount: capsule.total_saved_amount ?? 0,
       dDay: capsule.d_day,
-      isFree: capsule.account_id === demandAccountId.value,
+      isFree: capsule.account_id != null && demandAccountIds.has(capsule.account_id),
     }))
-    isFreeCapsuleCreated.value = capsuleAccounts.value.some(({ isFree }) => isFree)
   } catch (error) {
     showToast(getApiErrorMessage(error, '타임캡슐을 불러오지 못했습니다.'), 'error')
   } finally {
@@ -488,7 +561,7 @@ onMounted(async () => {
             :class="isCapsuleReleased(capsule) ? 'bg-[#ecfaff]' : 'bg-[#f0f3f5]'"
           >
             <span
-              v-if="capsule.isFree && !isFreeCapsuleCreated"
+              v-if="capsule.isFree && capsule.createdAt === '오픈 날짜 설정'"
               class="open-date-alert absolute top-2 right-2 grid size-5 place-items-center rounded-full bg-[#ef5b5b] text-[15px] font-black leading-none text-white"
               aria-label="오픈 날짜 설정 필요"
             >
@@ -506,7 +579,7 @@ onMounted(async () => {
           <time
             class="mt-1 block text-xs"
             :class="
-              capsule.isFree && !isFreeCapsuleCreated
+              capsule.isFree && capsule.createdAt === '오픈 날짜 설정'
                 ? 'font-bold text-[#ef5b5b]'
                 : 'text-[var(--color-text-secondary)]'
             "

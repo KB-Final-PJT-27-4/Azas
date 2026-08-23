@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Landmark } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import completePigUrl from '@/assets/images/accounts/complete-pig.png'
 import goalEducationIcon from '@/assets/images/goals/goals_1.png'
@@ -16,9 +16,19 @@ type GoalPlan = {
   targetDate: string
 }
 
-defineProps<{
+type SavingsAccount = {
+  id: string
+  name: string
+  number: string
+  balance: number
+  rate: string
+  maturity: string
+}
+
+const props = defineProps<{
   plans: GoalPlan[]
   linkedSavings: Record<string, string[]>
+  savingsAccounts: SavingsAccount[]
 }>()
 
 const goalIcons: Record<string, string> = {
@@ -37,11 +47,9 @@ const goalStyles: Record<string, string> = {
   custom: 'border-violet-200 bg-violet-50',
 }
 
-const savingsNames: Record<string, string> = {
-  'child-love-1': 'KB 아이사랑적금',
-  'young-youth': 'KB Young Youth 적금',
-  'child-love-2': 'KB 아이사랑적금 2',
-}
+const savingsById = computed(() =>
+  new Map(props.savingsAccounts.map((account) => [account.id, account])),
+)
 
 const carousel = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)
@@ -144,8 +152,16 @@ const moveTo = (index: number) => {
               >
                 <Landmark :size="17" :stroke-width="2.2" aria-hidden="true" />
               </span>
-              <span class="truncate text-sm font-semibold">
-                {{ savingsNames[savingsId] ?? '연결된 적금' }}
+              <span class="min-w-0">
+                <strong class="block truncate text-sm font-semibold">
+                  {{ savingsById.get(savingsId)?.name ?? '연결된 적금' }}
+                </strong>
+                <span
+                  v-if="savingsById.get(savingsId)?.number"
+                  class="mt-0.5 block truncate text-[11px] text-[var(--color-text-secondary)]"
+                >
+                  {{ savingsById.get(savingsId)?.number }}
+                </span>
               </span>
             </div>
           </div>

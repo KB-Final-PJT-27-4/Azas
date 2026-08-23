@@ -15,7 +15,7 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { Item } from './item';
+import type { ChecklistItemListItemResponse } from './checklist-item-list-item-response';
 
 /**
  * 생애주기 체크리스트 목록 응답
@@ -23,7 +23,7 @@ import type { Item } from './item';
 export interface ChecklistItemListResponse {
     'child_id'?: number;
     'completed_count'?: number;
-    'items'?: Array<Item>;
+    'items'?: Array<ChecklistItemListItemResponse>;
     'lifecycle_stage'?: string;
     'progress_percent'?: number;
     'stage_completed'?: boolean;

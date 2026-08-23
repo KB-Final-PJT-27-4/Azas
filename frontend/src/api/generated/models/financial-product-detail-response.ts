@@ -18,7 +18,7 @@
 import type { Badge } from './badge';
 // May contain unused imports in some cases
 // @ts-ignore
-import type { ContractPeriod } from './contract-period';
+import type { FinancialProductDetailContractPeriodResponse } from './financial-product-detail-contract-period-response';
 // May contain unused imports in some cases
 // @ts-ignore
 import type { InterestPaymentMethod } from './interest-payment-method';
@@ -34,7 +34,7 @@ export interface FinancialProductDetailResponse {
     'badges'?: Array<Badge>;
     'bank_name'?: string;
     'cautions'?: object;
-    'contract_period'?: ContractPeriod;
+    'contract_period'?: FinancialProductDetailContractPeriodResponse;
     'curation_reason'?: string;
     'detail_url'?: string;
     'eligibility_conditions'?: object;
