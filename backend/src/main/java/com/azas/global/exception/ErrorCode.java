@@ -131,6 +131,10 @@ public enum ErrorCode {
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자녀 명의의 활성 입출금 계좌에만 사용 관리 정책을 설정할 수 있습니다."
     ),
+    INELIGIBLE_PRIMARY_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "활성 입출금 계좌만 대표 계좌로 지정할 수 있습니다."
+    ),
     CHILD_MEMBER_ACCESS_REQUIRED(
             HttpStatus.FORBIDDEN,
             "자녀 회원 계정으로만 조회할 수 있습니다."

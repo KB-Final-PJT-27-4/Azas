@@ -331,6 +331,34 @@ class AccountPrimaryServiceTest {
         );
     }
 
+    @Test
+    void rejectsSavingsAccountAsPrimary() {
+        AccountPrimaryTargetRow target = target(
+                "PARENT",
+                MEMBER_ID,
+                null,
+                false
+        );
+        ReflectionTestUtils.setField(
+                target,
+                "accountProductType",
+                "SAVINGS"
+        );
+        when(financialAccountMapper
+                .findAccountPrimaryTargetByIdForUpdate(ACCOUNT_ID))
+                .thenReturn(target);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.setPrimaryAccount(MEMBER_ID, ACCOUNT_ID)
+        );
+
+        assertEquals(
+                ErrorCode.INELIGIBLE_PRIMARY_ACCOUNT,
+                exception.getErrorCode()
+        );
+    }
+
     private void assertNotFound(AccountPrimaryTargetRow ignored) {
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -372,6 +400,11 @@ class AccountPrimaryServiceTest {
                 target,
                 "childId",
                 childId
+        );
+        ReflectionTestUtils.setField(
+                target,
+                "accountProductType",
+                "DEMAND_DEPOSIT"
         );
         ReflectionTestUtils.setField(
                 target,

@@ -86,9 +86,13 @@ public class AccountOpenService {
                 ? now.toLocalDate().plusMonths(product.getContractPeriodMonths())
                 : null;
         String accountName = product.getName();
-        boolean primary = ownerType == FinancialAccountOwnerType.PARENT
-                && "DEMAND_DEPOSIT".equals(accountProductType)
-                && !hasParentDemand;
+        boolean hasActiveScopeDemand = ownerType == FinancialAccountOwnerType.PARENT
+                ? hasParentDemand
+                : accountMapper.countActiveChildDemandDeposit(
+                        request.getChildId()
+                ) > 0;
+        boolean primary = "DEMAND_DEPOSIT".equals(accountProductType)
+                && !hasActiveScopeDemand;
 
         AccountOpenRecord account = new AccountOpenRecord(
                 ownerType.name(),

@@ -207,6 +207,17 @@
           AND link_status = 'ACTIVE'
     </select>
 
+    <select id="countActiveChildDemandDeposit"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM financial_account
+        WHERE owner_type = 'CHILD'
+          AND child_id = #{childId}
+          AND account_product_type = 'DEMAND_DEPOSIT'
+          AND account_status = 'ACTIVE'
+          AND link_status = 'ACTIVE'
+    </select>
+
     <select id="findAccountLinkTargetsForUpdate"
             resultType="com.azas.domain.finance.account.dto.AccountLinkTargetRow">
         SELECT
@@ -463,6 +474,7 @@
             fa.owner_type,
             fa.owner_member_id,
             fa.child_id,
+            fa.account_product_type,
             fa.account_status,
             fa.link_status,
             fa.is_primary AS primary_account
