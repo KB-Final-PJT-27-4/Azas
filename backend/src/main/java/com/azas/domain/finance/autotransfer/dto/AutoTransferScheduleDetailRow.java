@@ -18,6 +18,7 @@ public class AutoTransferScheduleDetailRow {
 
     private Long autoTransferScheduleId;
     private Long childId;
+    private Long memberId;
     private Long financialGoalId;
     private String goalTitle;
 

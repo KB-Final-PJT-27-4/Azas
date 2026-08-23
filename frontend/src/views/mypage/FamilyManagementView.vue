@@ -38,14 +38,15 @@ const openInvitation = async (type: InviteType) => {
   isCreatingInvitation.value = true
   try {
     const invitationRequest = {
-      invitee_type: type === 'guardian' ? 'PARENT' : 'CHILD',
       expires_in_hours: 24,
     }
-    const { data } = await api.createChildFamilyInvitationUsingPOST(
-      childId.value,
-      undefined,
-      invitationRequest,
-    )
+    const { data } = type === 'guardian'
+      ? await api.createParentFamilyInvitationUsingPOST(undefined, invitationRequest)
+      : await api.createChildFamilyInvitationUsingPOST(
+        childId.value,
+        undefined,
+        invitationRequest,
+      )
     createdInvitationLink.value = data.invite_url
       ?? `${window.location.origin}/family-invitations/${data.invite_token ?? ''}`
   } catch (error) {

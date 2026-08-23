@@ -6,6 +6,7 @@ import com.azas.domain.finance.transfer.entity.TransferAccount;
 import com.azas.domain.finance.transfer.entity.TransferStatus;
 import com.azas.domain.finance.transfer.entity.TransferType;
 import com.azas.domain.finance.transfer.mapper.TransferMapper;
+import com.azas.domain.report.service.AssetReportSnapshotService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import com.azas.global.security.AccountNumberProtector;
@@ -17,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,10 +34,14 @@ public class TransferServiceImpl implements TransferService {
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final int MAX_PAGE_SIZE = 100;
 
+    private static final ZoneId SERVICE_ZONE =
+            ZoneId.of("Asia/Seoul");
+
     private final TransferMapper transferMapper;
     private final AccountNumberProtector accountNumberProtector;
+    private final AssetReportSnapshotService assetReportSnapshotService;
 
-    // TRANSFER 1: 목표 계좌로 이체 요청
+    // 부모 입출금 계좌에서 접근 가능한 입출금/적금 계좌로 이체한다.
     @Override
     @Transactional
     public TransferCreateResponse createTransfer(
@@ -95,6 +102,16 @@ public class TransferServiceImpl implements TransferService {
             throw new BusinessException(ErrorCode.TRANSFER_PROCESSING_FAILED);
         }
 
+        if (destination.getChildId() != null
+                && transferMapper.insertDestinationBalanceSnapshot(
+                destination.getFinancialAccountId(),
+                destination.getChildId(),
+                destination.getBalance().add(request.getAmount()),
+                completedAt
+        ) != 1) {
+            throw new BusinessException(ErrorCode.TRANSFER_PROCESSING_FAILED);
+        }
+
         TransferTransactionInsertCommand debitTransaction =
                 new TransferTransactionInsertCommand(
                         null,
@@ -131,6 +148,16 @@ public class TransferServiceImpl implements TransferService {
                 completedAt
         ) != 1) {
             throw new BusinessException(ErrorCode.TRANSFER_PROCESSING_FAILED);
+        }
+
+        if (destination.getChildId() != null) {
+            assetReportSnapshotService.generateForChild(
+                    destination.getChildId(),
+                    YearMonth.from(
+                            completedAt.atZone(ZoneOffset.UTC)
+                                    .withZoneSameInstant(SERVICE_ZONE)
+                    )
+            );
         }
 
         return new TransferCreateResponse(
@@ -248,13 +275,31 @@ public class TransferServiceImpl implements TransferService {
             throw new BusinessException(ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND);
         }
 
-        // 입금 계좌는 존재하지만 자녀 또는 실제 목표와 연결되지 않은 경우
-        if (destination.getChildId() == null
-                || destination.getFinancialGoalId() == null) {
+        boolean isSupportedDestination =
+                "DEMAND_DEPOSIT".equals(
+                        destination.getAccountProductType()
+                ) || "SAVINGS".equals(
+                        destination.getAccountProductType()
+                );
+
+        if (!isSupportedDestination
+                || !"ACTIVE".equals(destination.getAccountStatus())
+                || !"ACTIVE".equals(destination.getLinkStatus())) {
             throw new BusinessException(ErrorCode.INVALID_TRANSFER_REQUEST);
         }
 
-        validateChildAccess(memberId, destination.getChildId());
+        if ("PARENT".equals(destination.getOwnerType())) {
+            if (!Objects.equals(destination.getOwnerMemberId(), memberId)) {
+                throw new BusinessException(
+                        ErrorCode.FINANCIAL_ACCOUNT_ACCESS_DENIED
+                );
+            }
+        } else if ("CHILD".equals(destination.getOwnerType())
+                && destination.getChildId() != null) {
+            validateChildAccess(memberId, destination.getChildId());
+        } else {
+            throw new BusinessException(ErrorCode.INVALID_TRANSFER_REQUEST);
+        }
 
         if (source.getBalance() == null || source.getBalance().compareTo(amount) < 0) {
             throw new BusinessException(ErrorCode.INSUFFICIENT_ACCOUNT_BALANCE);

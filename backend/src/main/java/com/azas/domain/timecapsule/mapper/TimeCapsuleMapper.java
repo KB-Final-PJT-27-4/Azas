@@ -32,6 +32,11 @@ public interface TimeCapsuleMapper {
 
     int insert(TimeCapsule timeCapsule);
 
+    int updateExpectedReleaseAt(
+            @Param("timeCapsuleId") long timeCapsuleId,
+            @Param("expectedReleaseAt") java.time.LocalDateTime expectedReleaseAt
+    );
+
     TimeCapsule findById(
             @Param("timeCapsuleId") long timeCapsuleId
     );

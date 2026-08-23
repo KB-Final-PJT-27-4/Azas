@@ -10,7 +10,15 @@ import { apiBaseUrl } from '@/api/config'
 export const ACCESS_TOKEN_STORAGE_KEY = 'azas_access_token'
 export const REFRESH_TOKEN_STORAGE_KEY = 'azas_refresh_token'
 export const AUTH_MEMBER_STORAGE_KEY = 'azas_auth_member'
+export const CURRENT_CHILD_STORAGE_KEY = 'azas_current_child_id'
 export const AUTH_EXPIRED_EVENT = 'azas:auth-expired'
+export const AUTH_SESSION_CHANGED_EVENT = 'azas:auth-session-changed'
+
+const dispatchAuthSessionChanged = () => {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT))
+}
+
+export const notifyAuthSessionChanged = dispatchAuthSessionChanged
 
 export const getAccessToken = () => sessionStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)
 export const getRefreshToken = () => sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)
@@ -25,6 +33,8 @@ export const clearTokenPair = () => {
 export const clearAuthSessionStorage = () => {
   clearTokenPair()
   sessionStorage.removeItem(AUTH_MEMBER_STORAGE_KEY)
+  sessionStorage.removeItem(CURRENT_CHILD_STORAGE_KEY)
+  dispatchAuthSessionChanged()
 }
 export const getAuthorizationHeader = () => {
   const accessToken = getAccessToken()
@@ -47,16 +57,19 @@ const refreshAccessToken = () => {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return Promise.reject(new Error('Refresh token is missing.'))
 
-  refreshPromise ??= axios.post<RefreshResponse>(
-    `${apiBaseUrl}/v1/auth/token/refresh`,
-    { refresh_token: refreshToken },
-    { timeout: 15_000 },
-  ).then(({ data }) => {
-    saveTokenPair(data.access_token, data.refresh_token)
-    return data.access_token
-  }).finally(() => {
-    refreshPromise = null
-  })
+  refreshPromise ??= axios
+    .post<RefreshResponse>(
+      `${apiBaseUrl}/v1/auth/token/refresh`,
+      { refresh_token: refreshToken },
+      { timeout: 15_000 },
+    )
+    .then(({ data }) => {
+      saveTokenPair(data.access_token, data.refresh_token)
+      return data.access_token
+    })
+    .finally(() => {
+      refreshPromise = null
+    })
 
   return refreshPromise
 }
@@ -68,7 +81,13 @@ const installTokenRefreshInterceptor = (client: AxiosInstance) => {
       const request = error.config as RetriableRequestConfig | undefined
       const isAuthRequest = request?.url?.includes('/auth/') ?? false
 
-      if (error.response?.status !== 401 || !request || request._azasRetried || isAuthRequest || !getRefreshToken()) {
+      if (
+        error.response?.status !== 401 ||
+        !request ||
+        request._azasRetried ||
+        isAuthRequest ||
+        !getRefreshToken()
+      ) {
         return Promise.reject(error)
       }
 

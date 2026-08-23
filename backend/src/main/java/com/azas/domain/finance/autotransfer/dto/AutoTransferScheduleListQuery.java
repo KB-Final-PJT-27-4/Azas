@@ -8,6 +8,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class AutoTransferScheduleListQuery {
 
+    private final Long memberId;
     private final Long childId;
     private final AutoTransferScheduleStatus status;
     private final Long cursorId;

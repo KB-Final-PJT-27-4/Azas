@@ -80,8 +80,6 @@ public class AutoTransferScheduleServiceImpl
             return toResponse(existing);
         }
 
-        validateChildAccess(memberId, request.getChildId());
-
         AutoTransferAccountRow source;
         AutoTransferAccountRow destination;
 
@@ -103,11 +101,16 @@ public class AutoTransferScheduleServiceImpl
             );
         }
 
-        validateAccounts(memberId, request, source, destination);
+        Long scheduleChildId = validateAccounts(
+                memberId,
+                request,
+                source,
+                destination
+        );
 
         if (mapper.countEquivalentSchedule(
                 memberId,
-                request.getChildId(),
+                scheduleChildId,
                 request.getSourceAccountId(),
                 request.getDestinationAccountId(),
                 request.getAmount(),
@@ -127,7 +130,7 @@ public class AutoTransferScheduleServiceImpl
         AutoTransferScheduleInsertCommand command =
                 new AutoTransferScheduleInsertCommand(
                         null,
-                        request.getChildId(),
+                        scheduleChildId,
                         memberId,
                         idempotencyKey,
                         destination.getFinancialGoalId(),
@@ -194,14 +197,14 @@ public class AutoTransferScheduleServiceImpl
             CreateAutoTransferScheduleRequest request
     ) {
         if (request == null
-                || request.getChildId() == null
                 || request.getSourceAccountId() == null
                 || request.getDestinationAccountId() == null
                 || request.getAmount() == null
                 || request.getFrequency() == null
                 || request.getTransferDay() == null
                 || request.getStartDate() == null
-                || request.getChildId() <= 0
+                || (request.getChildId() != null
+                && request.getChildId() <= 0)
                 || request.getSourceAccountId() <= 0
                 || request.getDestinationAccountId() <= 0
                 || request.getAmount().signum() <= 0
@@ -235,7 +238,7 @@ public class AutoTransferScheduleServiceImpl
         }
     }
 
-    private void validateAccounts(
+    private Long validateAccounts(
             Long memberId,
             CreateAutoTransferScheduleRequest request,
             AutoTransferAccountRow source,
@@ -264,28 +267,47 @@ public class AutoTransferScheduleServiceImpl
                         && "ACTIVE".equals(source.getAccountStatus())
                         && "ACTIVE".equals(source.getLinkStatus());
 
-        boolean validDestination =
-                "CHILD".equals(destination.getOwnerType())
-                        && Objects.equals(
-                        destination.getChildId(),
-                        request.getChildId()
-                )
-                        && "SAVINGS".equals(
+        boolean validDestinationProduct =
+                "SAVINGS".equals(
                         destination.getAccountProductType()
-                )
+                ) || "DEMAND_DEPOSIT".equals(
+                        destination.getAccountProductType()
+                );
+
+        boolean validDestination = validDestinationProduct
                         && "ACTIVE".equals(
                         destination.getAccountStatus()
                 )
-                        && "ACTIVE".equals(
-                        destination.getLinkStatus()
-                )
-                        && destination.getFinancialGoalId() != null;
+                        && "ACTIVE".equals(destination.getLinkStatus());
 
         if (!validSource || !validDestination) {
             throw new BusinessException(
                     ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE
             );
         }
+
+        if ("PARENT".equals(destination.getOwnerType())) {
+            if (!Objects.equals(destination.getOwnerMemberId(), memberId)) {
+                throw new BusinessException(
+                        ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE
+                );
+            }
+            return null;
+        }
+
+        if ("CHILD".equals(destination.getOwnerType())
+                && destination.getChildId() != null
+                && (request.getChildId() == null
+                || Objects.equals(
+                destination.getChildId(), request.getChildId()
+        ))) {
+            validateChildAccess(memberId, destination.getChildId());
+            return destination.getChildId();
+        }
+
+        throw new BusinessException(
+                ErrorCode.INVALID_AUTO_TRANSFER_SCHEDULE
+        );
     }
 
     private LocalDate calculateNextTransferDate(
@@ -304,10 +326,12 @@ public class AutoTransferScheduleServiceImpl
             AutoTransferScheduleRow existing
     ) {
         return Objects.equals(existing.getMemberId(), memberId)
-                && Objects.equals(
+                && (existing.getChildId() == null
+                || request.getChildId() == null
+                || Objects.equals(
                 existing.getChildId(),
                 request.getChildId()
-        )
+        ))
                 && Objects.equals(
                 existing.getSourceAccountId(),
                 request.getSourceAccountId()
@@ -396,6 +420,7 @@ public class AutoTransferScheduleServiceImpl
 
         AutoTransferScheduleListQuery query =
                 new AutoTransferScheduleListQuery(
+                        memberId,
                         childId,
                         parsedStatus,
                         cursorId,
@@ -439,7 +464,7 @@ public class AutoTransferScheduleServiceImpl
             String value
     ) {
         if (value == null || value.isBlank()) {
-            return null;
+            return AutoTransferScheduleStatus.ACTIVE;
         }
 
         try {
@@ -518,7 +543,13 @@ public class AutoTransferScheduleServiceImpl
             );
         }
 
-        validateChildAccess(memberId, row.getChildId());
+        if (row.getChildId() != null) {
+            validateChildAccess(memberId, row.getChildId());
+        } else if (!Objects.equals(row.getMemberId(), memberId)) {
+            throw new BusinessException(
+                    ErrorCode.AUTO_TRANSFER_SCHEDULE_ACCESS_DENIED
+            );
+        }
 
         return toDetailResponse(row);
     }
@@ -546,10 +577,12 @@ public class AutoTransferScheduleServiceImpl
             );
         }
 
-        validateChildAccess(
-                memberId,
-                schedule.getChildId()
-        );
+        if (schedule.getChildId() != null) {
+            validateChildAccess(
+                    memberId,
+                    schedule.getChildId()
+            );
+        }
 
         /*
          * 다른 보호자가 목록·상세를 보는 것은 허용하지만,
@@ -829,7 +862,9 @@ public class AutoTransferScheduleServiceImpl
             );
         }
 
-        validateChildAccess(memberId, schedule.getChildId());
+        if (schedule.getChildId() != null) {
+            validateChildAccess(memberId, schedule.getChildId());
+        }
 
         if (!Objects.equals(schedule.getMemberId(), memberId)) {
             throw new BusinessException(

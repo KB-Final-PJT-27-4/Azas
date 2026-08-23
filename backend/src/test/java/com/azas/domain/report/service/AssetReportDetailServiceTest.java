@@ -15,6 +15,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -29,6 +32,9 @@ class AssetReportDetailServiceTest {
     @Mock
     private AssetReportMapper assetReportMapper;
 
+    @Mock
+    private AssetReportSnapshotService snapshotService;
+
     private AssetReportService assetReportService;
 
     @BeforeEach
@@ -36,7 +42,12 @@ class AssetReportDetailServiceTest {
         assetReportService =
                 new AssetReportService(
                         assetReportMapper,
-                        new ObjectMapper()
+                        new ObjectMapper(),
+                        snapshotService,
+                        Clock.fixed(
+                                Instant.parse("2026-08-20T00:00:00Z"),
+                                ZoneOffset.UTC
+                        )
                 );
     }
 
@@ -158,6 +169,42 @@ class AssetReportDetailServiceTest {
                 ErrorCode.ASSET_REPORT_NOT_FOUND,
                 exception.getErrorCode()
         );
+
+        verifyNoInteractions(snapshotService);
+    }
+
+    @Test
+    void 이번_달_리포트는_최신_잔액으로_다시_생성한_뒤_반환한다() {
+        mockAccess();
+
+        AssetReportDetailRow august = detailRow();
+        august.setReportMonth(LocalDate.of(2026, 8, 1));
+
+        when(assetReportMapper.findAssetReportDetail(
+                CHILD_ID,
+                LocalDate.of(2026, 8, 1)
+        )).thenReturn(august);
+
+        AssetReportDetailResponse response =
+                assetReportService.getAssetReportDetail(
+                        MEMBER_ID,
+                        CHILD_ID,
+                        2026,
+                        8
+                );
+
+        assertEquals(8, response.getReportMonth());
+
+        verify(snapshotService).generateForChild(
+                CHILD_ID,
+                java.time.YearMonth.of(2026, 8)
+        );
+
+        verify(assetReportMapper)
+                .findAssetReportDetail(
+                        CHILD_ID,
+                        LocalDate.of(2026, 8, 1)
+                );
     }
 
     @Test

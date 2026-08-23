@@ -13,6 +13,7 @@ import com.azas.domain.finance.autotransfer.mapper.AutoTransferScheduleMapper;
 import com.azas.domain.finance.transfer.dto.TransferTransactionInsertCommand;
 import com.azas.domain.finance.transfer.entity.TransferStatus;
 import com.azas.domain.notification.service.PushNotificationPublisher;
+import com.azas.domain.report.service.AssetReportSnapshotService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,7 @@ public class AutoTransferRetryServiceImplTest {
     private AutoTransferRetryMapper retryMapper;
     private AutoTransferRetryServiceImpl service;
     private PushNotificationPublisher pushNotificationPublisher;
+    private AssetReportSnapshotService assetReportSnapshotService;
 
     @BeforeEach
     void setUp() {
@@ -55,6 +57,8 @@ public class AutoTransferRetryServiceImplTest {
                 mock(AutoTransferRetryMapper.class);
         pushNotificationPublisher =
                 mock(PushNotificationPublisher.class);
+        assetReportSnapshotService =
+                mock(AssetReportSnapshotService.class);
 
         Clock clock = Clock.fixed(
                 Instant.parse("2026-08-18T01:30:00Z"),
@@ -65,7 +69,8 @@ public class AutoTransferRetryServiceImplTest {
                 scheduleMapper,
                 retryMapper,
                 clock,
-                pushNotificationPublisher
+                pushNotificationPublisher,
+                assetReportSnapshotService
         );
     }
 
@@ -84,7 +89,9 @@ public class AutoTransferRetryServiceImplTest {
         when(retryMapper.findAccountForExecutionForUpdate(1L))
                 .thenReturn(sourceAccount(new BigDecimal("200000")));
         when(retryMapper.findAccountForExecutionForUpdate(3L))
-                .thenReturn(destinationAccount(new BigDecimal("500000")));
+                .thenReturn(destinationDemandDepositAccount(
+                        new BigDecimal("500000")
+                ));
 
         when(retryMapper.insertRetryTransfer(any()))
                 .thenAnswer(invocation -> {
@@ -102,6 +109,13 @@ public class AutoTransferRetryServiceImplTest {
         when(retryMapper.increaseDestinationBalance(
                 3L,
                 new BigDecimal("100000")
+        )).thenReturn(1);
+
+        when(retryMapper.insertDestinationBalanceSnapshot(
+                eq(3L),
+                eq(5L),
+                eq(new BigDecimal("600000")),
+                any(LocalDateTime.class)
         )).thenReturn(1);
 
         when(retryMapper.insertTransaction(any()))
@@ -149,6 +163,14 @@ public class AutoTransferRetryServiceImplTest {
                 TransferStatus.SUCCEEDED,
                 response.getStatus()
         );
+        verify(retryMapper).insertDestinationBalanceSnapshot(
+                eq(3L),
+                eq(5L),
+                eq(new BigDecimal("600000")),
+                any(LocalDateTime.class)
+        );
+        verify(assetReportSnapshotService)
+                .generateForChild(eq(5L), any());
         verify(pushNotificationPublisher).publish(
                 eq(7L),
                 argThat(message ->
@@ -340,6 +362,15 @@ public class AutoTransferRetryServiceImplTest {
         row.setLinkStatus("ACTIVE");
         row.setBalance(balance);
 
+        return row;
+    }
+
+    private AutoTransferExecutionAccountRow
+    destinationDemandDepositAccount(BigDecimal balance) {
+        AutoTransferExecutionAccountRow row =
+                destinationAccount(balance);
+        row.setAccountProductType("DEMAND_DEPOSIT");
+        row.setAccountName("자녀 입출금 계좌");
         return row;
     }
     private AutoTransferRetryRow failedTransfer(

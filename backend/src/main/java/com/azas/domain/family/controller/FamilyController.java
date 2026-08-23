@@ -68,20 +68,40 @@ public class FamilyController {
     }
 
 
-    @ApiOperation("가족/아이 초대코드 발급")
-    @PostMapping("/children/{child_id}/family-invitations")
-    public ResponseEntity<FamilyInvitationCreateResponse> createFamilyInvitation(
+    @ApiOperation("보호자 초대코드 발급")
+    @PostMapping("/family-invitations")
+    public ResponseEntity<FamilyInvitationCreateResponse> createParentFamilyInvitation(
             @RequestHeader(value = "Authorization", required = false)
             String authorizationHeader,
-            @PathVariable("child_id") Long childId,
-            @Valid @RequestBody FamilyInvitationCreateRequest request
+            @Valid @RequestBody(required = false) FamilyInvitationCreateRequest request
     ) {
         long memberId = accessTokenMemberResolver.resolveMemberId(
                 authorizationHeader
         );
 
         FamilyInvitationCreateResponse response =
-                familyService.createFamilyInvitation(
+                familyService.createParentFamilyInvitation(
+                        memberId,
+                        request
+                );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @ApiOperation("자녀 계정 연결 초대코드 발급")
+    @PostMapping("/children/{child_id}/family-invitations")
+    public ResponseEntity<FamilyInvitationCreateResponse> createChildFamilyInvitation(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorizationHeader,
+            @PathVariable("child_id") Long childId,
+            @Valid @RequestBody(required = false) FamilyInvitationCreateRequest request
+    ) {
+        long memberId = accessTokenMemberResolver.resolveMemberId(
+                authorizationHeader
+        );
+
+        FamilyInvitationCreateResponse response =
+                familyService.createChildFamilyInvitation(
                         memberId,
                         childId,
                         request

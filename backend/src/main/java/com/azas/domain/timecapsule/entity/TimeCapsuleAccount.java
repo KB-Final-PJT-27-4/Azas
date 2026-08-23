@@ -3,6 +3,8 @@ package com.azas.domain.timecapsule.entity;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Getter
 @NoArgsConstructor
 public class TimeCapsuleAccount {
@@ -13,6 +15,7 @@ public class TimeCapsuleAccount {
     private Long childId;
     private String accountName;
     private String accountProductType;
+    private LocalDate maturityDate;
     private String accountStatus;
     private String linkStatus;
 

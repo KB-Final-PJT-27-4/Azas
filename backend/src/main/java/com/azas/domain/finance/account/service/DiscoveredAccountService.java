@@ -112,6 +112,7 @@ public class DiscoveredAccountService {
             return new DiscoveredAccountResult(
                     row.getAccountId(),
                     row.getBankName(),
+                    row.getAccountName(),
                     accountNumberProtector.decrypt(
                             row.getAccountNumberCiphertext()
                     ),
