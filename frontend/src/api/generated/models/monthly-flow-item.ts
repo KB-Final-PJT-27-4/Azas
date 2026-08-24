@@ -17,6 +17,6 @@
 export interface MonthlyFlowItem {
     'expense_amount'?: number;
     'month'?: number;
+    'same_age_average_amount'?: number;
     'year'?: number;
 }
-

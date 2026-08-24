@@ -1,0 +1,53 @@
+import { describe, expect, it, vi } from 'vitest'
+
+const mocks = vi.hoisted(() => ({
+  getReportUsingGET: vi.fn(),
+  resolveCurrentChildId: vi.fn(),
+}))
+
+vi.mock('@/api', () => ({
+  api: { getReportUsingGET: mocks.getReportUsingGET },
+}))
+vi.mock('@/api/context', () => ({
+  resolveCurrentChildId: mocks.resolveCurrentChildId,
+}))
+
+import { useChildcareReport } from '../useChildcareReport'
+
+describe('useChildcareReport', () => {
+  it('maps the backend comparison benchmark and monthly fixed average', async () => {
+    mocks.resolveCurrentChildId.mockResolvedValue(6)
+    mocks.getReportUsingGET.mockResolvedValue({
+      data: {
+        summary: {
+          total_expense_amount: 30_000,
+          same_age_monthly_average_amount: 1_407_000,
+          same_age_difference_amount: -1_377_000,
+          same_age_difference_rate: -98,
+        },
+        comparison_benchmark: {
+          label: '30대 부모 가구 월평균 양육비',
+          age_group: '30대',
+          source_name: '육아정책연구소 소비실태조사 2024',
+          source_url: 'https://example.com/source',
+          source_year: 2024,
+          calculation_basis: '부모 30대 응답 평균',
+        },
+        monthly_flow: [{ year: 2026, month: 8, expense_amount: 30_000, same_age_average_amount: 1_407_000 }],
+      },
+    })
+
+    const report = useChildcareReport()
+    await report.load()
+
+    expect(report.childcareReportSummary).toMatchObject({
+      peerAverageAmount: 1_407_000,
+      comparisonDifferenceAmount: -1_377_000,
+      comparisonLabel: '30대 부모 가구 월평균 양육비',
+      ageGroup: '30대',
+    })
+    expect(report.monthlyChildcareExpenses).toEqual([
+      { month: '8월', amount: 30_000, averageAmount: 1_407_000 },
+    ])
+  })
+})

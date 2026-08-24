@@ -2,7 +2,7 @@
 import { onMounted } from 'vue'
 import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
+const { childcareReportSummary, load } = useChildcareReport()
 onMounted(load)
 </script>
 
@@ -20,47 +20,41 @@ onMounted(load)
           >공공 통계 기반</span
         >
         <h1 id="age-average-title" class="mt-2.5 mb-0 text-[18px] font-extrabold">
-          동일 연령 평균 정보
+          {{ childcareReportSummary.comparisonLabel }} 정보
         </h1>
         <p class="mt-1.5 mb-0 text-[12px] font-semibold text-[var(--color-text-secondary)]">
-          {{ childcareReportSummary.ageGroup }} 기준
+          {{ childcareReportSummary.ageGroup }} 부모 가구 기준
         </p>
       </div>
 
       <div
         class="grid grid-cols-[minmax(0,1fr)_auto] bg-[#fafbfb] px-5 py-3 text-[11px] font-bold text-[var(--color-text-secondary)]"
       >
-        <span>항목</span>
+        <span>비교 기준</span>
         <span>월 평균 금액</span>
       </div>
 
       <dl class="m-0">
-        <div
-          v-for="category in childcareCategories"
-          :key="category.id"
-          class="grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-[#edf0f2] px-5 py-3.5"
-        >
-          <dt class="flex min-w-0 items-center gap-2.5 text-[13px] font-bold">
-            <span
-              class="size-2.5 shrink-0 rounded-full"
-              :style="{ backgroundColor: category.color }"
-            ></span>
-            {{ category.label }}
-          </dt>
-          <dd class="m-0 text-right text-[13px] font-semibold text-[var(--color-text-secondary)]">
-            {{ formatReportWon(category.averageAmount) }}
-          </dd>
+        <div class="grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-[#edf0f2] px-5 py-3.5">
+          <dt class="text-[13px] font-bold">{{ childcareReportSummary.comparisonLabel }}</dt>
+          <dd class="m-0 text-right text-[13px] font-semibold text-[var(--color-text-secondary)]">{{ formatReportWon(childcareReportSummary.peerAverageAmount) }}</dd>
         </div>
       </dl>
 
       <div
         class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-[#e2e7ea] bg-[var(--color-accent-yellow-surface)] px-5 py-5"
       >
-        <strong class="text-[14px]">합계</strong>
+        <strong class="text-[14px]">월평균 양육비</strong>
         <strong class="text-[20px] tracking-[-0.02em]">
           {{ formatReportWon(childcareReportSummary.peerAverageAmount) }}
         </strong>
       </div>
+    </section>
+
+    <section class="mt-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4 text-[11px] leading-5 text-[var(--color-text-secondary)]">
+      <p class="m-0"><strong class="text-[var(--color-text-primary)]">산정 방식</strong><br>{{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}</p>
+      <p class="mt-3 mb-0"><strong class="text-[var(--color-text-primary)]">출처</strong><br>{{ childcareReportSummary.benchmarkSourceName }} {{ childcareReportSummary.benchmarkSourceYear ? `(${childcareReportSummary.benchmarkSourceYear})` : '' }}</p>
+      <a v-if="childcareReportSummary.benchmarkSourceUrl" :href="childcareReportSummary.benchmarkSourceUrl" target="_blank" rel="noopener noreferrer" class="mt-2 inline-block font-bold text-[var(--color-accent-yellow-text)] underline">출처 보기</a>
     </section>
 
     <p class="mt-4 mb-0 px-1 text-[10px] leading-4 text-[var(--color-text-secondary)]">
