@@ -3,6 +3,9 @@ import { readonly, ref } from 'vue'
 export type HeaderNotificationNotice = {
   title: string
   message: string
+  notificationId?: number
+  isRead?: boolean
+  targetPath?: string
 }
 
 const notice = ref<HeaderNotificationNotice | null>(null)

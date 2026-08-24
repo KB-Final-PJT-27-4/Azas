@@ -34,6 +34,7 @@ const { showToast } = useToast()
 const isPageLeaving = ref(false)
 const isLoading = ref(true)
 const isFreeCapsuleSheetOpen = ref(false)
+const isMaturitySavingsSheetOpen = ref(false)
 const freeCapsuleSheetOffset = ref(0)
 const isFreeCapsuleSheetDragging = ref(false)
 let freeCapsuleDragStartY = 0
@@ -101,6 +102,7 @@ const UNLOCK_WHITE_FLASH_MS = 700
 const UNLOCK_REVEAL_FADE_MS = 800
 const UNLOCK_SEEN_STORAGE_PREFIX = 'azas_time_capsule_unlock_seen'
 const OPEN_FLASH_STORAGE_KEY = 'azas_time_capsule_open_flash'
+const MATURITY_SAVINGS_NOTICE_STORAGE_KEY = 'azas_time_capsule_maturity_savings_notice'
 const UNLOCK_LONG_PRESS_MS = 2000
 const unlockLongPressState = {
   timer: null as number | null,
@@ -252,6 +254,15 @@ const closeFreeCapsuleSheet = () => {
   freeCapsuleSheetOffset.value = 0
   isFreeCapsuleSheetDragging.value = false
   isFreeCapsuleSheetOpen.value = false
+}
+
+const closeMaturitySavingsSheet = () => {
+  isMaturitySavingsSheetOpen.value = false
+}
+
+const goToSavingsRecommendation = () => {
+  closeMaturitySavingsSheet()
+  navigateForward({ name: 'SavingsRecommendation' })
 }
 
 const clearUnlockTimers = () => {
@@ -517,6 +528,10 @@ const isCapsuleReleased = (capsule: { createdAt: string; isFree?: boolean }) =>
     : isReleased(capsule.createdAt)
 
 onMounted(async () => {
+  const shouldShowMaturitySavingsSheet =
+    window.sessionStorage.getItem(MATURITY_SAVINGS_NOTICE_STORAGE_KEY) === 'true'
+  window.sessionStorage.removeItem(MATURITY_SAVINGS_NOTICE_STORAGE_KEY)
+
   try {
     childId.value = await resolveCurrentChildId()
     const [
@@ -617,6 +632,7 @@ onMounted(async () => {
     applyLocalTimeCapsuleFallback()
   } finally {
     isLoading.value = false
+    isMaturitySavingsSheetOpen.value = shouldShowMaturitySavingsSheet
   }
 })
 
@@ -1106,6 +1122,60 @@ onBeforeUnmount(() => {
             >
               <Check :size="17" :stroke-width="2.8" />
               이 날짜로 캡슐 만들기
+            </button>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="free-capsule-sheet">
+        <div
+          v-if="isMaturitySavingsSheetOpen"
+          class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end justify-center bg-black/40"
+          @click.self="closeMaturitySavingsSheet"
+        >
+          <section
+            class="w-full max-w-[var(--app-max-width)] rounded-t-[26px] bg-white px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom))]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="maturity-savings-title"
+          >
+            <div class="flex h-10 items-center justify-center" aria-hidden="true">
+              <span class="block h-1 w-10 rounded-full bg-[#d7dfe4]"></span>
+            </div>
+            <header class="mt-1 flex items-start justify-between gap-4">
+              <div>
+                <p class="m-0 text-sm font-bold text-[var(--color-brand-primary)]">다음 자산 준비</p>
+                <h2 id="maturity-savings-title" class="mt-1 text-[22px] font-bold text-[var(--color-text-primary)]">
+                  적금이 만기됐어요
+                </h2>
+              </div>
+              <button
+                class="grid size-9 shrink-0 place-items-center rounded-full text-[var(--color-text-secondary)] active:bg-[#f2f5f7]"
+                type="button"
+                aria-label="만기 적금 안내 닫기"
+                @click="closeMaturitySavingsSheet"
+              >
+                <X :size="20" />
+              </button>
+            </header>
+            <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
+              새로운 적금으로 아이의 미래 자산을 계속 준비해보세요.
+            </p>
+            <button
+              class="mt-6 flex h-[54px] w-full items-center justify-center rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
+              type="button"
+              @click="goToSavingsRecommendation"
+            >
+              새 적금 알아보기
+            </button>
+            <button
+              class="mt-2 flex h-12 w-full items-center justify-center rounded-2xl text-sm font-bold text-[var(--color-text-secondary)] active:bg-[#f2f5f7]"
+              type="button"
+              @click="closeMaturitySavingsSheet"
+            >
+              나중에 할게요
             </button>
           </section>
         </div>
