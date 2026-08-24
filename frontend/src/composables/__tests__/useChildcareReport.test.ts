@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   getReportUsingGET: vi.fn(),
@@ -12,9 +12,14 @@ vi.mock('@/api/context', () => ({
   resolveCurrentChildId: mocks.resolveCurrentChildId,
 }))
 
-import { useChildcareReport } from '../useChildcareReport'
+let useChildcareReport: typeof import('../useChildcareReport').useChildcareReport
 
 describe('useChildcareReport', () => {
+  beforeEach(async () => {
+    vi.resetModules()
+    useChildcareReport = (await import('../useChildcareReport')).useChildcareReport
+  })
+
   it('maps the backend comparison benchmark and monthly fixed average', async () => {
     mocks.resolveCurrentChildId.mockResolvedValue(6)
     mocks.getReportUsingGET.mockResolvedValue({
@@ -33,7 +38,9 @@ describe('useChildcareReport', () => {
           source_year: 2024,
           calculation_basis: '부모 30대 응답 평균',
         },
-        monthly_flow: [{ year: 2026, month: 8, expense_amount: 30_000, same_age_average_amount: 1_407_000 }],
+        monthly_flow: [
+          { year: 2026, month: 8, expense_amount: 30_000, same_age_average_amount: 1_407_000 },
+        ],
       },
     })
 
@@ -49,5 +56,34 @@ describe('useChildcareReport', () => {
     expect(report.monthlyChildcareExpenses).toEqual([
       { month: '8월', amount: 30_000, averageAmount: 1_407_000 },
     ])
+  })
+
+  it('uses consistent demo data when the backend aggregate is empty', async () => {
+    mocks.resolveCurrentChildId.mockResolvedValue(6)
+    mocks.getReportUsingGET.mockResolvedValue({
+      data: {
+        summary: { total_expense_amount: 0 },
+        monthly_flow: [],
+      },
+    })
+
+    const report = useChildcareReport()
+    await report.load()
+
+    expect(report.isUsingDemoData.value).toBe(true)
+    expect(report.childcareReportSummary).toMatchObject({
+      currentMonthAmount: 1_860_000,
+      previousMonthDifference: 120_000,
+      annualAmount: 18_100_000,
+      peerAverageAmount: 1_520_000,
+      topCategoryLabel: '교육/학습',
+      topCategoryRate: 40,
+    })
+    expect(report.monthlyChildcareExpenses).toHaveLength(12)
+    expect(report.monthlyChildcareExpenses.at(-1)).toEqual({
+      month: '8월',
+      amount: 1_860_000,
+      averageAmount: 1_520_000,
+    })
   })
 })

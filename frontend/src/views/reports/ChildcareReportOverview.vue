@@ -4,14 +4,18 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const { childcareReportSummary, load } = useChildcareReport()
+const { childcareReportSummary, isUsingDemoData, load } = useChildcareReport()
 const isAverageInfoOpen = ref(false)
 const displayedCurrentMonthAmount = ref(0)
 let currentMonthAmountAnimationFrame: number | null = null
 const differenceAmount = computed(() => childcareReportSummary.comparisonDifferenceAmount)
 const differenceRate = computed(() => childcareReportSummary.comparisonDifferenceRate)
-const differenceText = computed(() => differenceAmount.value > 0 ? '더 높아요' : differenceAmount.value < 0 ? '더 낮아요' : '같아요')
-const comparisonMaxAmount = computed(() => Math.max(childcareReportSummary.currentMonthAmount, childcareReportSummary.peerAverageAmount, 1))
+const differenceText = computed(() =>
+  differenceAmount.value > 0 ? '더 높아요' : differenceAmount.value < 0 ? '더 낮아요' : '같아요',
+)
+const comparisonMaxAmount = computed(() =>
+  Math.max(childcareReportSummary.currentMonthAmount, childcareReportSummary.peerAverageAmount, 1),
+)
 const comparisonBarWidth = (amount: number) =>
   `${Math.max((amount / comparisonMaxAmount.value) * 100, 8)}%`
 
@@ -98,7 +102,9 @@ onBeforeUnmount(() => {
     >
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h2 class="m-0 text-[16px] font-extrabold">{{ childcareReportSummary.comparisonLabel }}과 비교</h2>
+          <h2 class="m-0 text-[16px] font-extrabold">
+            {{ childcareReportSummary.comparisonLabel }}과 비교
+          </h2>
           <p class="mt-1.5 mb-0 text-[12px] leading-5 text-[var(--color-text-secondary)]">
             {{ childcareReportSummary.comparisonLabel }}와 비교했어요.
           </p>
@@ -134,7 +140,9 @@ onBeforeUnmount(() => {
 
           <div class="min-w-0">
             <div class="flex items-center justify-between gap-3 text-[12px]">
-              <strong class="text-[var(--color-text-secondary)]">{{ childcareReportSummary.comparisonLabel }}</strong>
+              <strong class="text-[var(--color-text-secondary)]">{{
+                childcareReportSummary.comparisonLabel
+              }}</strong>
               <strong class="shrink-0 tabular-nums text-[var(--color-text-secondary)]">
                 {{ formatReportWon(childcareReportSummary.peerAverageAmount) }}
               </strong>
@@ -183,7 +191,12 @@ onBeforeUnmount(() => {
             :stroke-width="2.2"
           />
           <div>
-            <strong class="text-sm">지난달보다 지출이 {{ Math.abs(childcareReportSummary.previousMonthRate) }}% {{ childcareReportSummary.previousMonthDifference >= 0 ? '늘었어요' : '줄었어요' }}.</strong>
+            <strong class="text-sm"
+              >지난달보다 지출이 {{ Math.abs(childcareReportSummary.previousMonthRate) }}%
+              {{
+                childcareReportSummary.previousMonthDifference >= 0 ? '늘었어요' : '줄었어요'
+              }}.</strong
+            >
             <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
               지난달과 비교한 실제 지출 흐름이에요.
             </p>
@@ -196,9 +209,19 @@ onBeforeUnmount(() => {
             :stroke-width="2.2"
           />
           <div>
-            <strong class="text-sm">다음 달 교육비를 미리 계획해보세요.</strong>
+            <strong class="text-sm">
+              {{
+                isUsingDemoData
+                  ? `${childcareReportSummary.topCategoryLabel} 지출이 ${formatReportWon(childcareReportSummary.topCategoryAmount)}으로 가장 높아요.`
+                  : '다음 달 교육비를 미리 계획해보세요.'
+              }}
+            </strong>
             <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-              정기 지출을 먼저 나누면 예산 관리가 쉬워져요.
+              {{
+                isUsingDemoData
+                  ? `이번 달 양육비의 ${childcareReportSummary.topCategoryRate}%를 차지하고 있어요.`
+                  : '정기 지출을 먼저 나누면 예산 관리가 쉬워져요.'
+              }}
             </p>
           </div>
         </article>
@@ -245,9 +268,15 @@ onBeforeUnmount(() => {
 
             <div class="min-h-0 flex-1 overflow-y-auto">
               <div class="px-5 py-4">
-                <p class="m-0 text-[12px] font-bold">{{ childcareReportSummary.comparisonLabel }}</p>
-                <strong class="mt-2 block text-[22px]">{{ formatReportWon(childcareReportSummary.peerAverageAmount) }}</strong>
-                <p class="mt-4 mb-0 text-[11px] leading-5 text-[var(--color-text-secondary)]">{{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}</p>
+                <p class="m-0 text-[12px] font-bold">
+                  {{ childcareReportSummary.comparisonLabel }}
+                </p>
+                <strong class="mt-2 block text-[22px]">{{
+                  formatReportWon(childcareReportSummary.peerAverageAmount)
+                }}</strong>
+                <p class="mt-4 mb-0 text-[11px] leading-5 text-[var(--color-text-secondary)]">
+                  {{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}
+                </p>
               </div>
 
               <p class="m-0 px-5 py-4 text-[10px] leading-4 text-[var(--color-text-secondary)]">

@@ -2,6 +2,10 @@ import { reactive, ref } from 'vue'
 
 import { api } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
+import {
+  childcareReportSummary as demoSummary,
+  monthlyChildcareExpenses as demoMonthlyExpenses,
+} from '@/data/childcareReportData'
 
 export type MonthlyChildcareExpense = { month: string; amount: number; averageAmount: number }
 
@@ -19,10 +23,38 @@ const childcareReportSummary = reactive({
   benchmarkCalculationBasis: '',
   annualAmount: 0,
   ageGroup: '30대',
+  topCategoryLabel: '',
+  topCategoryAmount: 0,
+  topCategoryRate: 0,
 })
 const monthlyChildcareExpenses = reactive<MonthlyChildcareExpense[]>([])
+const isUsingDemoData = ref(false)
 const loadedPeriod = ref('')
 let loading: Promise<void> | null = null
+
+const applyDemoData = () => {
+  Object.assign(childcareReportSummary, {
+    ...demoSummary,
+    comparisonDifferenceAmount: demoSummary.currentMonthAmount - demoSummary.peerAverageAmount,
+    comparisonDifferenceRate: Number(
+      (
+        ((demoSummary.currentMonthAmount - demoSummary.peerAverageAmount) /
+          demoSummary.peerAverageAmount) *
+        100
+      ).toFixed(1),
+    ),
+  })
+  monthlyChildcareExpenses.splice(
+    0,
+    monthlyChildcareExpenses.length,
+    ...demoMonthlyExpenses.map((item) => ({ ...item })),
+  )
+  isUsingDemoData.value = true
+}
+
+const hasChildcareAggregate = (data: Awaited<ReturnType<typeof api.getReportUsingGET>>['data']) =>
+  (data.summary?.total_expense_amount ?? 0) > 0 ||
+  (data.monthly_flow ?? []).some((item) => (item.expense_amount ?? 0) > 0)
 
 const load = async () => {
   const now = new Date()
@@ -33,29 +65,54 @@ const load = async () => {
   loading = (async () => {
     const childId = await resolveCurrentChildId()
     const { data } = await api.getReportUsingGET(childId, now.getMonth() + 1, now.getFullYear())
+    if (!hasChildcareAggregate(data)) {
+      applyDemoData()
+      loadedPeriod.value = period
+      return
+    }
+
+    isUsingDemoData.value = false
     childcareReportSummary.currentMonthAmount = data.summary?.total_expense_amount ?? 0
     childcareReportSummary.previousMonthDifference = data.summary?.previous_month_change_amount ?? 0
     childcareReportSummary.previousMonthRate = data.summary?.previous_month_change_rate ?? 0
     childcareReportSummary.annualAmount = data.summary?.annual_expense_amount ?? 0
-    childcareReportSummary.peerAverageAmount = data.summary?.same_age_monthly_average_amount
-      ?? data.comparison_benchmark?.monthly_average_amount ?? 0
-    childcareReportSummary.comparisonDifferenceAmount = data.summary?.same_age_difference_amount
-      ?? childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount
+    childcareReportSummary.peerAverageAmount =
+      data.summary?.same_age_monthly_average_amount ??
+      data.comparison_benchmark?.monthly_average_amount ??
+      0
+    childcareReportSummary.comparisonDifferenceAmount =
+      data.summary?.same_age_difference_amount ??
+      childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount
     childcareReportSummary.comparisonDifferenceRate = data.summary?.same_age_difference_rate ?? 0
-    childcareReportSummary.comparisonLabel = data.comparison_benchmark?.label
-      ?? '30대 부모 가구 월평균 양육비'
+    childcareReportSummary.comparisonLabel =
+      data.comparison_benchmark?.label ?? '30대 부모 가구 월평균 양육비'
     childcareReportSummary.ageGroup = data.comparison_benchmark?.age_group ?? '30대'
     childcareReportSummary.benchmarkSourceName = data.comparison_benchmark?.source_name ?? ''
     childcareReportSummary.benchmarkSourceUrl = data.comparison_benchmark?.source_url ?? ''
     childcareReportSummary.benchmarkSourceYear = data.comparison_benchmark?.source_year ?? 0
-    childcareReportSummary.benchmarkCalculationBasis = data.comparison_benchmark?.calculation_basis ?? ''
-    monthlyChildcareExpenses.splice(0, monthlyChildcareExpenses.length, ...(data.monthly_flow ?? []).map((item) => ({
-      month: `${item.month ?? 0}월`,
-      amount: item.expense_amount ?? 0,
-      averageAmount: item.same_age_average_amount ?? childcareReportSummary.peerAverageAmount,
-    })))
+    childcareReportSummary.benchmarkCalculationBasis =
+      data.comparison_benchmark?.calculation_basis ?? ''
+    childcareReportSummary.topCategoryLabel = ''
+    childcareReportSummary.topCategoryAmount = 0
+    childcareReportSummary.topCategoryRate = 0
+    monthlyChildcareExpenses.splice(
+      0,
+      monthlyChildcareExpenses.length,
+      ...(data.monthly_flow ?? []).map((item) => ({
+        month: `${item.month ?? 0}월`,
+        amount: item.expense_amount ?? 0,
+        averageAmount: item.same_age_average_amount ?? childcareReportSummary.peerAverageAmount,
+      })),
+    )
     loadedPeriod.value = period
-  })().finally(() => { loading = null })
+  })()
+    .catch(() => {
+      applyDemoData()
+      loadedPeriod.value = period
+    })
+    .finally(() => {
+      loading = null
+    })
 
   return loading
 }
@@ -66,5 +123,6 @@ export const formatReportManwon = (amount: number) => `${Math.round(amount / 10_
 export const useChildcareReport = () => ({
   childcareReportSummary,
   monthlyChildcareExpenses,
+  isUsingDemoData,
   load,
 })
