@@ -25,7 +25,8 @@ type AutoTransferFormData = {
 const props = defineProps<{
   open: boolean
   mode: 'create' | 'edit'
-  accountOptions: AccountOption[]
+  sourceAccountOptions: AccountOption[]
+  targetAccountOptions: AccountOption[]
   initialData: AutoTransferFormData
 }>()
 
@@ -134,7 +135,7 @@ const submit = () => {
         v-model="sourceAccountId"
         class="mt-2"
         :options="
-          accountOptions.map((account) => ({
+          sourceAccountOptions.map((account) => ({
             id: account.id,
             name: account.label,
             number: account.number,
@@ -153,7 +154,7 @@ const submit = () => {
         v-model="targetAccountId"
         class="mt-2"
         :options="
-          accountOptions.map((account) => ({
+          targetAccountOptions.map((account) => ({
             id: account.id,
             name: account.label,
             number: account.number,

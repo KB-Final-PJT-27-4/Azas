@@ -81,6 +81,14 @@ const sourceAccountOptions = computed(() =>
     ({ tag, type }) => tag === '부모' && (type === '입출금' || type === '적금'),
   ),
 )
+const autoTransferSourceAccountOptions = computed(() =>
+  accountOptions.value.filter(({ tag, type }) => tag === '부모' && type === '입출금'),
+)
+const autoTransferTargetAccountOptions = computed(() =>
+  accountOptions.value.filter(
+    ({ tag, type }) => tag === '자녀' && (type === '입출금' || type === '적금'),
+  ),
+)
 const allowanceRequestId = computed(() => Number(route.query.allowanceRequest) || null)
 const requestedTargetAccountId = computed(() => String(route.query.targetAccountId ?? ''))
 const allowanceTargetAccountOptions = computed(() =>
@@ -94,10 +102,11 @@ const transferTargetAccountOptions = computed(() =>
   allowanceRequestId.value ? allowanceTargetAccountOptions.value : accountOptions.value,
 )
 const defaultSourceAccount = computed(() =>
-  accountOptions.value.find(({ type }) => type === '입출금') ?? accountOptions.value[0],
+  autoTransferSourceAccountOptions.value[0],
 )
 const defaultTargetAccount = computed(() =>
-  accountOptions.value.find(({ type }) => type === '적금') ?? accountOptions.value[0],
+  autoTransferTargetAccountOptions.value.find(({ type }) => type === '적금')
+  ?? autoTransferTargetAccountOptions.value[0],
 )
 
 const autoTransfers = ref<AutoTransfer[]>([])
@@ -339,16 +348,16 @@ const loadAssets = async () => {
       },
     ]
 
-    const details = await Promise.all(
+    const details = await Promise.allSettled(
       (scheduleResponse.data.items ?? []).map((item) =>
         item.auto_transfer_schedule_id
           ? api.getScheduleDetailUsingGET(item.auto_transfer_schedule_id)
-          : null,
+          : Promise.resolve(null),
       ),
     )
-    autoTransfers.value = details.flatMap((response) => {
-      if (!response) return []
-      const schedule = response.data
+    autoTransfers.value = details.flatMap((result) => {
+      if (result.status !== 'fulfilled' || !result.value) return []
+      const schedule = result.value.data
       return [{
         id: String(schedule.auto_transfer_schedule_id ?? ''),
         title: schedule.goal_title ?? '자동이체',
@@ -795,7 +804,8 @@ onMounted(loadAssets)
     <AutoTransferSheet
       :open="isAutoTransferSheetOpen"
       :mode="autoTransferSheetMode"
-      :account-options="accountOptions"
+      :source-account-options="autoTransferSourceAccountOptions"
+      :target-account-options="autoTransferTargetAccountOptions"
       :initial-data="autoTransferSheetInitialData"
       @close="closeAutoTransferForm"
       @save="saveAutoTransfer"
