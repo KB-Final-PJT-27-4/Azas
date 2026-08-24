@@ -88,4 +88,12 @@ public interface AllowanceRequestMapper {
             @Param("allowanceRequestId") Long allowanceRequestId,
             @Param("memberId") Long memberId
     );
+
+    Long findPrimaryParentDemandDepositAccountId(
+            @Param("memberId") Long memberId
+    );
+
+    Long findPrimaryChildDemandDepositAccountId(
+            @Param("childId") Long childId
+    );
 }

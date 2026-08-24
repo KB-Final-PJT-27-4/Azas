@@ -9,6 +9,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChildAccountListResponseTest {
 
@@ -44,7 +45,7 @@ class ChildAccountListResponseTest {
         assertFalse(account.has("bank_name"));
         assertFalse(account.has("balance_updated_at"));
         assertFalse(account.has("account_status"));
-        assertFalse(account.has("is_primary"));
+        assertTrue(account.path("is_primary").asBoolean());
         assertFalse(account.has("financial_goal"));
         assertFalse(account.has("time_capsule"));
         assertFalse(body.contains("accountNumberCiphertext"));
@@ -56,7 +57,8 @@ class ChildAccountListResponseTest {
                 "아이사랑적금1",
                 "952-17362605-43",
                 "SAVINGS",
-                new BigDecimal("14600000.00")
+                new BigDecimal("14600000.00"),
+                true
         );
     }
 }
