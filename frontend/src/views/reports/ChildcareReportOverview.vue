@@ -248,8 +248,6 @@ onBeforeUnmount(() => {
                 <p class="m-0 text-[12px] font-bold">{{ childcareReportSummary.comparisonLabel }}</p>
                 <strong class="mt-2 block text-[22px]">{{ formatReportWon(childcareReportSummary.peerAverageAmount) }}</strong>
                 <p class="mt-4 mb-0 text-[11px] leading-5 text-[var(--color-text-secondary)]">{{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}</p>
-                <p class="mt-2 mb-0 text-[11px] font-semibold">{{ childcareReportSummary.benchmarkSourceName }} {{ childcareReportSummary.benchmarkSourceYear ? `(${childcareReportSummary.benchmarkSourceYear})` : '' }}</p>
-                <a v-if="childcareReportSummary.benchmarkSourceUrl" :href="childcareReportSummary.benchmarkSourceUrl" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-[11px] font-bold text-[var(--color-accent-yellow-text)] underline">출처 보기</a>
               </div>
 
               <p class="m-0 px-5 py-4 text-[10px] leading-4 text-[var(--color-text-secondary)]">

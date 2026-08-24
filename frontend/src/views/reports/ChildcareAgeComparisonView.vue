@@ -65,9 +65,7 @@ onMounted(load)
       <dl class="mt-4 grid gap-3 text-[12px]">
         <div class="flex justify-between gap-3"><dt class="text-[var(--color-text-secondary)]">기준 금액</dt><dd class="m-0 font-bold">{{ formatReportWon(childcareReportSummary.peerAverageAmount) }}</dd></div>
         <div><dt class="text-[var(--color-text-secondary)]">산정 방식</dt><dd class="mt-1 m-0 leading-5">{{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}</dd></div>
-        <div><dt class="text-[var(--color-text-secondary)]">출처</dt><dd class="mt-1 m-0 font-semibold">{{ childcareReportSummary.benchmarkSourceName }} {{ childcareReportSummary.benchmarkSourceYear ? `(${childcareReportSummary.benchmarkSourceYear})` : '' }}</dd></div>
       </dl>
-      <a v-if="childcareReportSummary.benchmarkSourceUrl" :href="childcareReportSummary.benchmarkSourceUrl" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-[12px] font-bold text-[var(--color-accent-yellow-text)] underline">출처 보기</a>
     </section>
   </main>
 </template>

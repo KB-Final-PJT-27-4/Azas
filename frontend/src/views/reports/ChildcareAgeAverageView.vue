@@ -53,8 +53,6 @@ onMounted(load)
 
     <section class="mt-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4 text-[11px] leading-5 text-[var(--color-text-secondary)]">
       <p class="m-0"><strong class="text-[var(--color-text-primary)]">산정 방식</strong><br>{{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}</p>
-      <p class="mt-3 mb-0"><strong class="text-[var(--color-text-primary)]">출처</strong><br>{{ childcareReportSummary.benchmarkSourceName }} {{ childcareReportSummary.benchmarkSourceYear ? `(${childcareReportSummary.benchmarkSourceYear})` : '' }}</p>
-      <a v-if="childcareReportSummary.benchmarkSourceUrl" :href="childcareReportSummary.benchmarkSourceUrl" target="_blank" rel="noopener noreferrer" class="mt-2 inline-block font-bold text-[var(--color-accent-yellow-text)] underline">출처 보기</a>
     </section>
 
     <p class="mt-4 mb-0 px-1 text-[10px] leading-4 text-[var(--color-text-secondary)]">
