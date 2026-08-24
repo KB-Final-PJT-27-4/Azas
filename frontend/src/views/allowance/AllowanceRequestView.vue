@@ -22,7 +22,6 @@ const request = ref<null | {
 }>(null)
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const isPending = computed(() => request.value?.status === 'PENDING')
-const hasTargetAccount = computed(() => Boolean(request.value?.targetAccountId))
 const statusLabel = computed(() => {
   switch (request.value?.status) {
     case 'APPROVED':
@@ -45,9 +44,13 @@ onMounted(async () => {
       api.getChildUsingGET(childId),
       api.getChildAccountsUsingGET(childId),
     ])
-    const targetAccount = accountResult.data.accounts?.find(
-      ({ account_product_type: productType }) => productType === 'DEMAND_DEPOSIT',
-    )
+    const demandDepositAccounts =
+      accountResult.data.accounts?.filter(
+        ({ account_product_type: productType }) => productType === 'DEMAND_DEPOSIT',
+      ) ?? []
+    const targetAccount =
+      demandDepositAccounts.find(({ is_primary: isPrimary }) => isPrimary) ??
+      demandDepositAccounts[0]
     request.value = {
       id: data.allowance_request_id ?? requestId,
       amount: data.requested_amount ?? 0,
@@ -78,23 +81,13 @@ const rejectRequest = async () => {
 
 const approveRequest = async () => {
   if (!request.value || !isPending.value) return
-  if (!request.value.targetAccountId) {
-    showToast('용돈을 받을 아이 입출금 계좌를 먼저 만들어 주세요.', 'info')
-    await router.push({ name: 'ChildAccountCreate' })
-    return
+  try {
+    await api.updateAllowanceRequestStatusUsingPATCH(request.value.id, { action: 'APPROVE' })
+    request.value.status = 'APPROVED'
+    showToast('용돈 요청을 확인하고 이체했어요.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '용돈 요청 승인과 이체를 완료하지 못했어요.'), 'error')
   }
-
-  await router.push({
-    name: 'Assets',
-    query: {
-      allowanceRequest: request.value.id,
-      amount: String(request.value.amount),
-      memo: `${request.value.childName} 용돈`,
-      targetAccountId: String(request.value.targetAccountId),
-      targetName: request.value.targetAccountName,
-      targetNumber: request.value.targetAccountNumber,
-    },
-  })
 }
 </script>
 
@@ -189,7 +182,7 @@ const approveRequest = async () => {
             type="button"
             @click="approveRequest"
           >
-            {{ hasTargetAccount ? '승인하고 이체하기' : '아이 계좌 만들기' }}
+            승인하고 이체하기
           </button>
         </div>
       </div>

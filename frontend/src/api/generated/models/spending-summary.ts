@@ -16,6 +16,10 @@
 
 export interface SpendingSummary {
     /**
+     * 자녀 대표 입출금계좌의 실제 잔액
+     */
+    'account_balance'?: number;
+    /**
      * 자녀 화면에서 실제 계좌 잔액을 숨기는지 여부
      */
     'account_balance_hidden'?: boolean;
@@ -42,5 +46,4 @@ export const SpendingSummaryChildUsageModeEnum = {
 } as const;
 
 export type SpendingSummaryChildUsageModeEnum = typeof SpendingSummaryChildUsageModeEnum[keyof typeof SpendingSummaryChildUsageModeEnum];
-
 
