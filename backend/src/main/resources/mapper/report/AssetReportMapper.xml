@@ -190,7 +190,7 @@
                  INNER JOIN financial_account fa
                             ON fa.financial_account_id = abs.financial_account_id
         WHERE fa.child_id = #{childId}
-          AND fa.owner_type = 'CHILD'
+          AND fa.account_product_type = 'SAVINGS'
           AND fa.link_status = 'ACTIVE'
           AND fa.account_status IN ('ACTIVE', 'MATURED')
     </select>
@@ -199,12 +199,13 @@
             resultType="java.math.BigDecimal">
         SELECT COALESCE(SUM(at.amount), 0)
         FROM account_transaction at
-    INNER JOIN financial_goal_account fga
-        ON fga.financial_account_id = at.financial_account_id
-            INNER JOIN financial_goal fg
-            ON fg.financial_goal_id = fga.financial_goal_id
-            AND fg.child_id = #{childId}
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = at.financial_account_id
         WHERE at.direction = 'CREDIT'
+          AND fa.child_id = #{childId}
+          AND fa.account_product_type = 'SAVINGS'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.account_status IN ('ACTIVE', 'MATURED')
           AND at.occurred_at <![CDATA[>=]]> #{startAt}
           AND at.occurred_at <![CDATA[<]]> #{endExclusive}
     </select>
