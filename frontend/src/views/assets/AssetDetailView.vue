@@ -39,6 +39,7 @@ const transferAccounts = ref<AssetAccountSelectOption[]>([])
 const sourceTransferAccounts = ref<AssetAccountSelectOption[]>([])
 const isTransferSheetOpen = ref(false)
 const transferResult = ref<'success' | 'failure' | null>(null)
+const completedTransferTargetAccountId = ref<number | null>(null)
 const isDeleteDialogOpen = ref(false)
 const isAccountMenuOpen = ref(false)
 const isLoading = ref(true)
@@ -86,6 +87,7 @@ const completeTransfer = async ({
       memo,
       source_account_id: Number(sourceAccountId),
     })
+    completedTransferTargetAccountId.value = Number(targetAccountId)
     isTransferSheetOpen.value = false
     transferResult.value = 'success'
     await loadAccount()
@@ -485,6 +487,7 @@ onMounted(loadAccount)
     <AssetTransferResultSheet
       :open="transferResult !== null"
       :status="transferResult ?? 'success'"
+      :time-capsule-account-id="completedTransferTargetAccountId"
       @close="transferResult = null"
       @retry="retryTransfer"
     />

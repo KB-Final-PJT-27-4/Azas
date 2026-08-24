@@ -19,8 +19,10 @@ const isTransferMenuOpen = ref(false)
 const accounts = ref<Array<{ id: number; accountId: number; bank: string; name: string; number: string }>>([])
 const transfers = ref<Array<{ id: number; date: string; name: string; amount: number }>>([])
 
-const requestedAccountId = Number(route.query.account)
-const selectedAccountId = ref(requestedAccountId || 0)
+const requestedTimeCapsuleId = Number(route.query.account)
+const requestedFinancialAccountId = Number(route.query.account_id)
+const shouldSelectLatestTransfer = route.query.transfer === 'latest'
+const selectedAccountId = ref(requestedTimeCapsuleId || 0)
 const selectedTransferId = ref(0)
 const selectedAccount = computed(() => accounts.value.find(({ id }) => id === selectedAccountId.value) ?? { id: 0, accountId: 0, bank: '', name: '계좌를 선택해주세요', number: '' })
 const selectedTransfer = computed(() => transfers.value.find(({ id }) => id === selectedTransferId.value) ?? { id: 0, date: '', name: '거래를 선택해주세요', amount: 0 })
@@ -40,7 +42,6 @@ const hasCreated = ref(false)
 const canPreview = computed(() =>
   selectedAccountId.value > 0
     && selectedTransferId.value > 0
-    && mediaItems.value.length === 1
     && Boolean(title.value.trim())
     && Boolean(letter.value.trim()),
 )
@@ -130,7 +131,7 @@ const showForm = () => {
 const createTimeCapsule = async () => {
   if (isPageLeaving.value) return
   if (!canPreview.value) {
-    showToast('계좌·입금 거래·사진 1장과 필수 내용을 모두 입력해 주세요.', 'error')
+    showToast('계좌·입금 거래와 필수 내용을 모두 입력해 주세요.', 'error')
     return
   }
 
@@ -142,16 +143,18 @@ const createTimeCapsule = async () => {
     })
     const entryId = data.time_capsule_entry_id
     const media = mediaItems.value[0]
-    if (!entryId || !media) throw new Error('타임캡슐 기록 또는 사진 정보가 없습니다.')
-    const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
-      file_size: media.file.size,
-      mime_type: media.file.type,
-    })
-    if (!upload.upload_url || !upload.time_capsule_media_id) {
-      throw new Error('사진 업로드 정보를 받지 못했습니다.')
+    if (!entryId) throw new Error('타임캡슐 기록 정보를 받지 못했습니다.')
+    if (media) {
+      const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
+        file_size: media.file.size,
+        mime_type: media.file.type,
+      })
+      if (!upload.upload_url || !upload.time_capsule_media_id) {
+        throw new Error('사진 업로드 정보를 받지 못했습니다.')
+      }
+      await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
+      await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
     }
-    await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
-    await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
     await api.sealTimeCapsuleEntryUsingPATCH(entryId)
     hasCreated.value = true
     isPageLeaving.value = true
@@ -179,7 +182,9 @@ const loadTransfers = async () => {
     name: transaction.counterparty_name ?? '계좌 거래',
     amount: transaction.amount,
     }))
-  selectedTransferId.value = transfers.value[0]?.id ?? 0
+  if (shouldSelectLatestTransfer || !transfers.value.some(({ id }) => id === selectedTransferId.value)) {
+    selectedTransferId.value = transfers.value[0]?.id ?? 0
+  }
 }
 
 watch(selectedAccountId, () => void loadTransfers())
@@ -205,6 +210,9 @@ onMounted(async () => {
         number: linked?.account_number ?? '',
       }
     })
+    if (requestedFinancialAccountId > 0) {
+      selectedAccountId.value = accounts.value.find(({ accountId }) => accountId === requestedFinancialAccountId)?.id ?? 0
+    }
     if (!accounts.value.some(({ id }) => id === selectedAccountId.value)) selectedAccountId.value = accounts.value[0]?.id ?? 0
     await loadTransfers()
   } catch (error) {
