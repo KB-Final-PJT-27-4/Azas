@@ -591,6 +591,7 @@ onMounted(async () => {
           @mousedown.stop
         >
           <button
+            v-if="!selectedMemoryHasPhoto"
             class="modal-close"
             :class="{ 'modal-close--text': !selectedMemoryHasPhoto }"
             type="button"
