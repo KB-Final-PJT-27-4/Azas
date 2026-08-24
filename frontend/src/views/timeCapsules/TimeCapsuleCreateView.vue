@@ -226,7 +226,25 @@ onMounted(async () => {
     ])
     childName.value = child.name?.trim() || '아이'
     const linkedAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
-    accounts.value = (capsules.time_capsules ?? []).map((capsule) => {
+    let capsuleItems = capsules.time_capsules ?? []
+
+    if (
+      requestedFinancialAccountId > 0
+      && linkedAccounts.some(({ account_id }) => account_id === requestedFinancialAccountId)
+      && !capsuleItems.some(({ account_id }) => account_id === requestedFinancialAccountId)
+    ) {
+      try {
+        await api.createTimeCapsuleUsingPOST(childId, {
+          financial_account_id: requestedFinancialAccountId,
+        })
+      } catch {
+        // A capsule may already have been created by another screen. Refresh before deciding.
+      }
+      const { data: refreshedCapsules } = await api.getTimeCapsulesUsingGET(childId)
+      capsuleItems = refreshedCapsules.time_capsules ?? []
+    }
+
+    accounts.value = capsuleItems.map((capsule) => {
       const linked = linkedAccounts.find(({ account_id }) => account_id === capsule.account_id)
       return {
         id: capsule.time_capsule_id ?? 0,
@@ -360,7 +378,7 @@ onBeforeUnmount(() => {
           <span class="mb-3 block text-sm font-bold">제목 <em class="not-italic text-red-500">*</em></span>
           <input
             v-model="title"
-            class="h-14 w-full rounded-2xl border border-[#d6e3e9] bg-white px-4 text-sm outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
+            class="h-14 w-full rounded-2xl border border-[#d6e3e9] bg-white px-4 text-[16px] outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
             maxlength="30"
             placeholder="제목을 입력해주세요"
             required
@@ -425,7 +443,7 @@ onBeforeUnmount(() => {
           <span class="mb-3 block text-sm font-bold">부모의 편지 <em class="not-italic text-red-500">*</em></span>
           <textarea
             v-model="letter"
-            class="min-h-[120px] w-full resize-none rounded-2xl border border-[#d6e3e9] bg-white px-4 py-3.5 text-sm leading-relaxed outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
+            class="min-h-[120px] w-full resize-none rounded-2xl border border-[#d6e3e9] bg-white px-4 py-3.5 text-[16px] leading-relaxed outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
             maxlength="300"
             :placeholder="`${childName}의 첫걸음을 기록해요.\n앞으로도 건강하게 자라길 바라`"
             required
