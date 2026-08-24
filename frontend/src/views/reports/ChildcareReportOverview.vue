@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const { childcareReportSummary, load } = useChildcareReport()
+const { childcareReportSummary, isUsingDemoData, load } = useChildcareReport()
 const isAverageInfoOpen = ref(false)
 const displayedCurrentMonthAmount = ref(0)
 let currentMonthAmountAnimationFrame: number | null = null
@@ -226,9 +226,19 @@ onBeforeUnmount(() => {
             :stroke-width="2.2"
           />
           <div>
-            <strong class="text-sm">다음 달 교육비를 미리 계획해보세요.</strong>
+            <strong class="text-sm">
+              {{
+                isUsingDemoData
+                  ? `${childcareReportSummary.topCategoryLabel} 지출이 ${formatReportWon(childcareReportSummary.topCategoryAmount)}으로 가장 높아요.`
+                  : '다음 달 교육비를 미리 계획해보세요.'
+              }}
+            </strong>
             <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-              정기 지출을 먼저 나누면 예산 관리가 쉬워져요.
+              {{
+                isUsingDemoData
+                  ? `이번 달 양육비의 ${childcareReportSummary.topCategoryRate}%를 차지하고 있어요.`
+                  : '정기 지출을 먼저 나누면 예산 관리가 쉬워져요.'
+              }}
             </p>
           </div>
         </article>
