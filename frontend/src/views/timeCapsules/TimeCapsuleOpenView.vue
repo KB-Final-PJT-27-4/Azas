@@ -571,8 +571,10 @@ onMounted(async () => {
         추억 콜라주 보기
       </button>
 
-      <button class="list-button" type="button" @click="goToList">기록 리스트 보기</button>
-      <button class="back-button" type="button" @click="goBack">돌아가기</button>
+      <div class="ending-actions">
+        <button class="list-button" type="button" @click="goToList">기록 리스트 보기</button>
+        <button class="back-button" type="button" @click="goBack">돌아가기</button>
+      </div>
     </section>
 
     <Teleport to="body">
@@ -1357,35 +1359,35 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-.back-button {
-  min-width: 116px;
-  margin-top: 16px;
-  padding: 12px 22px;
-  color: #7f939d;
-  background: transparent;
-  border: 1px solid rgba(127, 147, 157, 0.32);
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
+.ending-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  width: min(100%, 320px);
+  margin-top: 42px;
 }
 
-.list-button {
-  width: min(100%, 320px);
-  min-height: 56px;
-  margin-top: 68px;
-  color: white;
-  background: #79bdf0;
-  border: 0;
+.list-button,
+.back-button {
+  min-height: 50px;
+  padding: 0 12px;
   border-radius: 15px;
-  box-shadow: 0 10px 24px rgba(76, 159, 214, 0.2);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
 }
 
-.list-button + .back-button {
-  margin-top: 12px;
+.list-button {
+  color: white;
+  background: #79bdf0;
+  border: 0;
+  box-shadow: 0 10px 24px rgba(76, 159, 214, 0.18);
+}
+
+.back-button {
+  color: #7f939d;
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(127, 147, 157, 0.32);
 }
 
 .modal-backdrop {
