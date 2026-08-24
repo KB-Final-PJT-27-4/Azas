@@ -39,8 +39,22 @@ const lifecycleStages = [
   { id: 'AGE_17_TO_19', ageRange: '17~19세', title: '미래 자산 완성', description: '독립 전 자산 준비를 마무리해요.' },
 ]
 
-const resolveLifecycleStage = (birthStatus?: string, age = 0) => {
-  if (birthStatus === 'EXPECTED') return 'PREGNANCY'
+const resolveLifecycleStage = (
+  birthStatus?: string,
+  age = 0,
+  expectedBirthDate?: string,
+  birthDate?: string,
+) => {
+  const normalizedBirthStatus = birthStatus?.toUpperCase()
+  if (normalizedBirthStatus === 'EXPECTED') return 'PREGNANCY'
+
+  const pregnancyDate = normalizedBirthStatus === 'BORN' ? birthDate : expectedBirthDate ?? birthDate
+  if (pregnancyDate) {
+    const dueDate = new Date(`${pregnancyDate}T00:00:00`)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (!Number.isNaN(dueDate.getTime()) && dueDate >= today) return 'PREGNANCY'
+  }
   if (age <= 1) return 'AGE_0_TO_1'
   if (age <= 4) return 'AGE_2_TO_4'
   if (age <= 7) return 'AGE_5_TO_7'
@@ -157,7 +171,12 @@ onMounted(async () => {
   let stage = selectedStageId.value
   try {
     const { data: child } = await api.getChildUsingGET(childId.value)
-    stage = resolveLifecycleStage(child.birth_status, child.age)
+    stage = resolveLifecycleStage(
+      child.birth_status,
+      child.age,
+      child.expected_birth_date,
+      child.birth_date,
+    )
   } catch (error) {
     showToast(getApiErrorMessage(error, '자녀 생애주기 정보를 불러오지 못했습니다.'), 'error')
   }

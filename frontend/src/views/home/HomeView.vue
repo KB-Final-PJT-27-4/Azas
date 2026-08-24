@@ -58,6 +58,23 @@ let guidePositionFrame: number | null = null
 let previousBodyOverflow = ''
 const formatCurrency = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 
+const resolveChecklistStage = (
+  birthStatus?: string,
+  expectedBirthDate?: string,
+  birthDate?: string,
+) => {
+  const normalizedBirthStatus = birthStatus?.toUpperCase()
+  if (normalizedBirthStatus === 'EXPECTED') return 'PREGNANCY'
+
+  const pregnancyDate = normalizedBirthStatus === 'BORN' ? birthDate : expectedBirthDate ?? birthDate
+  if (!pregnancyDate) return undefined
+
+  const dueDate = new Date(`${pregnancyDate}T00:00:00`)
+  return !Number.isNaN(dueDate.getTime()) && dueDate >= new Date(new Date().setHours(0, 0, 0, 0))
+    ? 'PREGNANCY'
+    : undefined
+}
+
 
 const guideSteps = computed<HomeGuideStep[]>(() => [
   {
@@ -253,11 +270,16 @@ const loadHome = async () => {
     const authorization = requireAuthorizationHeader()
     const childResponse = await api.getChildUsingGET(childId, authorization).catch(() => null)
     childName.value = childResponse?.data.name?.trim() || childName.value
+    const checklistStage = resolveChecklistStage(
+      childResponse?.data.birth_status,
+      childResponse?.data.expected_birth_date,
+      childResponse?.data.birth_date,
+    )
 
     const [dashboardResponse, goalsResponse, checklistResponse] = await Promise.all([
       api.getDashboardUsingGET1(authorization, childId),
       api.getGoalsUsingGET(childId, authorization),
-      api.getChecklistItemsUsingGET(authorization, childId),
+      api.getChecklistItemsUsingGET(authorization, childId, checklistStage),
     ])
     const dashboard = dashboardResponse.data
     childName.value = childResponse?.data.name?.trim() || dashboard.child?.name?.trim() || '우리 아이'
