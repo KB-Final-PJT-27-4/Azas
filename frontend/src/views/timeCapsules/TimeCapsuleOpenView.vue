@@ -22,6 +22,7 @@ type Memory = {
   title: string
   short: string
   letter: string
+  photoUrl?: string
 }
 
 const allMemories = ref<Memory[]>([])
@@ -171,6 +172,14 @@ const galleryRows = computed(() => {
 
 const getPhotoStyle = (index: number) => {
   const memory = allMemories.value[index]
+  if (memory?.photoUrl) {
+    return {
+      backgroundImage: `url(${memory.photoUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }
+  }
+
   if (memory?.year === 2024) {
     const photoUrl = memory2024PhotoUrls[(memory.month - 1) % memory2024PhotoUrls.length]
 
@@ -256,6 +265,18 @@ const applyLocalTimeCapsuleFallback = () => {
   activeYear.value = localTimeCapsuleMemories[0]?.year ?? new Date().getFullYear()
 }
 
+const getEntryDate = (contributedAt?: string) => {
+  const date = contributedAt ? new Date(contributedAt) : new Date()
+  return Number.isNaN(date.getTime()) ? new Date() : date
+}
+
+const createEntryLetter = (year: number, month: number, title: string, amount?: number) => {
+  const amountText =
+    amount && amount > 0 ? `\n\n이날 함께 남긴 금액은 ${amount.toLocaleString('ko-KR')}원이야.` : ''
+
+  return `사랑하는 우리 아이에게.\n\n${year}년 ${month}월, ${title}을 이 타임캡슐에 담아두었어.${amountText}\n\n시간이 지나 다시 꺼내보는 오늘, 이 순간의 마음과 기록이 오래 따뜻하게 남기를 바라.`
+}
+
 onMounted(async () => {
   if (window.sessionStorage.getItem(OPEN_FLASH_STORAGE_KEY) === 'true') {
     isOpeningFlashVisible.value = true
@@ -266,38 +287,36 @@ onMounted(async () => {
   }
 
   try {
-    if (import.meta.env.DEV && isLocalTimeCapsuleRoute.value) {
+    if (isLocalTimeCapsuleRoute.value) {
       applyLocalTimeCapsuleFallback()
       return
     }
 
     const capsuleListId = Number(route.params.capsuleListId)
     if (!Number.isFinite(capsuleListId)) {
-      applyLocalTimeCapsuleFallback()
       return
     }
 
     const { data } = await api.getTimeCapsuleEntriesUsingGET(capsuleListId)
-    const details = await Promise.all((data.entries ?? []).map(({ time_capsule_entry_id }) =>
-      api.getTimeCapsuleEntryUsingGET(time_capsule_entry_id ?? 0).then(({ data: detail }) => detail),
-    ))
-    allMemories.value = details.map((entry) => {
-      const date = new Date(entry.contributed_at ?? Date.now())
+
+    allMemories.value = (data.entries ?? []).map((entry) => {
+      const date = getEntryDate(entry.contributed_at)
+      const year = date.getFullYear()
+      const month = date.getMonth() + 1
+      const title = entry.title ?? '소중한 기록'
+
       return {
-        year: date.getFullYear(),
-        month: date.getMonth() + 1,
-        title: entry.title ?? '소중한 기록',
-        short: entry.message?.split('\n')[0] ?? '',
-        letter: entry.message ?? '',
+        year,
+        month,
+        title,
+        short: title,
+        letter: createEntryLetter(year, month, title, entry.contribution_amount),
+        photoUrl: entry.thumbnail_url,
       }
     })
-    if (import.meta.env.DEV && allMemories.value.length < 12) {
-      applyLocalTimeCapsuleFallback()
-      return
-    }
     activeYear.value = years.value[0] ?? new Date().getFullYear()
-  } catch {
-    applyLocalTimeCapsuleFallback()
+  } catch (error) {
+    if (isLocalTimeCapsuleRoute.value) applyLocalTimeCapsuleFallback()
   }
 })
 </script>
