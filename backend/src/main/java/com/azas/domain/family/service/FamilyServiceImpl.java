@@ -61,6 +61,9 @@ public class FamilyServiceImpl implements FamilyService {
     @Value("${FAMILY_INVITATION_URL_BASE:http://localhost:5173/family-invitations}")
     private String familyInvitationUrlBase;
 
+    @Value("${FAMILY_INVITATION_SHARE_URL_BASE:http://localhost:8080/family-invitations}")
+    private String familyInvitationShareUrlBase;
+
     @Value("${FAMILY_INVITATION_DEFAULT_EXPIRE_HOURS:24}")
     private int defaultExpirationHours;
 
@@ -214,7 +217,7 @@ public class FamilyServiceImpl implements FamilyService {
                 invitationChildren.size(),
                 inviteeType,
                 inviteToken,
-                buildInvitationUrl(inviteToken),
+                buildInvitationShareUrl(inviteToken),
                 FamilyInvitationStatus.PENDING,
                 toInstant(expiresAt),
                 toInstant(now)
@@ -460,10 +463,11 @@ public class FamilyServiceImpl implements FamilyService {
                 .encodeToString(tokenBytes);
     }
 
-    private String buildInvitationUrl(String inviteToken) {
-        return familyInvitationUrlBase.replaceAll("/+$", "")
+    private String buildInvitationShareUrl(String inviteToken) {
+        return familyInvitationShareUrlBase.replaceAll("/+$", "")
                 + "/"
-                + inviteToken;
+                + inviteToken
+                + "/share";
     }
 
     private Instant toInstant(LocalDateTime dateTime) {
