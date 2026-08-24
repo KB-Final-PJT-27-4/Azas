@@ -16,7 +16,6 @@ const isCreatingInvitation = ref(false)
 
 const childId = ref<number | null>(null)
 const childName = ref('아이')
-const inviterName = ref('보호자')
 const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; isMe: boolean; color: string }>>([])
 const createdInvitationLink = ref('')
 
@@ -31,11 +30,7 @@ const invitationDescription = computed(() =>
 const invitationLink = computed(() => {
   return createdInvitationLink.value
 })
-const invitationShareText = computed(() => {
-  const invitationRole = inviteType.value === 'guardian' ? '보호자로' : '자녀로'
-
-  return `${inviterName.value}님이 당신을 ${invitationRole} 초대했어요!\n${invitationLink.value}`
-})
+const invitationShareText = computed(() => invitationLink.value)
 
 const openInvitation = async (type: InviteType) => {
   inviteType.value = type
@@ -72,13 +67,11 @@ const closeInvitation = () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const [{ data }, child, { data: profile }] = await Promise.all([
+    const [{ data }, child] = await Promise.all([
       api.getFamilyMembersUsingGET(childId.value),
       getCurrentChild(),
-      api.getMyProfileUsingGET(),
     ])
     childName.value = child.name?.trim() || '아이'
-    inviterName.value = profile.name?.trim() || '보호자'
     familyMembers.value = (data.items ?? []).map((member, index) => ({
       id: member.member_id ?? index,
       name: member.name ?? '보호자',
