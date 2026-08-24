@@ -599,16 +599,53 @@ class TimeCapsuleEntryServiceTest {
     }
 
     @Test
-    void sealTimeCapsuleEntryRejectsMissingRepresentativeImage() {
+    void sealTimeCapsuleEntryWithoutImageUpdatesAggregates() {
         TimeCapsuleEntry draft = createEntry(
                 1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
                 new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
                 TimeCapsuleEntryMediaMode.NONE
         );
+        TimeCapsuleEntry sealed = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.SEALED,
+                TimeCapsuleEntryMediaMode.NONE
+        );
+        ReflectionTestUtils.setField(
+                sealed, "sealedAt", LocalDateTime.of(2026, 8, 24, 12, 0)
+        );
         given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
                 .willReturn(draft);
         given(timeCapsuleEntryMapper.countPendingMediaByEntryId(1000L))
                 .willReturn(0);
+        given(timeCapsuleEntryMapper.sealDraftEntry(1000L)).willReturn(1);
+        given(timeCapsuleEntryMapper.increaseEntryAggregates(draft))
+                .willReturn(1);
+        given(timeCapsuleEntryMapper.findOwnedById(1000L, 7L))
+                .willReturn(sealed);
+
+        TimeCapsuleEntrySealResponse response =
+                timeCapsuleEntryService.sealTimeCapsuleEntry(7L, 1000L);
+
+        assertEquals("SEALED", response.getStatus());
+        verify(timeCapsuleEntryMapper).sealDraftEntry(1000L);
+        verify(timeCapsuleEntryMapper).increaseEntryAggregates(draft);
+        verify(timeCapsuleEntryMapper, never())
+                .countActiveMediaByEntryIdAndType(
+                        1000L, TimeCapsuleMediaType.IMAGE
+                );
+    }
+
+    @Test
+    void sealTimeCapsuleEntryRejectsPendingImageUpload() {
+        TimeCapsuleEntry draft = createEntry(
+                1000L, 100L, 901L, AccountTransactionDirection.CREDIT,
+                new BigDecimal("150000.00"), TimeCapsuleEntryStatus.DRAFT,
+                TimeCapsuleEntryMediaMode.IMAGE
+        );
+        given(timeCapsuleEntryMapper.findOwnedByIdForUpdate(1000L, 7L))
+                .willReturn(draft);
+        given(timeCapsuleEntryMapper.countPendingMediaByEntryId(1000L))
+                .willReturn(1);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
