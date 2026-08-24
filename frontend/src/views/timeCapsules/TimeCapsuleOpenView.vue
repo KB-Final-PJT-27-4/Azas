@@ -609,12 +609,16 @@ onMounted(async () => {
           </div>
           <div v-else class="modal-note-wrap">
             <i class="modal-note-clip" aria-hidden="true"></i>
-            <span class="modal-note-date">
-              {{ selectedMemory.year }}. {{ String(selectedMemory.month).padStart(2, '0') }}
-            </span>
-            <p>TEXT MEMORY</p>
-            <h3>{{ selectedMemory.title }}</h3>
-            <small>{{ selectedMemory.short }}</small>
+            <div class="modal-note-polaroid">
+              <div class="modal-note-paper">
+                <span>To. 사랑하는 너에게</span>
+                <p>{{ getMemoryLetterText(selectedMemory) }}</p>
+              </div>
+              <div class="modal-note-caption">
+                <span>{{ selectedMemory.year }}. {{ String(selectedMemory.month).padStart(2, '0') }}</span>
+                <b>{{ selectedMemory.title }}</b>
+              </div>
+            </div>
           </div>
           <div class="modal-body">
             <p class="modal-kicker">
@@ -623,7 +627,7 @@ onMounted(async () => {
             </p>
             <h2 id="full-letter-title">{{ selectedMemory.title }}</h2>
             <p class="modal-short">{{ selectedMemory.short }}</p>
-            <div class="letter-preview open" :class="{ 'letter-preview--note': !selectedMemoryHasPhoto }">
+            <div v-if="selectedMemoryHasPhoto" class="letter-preview open">
               <b v-if="isLocalTimeCapsuleRoute">To. 사랑하는 우리 아가에게</b>
               <p>{{ getMemoryLetterText(selectedMemory) }}</p>
             </div>
@@ -1463,19 +1467,11 @@ onMounted(async () => {
 
 .modal-note-wrap {
   position: relative;
-  min-height: 350px;
-  padding: 78px 32px 44px;
+  min-height: 430px;
+  padding: 52px 32px 38px;
   overflow: hidden;
   color: #4f5b60;
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(211, 194, 139, 0.16) 0,
-      rgba(211, 194, 139, 0.16) 1px,
-      transparent 1px,
-      transparent 24px
-    ),
-    linear-gradient(145deg, #fff8d8 0%, #fffdf1 66%, #f5efd6 100%);
+  background: linear-gradient(145deg, #f7fbfd 0%, #eef5f8 54%, #fdfbf3 100%);
   border-radius: 30px 30px 0 0;
 }
 
@@ -1491,59 +1487,89 @@ onMounted(async () => {
 
 .modal-note-clip {
   position: absolute;
-  top: 20px;
+  top: 34px;
   left: 50%;
-  z-index: 2;
-  width: 24px;
-  height: 46px;
+  z-index: 4;
+  width: 64px;
+  height: 18px;
   border-radius: 10px;
-  background: linear-gradient(90deg, #d1b36c, #f0db9c 46%, #b79952);
+  background: rgba(189, 178, 151, 0.56);
   box-shadow: 0 4px 10px rgba(94, 72, 32, 0.22);
-  transform: translateX(-50%);
+  transform: translateX(-50%) rotate(-3deg);
 }
 
-.modal-note-date {
+.modal-note-polaroid {
   position: relative;
   z-index: 2;
+  width: min(270px, 100%);
+  margin: 18px auto 0;
+  padding: 18px 18px 28px;
+  background: #fffefb;
+  box-shadow:
+    0 24px 46px rgba(45, 59, 65, 0.17),
+    inset 0 0 0 1px rgba(216, 215, 207, 0.8);
+  transform: rotate(-1.5deg);
+}
+
+.modal-note-paper {
+  min-height: 260px;
+  padding: 26px 24px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 27px,
+      rgba(185, 192, 186, 0.26) 28px
+    ),
+    #fbfaf4;
+  border: 1px solid #d8d8d2;
+  box-shadow:
+    inset 0 0 0 10px #f0f0eb,
+    inset 0 0 0 12px #d7d7cf;
+}
+
+.modal-note-paper span {
   display: block;
-  margin-bottom: 26px;
-  color: #819ca8;
-  font-size: 13px;
+  color: #5d6466;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.modal-note-paper p {
+  margin: 14px 0 0;
+  color: #4d5355;
+  white-space: pre-line;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.9;
+  word-break: keep-all;
+}
+
+.modal-note-caption {
+  padding-top: 16px;
+  text-align: center;
+}
+
+.modal-note-caption span,
+.modal-note-caption b {
+  display: block;
+}
+
+.modal-note-caption span {
+  color: #9ca8ad;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
 }
 
-.modal-note-wrap p,
-.modal-note-wrap h3,
-.modal-note-wrap small {
-  position: relative;
-  z-index: 2;
-}
-
-.modal-note-wrap p {
-  margin: 0 0 12px;
-  color: #8eb7ca;
-  font-size: 9px;
+.modal-note-caption b {
+  margin-top: 7px;
+  color: #535b5f;
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: 0.22em;
-}
-
-.modal-note-wrap h3 {
-  margin: 0;
-  color: #2f3639;
-  font-size: 32px;
-  font-weight: 800;
-  line-height: 1.25;
-  word-break: keep-all;
-}
-
-.modal-note-wrap small {
-  display: block;
-  margin-top: 18px;
-  color: #727d82;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.7;
+  line-height: 1.45;
   word-break: keep-all;
 }
 
@@ -1578,19 +1604,6 @@ onMounted(async () => {
   color: #64635d;
   background: #fffaf0;
   border: 1px solid #eee5d2;
-}
-
-.letter-preview--note {
-  padding: 22px 18px;
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(220, 203, 153, 0.14) 0,
-      rgba(220, 203, 153, 0.14) 1px,
-      transparent 1px,
-      transparent 28px
-    ),
-    #fff9e8;
 }
 
 .letter-preview b {
