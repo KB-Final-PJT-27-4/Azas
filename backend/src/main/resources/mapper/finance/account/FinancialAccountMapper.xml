@@ -85,12 +85,21 @@
             tx.balance_after,
             tx.description,
             tx.counterparty_name,
+            CASE
+                WHEN tx.direction = 'DEBIT'
+                     AND tx.counterparty_account_id IS NULL
+                     AND fa.owner_type = 'PARENT'
+                THEN tx.child_id
+                ELSE NULL
+            END AS childcare_child_id,
             cfa.financial_account_id AS counterparty_account_id,
             cfa.bank_name AS counterparty_bank_name,
             cfa.account_name AS counterparty_account_name,
             cfa.account_number_ciphertext
                 AS counterparty_account_number_ciphertext
         FROM account_transaction tx
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = tx.financial_account_id
                  LEFT JOIN financial_account cfa
                            ON cfa.financial_account_id =
                               tx.counterparty_account_id
@@ -121,17 +130,33 @@
             tx.balance_after,
             tx.description,
             tx.counterparty_name,
+            tx.child_id AS childcare_child_id,
+            tx.counterparty_account_id,
+            fa.owner_type,
             cfa.bank_name AS counterparty_bank_name,
             cfa.account_name AS counterparty_account_name,
             cfa.account_number_ciphertext
                 AS counterparty_account_number_ciphertext
         FROM account_transaction tx
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = tx.financial_account_id
                  LEFT JOIN financial_account cfa
                            ON cfa.financial_account_id =
                               tx.counterparty_account_id
         WHERE tx.account_transaction_id = #{accountTransactionId}
         LIMIT 1
     </select>
+
+    <update id="updateChildcareChildIdForExternalDebit">
+        UPDATE account_transaction tx
+        INNER JOIN financial_account fa
+                ON fa.financial_account_id = tx.financial_account_id
+        SET tx.child_id = #{childId}
+        WHERE tx.account_transaction_id = #{accountTransactionId}
+          AND tx.direction = 'DEBIT'
+          AND tx.counterparty_account_id IS NULL
+          AND fa.owner_type = 'PARENT'
+    </update>
 
     <select id="findActiveParentAccounts"
             resultType="com.azas.domain.finance.account.dto.ParentAccountListRow">

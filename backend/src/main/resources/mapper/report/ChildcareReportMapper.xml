@@ -57,12 +57,10 @@
         COALESCE(SUM(tx.amount), 0) AS expense_amount
         FROM account_transaction tx
         INNER JOIN financial_account fa
-        ON fa.financial_account_id =
-        tx.financial_account_id
-        WHERE fa.child_id = #{childId}
-        AND fa.owner_type = 'CHILD'
-        AND fa.account_product_type = 'DEMAND_DEPOSIT'
+                ON fa.financial_account_id = tx.financial_account_id
+        WHERE tx.child_id = #{childId}
         AND tx.direction = 'DEBIT'
+        AND fa.owner_type = 'PARENT'
         AND tx.occurred_at
         <![CDATA[>=]]> #{startOccurredAt}
         AND tx.occurred_at
@@ -72,13 +70,7 @@
             같은 자녀의 다른 계좌로 이동한 금액은
             소비가 아니라 자산 이동이므로 제외합니다.
         -->
-        AND NOT EXISTS (
-        SELECT 1
-        FROM financial_account destination
-        WHERE destination.financial_account_id =
-        tx.counterparty_account_id
-        AND destination.child_id = #{childId}
-        )
+        AND tx.counterparty_account_id IS NULL
 
         GROUP BY report_month
         ORDER BY report_month ASC

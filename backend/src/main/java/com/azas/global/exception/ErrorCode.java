@@ -223,6 +223,10 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "계좌 거래내역을 찾을 수 없습니다."
     ),
+    INELIGIBLE_CHILDCARE_TRANSACTION(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "부모 계좌의 외부 출금 거래만 양육비에 포함할 수 있습니다."
+    ),
     DUPLICATE_TIME_CAPSULE(
             HttpStatus.CONFLICT,
             "해당 자녀와 계좌에 이미 타임캡슐이 존재합니다."

@@ -38,6 +38,12 @@ public final class AccountTransactionItemResponse {
             example = "100000.00")
     private final BigDecimal amount;
 
+    @JsonProperty("childcare_included")
+    private final boolean childcareIncluded;
+
+    @JsonProperty("childcare_child_id")
+    private final Long childcareChildId;
+
     public static AccountTransactionItemResponse from(
             AccountTransactionItemResult result
     ) {
@@ -46,7 +52,9 @@ public final class AccountTransactionItemResponse {
                 result.getOccurredAt().toInstant(ZoneOffset.UTC),
                 result.getCounterpartyName(),
                 result.getDirection(),
-                result.getAmount()
+                result.getAmount(),
+                result.isChildcareIncluded(),
+                result.getChildcareChildId()
         );
     }
 }
