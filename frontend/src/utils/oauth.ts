@@ -2,7 +2,11 @@ import type { OAuthProvider } from '@/api/auth'
 
 const OAUTH_STATE_PREFIX = 'azas_oauth_state_'
 const OAUTH_INVITE_PREFIX = 'azas_oauth_invite_'
-export type OAuthInvitationContext = { inviteToken: string; inviteeType: 'PARENT' | 'CHILD' }
+export type OAuthInvitationContext = {
+  inviteToken: string
+  inviteeType: 'PARENT' | 'CHILD'
+  relationType?: 'FATHER' | 'MOTHER' | 'GUARDIAN'
+}
 
 const providerConfig = {
   google: {
