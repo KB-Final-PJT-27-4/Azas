@@ -102,7 +102,7 @@ const submitRequest = async () => {
       <div class="my-5 h-px bg-[var(--color-border)]" />
 
       <label class="block text-[length:var(--font-size-md)] font-bold">
-        부모님께 하고 싶은 말
+        부모님께 하고 싶은 말 <span class="text-[#ef6262]">*</span>
         <div class="relative mt-3">
           <textarea
             :value="reason"
