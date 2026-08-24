@@ -26,6 +26,8 @@ export interface AccountTransactionItemResponse {
      * 양수 거래 금액
      */
     'amount': number;
+    'childcare_included'?: boolean;
+    'childcare_child_id'?: number;
     /**
      * 거래 상대 표시명. 확인할 수 없으면 null
      */
@@ -46,5 +48,4 @@ export const AccountTransactionItemResponseDirectionEnum = {
 } as const;
 
 export type AccountTransactionItemResponseDirectionEnum = typeof AccountTransactionItemResponseDirectionEnum[keyof typeof AccountTransactionItemResponseDirectionEnum];
-
 
