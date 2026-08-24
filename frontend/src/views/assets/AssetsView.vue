@@ -124,6 +124,7 @@ const autoTransferSheetInitialData = computed(() => ({
 
 const isTransferSheetOpen = ref(Boolean(route.query.allowanceRequest))
 const transferResult = ref<'success' | 'failure' | null>(null)
+const completedTransferTargetAccountId = ref<number | null>(null)
 const isAnyTransferSheetOpen = computed(
   () =>
     isTransferSheetOpen.value ||
@@ -287,6 +288,7 @@ const completeTransfer = async ({
         action: 'APPROVE',
       })
     }
+    completedTransferTargetAccountId.value = Number(targetAccountId)
     isTransferSheetOpen.value = false
     transferResult.value = 'success'
     await loadAssets()
@@ -801,6 +803,7 @@ onMounted(loadAssets)
     <AssetTransferResultSheet
       :open="transferResult !== null"
       :status="transferResult ?? 'success'"
+      :time-capsule-account-id="completedTransferTargetAccountId"
       @close="transferResult = null"
       @retry="retryTransfer"
     />
