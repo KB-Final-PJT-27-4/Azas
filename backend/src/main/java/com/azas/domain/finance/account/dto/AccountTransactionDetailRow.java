@@ -18,6 +18,9 @@ public class AccountTransactionDetailRow {
     private BigDecimal balanceAfter;
     private String description;
     private String counterpartyName;
+    private Long childcareChildId;
+    private Long counterpartyAccountId;
+    private String ownerType;
     private String counterpartyBankName;
     private String counterpartyAccountName;
     private byte[] counterpartyAccountNumberCiphertext;
