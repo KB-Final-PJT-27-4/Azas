@@ -129,6 +129,16 @@ class ChildcareReportControllerTest {
                 .andExpect(
                         jsonPath("$.monthly_flow.length()")
                                 .value(12)
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.comparison_benchmark.label"
+                        ).value("30대 부모 가구 월평균 양육비")
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.created_at"
+                        ).value("2026-08-20T01:30:00Z")
                 );
     }
 

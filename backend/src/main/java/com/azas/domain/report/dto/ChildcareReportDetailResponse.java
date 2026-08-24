@@ -33,7 +33,51 @@ public class ChildcareReportDetailResponse {
 
     private final List<MonthlyFlowItem> monthlyFlow;
 
+    private final ComparisonBenchmark comparisonBenchmark;
+
+    /**
+     * 자산 리포트의 created_at, updated_at과 공통으로 사용하는 조회 시각입니다.
+     * 양육비 리포트는 거래내역을 실시간 집계하므로 둘 다 같은 값입니다.
+     */
+    private final Instant createdAt;
+
+    private final Instant updatedAt;
+
+    /**
+     * 기존 클라이언트 호환용 필드입니다. created_at과 같은 값입니다.
+     */
     private final Instant calculatedAt;
+
+    public ChildcareReportDetailResponse(
+            Long childId,
+            int reportYear,
+            int reportMonth,
+            Period period,
+            Summary summary,
+            List<MonthlyFlowItem> monthlyFlow,
+            Instant calculatedAt
+    ) {
+        this(
+                childId,
+                reportYear,
+                reportMonth,
+                period,
+                summary,
+                monthlyFlow,
+                new ComparisonBenchmark(
+                        "30대 부모 가구 월평균 양육비",
+                        "30대",
+                        new BigDecimal("1407000"),
+                        "",
+                        "",
+                        0,
+                        ""
+                ),
+                calculatedAt,
+                calculatedAt,
+                calculatedAt
+        );
+    }
 
     @Getter
     @RequiredArgsConstructor
@@ -65,6 +109,31 @@ public class ChildcareReportDetailResponse {
         private final BigDecimal previousMonthChangeRate;
 
         private final BigDecimal annualExpenseAmount;
+
+        private final BigDecimal sameAgeMonthlyAverageAmount;
+
+        private final BigDecimal sameAgeDifferenceAmount;
+
+        private final BigDecimal sameAgeDifferenceRate;
+
+        public Summary(
+                BigDecimal totalExpenseAmount,
+                BigDecimal previousMonthExpenseAmount,
+                BigDecimal previousMonthChangeAmount,
+                BigDecimal previousMonthChangeRate,
+                BigDecimal annualExpenseAmount
+        ) {
+            this(
+                    totalExpenseAmount,
+                    previousMonthExpenseAmount,
+                    previousMonthChangeAmount,
+                    previousMonthChangeRate,
+                    annualExpenseAmount,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO
+            );
+        }
     }
 
     @Getter
@@ -77,5 +146,35 @@ public class ChildcareReportDetailResponse {
         private final int month;
 
         private final BigDecimal expenseAmount;
+
+        private final BigDecimal sameAgeAverageAmount;
+
+        public MonthlyFlowItem(
+                int year,
+                int month,
+                BigDecimal expenseAmount
+        ) {
+            this(year, month, expenseAmount, BigDecimal.ZERO);
+        }
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public static class ComparisonBenchmark {
+
+        private final String label;
+
+        private final String ageGroup;
+
+        private final BigDecimal monthlyAverageAmount;
+
+        private final String sourceName;
+
+        private final String sourceUrl;
+
+        private final int sourceYear;
+
+        private final String calculationBasis;
     }
 }
