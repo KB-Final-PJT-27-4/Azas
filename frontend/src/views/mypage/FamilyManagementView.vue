@@ -30,6 +30,7 @@ const invitationDescription = computed(() =>
 const invitationLink = computed(() => {
   return createdInvitationLink.value
 })
+const invitationShareText = computed(() => invitationLink.value)
 
 const openInvitation = async (type: InviteType) => {
   inviteType.value = type
@@ -90,9 +91,9 @@ const copyInvitationLink = async () => {
   if (isCreatingInvitation.value || !invitationLink.value) return
 
   try {
-    await navigator.clipboard.writeText(invitationLink.value)
+    await navigator.clipboard.writeText(invitationShareText.value)
     copied.value = true
-    showToast('초대 링크를 복사했습니다.', 'success')
+    showToast('초대 문구와 링크를 복사했습니다.', 'success')
   } catch {
     showToast('링크를 복사하지 못했습니다. 다시 시도해 주세요.', 'error')
   }
@@ -248,8 +249,8 @@ const copyInvitationLink = async () => {
               <div v-if="isCreatingInvitation" class="min-w-0 flex-1" aria-hidden="true">
                 <span class="block h-3 w-[88%] animate-pulse rounded-full bg-[#dfe8ec]"></span>
               </div>
-              <p v-else class="m-0 min-w-0 flex-1 truncate text-[12px] font-medium text-[#647783]">
-                {{ invitationLink }}
+              <p v-else class="m-0 min-w-0 flex-1 whitespace-pre-line break-all text-[12px] leading-5 font-medium text-[#647783]">
+                {{ invitationShareText }}
               </p>
             </div>
 

@@ -192,7 +192,7 @@ onBeforeUnmount(stopVerificationTimer)
                   <input
                     id="account-verification-code"
                     :value="verificationCode"
-                    class="h-full w-full rounded-xl border border-[#dce7ed] bg-white px-3 pr-14 text-sm outline-none focus:border-[var(--color-brand-primary)] focus:ring-2 focus:ring-[#dff4fc]"
+                    class="h-full w-full rounded-xl border border-[#dce7ed] bg-white px-3 pr-14 text-[16px] outline-none focus:border-[var(--color-brand-primary)] focus:ring-2 focus:ring-[#dff4fc]"
                     type="text"
                     inputmode="numeric"
                     maxlength="6"
