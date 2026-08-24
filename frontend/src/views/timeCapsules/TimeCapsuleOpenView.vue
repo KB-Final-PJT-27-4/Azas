@@ -27,6 +27,7 @@ type Memory = {
 
 const allMemories = ref<Memory[]>([])
 const years = computed(() => [...new Set(allMemories.value.map(({ year }) => year))].sort())
+const yearTabCount = computed(() => Math.max(years.value.length, 1))
 const emptyMemory: Memory = { year: new Date().getFullYear(), month: 1, title: '타임캡슐', short: '', letter: '' }
 const OPEN_FLASH_STORAGE_KEY = 'azas_time_capsule_open_flash'
 const shortMessages = [
@@ -152,6 +153,16 @@ const activeYearMemories = computed(() =>
     .map((memory, index) => ({ ...memory, index }))
     .filter((memory) => memory.year === activeYear.value),
 )
+const activeYearPhotoCount = computed(() =>
+  activeYearMemories.value.filter((memory) => isLocalTimeCapsuleRoute.value || memory.photoUrl).length,
+)
+const activeYearLetterCount = computed(() => activeYearMemories.value.length)
+const collageItems = computed(() =>
+  allMemories.value
+    .map((memory, index) => ({ memory, index }))
+    .filter(({ memory }) => isLocalTimeCapsuleRoute.value || Boolean(memory.photoUrl))
+    .slice(0, 12),
+)
 const galleryRows = computed(() => {
   const items: Array<{
     kind: 'photo' | 'note'
@@ -167,7 +178,9 @@ const galleryRows = computed(() => {
     }
   })
 
-  return Array.from({ length: 5 }, (_, index) => items.slice(index * 3, index * 3 + 3))
+  return Array.from({ length: Math.max(1, Math.ceil(items.length / 3)) }, (_, index) =>
+    items.slice(index * 3, index * 3 + 3),
+  )
 })
 
 const getPhotoStyle = (index: number) => {
@@ -175,6 +188,14 @@ const getPhotoStyle = (index: number) => {
   if (memory?.photoUrl) {
     return {
       backgroundImage: `url(${memory.photoUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }
+  }
+
+  if (!isLocalTimeCapsuleRoute.value) {
+    return {
+      backgroundImage: 'linear-gradient(135deg, #f6fbfd 0%, #e9f3f7 100%)',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     }
@@ -276,13 +297,6 @@ const getEntryDate = (contributedAt?: string) => {
   return Number.isNaN(date.getTime()) ? new Date() : date
 }
 
-const createEntryLetter = (year: number, month: number, title: string, amount?: number) => {
-  const amountText =
-    amount && amount > 0 ? `\n\n이날 함께 남긴 금액은 ${amount.toLocaleString('ko-KR')}원이야.` : ''
-
-  return `사랑하는 우리 아이에게.\n\n${year}년 ${month}월, ${title}을 이 타임캡슐에 담아두었어.${amountText}\n\n시간이 지나 다시 꺼내보는 오늘, 이 순간의 마음과 기록이 오래 따뜻하게 남기를 바라.`
-}
-
 onMounted(async () => {
   if (window.sessionStorage.getItem(OPEN_FLASH_STORAGE_KEY) === 'true') {
     isOpeningFlashVisible.value = true
@@ -304,20 +318,37 @@ onMounted(async () => {
     }
 
     const { data } = await api.getTimeCapsuleEntriesUsingGET(capsuleListId)
+    const entries = [...(data.entries ?? [])].sort((current, next) => {
+      const currentTime = getEntryDate(current.contributed_at).getTime()
+      const nextTime = getEntryDate(next.contributed_at).getTime()
+      if (currentTime !== nextTime) return currentTime - nextTime
+      return (current.time_capsule_entry_id ?? 0) - (next.time_capsule_entry_id ?? 0)
+    })
+    const detailResults = await Promise.allSettled(
+      entries.map((entry) =>
+        entry.time_capsule_entry_id
+          ? api.getTimeCapsuleEntryUsingGET(entry.time_capsule_entry_id)
+          : Promise.resolve(null),
+      ),
+    )
 
-    allMemories.value = (data.entries ?? []).map((entry) => {
+    allMemories.value = entries.map((entry, index) => {
+      const detailResult = detailResults[index]
+      const detail = detailResult?.status === 'fulfilled' ? detailResult.value?.data : undefined
       const date = getEntryDate(entry.contributed_at)
       const year = date.getFullYear()
       const month = date.getMonth() + 1
       const title = entry.title ?? '소중한 기록'
+      const letter = detail?.message?.trim() ?? ''
+      const short = letter.split('\n').find((line) => line.trim())?.trim() || title
 
       return {
         year,
         month,
         title,
-        short: title,
-        letter: createEntryLetter(year, month, title, entry.contribution_amount),
-        photoUrl: entry.thumbnail_url,
+        short,
+        letter,
+        photoUrl: detail?.image?.url || entry.thumbnail_url,
       }
     })
     activeYear.value = years.value[0] ?? new Date().getFullYear()
@@ -374,7 +405,7 @@ onMounted(async () => {
 
         <article class="first-letter" :class="{ open: isLetterOpen }">
           <div class="letter-tape" aria-hidden="true"></div>
-          <p class="letter-to">To. 사랑하는 우리 아가에게</p>
+          <p v-if="isLocalTimeCapsuleRoute" class="letter-to">To. 사랑하는 우리 아가에게</p>
           <p class="letter-body">{{ currentMemory.letter }}</p>
           <div v-if="!isLetterOpen" class="first-letter-fade" aria-hidden="true"></div>
           <button class="first-letter-more" type="button" @click="openLetterModal(currentIndex)">
@@ -410,7 +441,12 @@ onMounted(async () => {
         <p>연도를 고르고, 마음이 머무는 사진을 눌러보세요.</p>
       </div>
 
-      <div class="year-tabs" role="tablist" aria-label="연도 선택">
+      <div
+        class="year-tabs"
+        role="tablist"
+        aria-label="연도 선택"
+        :style="{ gridTemplateColumns: `repeat(${yearTabCount}, minmax(0, 1fr))` }"
+      >
         <button
           v-for="year in years"
           :key="year"
@@ -455,15 +491,15 @@ onMounted(async () => {
                 </template>
 
                 <template v-else>
-                  <b>To. 사랑하는 너에게</b>
+                  <b v-if="isLocalTimeCapsuleRoute">To. 사랑하는 너에게</b>
                   <span>{{ item.memory.short }}</span>
-                  <small>엄마, 아빠가</small>
+                  <small v-if="isLocalTimeCapsuleRoute">엄마, 아빠가</small>
                 </template>
               </button>
             </div>
           </div>
           <div class="frame-footer">
-            <span>사진 12장</span><i>·</i><span>편지 12통</span><i>·</i
+            <span>사진 {{ activeYearPhotoCount }}장</span><i>·</i><span>편지 {{ activeYearLetterCount }}통</span><i>·</i
             ><span>{{ years.indexOf(activeYear) + 1 }}년 차</span>
           </div>
         </div>
@@ -525,7 +561,7 @@ onMounted(async () => {
             <h2 id="full-letter-title">{{ selectedMemory.title }}</h2>
             <p class="modal-short">{{ selectedMemory.short }}</p>
             <div class="letter-preview open">
-              <b>To. 사랑하는 우리 아가에게</b>
+              <b v-if="isLocalTimeCapsuleRoute">To. 사랑하는 우리 아가에게</b>
               <p>{{ selectedMemory.letter }}</p>
             </div>
             <button
@@ -564,18 +600,19 @@ onMounted(async () => {
           <h2 id="overview-title">함께 자란 우리의 시간</h2>
           <p class="collage-desc">각 계절에서 한 장씩 고른 12개의 마음</p>
 
-          <div class="final-collage">
+          <div v-if="collageItems.length" class="final-collage">
             <button
-              v-for="(_, index) in 12"
-              :key="index"
+              v-for="item in collageItems"
+              :key="item.index"
               class="collage-photo-button"
               type="button"
-              :aria-label="`${index + 1}번째 대표 추억 보기`"
-              @click="openMemoryFromOverview(index * 3)"
+              :aria-label="`${item.index + 1}번째 대표 추억 보기`"
+              @click="openMemoryFromOverview(item.index)"
             >
-              <span class="memory-photo" :style="getPhotoStyle(index * 3)"></span>
+              <span class="memory-photo" :style="getPhotoStyle(item.index)"></span>
             </button>
           </div>
+          <p v-else class="collage-empty">아직 콜라주로 모을 사진이 없어요.</p>
 
           <button class="save-button" type="button" @click="saveOverviewScene">
             {{ isCollageSaved ? '저장되었습니다' : '이 장면 간직하기' }}
@@ -1428,6 +1465,19 @@ onMounted(async () => {
     cover;
   border: 10px solid #fffdf8;
   box-shadow: 0 18px 42px rgba(51, 51, 45, 0.16);
+}
+
+.collage-empty {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  margin: 0;
+  color: #879399;
+  background: #fffdf8;
+  border: 1px dashed #d8d0bf;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .collage-photo-button {

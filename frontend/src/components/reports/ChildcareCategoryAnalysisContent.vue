@@ -1,160 +1,31 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 
 import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
-
-const total = computed(() => childcareReportSummary.currentMonthAmount)
-const percentage = (amount: number) => total.value ? Math.round((amount / total.value) * 100) : 0
-const sortedCategories = computed(() =>
-  [...childcareCategories].sort((left, right) => right.amount - left.amount),
-)
-const largestCategory = computed(() => sortedCategories.value[0] ?? null)
-const smallestCategory = computed(() => sortedCategories.value.at(-1) ?? null)
-const donutSegments = computed(() => {
-  let offset = 0
-  return childcareCategories.map((category) => {
-    const length = total.value ? (category.amount / total.value) * 100 : 0
-    const segment = {
-      ...category,
-      dashArray: `${length} ${100 - length}`,
-      dashOffset: -offset,
-    }
-    offset += length
-    return segment
-  })
-})
+const { childcareReportSummary, load } = useChildcareReport()
 onMounted(load)
 </script>
 
 <template>
-  <div>
-    <section aria-label="항목별 소비 구성">
-      <div
-        class="relative mx-auto size-[180px] rounded-full shadow-[0_12px_28px_rgba(98,78,15,0.1)]"
-        role="img"
-        aria-label="항목별 소비 비율 도넛 그래프"
-      >
-        <svg
-          class="absolute inset-0 size-full overflow-visible"
-          viewBox="0 0 180 180"
-          aria-hidden="true"
-        >
-          <defs>
-            <mask
-              id="childcare-donut-reveal-mask"
-              x="0"
-              y="0"
-              width="180"
-              height="180"
-              maskUnits="userSpaceOnUse"
-            >
-              <circle
-                class="donut-reveal-path"
-                cx="90"
-                cy="90"
-                r="75.5"
-                pathLength="1"
-                fill="none"
-                stroke="white"
-                stroke-width="30"
-                transform="rotate(-90 90 90)"
-              />
-            </mask>
-          </defs>
-          <g mask="url(#childcare-donut-reveal-mask)">
-            <circle
-              v-for="segment in donutSegments"
-              :key="segment.id"
-              cx="90"
-              cy="90"
-              r="75.5"
-              pathLength="100"
-              fill="none"
-              :stroke="segment.color"
-              stroke-width="29"
-              stroke-linecap="butt"
-              :stroke-dasharray="segment.dashArray"
-              :stroke-dashoffset="segment.dashOffset"
-              transform="rotate(-90 90 90)"
-            />
-          </g>
-        </svg>
-        <div
-          class="absolute inset-[29px] grid place-items-center rounded-full bg-white text-center"
-        >
-          <div>
-            <strong class="block text-[20px] tracking-[-0.03em]">{{
-              formatReportWon(total)
-            }}</strong>
-            <span class="mt-1.5 block text-[11px] text-[var(--color-text-secondary)]">
-              이번 달 총 지출
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <ul
-        class="mt-7 mb-0 grid list-none divide-y divide-[#edf0f2] overflow-hidden rounded-[18px] border border-[#e3e7ea] bg-white px-4 py-1"
-      >
-        <li
-          v-for="category in donutSegments"
-          :key="category.id"
-          class="flex min-h-13 min-w-0 items-center gap-3 py-3"
-        >
-          <span
-            class="size-3 shrink-0 rounded-full"
-            :style="{ backgroundColor: category.color }"
-          ></span>
-          <strong class="min-w-0 flex-1 truncate text-[13px]">{{ category.label }}</strong>
-          <span class="shrink-0 text-[12px] font-medium text-[var(--color-text-secondary)]">
-            {{ formatReportWon(category.amount) }} ({{ percentage(category.amount) }}%)
-          </span>
-        </li>
-      </ul>
-    </section>
-
-    <section
-      class="mt-8 rounded-[20px] border border-[#e3e7ea] bg-[var(--color-surface-muted)] p-5"
-      aria-labelledby="expense-summary-title"
+  <section
+    class="rounded-[20px] border border-[#e3e7ea] bg-white p-5"
+    aria-labelledby="comparison-benchmark-title"
+  >
+    <h2 id="comparison-benchmark-title" class="m-0 text-[16px] font-extrabold">양육비 비교 기준</h2>
+    <p class="mt-2 mb-0 text-[12px] text-[var(--color-text-secondary)]">
+      항목별 비교 통계는 제공하지 않으며, 월 총지출을 고정 기준값과 비교합니다.
+    </p>
+    <div
+      class="mt-5 flex items-center justify-between gap-4 rounded-[14px] bg-[var(--color-surface-muted)] p-4"
     >
-      <h3 id="expense-summary-title" class="m-0 text-[16px] font-extrabold">소비 요약</h3>
-      <dl class="mt-4 mb-0 grid gap-3.5 text-[12px]">
-        <div class="flex items-center justify-between gap-4 border-b border-[#e3e7ea] pb-3.5">
-          <dt class="text-[var(--color-text-secondary)]">가장 큰 지출</dt>
-          <dd class="m-0 font-bold">{{ largestCategory?.label ?? '지출 내역 없음' }}</dd>
-        </div>
-        <div class="flex items-center justify-between gap-4 border-b border-[#e3e7ea] pb-3.5">
-          <dt class="text-[var(--color-text-secondary)]">가장 적은 지출</dt>
-          <dd class="m-0 font-bold">{{ smallestCategory?.label ?? '지출 내역 없음' }}</dd>
-        </div>
-        <div class="flex items-center justify-between gap-4">
-          <dt class="text-[var(--color-text-secondary)]">총 지출</dt>
-          <dd class="m-0 font-extrabold">{{ formatReportWon(total) }}</dd>
-        </div>
-      </dl>
-    </section>
-  </div>
+      <span class="text-[12px] font-bold">{{ childcareReportSummary.comparisonLabel }}</span>
+      <strong class="text-[18px]">{{
+        formatReportWon(childcareReportSummary.peerAverageAmount)
+      }}</strong>
+    </div>
+    <p class="mt-4 mb-0 text-[11px] leading-5 text-[var(--color-text-secondary)]">
+      {{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}
+    </p>
+  </section>
 </template>
-
-<style scoped>
-.donut-reveal-path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: reveal-donut 1100ms cubic-bezier(0.22, 1, 0.36, 1) 120ms forwards;
-}
-
-@keyframes reveal-donut {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .donut-reveal-path {
-    animation: none;
-    stroke-dashoffset: 0;
-  }
-}
-</style>

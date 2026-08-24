@@ -19,8 +19,10 @@ const isTransferMenuOpen = ref(false)
 const accounts = ref<Array<{ id: number; accountId: number; bank: string; name: string; number: string }>>([])
 const transfers = ref<Array<{ id: number; date: string; name: string; amount: number }>>([])
 
-const requestedAccountId = Number(route.query.account)
-const selectedAccountId = ref(requestedAccountId || 0)
+const requestedTimeCapsuleId = Number(route.query.account)
+const requestedFinancialAccountId = Number(route.query.account_id)
+const shouldSelectLatestTransfer = route.query.transfer === 'latest'
+const selectedAccountId = ref(requestedTimeCapsuleId || 0)
 const selectedTransferId = ref(0)
 const selectedAccount = computed(() => accounts.value.find(({ id }) => id === selectedAccountId.value) ?? { id: 0, accountId: 0, bank: '', name: '계좌를 선택해주세요', number: '' })
 const selectedTransfer = computed(() => transfers.value.find(({ id }) => id === selectedTransferId.value) ?? { id: 0, date: '', name: '거래를 선택해주세요', amount: 0 })
@@ -40,7 +42,6 @@ const hasCreated = ref(false)
 const canPreview = computed(() =>
   selectedAccountId.value > 0
     && selectedTransferId.value > 0
-    && mediaItems.value.length === 1
     && Boolean(title.value.trim())
     && Boolean(letter.value.trim()),
 )
@@ -130,7 +131,7 @@ const showForm = () => {
 const createTimeCapsule = async () => {
   if (isPageLeaving.value) return
   if (!canPreview.value) {
-    showToast('계좌·입금 거래·사진 1장과 필수 내용을 모두 입력해 주세요.', 'error')
+    showToast('계좌·입금 거래와 필수 내용을 모두 입력해 주세요.', 'error')
     return
   }
 
@@ -142,16 +143,18 @@ const createTimeCapsule = async () => {
     })
     const entryId = data.time_capsule_entry_id
     const media = mediaItems.value[0]
-    if (!entryId || !media) throw new Error('타임캡슐 기록 또는 사진 정보가 없습니다.')
-    const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
-      file_size: media.file.size,
-      mime_type: media.file.type,
-    })
-    if (!upload.upload_url || !upload.time_capsule_media_id) {
-      throw new Error('사진 업로드 정보를 받지 못했습니다.')
+    if (!entryId) throw new Error('타임캡슐 기록 정보를 받지 못했습니다.')
+    if (media) {
+      const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
+        file_size: media.file.size,
+        mime_type: media.file.type,
+      })
+      if (!upload.upload_url || !upload.time_capsule_media_id) {
+        throw new Error('사진 업로드 정보를 받지 못했습니다.')
+      }
+      await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
+      await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
     }
-    await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
-    await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
     await api.sealTimeCapsuleEntryUsingPATCH(entryId)
     hasCreated.value = true
     isPageLeaving.value = true
@@ -179,7 +182,9 @@ const loadTransfers = async () => {
     name: transaction.counterparty_name ?? '계좌 거래',
     amount: transaction.amount,
     }))
-  selectedTransferId.value = transfers.value[0]?.id ?? 0
+  if (shouldSelectLatestTransfer || !transfers.value.some(({ id }) => id === selectedTransferId.value)) {
+    selectedTransferId.value = transfers.value[0]?.id ?? 0
+  }
 }
 
 watch(selectedAccountId, () => void loadTransfers())
@@ -205,6 +210,9 @@ onMounted(async () => {
         number: linked?.account_number ?? '',
       }
     })
+    if (requestedFinancialAccountId > 0) {
+      selectedAccountId.value = accounts.value.find(({ accountId }) => accountId === requestedFinancialAccountId)?.id ?? 0
+    }
     if (!accounts.value.some(({ id }) => id === selectedAccountId.value)) selectedAccountId.value = accounts.value[0]?.id ?? 0
     await loadTransfers()
   } catch (error) {
@@ -400,7 +408,7 @@ onBeforeUnmount(() => {
 
         <div>
           <div class="mb-3 flex items-center justify-between">
-            <span class="text-sm font-bold">대표 사진</span>
+            <span class="text-sm font-bold">대표 사진 <em class="text-xs font-semibold not-italic text-[var(--color-text-secondary)]">(선택)</em></span>
           </div>
           <div v-if="mediaItems[0]" class="relative overflow-hidden rounded-[20px] border border-[#d6e3e9] bg-[#f5f8fa]">
             <img :src="mediaItems[0].url" alt="선택한 대표 사진" class="aspect-[16/10] w-full bg-[#f4f7f9] object-contain" />
@@ -424,7 +432,7 @@ onBeforeUnmount(() => {
             class="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-[20px] border border-dashed border-[#cbdde6] bg-[#f5fbfe] text-[var(--color-text-secondary)] transition-colors active:bg-[#ebf8fd]"
           >
             <ImagePlus :size="30" class="text-[var(--color-brand-primary)]" />
-            <span class="mt-3 text-xs font-semibold">대표 사진 한 장을 추가해주세요</span>
+            <span class="mt-3 text-xs font-semibold">대표 사진을 추가할 수 있어요</span>
             <span class="mt-1 text-[10px] text-[#98a5ad]">사진은 나중에 다시 변경할 수 있어요.</span>
             <input class="sr-only" type="file" accept="image/*" @change="selectMedia" />
           </label>
