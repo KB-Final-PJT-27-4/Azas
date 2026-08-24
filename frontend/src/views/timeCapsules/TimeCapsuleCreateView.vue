@@ -408,7 +408,7 @@ onBeforeUnmount(() => {
 
         <div>
           <div class="mb-3 flex items-center justify-between">
-            <span class="text-sm font-bold">대표 사진</span>
+            <span class="text-sm font-bold">대표 사진 <em class="text-xs font-semibold not-italic text-[var(--color-text-secondary)]">(선택)</em></span>
           </div>
           <div v-if="mediaItems[0]" class="relative overflow-hidden rounded-[20px] border border-[#d6e3e9] bg-[#f5f8fa]">
             <img :src="mediaItems[0].url" alt="선택한 대표 사진" class="aspect-[16/10] w-full bg-[#f4f7f9] object-contain" />
@@ -432,7 +432,7 @@ onBeforeUnmount(() => {
             class="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-[20px] border border-dashed border-[#cbdde6] bg-[#f5fbfe] text-[var(--color-text-secondary)] transition-colors active:bg-[#ebf8fd]"
           >
             <ImagePlus :size="30" class="text-[var(--color-brand-primary)]" />
-            <span class="mt-3 text-xs font-semibold">대표 사진 한 장을 추가해주세요</span>
+            <span class="mt-3 text-xs font-semibold">대표 사진을 추가할 수 있어요</span>
             <span class="mt-1 text-[10px] text-[#98a5ad]">사진은 나중에 다시 변경할 수 있어요.</span>
             <input class="sr-only" type="file" accept="image/*" @change="selectMedia" />
           </label>
