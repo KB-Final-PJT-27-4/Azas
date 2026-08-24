@@ -39,7 +39,7 @@ onMounted(async () => {
   }
 
   try {
-    const invitation = consumeOAuthInvitation(provider)
+    const invitation = consumeOAuthInvitation(provider, state)
     const response = await loginWithOAuthCode(provider, code, getOAuthRedirectUri(provider), invitation)
     const isChildInvitation = invitation?.inviteeType === 'CHILD'
     if (invitation) {
