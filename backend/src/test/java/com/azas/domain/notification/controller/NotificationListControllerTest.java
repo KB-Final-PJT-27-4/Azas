@@ -72,7 +72,7 @@ class NotificationListControllerTest {
                 0L,
                 false,
                 0L,
-                15
+                5
         ));
 
         mockMvc.perform(
@@ -103,7 +103,7 @@ class NotificationListControllerTest {
                 .andExpect(jsonPath("$.unread_count").value(0))
                 .andExpect(jsonPath(
                         "$.recommended_poll_interval_seconds"
-                ).value(15));
+                ).value(5));
     }
 
     @Test

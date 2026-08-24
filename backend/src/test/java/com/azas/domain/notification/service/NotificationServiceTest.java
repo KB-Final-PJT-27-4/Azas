@@ -73,7 +73,7 @@ class NotificationServiceTest {
         assertFalse(response.isHasMoreNew());
         assertEquals(3L, response.getUnreadCount());
         assertEquals(
-                15,
+                5,
                 response.getRecommendedPollIntervalSeconds()
         );
     }
@@ -99,7 +99,7 @@ class NotificationServiceTest {
 
         assertTrue(response.getItems().isEmpty());
         assertEquals(0L, response.getPollCursor());
-        assertEquals(15, response.getRecommendedPollIntervalSeconds());
+        assertEquals(5, response.getRecommendedPollIntervalSeconds());
     }
 
     // 신규 알림 폴링(실시간 갱신) 테스트 (중간 누락 없음)
