@@ -2,14 +2,27 @@
 import { BellRing, ChevronRight, X } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
+import { api } from '@/api'
 import { useHeaderNotificationPopover } from '@/composables/useHeaderNotificationPopover'
+import { markOneNotificationRead } from '@/services/inAppNotificationPolling'
 
 const router = useRouter()
 const { headerNotification, dismissHeaderNotification } = useHeaderNotificationPopover()
 
-const openNotificationPage = async () => {
+const openNotificationTarget = async () => {
+  const notification = headerNotification.value
   dismissHeaderNotification()
-  await router.push({ name: 'Alarm' })
+
+  if (notification && !notification.isRead && typeof notification.notificationId === 'number') {
+    try {
+      await api.readNotificationUsingPATCH(notification.notificationId)
+      markOneNotificationRead()
+    } catch {
+      // 읽음 처리 실패는 화면 이동을 막지 않습니다.
+    }
+  }
+
+  await router.push(notification?.targetPath ?? { name: 'Alarm' })
 }
 </script>
 
@@ -27,7 +40,7 @@ const openNotificationPage = async () => {
         class="header-notification-popover__content"
         type="button"
         aria-label="알림 목록 열기"
-        @click="openNotificationPage"
+        @click="openNotificationTarget"
       >
         <span class="header-notification-popover__icon" aria-hidden="true">
           <BellRing :size="18" :stroke-width="2.6" />

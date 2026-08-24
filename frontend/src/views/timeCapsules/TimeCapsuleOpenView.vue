@@ -244,7 +244,13 @@ const saveOverviewScene = () => {
 
 const router = useRouter()
 const route = useRoute()
-const goBack = () => router.back()
+const MATURITY_SAVINGS_NOTICE_STORAGE_KEY = 'azas_time_capsule_maturity_savings_notice'
+const goBack = () => {
+  if (!isLocalTimeCapsuleRoute.value) {
+    window.sessionStorage.setItem(MATURITY_SAVINGS_NOTICE_STORAGE_KEY, 'true')
+  }
+  return router.push({ name: 'TimeCapsuleArchive' })
+}
 const routeCapsuleListId = computed(() => String(route.params.capsuleListId ?? 'local'))
 const isLocalTimeCapsuleRoute = computed(
   () => route.name === 'LocalTimeCapsuleOpen' || routeCapsuleListId.value === 'local',
