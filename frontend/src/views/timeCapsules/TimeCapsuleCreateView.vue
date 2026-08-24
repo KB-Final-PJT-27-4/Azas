@@ -6,6 +6,7 @@ import { Check, ChevronDown, ImagePlus, Landmark, X } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
+import { saveStoredTimeCapsuleEntry } from '@/utils/timeCapsuleTextEntries'
 
 const router = useRouter()
 const route = useRoute()
@@ -38,6 +39,7 @@ type MediaItem = {
 
 const mediaItems = ref<MediaItem[]>([])
 const hasCreated = ref(false)
+const isSubmitting = ref(false)
 
 const canPreview = computed(() =>
   selectedAccountId.value > 0
@@ -129,11 +131,14 @@ const showForm = () => {
 }
 
 const createTimeCapsule = async () => {
-  if (isPageLeaving.value) return
+  if (isPageLeaving.value || isSubmitting.value) return
   if (!canPreview.value) {
     showToast('계좌·입금 거래와 필수 내용을 모두 입력해 주세요.', 'error')
     return
   }
+
+  let createdEntryId: number | undefined
+  isSubmitting.value = true
 
   try {
     const { data } = await api.createTimeCapsuleEntryUsingPOST(selectedAccountId.value, {
@@ -142,8 +147,10 @@ const createTimeCapsule = async () => {
       message: letter.value.trim(),
     })
     const entryId = data.time_capsule_entry_id
+    createdEntryId = entryId
     const media = mediaItems.value[0]
     if (!entryId) throw new Error('타임캡슐 기록 정보를 받지 못했습니다.')
+
     if (media) {
       const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
         file_size: media.file.size,
@@ -156,6 +163,16 @@ const createTimeCapsule = async () => {
       await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
     }
     await api.sealTimeCapsuleEntryUsingPATCH(entryId)
+    saveStoredTimeCapsuleEntry({
+      id: entryId,
+      timeCapsuleId: selectedAccountId.value,
+      title: title.value.trim(),
+      message: letter.value.trim(),
+      contributedAt: data.contributed_at ?? new Date().toISOString(),
+      contributionAmount: data.contribution_amount ?? selectedTransfer.value.amount,
+      hasPhoto: Boolean(media),
+    })
+
     hasCreated.value = true
     isPageLeaving.value = true
     await router.push({
@@ -166,7 +183,16 @@ const createTimeCapsule = async () => {
   } catch (error) {
     hasCreated.value = false
     isPageLeaving.value = false
+    if (createdEntryId) {
+      try {
+        await api.deleteTimeCapsuleEntryUsingDELETE(createdEntryId)
+      } catch {
+        // Keep the original error visible. Cleanup failure can be retried from the list/backend.
+      }
+    }
     showToast(getApiErrorMessage(error, '캡슐 저장에 실패했습니다.'), 'error')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -525,10 +551,10 @@ onBeforeUnmount(() => {
           <button
             class="h-14 rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
             type="button"
-            :disabled="isPageLeaving"
+            :disabled="isSubmitting || isPageLeaving"
             @click="createTimeCapsule"
           >
-            생성하기
+            {{ isSubmitting ? '생성 중...' : '생성하기' }}
           </button>
         </div>
       </div>
