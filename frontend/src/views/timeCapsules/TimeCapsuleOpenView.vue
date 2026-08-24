@@ -15,14 +15,18 @@ import memory202410Url from '@/assets/images/timeCapsules/open/memory-2024/memor
 import memory202411Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-11.png'
 import memory202412Url from '@/assets/images/timeCapsules/open/memory-2024/memory-2024-12.png'
 import { api } from '@/api'
+import { getStoredTimeCapsuleEntries } from '@/utils/timeCapsuleTextEntries'
 
 type Memory = {
+  id?: number
   year: number
   month: number
   title: string
   short: string
   letter: string
   photoUrl?: string
+  contributedAt?: string
+  isTextOnly?: boolean
 }
 
 const allMemories = ref<Memory[]>([])
@@ -154,15 +158,17 @@ const activeYearMemories = computed(() =>
     .filter((memory) => memory.year === activeYear.value),
 )
 const activeYearPhotoCount = computed(() =>
-  activeYearMemories.value.filter((memory) => isLocalTimeCapsuleRoute.value || memory.photoUrl).length,
+  activeYearMemories.value.filter((memory) => hasMemoryPhoto(memory)).length,
 )
 const activeYearLetterCount = computed(() => activeYearMemories.value.length)
 const collageItems = computed(() =>
   allMemories.value
     .map((memory, index) => ({ memory, index }))
-    .filter(({ memory }) => isLocalTimeCapsuleRoute.value || Boolean(memory.photoUrl))
+    .filter(({ memory }) => hasMemoryPhoto(memory))
     .slice(0, 12),
 )
+const currentMemoryHasPhoto = computed(() => hasMemoryPhoto(currentMemory.value))
+const selectedMemoryHasPhoto = computed(() => hasMemoryPhoto(selectedMemory.value))
 const galleryRows = computed(() => {
   const items: Array<{
     kind: 'photo' | 'note'
@@ -172,8 +178,13 @@ const galleryRows = computed(() => {
   }> = []
 
   activeYearMemories.value.forEach((memory, monthIndex) => {
-    items.push({ kind: 'photo', memory, index: memory.index, monthIndex })
-    if (monthIndex === 2 || monthIndex === 6 || monthIndex === 10) {
+    items.push({
+      kind: hasMemoryPhoto(memory) ? 'photo' : 'note',
+      memory,
+      index: memory.index,
+      monthIndex,
+    })
+    if (isLocalTimeCapsuleRoute.value && (monthIndex === 2 || monthIndex === 6 || monthIndex === 10)) {
       items.push({ kind: 'note', memory, index: memory.index, monthIndex })
     }
   })
@@ -285,6 +296,9 @@ const routeCapsuleListId = computed(() => String(route.params.capsuleListId ?? '
 const isLocalTimeCapsuleRoute = computed(
   () => route.name === 'LocalTimeCapsuleOpen' || routeCapsuleListId.value === 'local',
 )
+const hasMemoryPhoto = (memory: Memory) =>
+  isLocalTimeCapsuleRoute.value || (!memory.isTextOnly && Boolean(memory.photoUrl))
+const getMemoryLetterText = (memory: Memory) => memory.letter || memory.short || memory.title
 const goToList = () => router.push(`/time-capsules/${routeCapsuleListId.value}`)
 
 const applyLocalTimeCapsuleFallback = () => {
@@ -331,25 +345,58 @@ onMounted(async () => {
           : Promise.resolve(null),
       ),
     )
+    const storedEntries = getStoredTimeCapsuleEntries(capsuleListId)
+    const storedEntriesById = new Map(storedEntries.map((entry) => [entry.id, entry]))
 
-    allMemories.value = entries.map((entry, index) => {
+    const apiMemories = entries.map((entry, index) => {
       const detailResult = detailResults[index]
       const detail = detailResult?.status === 'fulfilled' ? detailResult.value?.data : undefined
+      const storedEntry = entry.time_capsule_entry_id
+        ? storedEntriesById.get(entry.time_capsule_entry_id)
+        : undefined
       const date = getEntryDate(entry.contributed_at)
       const year = date.getFullYear()
       const month = date.getMonth() + 1
       const title = entry.title ?? '소중한 기록'
-      const letter = detail?.message?.trim() ?? ''
+      const letter = detail?.message?.trim() || storedEntry?.message.trim() || ''
       const short = letter.split('\n').find((line) => line.trim())?.trim() || title
 
       return {
+        id: entry.time_capsule_entry_id,
         year,
         month,
         title,
         short,
         letter,
+        contributedAt: entry.contributed_at,
         photoUrl: detail?.image?.url || entry.thumbnail_url,
       }
+    })
+    const existingEntryIds = new Set(apiMemories.map(({ id }) => id).filter(Boolean))
+    const storedTextMemories = storedEntries
+      .filter((entry) => !entry.hasPhoto && !existingEntryIds.has(entry.id))
+      .map((entry) => {
+        const date = getEntryDate(entry.contributedAt)
+        const title = entry.title || '소중한 기록'
+        const letter = entry.message.trim()
+
+        return {
+          id: entry.id,
+          year: date.getFullYear(),
+          month: date.getMonth() + 1,
+          title,
+          short: letter.split('\n').find((line) => line.trim())?.trim() || title,
+          letter,
+          contributedAt: entry.contributedAt,
+          isTextOnly: true,
+        }
+      })
+
+    allMemories.value = [...apiMemories, ...storedTextMemories].sort((current, next) => {
+      const currentTime = getEntryDate(current.contributedAt).getTime()
+      const nextTime = getEntryDate(next.contributedAt).getTime()
+      if (currentTime !== nextTime) return currentTime - nextTime
+      return (current.id ?? 0) - (next.id ?? 0)
     })
     activeYear.value = years.value[0] ?? new Date().getFullYear()
   } catch (error) {
@@ -389,7 +436,7 @@ onMounted(async () => {
       </div>
 
       <div class="first-keepsake">
-        <article class="first-polaroid">
+        <article v-if="currentMemoryHasPhoto" class="first-polaroid">
           <i class="first-clip" aria-hidden="true"></i>
           <div
             class="memory-photo"
@@ -402,11 +449,17 @@ onMounted(async () => {
             <b>{{ isFirstMemory ? '우리의 첫 번째 기록' : currentMemory.short }}</b>
           </div>
         </article>
+        <article v-else class="first-text-memory-card">
+          <i class="first-clip" aria-hidden="true"></i>
+          <span>{{ currentMemory.year }}. {{ String(currentMemory.month).padStart(2, '0') }}</span>
+          <h2>{{ currentMemory.title }}</h2>
+          <p>{{ currentMemory.short }}</p>
+        </article>
 
         <article class="first-letter" :class="{ open: isLetterOpen }">
           <div class="letter-tape" aria-hidden="true"></div>
           <p v-if="isLocalTimeCapsuleRoute" class="letter-to">To. 사랑하는 우리 아가에게</p>
-          <p class="letter-body">{{ currentMemory.letter }}</p>
+          <p class="letter-body">{{ getMemoryLetterText(currentMemory) }}</p>
           <div v-if="!isLetterOpen" class="first-letter-fade" aria-hidden="true"></div>
           <button class="first-letter-more" type="button" @click="openLetterModal(currentIndex)">
             편지 전체 읽기
@@ -429,7 +482,7 @@ onMounted(async () => {
           type="button"
           @click="isLastMemory ? openOverviewModal() : moveMemory(1)"
         >
-          {{ isLastMemory ? '마지막 추억 콜라주 보기' : '다음 추억 보기' }}
+          {{ isLastMemory ? '추억 콜라주 보기' : '다음 추억 보기' }}
         </button>
       </div>
     </section>
@@ -515,11 +568,13 @@ onMounted(async () => {
       <p>{{ savingDurationMonths }}개월의 마음을 한 장에</p>
       <h2>우리의 시간이<br />하나의 작품이 되었어요</h2>
       <button class="collage-button" type="button" @click="openOverviewModal">
-        마지막 추억 콜라주 보기
+        추억 콜라주 보기
       </button>
 
-      <button class="list-button" type="button" @click="goToList">기록 리스트 보기</button>
-      <button class="back-button" type="button" @click="goBack">돌아가기</button>
+      <div class="ending-actions">
+        <button class="back-button" type="button" @click="goBack">돌아가기</button>
+        <button class="list-button" type="button" @click="goToList">기록 리스트 보기</button>
+      </div>
     </section>
 
     <Teleport to="body">
@@ -531,20 +586,23 @@ onMounted(async () => {
       >
         <section
           class="memory-modal"
+          :class="{ 'memory-modal--text': !selectedMemoryHasPhoto }"
           role="dialog"
           aria-modal="true"
           aria-labelledby="full-letter-title"
           @mousedown.stop
         >
           <button
+            v-if="!selectedMemoryHasPhoto"
             class="modal-close"
+            :class="{ 'modal-close--text': !selectedMemoryHasPhoto }"
             type="button"
             aria-label="닫기"
             @click="isFullLetterModalOpen = false"
           >
             ×
           </button>
-          <div class="modal-photo-wrap">
+          <div v-if="selectedMemoryHasPhoto" class="modal-photo-wrap">
             <div
               class="memory-photo"
               :style="getPhotoStyle(selectedMemoryIndex ?? currentIndex)"
@@ -553,7 +611,19 @@ onMounted(async () => {
               {{ selectedMemory.year }}. {{ String(selectedMemory.month).padStart(2, '0') }}
             </span>
           </div>
-          <div class="modal-body">
+          <div v-else class="modal-note-wrap">
+            <div class="modal-note-polaroid">
+              <div class="modal-note-paper">
+                <span>To. 사랑하는 너에게</span>
+                <p>{{ getMemoryLetterText(selectedMemory) }}</p>
+              </div>
+              <div class="modal-note-caption">
+                <span>{{ selectedMemory.year }}. {{ String(selectedMemory.month).padStart(2, '0') }}</span>
+                <b>{{ selectedMemory.title }}</b>
+              </div>
+            </div>
+          </div>
+          <div v-if="selectedMemoryHasPhoto" class="modal-body">
             <p class="modal-kicker">
               MEMORY {{ String((selectedMemoryIndex ?? currentIndex) + 1).padStart(2, '0') }} /
               {{ savingDurationMonths }}
@@ -562,7 +632,7 @@ onMounted(async () => {
             <p class="modal-short">{{ selectedMemory.short }}</p>
             <div class="letter-preview open">
               <b v-if="isLocalTimeCapsuleRoute">To. 사랑하는 우리 아가에게</b>
-              <p>{{ selectedMemory.letter }}</p>
+              <p>{{ getMemoryLetterText(selectedMemory) }}</p>
             </div>
             <button
               class="letter-toggle"
@@ -833,6 +903,45 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.5;
+}
+
+.first-text-memory-card {
+  position: relative;
+  width: 76%;
+  min-height: 236px;
+  margin: 0 auto;
+  padding: 44px 28px 34px;
+  background: #f8f2dc;
+  box-shadow:
+    0 18px 42px rgba(54, 71, 78, 0.12),
+    inset 0 0 0 1px rgba(204, 183, 129, 0.18);
+  transform: rotate(-1.1deg);
+}
+
+.first-text-memory-card span {
+  display: block;
+  color: #9dafb6;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.first-text-memory-card h2 {
+  margin: 18px 0 0;
+  color: #59646a;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.first-text-memory-card p {
+  margin: 18px 0 0;
+  color: #7f898d;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.65;
+  word-break: keep-all;
 }
 
 .first-letter {
@@ -1250,35 +1359,35 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-.back-button {
-  min-width: 116px;
-  margin-top: 16px;
-  padding: 12px 22px;
-  color: #7f939d;
-  background: transparent;
-  border: 1px solid rgba(127, 147, 157, 0.32);
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
+.ending-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  width: min(100%, 320px);
+  margin-top: 42px;
 }
 
-.list-button {
-  width: min(100%, 320px);
-  min-height: 56px;
-  margin-top: 68px;
-  color: white;
-  background: #79bdf0;
-  border: 0;
+.list-button,
+.back-button {
+  min-height: 50px;
+  padding: 0 12px;
   border-radius: 15px;
-  box-shadow: 0 10px 24px rgba(76, 159, 214, 0.2);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
 }
 
-.list-button + .back-button {
-  margin-top: 12px;
+.list-button {
+  color: white;
+  background: #79bdf0;
+  border: 0;
+  box-shadow: 0 10px 24px rgba(76, 159, 214, 0.18);
+}
+
+.back-button {
+  color: #7f939d;
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(127, 147, 157, 0.32);
 }
 
 .modal-backdrop {
@@ -1305,6 +1414,15 @@ onMounted(async () => {
   animation: rise 0.35s ease;
 }
 
+.memory-modal--text {
+  width: min(350px, 100%);
+  max-height: none;
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .modal-close {
   position: absolute;
   top: 14px;
@@ -1320,6 +1438,18 @@ onMounted(async () => {
   border-radius: 50%;
   backdrop-filter: blur(8px);
   cursor: pointer;
+}
+
+.modal-close--text {
+  top: auto;
+  right: auto;
+  bottom: -42px;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  font-size: 26px;
+  background: rgba(31, 40, 43, 0.42);
+  transform: translateX(-50%);
 }
 
 .modal-photo-wrap {
@@ -1353,6 +1483,90 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.12em;
+}
+
+.modal-note-wrap {
+  position: relative;
+  padding: 22px 10px 26px;
+  overflow: visible;
+  color: #4f5b60;
+  background: transparent;
+}
+
+.modal-note-polaroid {
+  position: relative;
+  z-index: 2;
+  width: min(300px, 100%);
+  margin: 0 auto;
+  padding: 14px 14px 31px;
+  background: #fffefb;
+  box-shadow:
+    0 22px 42px rgba(45, 59, 65, 0.2),
+    0 2px 0 rgba(255, 255, 255, 0.8) inset,
+    inset 0 0 0 1px rgba(232, 229, 219, 0.9);
+  transform: rotate(-1.2deg);
+}
+
+.modal-note-paper {
+  min-height: 264px;
+  padding: 28px 24px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 27px,
+      rgba(185, 192, 186, 0.26) 28px
+    ),
+    #fffdf7;
+  border: 1px solid #e2e0d7;
+  box-shadow:
+    inset 0 0 0 9px #f1f1ec,
+    inset 0 0 0 11px #d9d9d1;
+}
+
+.modal-note-paper span {
+  display: block;
+  color: #5d6466;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.modal-note-paper p {
+  margin: 14px 0 0;
+  color: #4d5355;
+  white-space: pre-line;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.9;
+  word-break: keep-all;
+}
+
+.modal-note-caption {
+  padding-top: 19px;
+  text-align: center;
+}
+
+.modal-note-caption span,
+.modal-note-caption b {
+  display: block;
+}
+
+.modal-note-caption span {
+  color: #9ca8ad;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.modal-note-caption b {
+  margin-top: 7px;
+  color: #535b5f;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.45;
+  word-break: keep-all;
 }
 
 .modal-body {

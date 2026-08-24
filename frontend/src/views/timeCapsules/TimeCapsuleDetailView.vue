@@ -4,6 +4,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { AlertTriangle, Trash2, X } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import { api, getApiErrorMessage } from '@/api'
+import {
+  getStoredTimeCapsuleEntry,
+  removeStoredTimeCapsuleEntry,
+} from '@/utils/timeCapsuleTextEntries'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,10 +81,19 @@ const deleteRecord = async () => {
 
   try {
     await api.deleteTimeCapsuleEntryUsingDELETE(Number(recordId.value))
+    removeStoredTimeCapsuleEntry(Number(recordId.value))
     isDeleteDialogOpen.value = false
     await router.replace(`/time-capsules/${accountId.value}`)
     showToast('타임캡슐을 삭제했습니다.', 'success')
   } catch (error) {
+    const storedEntry = getStoredTimeCapsuleEntry(Number(recordId.value))
+    if (storedEntry) {
+      removeStoredTimeCapsuleEntry(storedEntry.id)
+      isDeleteDialogOpen.value = false
+      await router.replace(`/time-capsules/${accountId.value}`)
+      showToast('타임캡슐을 삭제했습니다.', 'success')
+      return
+    }
     showToast(getApiErrorMessage(error, '삭제에 실패했습니다.'), 'error')
   } finally {
     isDeleting.value = false
@@ -102,6 +115,17 @@ onMounted(async () => {
       }] : [],
     }
   } catch (error) {
+    const storedEntry = getStoredTimeCapsuleEntry(Number(recordId.value))
+    if (storedEntry) {
+      record.value = {
+        title: storedEntry.title || '타임캡슐',
+        date: storedEntry.contributedAt.slice(0, 10),
+        amount: storedEntry.contributionAmount,
+        letter: storedEntry.message,
+        photos: [],
+      }
+      return
+    }
     showToast(getApiErrorMessage(error, '타임캡슐 기록을 불러오지 못했습니다.'), 'error')
   }
 })

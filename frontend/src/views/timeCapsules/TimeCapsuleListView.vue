@@ -5,6 +5,10 @@ import { ChevronDown, EllipsisVertical, Trash2, X } from 'lucide-vue-next'
 import capsulePigImage from '@/assets/images/timeCapsules/archive/list-capsule-pig.png'
 import { api, getApiErrorMessage } from '@/api'
 import { useToast } from '@/composables/useToast'
+import {
+  getStoredTimeCapsuleEntries,
+  removeStoredTimeCapsuleEntry,
+} from '@/utils/timeCapsuleTextEntries'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +28,7 @@ type TimeCapsuleRecord = {
   amount: number
   thumbnail: string
   photos: Array<{ src: string; orientation: 'portrait'; type: 'image' }>
+  isTextOnly?: boolean
 }
 
 const accountId = computed(() => String(route.params.capsuleListId ?? '1'))
@@ -82,6 +87,19 @@ const applyLocalTimeCapsuleFallback = () => {
   isCapsuleReleased.value = true
 }
 
+const getStoredTextOnlyRecords = (timeCapsuleId: number, existingIds = new Set<number>()) =>
+  getStoredTimeCapsuleEntries(timeCapsuleId)
+    .filter((entry) => !entry.hasPhoto && !existingIds.has(entry.id))
+    .map((entry) => ({
+      id: entry.id,
+      title: entry.title || '소중한 기록',
+      date: entry.contributedAt.slice(0, 10),
+      amount: entry.contributionAmount,
+      thumbnail: capsulePigImage,
+      photos: [],
+      isTextOnly: true,
+    }))
+
 const getMonthCells = (year: number, month: number) => {
   const firstDay = new Date(year, month - 1, 1).getDay()
   const lastDate = new Date(year, month, 0).getDate()
@@ -99,18 +117,24 @@ onMounted(async () => {
 
   try {
     const { data } = await api.getTimeCapsuleEntriesUsingGET(Number(accountId.value))
+    const apiRecords = (data.entries ?? []).map((entry) => ({
+      id: entry.time_capsule_entry_id ?? 0,
+      title: entry.title ?? '소중한 기록',
+      date: entry.contributed_at?.slice(0, 10) ?? '',
+      amount: entry.contribution_amount ?? 0,
+      thumbnail: entry.thumbnail_url ?? capsulePigImage,
+      photos: entry.thumbnail_url ? [{ src: entry.thumbnail_url, orientation: 'portrait' as const, type: 'image' as const }] : [],
+    }))
+    const existingIds = new Set(apiRecords.map(({ id }) => id))
+    const textOnlyRecords = getStoredTextOnlyRecords(Number(accountId.value), existingIds)
+
     account.value = {
       name: data.time_capsule?.title ?? '타임캡슐',
       description: '아이의 성장 순간과 금융 기록을 모아보세요.',
-      totalSavedAmount: data.time_capsule?.total_saved_amount ?? 0,
-      records: (data.entries ?? []).map((entry) => ({
-        id: entry.time_capsule_entry_id ?? 0,
-        title: entry.title ?? '소중한 기록',
-        date: entry.contributed_at?.slice(0, 10) ?? '',
-        amount: entry.contribution_amount ?? 0,
-        thumbnail: entry.thumbnail_url ?? capsulePigImage,
-        photos: entry.thumbnail_url ? [{ src: entry.thumbnail_url, orientation: 'portrait', type: 'image' }] : [],
-      })),
+      totalSavedAmount:
+        (data.time_capsule?.total_saved_amount ?? 0) +
+        textOnlyRecords.reduce((sum, record) => sum + record.amount, 0),
+      records: [...apiRecords, ...textOnlyRecords],
     }
     const releaseDate = data.time_capsule?.release_date
     isCapsuleReleased.value = data.time_capsule?.d_day !== undefined
@@ -185,7 +209,16 @@ const deleteRecord = async () => {
 
   isDeletingRecord.value = true
   try {
-    await api.deleteTimeCapsuleEntryUsingDELETE(record.id)
+    if (!record.isTextOnly) {
+      await api.deleteTimeCapsuleEntryUsingDELETE(record.id)
+    } else {
+      try {
+        await api.deleteTimeCapsuleEntryUsingDELETE(record.id)
+      } catch {
+        // Older local fallback records may not exist on the backend.
+      }
+    }
+    removeStoredTimeCapsuleEntry(record.id)
     account.value.records = account.value.records.filter(({ id }) => id !== record.id)
     account.value.totalSavedAmount = Math.max(0, account.value.totalSavedAmount - record.amount)
     recordToDelete.value = null
