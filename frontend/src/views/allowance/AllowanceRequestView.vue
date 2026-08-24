@@ -44,9 +44,13 @@ onMounted(async () => {
       api.getChildUsingGET(childId),
       api.getChildAccountsUsingGET(childId),
     ])
-    const targetAccount = accountResult.data.accounts?.find(
-      ({ account_product_type: productType }) => productType === 'DEMAND_DEPOSIT',
-    )
+    const demandDepositAccounts =
+      accountResult.data.accounts?.filter(
+        ({ account_product_type: productType }) => productType === 'DEMAND_DEPOSIT',
+      ) ?? []
+    const targetAccount =
+      demandDepositAccounts.find(({ is_primary: isPrimary }) => isPrimary) ??
+      demandDepositAccounts[0]
     request.value = {
       id: data.allowance_request_id ?? requestId,
       amount: data.requested_amount ?? 0,
