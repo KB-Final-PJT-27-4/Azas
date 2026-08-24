@@ -25,7 +25,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 100;
-    private static final int RECOMMENDED_POLL_INTERVAL_SECONDS = 15;
+    private static final int RECOMMENDED_POLL_INTERVAL_SECONDS = 5;
 
     private final NotificationMapper notificationMapper;
     private final ObjectMapper objectMapper;
