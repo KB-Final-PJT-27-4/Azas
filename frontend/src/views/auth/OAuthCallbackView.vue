@@ -42,16 +42,32 @@ onMounted(async () => {
     const invitation = consumeOAuthInvitation(provider)
     const response = await loginWithOAuthCode(provider, code, getOAuthRedirectUri(provider), invitation)
     const isChildInvitation = invitation?.inviteeType === 'CHILD'
-    if (isChildInvitation) {
-      await api.acceptFamilyInvitationUsingPOST(invitation.inviteToken)
-      const childId = (response as ChildInviteOAuthResponse).child?.child_id
-      if (childId) setCurrentChildId(childId)
+    if (invitation) {
+      if (invitation.inviteeType === 'PARENT' && !invitation.relationType) {
+        throw new Error('보호자 관계를 다시 선택해주세요.')
+      }
+
+      await api.acceptFamilyInvitationUsingPOST(
+        invitation.inviteToken,
+        undefined,
+        invitation.inviteeType === 'PARENT'
+          ? { relation_type: invitation.relationType }
+          : undefined,
+      )
+
+      if (isChildInvitation) {
+        const childId = (response as ChildInviteOAuthResponse).child?.child_id
+        if (childId) setCurrentChildId(childId)
+      }
+
+      await router.replace({ name: isChildInvitation ? 'ChildHome' : 'Accounts' })
+      return
     }
 
     const isChildMember = response.member?.member_type === 'CHILD'
     const nextRouteName = response.is_new_member && !invitation
       ? 'Register'
-      : isChildInvitation || isChildMember
+      : isChildMember
         ? 'ChildHome'
         : 'Home'
 
