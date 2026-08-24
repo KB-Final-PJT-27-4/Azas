@@ -21,6 +21,7 @@ type AlarmItem = {
   receivedAt: string
   isRead: boolean
   requestId?: number
+  missionRouteName?: 'ChildMissions' | 'ParentMissions'
 }
 
 const router = useRouter()
@@ -38,6 +39,20 @@ const formatReceivedAt = (value?: string) => {
     : date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
 }
 
+const resolveMissionRouteName = (item: NotificationListItemResponse) => {
+  if (item.reference_type !== 'MISSION') return undefined
+
+  if (item.notification_type === 'MISSION_ASSIGNED') {
+    return 'ChildMissions' as const
+  }
+
+  if (item.notification_type === 'MISSION_SUBMITTED') {
+    return 'ParentMissions' as const
+  }
+
+  return undefined
+}
+
 const mapAlarm = (item: NotificationListItemResponse): AlarmItem => ({
   id: item.notification_id ?? 0,
   group:
@@ -50,6 +65,7 @@ const mapAlarm = (item: NotificationListItemResponse): AlarmItem => ({
   receivedAt: formatReceivedAt(item.created_at),
   isRead: item.is_read ?? false,
   requestId: item.reference_type === 'ALLOWANCE_REQUEST' ? item.reference_id : undefined,
+  missionRouteName: resolveMissionRouteName(item),
 })
 
 const loadAlarms = async () => {
@@ -83,7 +99,12 @@ const readAlarm = async (alarm: AlarmItem) => {
     }
   }
   if (alarm.requestId) {
-    router.push({ name: 'AllowanceRequest', params: { requestId: alarm.requestId } })
+    await router.push({ name: 'AllowanceRequest', params: { requestId: alarm.requestId } })
+    return
+  }
+
+  if (alarm.missionRouteName) {
+    await router.push({ name: alarm.missionRouteName })
   }
 }
 
