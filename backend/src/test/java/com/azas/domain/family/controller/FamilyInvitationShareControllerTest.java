@@ -12,12 +12,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,8 +50,11 @@ class FamilyInvitationShareControllerTest {
         when(familyService.getFamilyInvitationInfo("invite-token"))
                 .thenReturn(invitation("김&lt;하나", FamilyInviteeType.PARENT));
 
-        String html = controller.getInvitationSharePreview("invite-token");
+        ResponseEntity<String> response =
+                controller.getInvitationSharePreview("invite-token");
+        String html = response.getBody();
 
+        assertEquals("text/html;charset=UTF-8", response.getHeaders().getContentType().toString());
         assertTrue(html.contains(
                 "아자스 | 부모와 자녀가 함께 만드는 미래 자산"
         ));
@@ -68,7 +73,7 @@ class FamilyInvitationShareControllerTest {
         when(familyService.getFamilyInvitationInfo("child-token"))
                 .thenReturn(invitation("송준수", FamilyInviteeType.CHILD));
 
-        String html = controller.getInvitationSharePreview("child-token");
+        String html = controller.getInvitationSharePreview("child-token").getBody();
 
         assertTrue(html.contains("송준수님이 당신을 자녀로 초대했어요!"));
         assertFalse(html.contains("<title>송준수님이 당신을 자녀로 초대했어요!"));
