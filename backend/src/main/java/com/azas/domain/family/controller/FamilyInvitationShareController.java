@@ -16,8 +16,8 @@ import org.springframework.web.util.HtmlUtils;
 @RequiredArgsConstructor
 public class FamilyInvitationShareController {
 
-    private static final String DEFAULT_DESCRIPTION =
-            "아자스에서 가족의 자산과 성장 기록을 함께 관리해보세요.";
+    private static final String SHARE_TITLE =
+            "아자스 | 부모와 자녀가 함께 만드는 미래 자산";
 
     private final FamilyService familyService;
 
@@ -41,7 +41,7 @@ public class FamilyInvitationShareController {
         String invitationUrl = buildInvitationUrl(inviteToken);
         String shareUrl = buildShareUrl(inviteToken);
         String previewImageUrl = buildPreviewImageUrl();
-        String title = buildTitle(
+        String description = buildInvitationDescription(
                 invitation.getInviterName(),
                 invitation.getInviteeType()
         );
@@ -70,21 +70,21 @@ public class FamilyInvitationShareController {
                 </body>
                 </html>
                 """.formatted(
-                escape(title),
-                escape(DEFAULT_DESCRIPTION),
+                escape(SHARE_TITLE),
+                escape(description),
                 escape(previewImageUrl),
                 escape(shareUrl),
-                escape(title),
-                escape(DEFAULT_DESCRIPTION),
+                escape(SHARE_TITLE),
+                escape(description),
                 escape(previewImageUrl),
                 escape(invitationUrl),
-                escape(title),
+                escape(SHARE_TITLE),
                 toJavaScriptString(invitationUrl),
                 escape(invitationUrl)
         );
     }
 
-    private String buildTitle(
+    private String buildInvitationDescription(
             String inviterName,
             FamilyInviteeType inviteeType
     ) {

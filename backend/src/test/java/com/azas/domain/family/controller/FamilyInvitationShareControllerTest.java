@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +50,9 @@ class FamilyInvitationShareControllerTest {
 
         String html = controller.getInvitationSharePreview("invite-token");
 
+        assertTrue(html.contains(
+                "아자스 | 부모와 자녀가 함께 만드는 미래 자산"
+        ));
         assertTrue(html.contains("김&amp;lt;하나님이 당신을 보호자로 초대했어요!"));
         assertTrue(html.contains("https://azas-seven.vercel.app/pwa-512x512.png"));
         assertTrue(html.contains(
@@ -67,6 +71,7 @@ class FamilyInvitationShareControllerTest {
         String html = controller.getInvitationSharePreview("child-token");
 
         assertTrue(html.contains("송준수님이 당신을 자녀로 초대했어요!"));
+        assertFalse(html.contains("<title>송준수님이 당신을 자녀로 초대했어요!"));
     }
 
     private FamilyInvitationInfoResponse invitation(
