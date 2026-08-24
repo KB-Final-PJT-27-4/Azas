@@ -119,6 +119,39 @@ class ChildcareReportServiceTest {
                         .getAnnualExpenseAmount()
         );
 
+        assertEquals(
+                new BigDecimal("1407000"),
+                response.getSummary()
+                        .getSameAgeMonthlyAverageAmount()
+        );
+
+        assertEquals(
+                new BigDecimal("453000"),
+                response.getSummary()
+                        .getSameAgeDifferenceAmount()
+        );
+
+        assertEquals(
+                new BigDecimal("32.2"),
+                response.getSummary()
+                        .getSameAgeDifferenceRate()
+        );
+
+        assertEquals(
+                "30대 부모 가구 월평균 양육비",
+                response.getComparisonBenchmark().getLabel()
+        );
+
+        assertEquals(
+                "30대",
+                response.getComparisonBenchmark().getAgeGroup()
+        );
+
+        assertEquals(
+                2023,
+                response.getComparisonBenchmark().getSourceYear()
+        );
+
         assertEquals(12, response.getMonthlyFlow().size());
 
         assertEquals(
@@ -143,6 +176,13 @@ class ChildcareReportServiceTest {
                 response.getMonthlyFlow()
                         .get(11)
                         .getExpenseAmount()
+        );
+
+        assertEquals(
+                new BigDecimal("1407000"),
+                response.getMonthlyFlow()
+                        .get(0)
+                        .getSameAgeAverageAmount()
         );
 
         verify(childcareReportMapper)
@@ -337,6 +377,7 @@ class ChildcareReportServiceTest {
                 MEMBER_ID,
                 CHILD_ID
         )).thenReturn(1);
+
     }
 
     private ChildcareMonthlyExpenseRow row(
