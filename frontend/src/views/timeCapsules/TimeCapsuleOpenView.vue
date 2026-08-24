@@ -27,6 +27,7 @@ type Memory = {
   photoUrl?: string
   contributedAt?: string
   isTextOnly?: boolean
+  photoIndex?: number
 }
 
 const allMemories = ref<Memory[]>([])
@@ -34,16 +35,6 @@ const years = computed(() => [...new Set(allMemories.value.map(({ year }) => yea
 const yearTabCount = computed(() => Math.max(years.value.length, 1))
 const emptyMemory: Memory = { year: new Date().getFullYear(), month: 1, title: '타임캡슐', short: '', letter: '' }
 const OPEN_FLASH_STORAGE_KEY = 'azas_time_capsule_open_flash'
-const shortMessages = [
-  '오늘의 웃음을 오래 기억할게',
-  '너와 함께라서 평범한 날도 특별했어',
-  '천천히, 너의 속도로 자라렴',
-] as const
-const elementaryShortMessages = [
-  '혼자서도 반짝이는 네 하루를 기억할게',
-  '조금 더 넓어진 세상에서도 우리는 네 편이야',
-  '네가 고른 꿈을 천천히 응원할게',
-] as const
 const memory2024PhotoUrls = [
   memory202401Url,
   memory202402Url,
@@ -58,75 +49,236 @@ const memory2024PhotoUrls = [
   memory202411Url,
   memory202412Url,
 ] as const
-const memoryTitlesByYear: Record<number, string[]> = {
+type LocalMemoryPreset = {
+  title: string
+  short: string
+  letter: string
+  photoIndex?: number
+}
+
+const createBabyLetter = (year: number, month: number, title: string, message: string) =>
+  `사랑하는 우리 아가에게.\n\n${year}년 ${month}월, ${title}을 오래 기억하고 싶어. ${message}\n\n작은 순간 하나도 놓치고 싶지 않아 사진과 마음을 이곳에 함께 담아두었어. 시간이 지나 다시 꺼내보는 날에도 오늘의 온기가 그대로 전해지기를 바라.`
+
+const createChildLetter = (year: number, month: number, title: string, message: string) =>
+  `사랑하는 우리 아이에게.\n\n${year}년 ${month}월, ${title}을 오래 기억하고 싶어. ${message}\n\n서툰 날도 있고 자신 있는 날도 있겠지만 괜찮아. 네가 배운 작은 용기와 웃음을 이곳에 담아둘게. 언제든 돌아보면 우리가 얼마나 너를 믿고 응원했는지 느낄 수 있기를 바라.`
+
+const createLegacyBabyLetter = (year: number, month: number, title: string) =>
+  `사랑하는 우리 아가에게.\n\n${year}년 ${month}월, ${title}을 기억하니? 작은 순간 하나도 놓치고 싶지 않아 사진과 마음을 이곳에 함께 담아두었어.\n\n앞으로 네가 어떤 꿈을 만나더라도 지금처럼 환하게 웃기를 바라. 서두르지 않아도 괜찮아. 우리는 언제나 네 곁에서 같은 마음으로 응원할게.`
+
+const localMemoryPresetsByYear: Record<number, LocalMemoryPreset[]> = {
   2023: [
-    '처음 마주 본 봄',
-    '작은 손의 온기',
-    '함께 웃던 오후',
-    '벚꽃 아래 우리',
-    '한 뼘 더 자란 날',
-    '햇살 가득한 소풍',
-    '첫 여름의 바다',
-    '달콤했던 생일',
-    '가을빛 산책',
-    '우리만의 여행',
-    '포근한 집의 밤',
-    '눈처럼 쌓인 사랑',
+    {
+      title: '처음 마주 본 봄',
+      short: '우리에게 처음 안긴 따뜻한 계절',
+      letter: createBabyLetter(2023, 1, '처음 마주 본 봄', '처음 품에 안긴 너를 보며 우리에게도 새로운 봄이 시작됐다는 걸 알았어.'),
+      photoIndex: 1,
+    },
+    {
+      title: '작은 손의 온기',
+      short: '손끝으로 전해진 첫 마음',
+      letter: createBabyLetter(2023, 2, '작은 손의 온기', '작은 손이 손가락을 꼭 잡던 순간, 말보다 먼저 마음이 전해졌어.'),
+      photoIndex: 4,
+    },
+    {
+      title: '눈처럼 쌓인 사랑',
+      short: '조용히 잠든 너에게 쌓이던 마음',
+      letter: createBabyLetter(2023, 3, '눈처럼 쌓인 사랑', '잠든 너를 바라보며 우리의 마음도 조용히, 아주 많이 쌓여갔어.'),
+      photoIndex: 0,
+    },
+    {
+      title: '함께 웃던 오후',
+      short: '웃음으로 가득 찬 우리 집',
+      letter: createBabyLetter(2023, 4, '함께 웃던 오후', '너의 웃음 하나에 집 안의 공기까지 환해지던 오후였어.'),
+      photoIndex: 5,
+    },
+    {
+      title: '벚꽃 아래 우리',
+      short: '봄바람 아래 함께 웃던 날',
+      letter: createBabyLetter(2023, 5, '벚꽃 아래 우리', '흩날리는 꽃잎 사이에서 너를 바라보던 마음이 아직도 선명해.'),
+      photoIndex: 7,
+    },
+    {
+      title: '한 뼘 더 자란 날',
+      short: '작은 발걸음이 우리에게 오던 순간',
+      letter: createBabyLetter(2023, 6, '한 뼘 더 자란 날', '두 팔을 벌리고 우리에게 걸어오던 모습이 네가 자라고 있다는 가장 반가운 신호였어.'),
+      photoIndex: 3,
+    },
+    {
+      title: '햇살 가득한 소풍',
+      short: '돗자리 위에 펼쳐진 우리의 웃음',
+      letter: createBabyLetter(2023, 7, '햇살 가득한 소풍', '따뜻한 햇살 아래 마주 앉아 웃던 시간이 평범해서 더 소중했어.'),
+      photoIndex: 10,
+    },
+    {
+      title: '첫 여름의 바다',
+      short: '파도 앞에서 꼭 잡은 작은 손',
+      letter: createBabyLetter(2023, 8, '첫 여름의 바다', '처음 만난 바다 앞에서 네 손을 잡고 천천히 걸었던 여름이야.'),
+      photoIndex: 8,
+    },
+    {
+      title: '달콤했던 생일',
+      short: '초 하나 앞에서 환하게 웃던 날',
+      letter: createBabyLetter(2023, 9, '달콤했던 생일', '작은 케이크 앞에서 반짝이던 네 표정이 우리에게는 가장 큰 선물이었어.'),
+      photoIndex: 2,
+    },
+    {
+      title: '한 뼘 더 자란 날',
+      short: '식탁 위로 자란 너의 웃음',
+      letter: createBabyLetter(2023, 10, '한 뼘 더 자란 날', '함께 먹고 웃는 시간이 늘어날수록 네 하루도 조금씩 더 넓어지고 있었어.'),
+      photoIndex: 6,
+    },
+    {
+      title: '다시 마주한 그 시절',
+      short: '그 옛날 나를 바라보던 당신의 눈빛',
+      letter: createBabyLetter(2023, 11, '다시 마주한 그 시절', '할머니, 할아버지가 너를 바라보는 눈빛에서 우리를 키워주던 오래된 사랑이 다시 보였어.'),
+      photoIndex: 9,
+    },
+    {
+      title: '가을빛 산책',
+      short: '계절 사이로 걸어온 우리',
+      letter: createBabyLetter(2023, 12, '가을빛 산책', '선선한 바람 사이로 함께 걷고 웃던 시간이 가을빛처럼 오래 남았어.'),
+      photoIndex: 11,
+    },
   ],
   2024: [
-    '처음 고른 파란 저금통',
-    '함께 적은 작은 약속',
-    '손끝에 남은 응원',
-    '기다림을 배운 봄',
-    '조금씩 모인 마음',
-    '웃음이 번진 주말',
-    '우리의 첫 계획표',
-    '네 이름으로 남긴 기록',
-    '가족이 모인 저녁',
-    '가을 햇살 속 다짐',
-    '오래 남을 칭찬',
-    '따뜻하게 닫은 한 해',
+    {
+      title: '아침 식탁의 약속',
+      short: '웃음으로 시작한 첫 계획',
+      letter: createChildLetter(2024, 1, '아침 식탁의 약속', '마주 앉아 나눈 작은 이야기가 너의 하루를 응원하는 약속이 되었어.'),
+    },
+    {
+      title: '새 가방을 멘 아침',
+      short: '조금 더 넓은 세상으로 걸어간 날',
+      letter: createChildLetter(2024, 2, '새 가방을 멘 아침', '가방을 메고 손을 흔들던 네 모습에서 부쩍 자란 마음이 보였어.'),
+    },
+    {
+      title: '손잡고 걷던 봄길',
+      short: '네가 고른 꿈을 함께 응원할게',
+      letter: createChildLetter(2024, 3, '손잡고 걷던 봄길', '함께 걸으며 올려다보던 네 눈빛이 앞으로 만날 세상을 기대하게 했어.'),
+    },
+    {
+      title: '촛불 앞의 작은 소원',
+      short: '기다림 끝에 환하게 웃던 순간',
+      letter: createChildLetter(2024, 4, '촛불 앞의 작은 소원', '초를 바라보며 웃던 네 얼굴에 올 한 해의 바람이 고스란히 담겨 있었어.'),
+    },
+    {
+      title: '돗자리 위의 다짐',
+      short: '조금씩 모인 마음이 하루를 채웠어',
+      letter: createChildLetter(2024, 5, '돗자리 위의 다짐', '햇살 아래 나눈 말들이 우리 가족의 작은 계획으로 차곡차곡 쌓였어.'),
+    },
+    {
+      title: '파도 앞의 첫 질주',
+      short: '웃음이 번진 여름 주말',
+      letter: createChildLetter(2024, 6, '파도 앞의 첫 질주', '바닷가를 향해 달리던 네 웃음이 여름 내내 우리 마음에 남았어.'),
+    },
+    {
+      title: '할머니 품의 칭찬',
+      short: '가족의 응원이 네 하루를 안아준 날',
+      letter: createChildLetter(2024, 7, '할머니 품의 칭찬', '가족이 함께 웃고 칭찬하던 시간이 너에게 든든한 힘이 되었기를 바라.'),
+    },
+    {
+      title: '조용히 펼친 책 한 권',
+      short: '네 이름으로 남긴 집중의 시간',
+      letter: createChildLetter(2024, 8, '조용히 펼친 책 한 권', '혼자 앉아 책장을 넘기던 네 모습이 새삼 의젓하게 느껴졌어.'),
+    },
+    {
+      title: '가을길의 약속',
+      short: '조금 더 넓어진 세상에서도 우리는 네 편이야',
+      letter: createChildLetter(2024, 9, '가을길의 약속', '가을빛 길을 함께 걸으며 어떤 날에도 네 곁에 있겠다고 마음속으로 약속했어.'),
+    },
+    {
+      title: '식탁 위의 이야기',
+      short: '오늘의 계획을 함께 나눈 저녁',
+      letter: createChildLetter(2024, 10, '식탁 위의 이야기', '밥상 앞에서 나눈 작은 대화들이 너의 생각을 더 선명하게 보여줬어.'),
+    },
+    {
+      title: '창가에 쌓인 겨울',
+      short: '오래 남을 생각을 조용히 담은 날',
+      letter: createChildLetter(2024, 11, '창가에 쌓인 겨울', '창밖을 바라보던 조용한 시간이 네 마음속에도 오래 남기를 바라.'),
+    },
+    {
+      title: '따뜻하게 닫은 한 해',
+      short: '한 해의 웃음을 품에 안은 밤',
+      letter: createChildLetter(2024, 12, '따뜻하게 닫은 한 해', '가족의 웃음 속에서 한 해를 마무리하던 그 밤이 따뜻하게 기억되면 좋겠어.'),
+    },
   ],
   2025: [
-    '다시 꺼낸 작은 꿈',
-    '어제보다 넓어진 세상',
-    '함께 기다린 선물',
-    '새봄에 남긴 편지',
-    '용기를 배운 오후',
-    '네가 고른 첫 목표',
-    '반짝이던 여름 기록',
-    '생일처럼 환한 날',
-    '걷다 발견한 마음',
-    '우리만 아는 여행',
-    '포근한 응원의 밤',
-    '다음 해로 건넨 사랑',
+    {
+      title: '다시 꺼낸 작은 꿈',
+      short: '오늘의 웃음을 오래 기억할게',
+      letter: createLegacyBabyLetter(2025, 1, '다시 꺼낸 작은 꿈'),
+    },
+    {
+      title: '어제보다 넓어진 세상',
+      short: '너와 함께라서 평범한 날도 특별했어',
+      letter: createLegacyBabyLetter(2025, 2, '어제보다 넓어진 세상'),
+    },
+    {
+      title: '함께 기다린 선물',
+      short: '천천히, 너의 속도로 자라렴',
+      letter: createLegacyBabyLetter(2025, 3, '함께 기다린 선물'),
+    },
+    {
+      title: '새봄에 남긴 편지',
+      short: '오늘의 웃음을 오래 기억할게',
+      letter: createLegacyBabyLetter(2025, 4, '새봄에 남긴 편지'),
+    },
+    {
+      title: '용기를 배운 오후',
+      short: '너와 함께라서 평범한 날도 특별했어',
+      letter: createLegacyBabyLetter(2025, 5, '용기를 배운 오후'),
+    },
+    {
+      title: '네가 고른 첫 목표',
+      short: '천천히, 너의 속도로 자라렴',
+      letter: createLegacyBabyLetter(2025, 6, '네가 고른 첫 목표'),
+    },
+    {
+      title: '반짝이던 여름 기록',
+      short: '오늘의 웃음을 오래 기억할게',
+      letter: createLegacyBabyLetter(2025, 7, '반짝이던 여름 기록'),
+    },
+    {
+      title: '생일처럼 환한 날',
+      short: '너와 함께라서 평범한 날도 특별했어',
+      letter: createLegacyBabyLetter(2025, 8, '생일처럼 환한 날'),
+    },
+    {
+      title: '걷다 발견한 마음',
+      short: '천천히, 너의 속도로 자라렴',
+      letter: createLegacyBabyLetter(2025, 9, '걷다 발견한 마음'),
+    },
+    {
+      title: '우리만 아는 여행',
+      short: '오늘의 웃음을 오래 기억할게',
+      letter: createLegacyBabyLetter(2025, 10, '우리만 아는 여행'),
+    },
+    {
+      title: '포근한 응원의 밤',
+      short: '너와 함께라서 평범한 날도 특별했어',
+      letter: createLegacyBabyLetter(2025, 11, '포근한 응원의 밤'),
+    },
+    {
+      title: '다음 해로 건넨 사랑',
+      short: '천천히, 너의 속도로 자라렴',
+      letter: createLegacyBabyLetter(2025, 12, '다음 해로 건넨 사랑'),
+    },
   ],
 }
-const getMemoryShort = (year: number, index: number) => {
-  const messages = year === 2024 ? elementaryShortMessages : shortMessages
-  return messages[index % messages.length] ?? messages[0]
-}
 
-const getMemoryLetter = (year: number, month: number, title: string) => {
-  if (year === 2024) {
-    return `사랑하는 우리 아이에게.\n\n${year}년 ${month}월, ${title}을 오래 기억하고 싶어. 어느새 가방을 메고 네 하루를 스스로 걸어가는 모습을 보며 엄마, 아빠는 매일 새롭게 감동하고 있어.\n\n서툰 날도 있고 자신 있는 날도 있겠지만 괜찮아. 네가 배운 작은 용기와 웃음을 이곳에 담아둘게. 언제든 돌아보면 우리가 얼마나 너를 믿고 응원했는지 느낄 수 있기를 바라.`
-  }
-
-  return `사랑하는 우리 아가에게.\n\n${year}년 ${month}월, ${title}을 기억하니? 작은 순간 하나도 놓치고 싶지 않아 사진과 마음을 이곳에 함께 담아두었어.\n\n앞으로 네가 어떤 꿈을 만나더라도 지금처럼 환하게 웃기를 바라. 서두르지 않아도 괜찮아. 우리는 언제나 네 곁에서 같은 마음으로 응원할게.`
-}
-
-const localTimeCapsuleMemories: Memory[] = Object.entries(memoryTitlesByYear).flatMap(
-  ([year, titles]) =>
-    titles.map((title, index) => {
+const localTimeCapsuleMemories: Memory[] = Object.entries(localMemoryPresetsByYear).flatMap(
+  ([year, presets]) =>
+    presets.map((preset, index) => {
       const memoryYear = Number(year)
       const month = index + 1
 
       return {
         year: memoryYear,
         month,
-        title,
-        short: getMemoryShort(memoryYear, index),
-        letter: getMemoryLetter(memoryYear, month, title),
+        title: preset.title,
+        short: preset.short,
+        letter: preset.letter,
+        photoIndex: preset.photoIndex,
       }
     }),
 )
@@ -213,7 +365,7 @@ const getPhotoStyle = (index: number) => {
   }
 
   if (memory?.year === 2024) {
-    const photoUrl = memory2024PhotoUrls[(memory.month - 1) % memory2024PhotoUrls.length]
+    const photoUrl = memory2024PhotoUrls[(memory.photoIndex ?? memory.month - 1) % memory2024PhotoUrls.length]
 
     return {
       backgroundImage: `url(${photoUrl})`,
@@ -222,8 +374,9 @@ const getPhotoStyle = (index: number) => {
     }
   }
 
-  const column = index % 3
-  const row = Math.floor(index / 3) % 4
+  const photoIndex = memory?.photoIndex ?? index
+  const column = photoIndex % 3
+  const row = Math.floor(photoIndex / 3) % 4
 
   return {
     backgroundImage: `url(${memorySheetUrl})`,
