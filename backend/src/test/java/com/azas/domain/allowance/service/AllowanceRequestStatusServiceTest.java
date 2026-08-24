@@ -77,6 +77,9 @@ class AllowanceRequestStatusServiceTest {
                                 && transfer.getAmount().compareTo(
                                 new BigDecimal("10000")
                         ) == 0
+                                && transfer.getMemo().equals(
+                                "용돈 요청 승인 이체"
+                        )
                 )
         );
     }
