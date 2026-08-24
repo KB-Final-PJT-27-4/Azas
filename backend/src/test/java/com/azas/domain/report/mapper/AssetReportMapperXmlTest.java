@@ -6,6 +6,7 @@ import org.apache.ibatis.session.Configuration;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,6 +64,39 @@ class AssetReportMapperXmlTest {
                 configuration.hasStatement(
                         NAMESPACE + "findGoalAccountSnapshots"
                 )
+        );
+    }
+
+    @Test
+    void childAssetReportAggregatesAllChildLinkedSavingsAccounts()
+            throws Exception {
+        String mapperXml;
+
+        try (InputStream inputStream =
+                     Resources.getResourceAsStream(RESOURCE_PATH)) {
+            mapperXml = new String(
+                    inputStream.readAllBytes(),
+                    StandardCharsets.UTF_8
+            );
+        }
+
+        assertTrue(
+                mapperXml.contains(
+                        "AND fa.account_product_type = 'SAVINGS'"
+                )
+        );
+        assertTrue(
+                mapperXml.contains(
+                        "ON fa.financial_account_id = at.financial_account_id"
+                )
+        );
+        assertTrue(
+                mapperXml.contains(
+                        "AND fa.child_id = #{childId}"
+                )
+        );
+        assertTrue(
+                !mapperXml.contains("fa.owner_type = 'CHILD'")
         );
     }
 }
