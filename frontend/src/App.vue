@@ -27,11 +27,30 @@ const shouldShowNotification = (notificationId?: number) => {
   return true
 }
 
+const resolveNotificationTargetPath = (item: NotificationListItemResponse) => {
+  if (item.reference_type === 'ALLOWANCE_REQUEST' && typeof item.reference_id === 'number') {
+    return `/allowance-requests/${item.reference_id}`
+  }
+
+  if (item.reference_type === 'MISSION') {
+    if (item.notification_type === 'MISSION_ASSIGNED') return '/child/missions'
+    if (item.notification_type === 'MISSION_SUBMITTED') return '/missions'
+  }
+
+  return undefined
+}
+
 const showPolledNotification = (item: NotificationListItemResponse) => {
   if (!shouldShowNotification(item.notification_id)) return
   const title = item.title?.trim() || '새 알림'
   const body = item.content?.trim() || '새로운 알림이 도착했어요.'
-  showHeaderNotification({ title, message: body })
+  showHeaderNotification({
+    title,
+    message: body,
+    notificationId: item.notification_id,
+    isRead: item.is_read ?? false,
+    targetPath: resolveNotificationTargetPath(item),
+  })
 }
 
 const handlePolledNotifications = (event: Event) => {
@@ -54,6 +73,8 @@ onMounted(() => {
         showHeaderNotification({
           title: message.title,
           message: message.body,
+          notificationId: Number.isFinite(notificationId) ? notificationId : undefined,
+          targetPath: message.actionUrl,
         })
       })
 
