@@ -163,7 +163,18 @@ class AllowanceRequestStatusServiceTest {
 
     @Test
     void doesNotApproveWhenTransferFails() {
-        stubPendingRequestForParent();
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
+                REQUEST_ID
+        )).thenReturn(row(AllowanceRequestStatus.PENDING));
+        when(allowanceRequestMapper.countAllowanceRequestParentAccess(
+                PARENT_ID, CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.findPrimaryParentDemandDepositAccountId(
+                PARENT_ID
+        )).thenReturn(SOURCE_ACCOUNT_ID);
+        when(allowanceRequestMapper.findPrimaryChildDemandDepositAccountId(
+                CHILD_ID
+        )).thenReturn(DESTINATION_ACCOUNT_ID);
         BusinessException transferFailure = new BusinessException(
                 ErrorCode.INSUFFICIENT_ACCOUNT_BALANCE
         );
