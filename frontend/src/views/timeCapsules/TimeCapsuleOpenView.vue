@@ -620,14 +620,14 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-          <div class="modal-body">
+          <div v-if="selectedMemoryHasPhoto" class="modal-body">
             <p class="modal-kicker">
               MEMORY {{ String((selectedMemoryIndex ?? currentIndex) + 1).padStart(2, '0') }} /
               {{ savingDurationMonths }}
             </p>
             <h2 id="full-letter-title">{{ selectedMemory.title }}</h2>
             <p class="modal-short">{{ selectedMemory.short }}</p>
-            <div v-if="selectedMemoryHasPhoto" class="letter-preview open">
+            <div class="letter-preview open">
               <b v-if="isLocalTimeCapsuleRoute">To. 사랑하는 우리 아가에게</b>
               <p>{{ getMemoryLetterText(selectedMemory) }}</p>
             </div>
@@ -1412,7 +1412,10 @@ onMounted(async () => {
 }
 
 .memory-modal--text {
-  background: #fffdf5;
+  width: min(350px, 100%);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .modal-close {
@@ -1467,27 +1470,15 @@ onMounted(async () => {
 
 .modal-note-wrap {
   position: relative;
-  min-height: 430px;
-  padding: 52px 32px 38px;
-  overflow: hidden;
+  padding: 44px 10px 26px;
+  overflow: visible;
   color: #4f5b60;
-  background: linear-gradient(145deg, #f7fbfd 0%, #eef5f8 54%, #fdfbf3 100%);
-  border-radius: 30px 30px 0 0;
-}
-
-.modal-note-wrap::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 36%;
-  background: linear-gradient(transparent, rgba(136, 142, 124, 0.32));
-  content: '';
+  background: transparent;
 }
 
 .modal-note-clip {
   position: absolute;
-  top: 34px;
+  top: 30px;
   left: 50%;
   z-index: 4;
   width: 64px;
@@ -1501,18 +1492,18 @@ onMounted(async () => {
 .modal-note-polaroid {
   position: relative;
   z-index: 2;
-  width: min(270px, 100%);
+  width: min(310px, 100%);
   margin: 18px auto 0;
-  padding: 18px 18px 28px;
+  padding: 18px 18px 30px;
   background: #fffefb;
   box-shadow:
-    0 24px 46px rgba(45, 59, 65, 0.17),
+    0 24px 46px rgba(45, 59, 65, 0.2),
     inset 0 0 0 1px rgba(216, 215, 207, 0.8);
   transform: rotate(-1.5deg);
 }
 
 .modal-note-paper {
-  min-height: 260px;
+  min-height: 275px;
   padding: 26px 24px;
   background:
     repeating-linear-gradient(
