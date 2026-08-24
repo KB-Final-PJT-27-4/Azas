@@ -592,6 +592,7 @@ onMounted(async () => {
         >
           <button
             class="modal-close"
+            :class="{ 'modal-close--text': !selectedMemoryHasPhoto }"
             type="button"
             aria-label="닫기"
             @click="isFullLetterModalOpen = false"
@@ -1432,6 +1433,18 @@ onMounted(async () => {
   border-radius: 50%;
   backdrop-filter: blur(8px);
   cursor: pointer;
+}
+
+.modal-close--text {
+  top: auto;
+  right: auto;
+  bottom: -42px;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  font-size: 26px;
+  background: rgba(31, 40, 43, 0.42);
+  transform: translateX(-50%);
 }
 
 .modal-photo-wrap {
