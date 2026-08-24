@@ -78,7 +78,7 @@ public class ChildDashboardService {
         MonthRange monthRange = currentMonthRange();
 
         ChildDashboardAccountRow account = childDashboardMapper
-                .findPrimaryAccountUsage(
+                .findPreferredAccountUsage(
                         child.getChildId(),
                         monthRange.startOccurredAt,
                         monthRange.endOccurredAtExclusive
