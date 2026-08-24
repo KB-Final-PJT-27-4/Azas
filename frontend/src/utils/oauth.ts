@@ -38,9 +38,19 @@ export const startOAuthLogin = (provider: OAuthProvider, invitation?: OAuthInvit
   }
 
   const state = createOAuthState()
-  sessionStorage.setItem(`${OAUTH_STATE_PREFIX}${provider}`, state)
-  if (invitation) sessionStorage.setItem(`${OAUTH_INVITE_PREFIX}${provider}`, JSON.stringify(invitation))
-  else sessionStorage.removeItem(`${OAUTH_INVITE_PREFIX}${provider}`)
+  const stateKey = getOAuthStateStorageKey(provider)
+  const invitationKey = getOAuthInvitationStorageKey(provider, state)
+
+  // OAuth provider를 거쳤다가 돌아오는 과정에서도 초대 문맥을 복원할 수 있도록
+  // 같은 출처의 두 저장소에 일시적으로 보관한다. 실제 초대 토큰은 URL state에 넣지 않는다.
+  sessionStorage.setItem(stateKey, state)
+  localStorage.setItem(stateKey, state)
+
+  if (invitation) {
+    const invitationValue = JSON.stringify(invitation)
+    sessionStorage.setItem(invitationKey, invitationValue)
+    localStorage.setItem(invitationKey, invitationValue)
+  }
 
   const parameters = new URLSearchParams({
     client_id: clientId,
@@ -55,10 +65,16 @@ export const startOAuthLogin = (provider: OAuthProvider, invitation?: OAuthInvit
   window.location.assign(`${config.authorizationUrl}?${parameters.toString()}`)
 }
 
-export const consumeOAuthInvitation = (provider: OAuthProvider): OAuthInvitationContext | undefined => {
-  const key = `${OAUTH_INVITE_PREFIX}${provider}`
-  const value = sessionStorage.getItem(key)
+export const consumeOAuthInvitation = (
+  provider: OAuthProvider,
+  state: string | null,
+): OAuthInvitationContext | undefined => {
+  if (!state) return undefined
+
+  const key = getOAuthInvitationStorageKey(provider, state)
+  const value = sessionStorage.getItem(key) ?? localStorage.getItem(key)
   sessionStorage.removeItem(key)
+  localStorage.removeItem(key)
   if (!value) return undefined
   try {
     return JSON.parse(value) as OAuthInvitationContext
@@ -68,12 +84,19 @@ export const consumeOAuthInvitation = (provider: OAuthProvider): OAuthInvitation
 }
 
 export const consumeOAuthState = (provider: OAuthProvider, returnedState: string | null) => {
-  const key = `${OAUTH_STATE_PREFIX}${provider}`
-  const expectedState = sessionStorage.getItem(key)
+  const key = getOAuthStateStorageKey(provider)
+  const expectedState = sessionStorage.getItem(key) ?? localStorage.getItem(key)
   sessionStorage.removeItem(key)
+  localStorage.removeItem(key)
 
   return Boolean(expectedState && returnedState && expectedState === returnedState)
 }
+
+const getOAuthStateStorageKey = (provider: OAuthProvider) =>
+  `${OAUTH_STATE_PREFIX}${provider}`
+
+const getOAuthInvitationStorageKey = (provider: OAuthProvider, state: string) =>
+  `${OAUTH_INVITE_PREFIX}${provider}_${state}`
 
 const createOAuthState = () => {
   if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
