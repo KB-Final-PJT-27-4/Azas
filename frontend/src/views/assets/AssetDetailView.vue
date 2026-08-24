@@ -33,6 +33,7 @@ const recentTransfers = ref<
     counterparty: string
     amount: number
     direction: '입금' | '출금'
+    childcareIncluded: boolean
   }>
 >([])
 const transferAccounts = ref<AssetAccountSelectOption[]>([])
@@ -158,6 +159,7 @@ const loadAccount = async () => {
       counterparty: transaction.counterparty_name ?? '거래 상대',
       amount: transaction.amount,
       direction: transaction.direction === 'CREDIT' ? '입금' : '출금',
+      childcareIncluded: transaction.childcare_included ?? false,
     }))
     transferAccounts.value = [
       ...parentResponse.data.accounts.map((item) => ({
@@ -372,6 +374,7 @@ onMounted(loadAccount)
               :to="{
                 name: 'AssetTransactionDetail',
                 params: { assetId: account.id, transactionId: transfer.transactionId },
+                query: { childcareIncluded: String(transfer.childcareIncluded) },
               }"
               :aria-label="`${transfer.counterparty} ${formatWon(transfer.amount)} 거래 상세 보기`"
             >
@@ -385,6 +388,10 @@ onMounted(loadAccount)
                 <strong class="mt-1 block truncate text-[11px] font-extrabold">
                   {{ transfer.counterparty }}
                 </strong>
+                <span
+                  v-if="transfer.childcareIncluded"
+                  class="mt-1 inline-flex rounded-full bg-[#fff4cd] px-1.5 py-0.5 text-[9px] font-bold text-[#a87500]"
+                >양육비 포함</span>
               </div>
               <strong
                 class="shrink-0 text-[13px] font-extrabold"
