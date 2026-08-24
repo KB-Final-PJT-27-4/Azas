@@ -69,6 +69,11 @@ class FamilyInvitationServiceImplTest {
         );
         ReflectionTestUtils.setField(
                 familyService,
+                "familyInvitationShareUrlBase",
+                "http://localhost:8080/family-invitations"
+        );
+        ReflectionTestUtils.setField(
+                familyService,
                 "defaultExpirationHours",
                 24
         );
@@ -102,8 +107,9 @@ class FamilyInvitationServiceImplTest {
         assertEquals(FamilyInvitationStatus.PENDING, response.getStatus());
         assertNotNull(response.getInviteToken());
         assertEquals(
-                "http://localhost:5173/family-invitations/"
-                        + response.getInviteToken(),
+                "http://localhost:8080/family-invitations/"
+                        + response.getInviteToken()
+                        + "/share",
                 response.getInviteUrl()
         );
         verify(familyMapper).expirePendingFamilyInvitations(
