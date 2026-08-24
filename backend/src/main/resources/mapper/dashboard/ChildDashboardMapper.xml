@@ -21,7 +21,7 @@
         LIMIT 1
     </select>
 
-    <select id="findPrimaryAccountUsage"
+    <select id="findPreferredAccountUsage"
             resultType="com.azas.domain.dashboard.dto.ChildDashboardAccountRow">
         SELECT
             fa.financial_account_id AS accountId,
@@ -48,7 +48,6 @@
           AND fa.account_product_type = 'DEMAND_DEPOSIT'
           AND fa.account_status = 'ACTIVE'
           AND fa.link_status = 'ACTIVE'
-          AND fa.is_primary = 1
         GROUP BY
             fa.financial_account_id,
             fa.balance,
@@ -56,6 +55,7 @@
             fa.child_available_amount,
             fa.linked_at
         ORDER BY
+            fa.is_primary DESC,
             fa.linked_at DESC,
             fa.financial_account_id DESC
         LIMIT 1
