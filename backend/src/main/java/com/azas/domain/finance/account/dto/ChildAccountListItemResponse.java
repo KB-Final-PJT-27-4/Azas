@@ -38,6 +38,9 @@ public final class ChildAccountListItemResponse {
             example = "9600000.00")
     private final BigDecimal balance;
 
+    @JsonProperty("is_primary")
+    private final boolean isPrimary;
+
     public static ChildAccountListItemResponse from(
             ChildAccountListItemResult result
     ) {
@@ -46,7 +49,8 @@ public final class ChildAccountListItemResponse {
                 result.getAccountName(),
                 result.getAccountNumber(),
                 result.getAccountProductType(),
-                result.getBalance()
+                result.getBalance(),
+                result.isPrimary()
         );
     }
 }

@@ -91,7 +91,8 @@ public class ChildAccountListService {
                 row.getAccountName(),
                 decryptAccountNumber(row.getAccountNumberCiphertext()),
                 row.getAccountProductType(),
-                row.getBalance()
+                row.getBalance(),
+                row.isPrimary()
         );
     }
 

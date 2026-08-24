@@ -158,7 +158,8 @@
             fa.account_name,
             fa.account_number_ciphertext,
             fa.account_product_type,
-            fa.balance
+            fa.balance,
+            fa.is_primary
         FROM financial_account fa
         WHERE fa.owner_type = 'CHILD'
           AND fa.child_id = #{childId}

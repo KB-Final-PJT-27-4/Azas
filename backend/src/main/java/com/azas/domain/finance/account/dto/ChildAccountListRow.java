@@ -14,4 +14,5 @@ public class ChildAccountListRow {
     private byte[] accountNumberCiphertext;
     private String accountProductType;
     private BigDecimal balance;
+    private boolean isPrimary;
 }
