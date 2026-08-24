@@ -608,7 +608,6 @@ onMounted(async () => {
             </span>
           </div>
           <div v-else class="modal-note-wrap">
-            <i class="modal-note-clip" aria-hidden="true"></i>
             <div class="modal-note-polaroid">
               <div class="modal-note-paper">
                 <span>To. 사랑하는 너에게</span>
@@ -1470,41 +1469,29 @@ onMounted(async () => {
 
 .modal-note-wrap {
   position: relative;
-  padding: 44px 10px 26px;
+  padding: 22px 10px 26px;
   overflow: visible;
   color: #4f5b60;
   background: transparent;
 }
 
-.modal-note-clip {
-  position: absolute;
-  top: 30px;
-  left: 50%;
-  z-index: 4;
-  width: 64px;
-  height: 18px;
-  border-radius: 10px;
-  background: rgba(189, 178, 151, 0.56);
-  box-shadow: 0 4px 10px rgba(94, 72, 32, 0.22);
-  transform: translateX(-50%) rotate(-3deg);
-}
-
 .modal-note-polaroid {
   position: relative;
   z-index: 2;
-  width: min(310px, 100%);
-  margin: 18px auto 0;
-  padding: 18px 18px 30px;
+  width: min(300px, 100%);
+  margin: 0 auto;
+  padding: 14px 14px 31px;
   background: #fffefb;
   box-shadow:
-    0 24px 46px rgba(45, 59, 65, 0.2),
-    inset 0 0 0 1px rgba(216, 215, 207, 0.8);
-  transform: rotate(-1.5deg);
+    0 22px 42px rgba(45, 59, 65, 0.2),
+    0 2px 0 rgba(255, 255, 255, 0.8) inset,
+    inset 0 0 0 1px rgba(232, 229, 219, 0.9);
+  transform: rotate(-1.2deg);
 }
 
 .modal-note-paper {
-  min-height: 275px;
-  padding: 26px 24px;
+  min-height: 264px;
+  padding: 28px 24px;
   background:
     repeating-linear-gradient(
       to bottom,
@@ -1512,11 +1499,11 @@ onMounted(async () => {
       transparent 27px,
       rgba(185, 192, 186, 0.26) 28px
     ),
-    #fbfaf4;
-  border: 1px solid #d8d8d2;
+    #fffdf7;
+  border: 1px solid #e2e0d7;
   box-shadow:
-    inset 0 0 0 10px #f0f0eb,
-    inset 0 0 0 12px #d7d7cf;
+    inset 0 0 0 9px #f1f1ec,
+    inset 0 0 0 11px #d9d9d1;
 }
 
 .modal-note-paper span {
@@ -1539,7 +1526,7 @@ onMounted(async () => {
 }
 
 .modal-note-caption {
-  padding-top: 16px;
+  padding-top: 19px;
   text-align: center;
 }
 
