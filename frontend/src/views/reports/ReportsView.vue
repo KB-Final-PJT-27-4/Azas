@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import reportPigGraphImage from '@/assets/images/reports/report-pig-graph.png'
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
+import type { InsightItem } from '@/api/generated'
 import { useToast } from '@/composables/useToast'
 
 import ChildcareReportOverview from './ChildcareReportOverview.vue'
@@ -34,7 +35,22 @@ const goalCarousel = ref<HTMLElement | null>(null)
 const goalCarouselHeight = ref<number | null>(null)
 const displayedTotalAssets = ref(0)
 const previousMonthChangeAmount = ref(0)
+const insightItems = ref<InsightItem[]>([])
 let totalAssetsAnimationFrame: number | null = null
+
+const insightIconByType = {
+  MONTHLY_SAVING_COMPARISON: TrendingUp,
+  GOAL_PROGRESS: CheckCircle2,
+  MONTHLY_SAVING: CalendarDays,
+} as const
+
+const getInsightIcon = (type?: string) =>
+  insightIconByType[type as keyof typeof insightIconByType] ?? Target
+
+const formatInsightText = (text?: string) =>
+  (text?.trim() || '').replace(/-?\d+(?:\.\d+)?(?=원)/g, (amount) =>
+    Math.round(Number(amount)).toLocaleString('ko-KR'),
+  )
 
 const setReportTab = (tab: ReportTab) => {
   activeTab.value = tab
@@ -130,6 +146,7 @@ onMounted(async () => {
         item.report_year === now.getFullYear() && item.report_month === now.getMonth() + 1,
     )
     previousMonthChangeAmount.value = currentMonthReport?.total_asset_change_amount ?? 0
+    insightItems.value = data.insight_items ?? []
     goalReports.value = (data.goal_summary ?? []).map((goal) => ({
       id: goal.financial_goal_id ?? 0,
       name: goal.title ?? '금융 목표',
@@ -379,47 +396,38 @@ onBeforeUnmount(() => {
           </div>
           <div class="mt-4 grid gap-3">
             <article
+              v-for="(insight, index) in insightItems"
+              :key="`${insight.type ?? 'insight'}-${index}`"
               class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4"
             >
-              <TrendingUp
+              <component
+                :is="getInsightIcon(insight.type)"
                 class="shrink-0 text-[var(--color-selected-text)]"
                 :size="27"
                 :stroke-width="2.2"
+                aria-hidden="true"
               />
               <div>
-                <strong class="text-sm">지난달보다 90,000원을 더 저축했어요.</strong>
+                <strong class="text-sm">{{ formatInsightText(insight.title) }}</strong>
                 <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
-                  꾸준한 저축 흐름이 아주 좋아요.
+                  {{ formatInsightText(insight.description) }}
                 </p>
               </div>
             </article>
             <article
+              v-if="insightItems.length === 0"
               class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4"
             >
-              <CheckCircle2
+              <Target
                 class="shrink-0 text-[var(--color-selected-text)]"
                 :size="27"
                 :stroke-width="2.2"
+                aria-hidden="true"
               />
               <div>
-                <strong class="text-sm">대학자금 목표의 절반에 가까워졌어요.</strong>
+                <strong class="text-sm">이번 달 인사이트를 준비하고 있어요.</strong>
                 <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
-                  현재 속도라면 계획대로 달성할 수 있어요.
-                </p>
-              </div>
-            </article>
-            <article
-              class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4"
-            >
-              <CalendarDays
-                class="shrink-0 text-[var(--color-selected-text)]"
-                :size="27"
-                :stroke-width="2.2"
-              />
-              <div>
-                <strong class="text-sm">목표 달성 시기를 4개월 앞당길 수 있어요.</strong>
-                <p class="mt-1 text-xs text-[var(--color-text-secondary)]">
-                  지금처럼 저축을 이어가 보세요.
+                  자산과 저축 기록이 쌓이면 맞춤 내용을 알려드릴게요.
                 </p>
               </div>
             </article>

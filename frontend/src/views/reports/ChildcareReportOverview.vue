@@ -6,7 +6,14 @@ import { formatReportWon, useChildcareReport } from '@/composables/useChildcareR
 
 const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
 
-const highestCategory = computed(() => childcareCategories[0] ?? { id: '', label: '분류 없음', amount: 0, averageAmount: 0, color: '#ddd' })
+const highestCategory = computed(() =>
+  [...childcareCategories].sort((left, right) => right.amount - left.amount)[0] ?? null,
+)
+const highestCategoryRate = computed(() =>
+  highestCategory.value && childcareReportSummary.currentMonthAmount > 0
+    ? Math.round((highestCategory.value.amount / childcareReportSummary.currentMonthAmount) * 100)
+    : 0,
+)
 const isAverageInfoOpen = ref(false)
 const displayedCurrentMonthAmount = ref(0)
 let currentMonthAmountAnimationFrame: number | null = null
@@ -17,6 +24,58 @@ const differenceRate = computed(() => childcareReportSummary.peerAverageAmount
 const comparisonMaxAmount = computed(() => Math.max(childcareReportSummary.currentMonthAmount, childcareReportSummary.peerAverageAmount, 1))
 const comparisonBarWidth = (amount: number) =>
   `${Math.max((amount / comparisonMaxAmount.value) * 100, 8)}%`
+const hasPeerAverage = computed(() => childcareReportSummary.peerAverageAmount > 0)
+const previousMonthDirection = computed(() => {
+  if (childcareReportSummary.previousMonthDifference > 0) return '늘었어요'
+  if (childcareReportSummary.previousMonthDifference < 0) return '줄었어요'
+  return '같아요'
+})
+const childcareInsights = computed(() => {
+  const insights: Array<{
+    key: string
+    icon: typeof Sparkles
+    title: string
+    description: string
+  }> = []
+
+  if (highestCategory.value) {
+    insights.push({
+      key: 'highest-category',
+      icon: Sparkles,
+      title: `${highestCategory.value.label} 비중이 가장 높아요.`,
+      description: `전체 양육비의 약 ${highestCategoryRate.value}%를 차지하고 있어요.`,
+    })
+  }
+
+  const changeAmount = childcareReportSummary.previousMonthDifference
+  const changeRate = Math.abs(childcareReportSummary.previousMonthRate)
+  insights.push({
+    key: 'previous-month',
+    icon: TrendingUp,
+    title:
+      changeAmount > 0
+        ? `지난달보다 지출이 ${changeRate}% 늘었어요.`
+        : changeAmount < 0
+          ? `지난달보다 지출이 ${changeRate}% 줄었어요.`
+          : '지난달과 지출 금액이 같아요.',
+    description:
+      changeAmount === 0
+        ? '현재의 지출 흐름을 유지하고 있어요.'
+        : `지난달과 ${formatReportWon(Math.abs(changeAmount))} 차이가 나요.`,
+  })
+
+  insights.push({
+    key: 'monthly-plan',
+    icon: CalendarDays,
+    title:
+      childcareReportSummary.currentMonthAmount > 0
+        ? `이번 달 아이 관련 지출은 ${formatReportWon(childcareReportSummary.currentMonthAmount)}이에요.`
+        : '이번 달 아이 관련 지출이 아직 없어요.',
+    description: '월별 지출 흐름을 확인하며 다음 달 예산을 계획해보세요.',
+  })
+
+  return insights
+})
 
 const animateCurrentMonthAmount = () => {
   if (currentMonthAmountAnimationFrame !== null) {
@@ -83,9 +142,9 @@ onBeforeUnmount(() => {
           <p class="mt-3 mb-0 text-[12px] text-[var(--color-text-secondary)]">
             지난달 대비
             <strong class="text-[var(--color-accent-yellow-text)]">
-              {{ formatReportWon(childcareReportSummary.previousMonthDifference) }}
+              {{ formatReportWon(Math.abs(childcareReportSummary.previousMonthDifference)) }}
             </strong>
-            늘었어요
+            {{ previousMonthDirection }}
           </p>
         </div>
         <span
@@ -117,7 +176,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="mt-6 grid gap-5">
-        <div class="grid gap-5" aria-label="우리 집과 동일 연령 평균 양육비 막대 그래프">
+        <div v-if="hasPeerAverage" class="grid gap-5" aria-label="우리 집과 동일 연령 평균 양육비 막대 그래프">
           <div class="min-w-0">
             <div class="flex items-center justify-between gap-3 text-[12px]">
               <strong>우리 집</strong>
@@ -154,6 +213,17 @@ onBeforeUnmount(() => {
         </div>
 
         <div
+          v-else
+          class="rounded-[16px] bg-[var(--color-surface-muted)] px-4 py-5 text-center"
+        >
+          <strong class="text-sm">동일 연령 평균을 준비하고 있어요</strong>
+          <p class="mt-1.5 mb-0 text-xs leading-5 text-[var(--color-text-secondary)]">
+            비교 데이터가 제공되면 우리 집 지출과 함께 보여드릴게요.
+          </p>
+        </div>
+
+        <div
+          v-if="hasPeerAverage"
           class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-[#edf0f2] pt-4 text-[11px]"
         >
           <span class="text-[var(--color-text-secondary)]">동일 연령 평균보다</span>
@@ -179,42 +249,22 @@ onBeforeUnmount(() => {
         이번 달 인사이트
       </h2>
       <div class="mt-4 grid gap-3">
-        <article class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4">
-          <Sparkles
+        <article
+          v-for="insight in childcareInsights"
+          :key="insight.key"
+          class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4"
+        >
+          <component
+            :is="insight.icon"
             class="shrink-0 text-[var(--color-accent-yellow-pressed)]"
             :size="27"
             :stroke-width="2.2"
+            aria-hidden="true"
           />
           <div>
-            <strong class="text-sm">{{ highestCategory.label }} 비중이 가장 높아요.</strong>
+            <strong class="text-sm">{{ insight.title }}</strong>
             <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-              전체 양육비의 약 40%를 차지하고 있어요.
-            </p>
-          </div>
-        </article>
-        <article class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4">
-          <TrendingUp
-            class="shrink-0 text-[var(--color-accent-yellow-pressed)]"
-            :size="27"
-            :stroke-width="2.2"
-          />
-          <div>
-            <strong class="text-sm">지난달보다 지출이 6.9% 늘었어요.</strong>
-            <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-              교육·의류 항목에서 증가 폭이 컸어요.
-            </p>
-          </div>
-        </article>
-        <article class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4">
-          <CalendarDays
-            class="shrink-0 text-[var(--color-accent-yellow-pressed)]"
-            :size="27"
-            :stroke-width="2.2"
-          />
-          <div>
-            <strong class="text-sm">다음 달 교육비를 미리 계획해보세요.</strong>
-            <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-              정기 지출을 먼저 나누면 예산 관리가 쉬워져요.
+              {{ insight.description }}
             </p>
           </div>
         </article>

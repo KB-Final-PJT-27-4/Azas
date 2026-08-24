@@ -7,6 +7,11 @@ const { childcareCategories, childcareReportSummary, load } = useChildcareReport
 
 const total = computed(() => childcareReportSummary.currentMonthAmount)
 const percentage = (amount: number) => total.value ? Math.round((amount / total.value) * 100) : 0
+const sortedCategories = computed(() =>
+  [...childcareCategories].sort((left, right) => right.amount - left.amount),
+)
+const largestCategory = computed(() => sortedCategories.value[0] ?? null)
+const smallestCategory = computed(() => sortedCategories.value.at(-1) ?? null)
 const donutSegments = computed(() => {
   let offset = 0
   return childcareCategories.map((category) => {
@@ -118,11 +123,11 @@ onMounted(load)
       <dl class="mt-4 mb-0 grid gap-3.5 text-[12px]">
         <div class="flex items-center justify-between gap-4 border-b border-[#e3e7ea] pb-3.5">
           <dt class="text-[var(--color-text-secondary)]">가장 큰 지출</dt>
-          <dd class="m-0 font-bold">교육/학습</dd>
+          <dd class="m-0 font-bold">{{ largestCategory?.label ?? '지출 내역 없음' }}</dd>
         </div>
         <div class="flex items-center justify-between gap-4 border-b border-[#e3e7ea] pb-3.5">
           <dt class="text-[var(--color-text-secondary)]">가장 적은 지출</dt>
-          <dd class="m-0 font-bold">교통</dd>
+          <dd class="m-0 font-bold">{{ smallestCategory?.label ?? '지출 내역 없음' }}</dd>
         </div>
         <div class="flex items-center justify-between gap-4">
           <dt class="text-[var(--color-text-secondary)]">총 지출</dt>
