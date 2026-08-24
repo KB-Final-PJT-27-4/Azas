@@ -32,6 +32,8 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
     private final TransferService transferService;
     private static final int DEFAULT_LIST_SIZE = 20;
     private static final int MAX_LIST_SIZE = 100;
+    private static final String ALLOWANCE_APPROVAL_TRANSFER_MEMO =
+            "용돈 요청 승인 이체";
 
     @Override
     @Transactional
@@ -462,7 +464,7 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                         sourceAccountId,
                         destinationAccountId,
                         allowanceRequest.getRequestedAmount(),
-                        "ALLOWANCE_APPROVAL"
+                        ALLOWANCE_APPROVAL_TRANSFER_MEMO
                 )
         );
 
@@ -496,7 +498,7 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                         request.getSourceAccountId(),
                         request.getDestinationAccountId(),
                         allowanceRequest.getRequestedAmount(),
-                        "용돈 요청 지급"
+                        ALLOWANCE_APPROVAL_TRANSFER_MEMO
                 );
 
         TransferCreateResponse transferResponse =
