@@ -17,8 +17,16 @@ export const childcareReportSummary = {
   previousMonthDifference: 120_000,
   previousMonthRate: 6.9,
   peerAverageAmount: 1_520_000,
-  annualAmount: 12_450_000,
-  ageGroup: '초등학생 (7~12세)',
+  annualAmount: 18_100_000,
+  ageGroup: '초등학생 자녀 가구',
+  comparisonLabel: '초등학생 자녀 가구 월평균 양육비',
+  benchmarkSourceName: '시연용 양육비 비교 데이터',
+  benchmarkSourceUrl: '',
+  benchmarkSourceYear: 2026,
+  benchmarkCalculationBasis: '시연을 위한 초등학생 자녀 가구 월평균 비교값',
+  topCategoryLabel: '교육/학습',
+  topCategoryAmount: 744_000,
+  topCategoryRate: 40,
 }
 
 export const childcareCategories: ChildcareCategory[] = [
@@ -67,18 +75,18 @@ export const childcareCategories: ChildcareCategory[] = [
 ]
 
 export const monthlyChildcareExpenses: MonthlyChildcareExpense[] = [
-  { month: '8월', amount: 1_050_000, averageAmount: 920_000 },
-  { month: '9월', amount: 1_140_000, averageAmount: 980_000 },
-  { month: '10월', amount: 1_260_000, averageAmount: 1_050_000 },
-  { month: '11월', amount: 1_210_000, averageAmount: 1_080_000 },
-  { month: '12월', amount: 1_390_000, averageAmount: 1_160_000 },
-  { month: '1월', amount: 1_180_000, averageAmount: 1_020_000 },
-  { month: '2월', amount: 1_060_000, averageAmount: 900_000 },
-  { month: '3월', amount: 1_370_000, averageAmount: 1_080_000 },
-  { month: '4월', amount: 1_740_000, averageAmount: 1_230_000 },
-  { month: '5월', amount: 1_780_000, averageAmount: 1_340_000 },
-  { month: '6월', amount: 2_210_000, averageAmount: 1_620_000 },
-  { month: '7월', amount: 2_580_000, averageAmount: 1_630_000 },
+  { month: '9월', amount: 1_280_000, averageAmount: 1_210_000 },
+  { month: '10월', amount: 1_350_000, averageAmount: 1_260_000 },
+  { month: '11월', amount: 1_420_000, averageAmount: 1_300_000 },
+  { month: '12월', amount: 1_560_000, averageAmount: 1_420_000 },
+  { month: '1월', amount: 1_310_000, averageAmount: 1_250_000 },
+  { month: '2월', amount: 1_240_000, averageAmount: 1_200_000 },
+  { month: '3월', amount: 1_480_000, averageAmount: 1_350_000 },
+  { month: '4월', amount: 1_540_000, averageAmount: 1_430_000 },
+  { month: '5월', amount: 1_630_000, averageAmount: 1_460_000 },
+  { month: '6월', amount: 1_690_000, averageAmount: 1_490_000 },
+  { month: '7월', amount: 1_740_000, averageAmount: 1_510_000 },
+  { month: '8월', amount: 1_860_000, averageAmount: 1_520_000 },
 ]
 
 export const formatReportWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
