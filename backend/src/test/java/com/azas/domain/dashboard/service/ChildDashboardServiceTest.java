@@ -129,7 +129,7 @@ class ChildDashboardServiceTest {
                 response.getNotificationSummary().getUnreadCount()
         );
 
-        verify(childDashboardMapper).findPrimaryAccountUsage(
+        verify(childDashboardMapper).findPreferredAccountUsage(
                 CHILD_ID,
                 MONTH_START_UTC,
                 NEXT_MONTH_START_UTC
@@ -256,7 +256,7 @@ class ChildDashboardServiceTest {
                 exception.getErrorCode()
         );
         verify(childDashboardMapper, never())
-                .findPrimaryAccountUsage(
+                .findPreferredAccountUsage(
                         any(Long.class),
                         any(LocalDateTime.class),
                         any(LocalDateTime.class)
@@ -292,7 +292,7 @@ class ChildDashboardServiceTest {
         when(childDashboardMapper.findActiveChildByMemberId(
                 MEMBER_ID
         )).thenReturn(child());
-        when(childDashboardMapper.findPrimaryAccountUsage(
+        when(childDashboardMapper.findPreferredAccountUsage(
                 CHILD_ID,
                 MONTH_START_UTC,
                 NEXT_MONTH_START_UTC
