@@ -14,4 +14,5 @@ public final class ChildAccountListItemResult {
     private final String accountNumber;
     private final String accountProductType;
     private final BigDecimal balance;
+    private final boolean isPrimary;
 }

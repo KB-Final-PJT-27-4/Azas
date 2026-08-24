@@ -89,6 +89,10 @@ class ChildDashboardServiceTest {
                 response.getSpendingSummary()
                         .getDisplayAvailableAmount()
         );
+        assertEquals(
+                new BigDecimal("96000.00"),
+                response.getSpendingSummary().getAccountBalance()
+        );
         assertTrue(
                 response.getSpendingSummary()
                         .isAccountBalanceHidden()
@@ -171,6 +175,10 @@ class ChildDashboardServiceTest {
                 new BigDecimal("96000.00"),
                 response.getSpendingSummary()
                         .getDisplayAvailableAmount()
+        );
+        assertEquals(
+                new BigDecimal("96000.00"),
+                response.getSpendingSummary().getAccountBalance()
         );
         assertFalse(
                 response.getSpendingSummary()

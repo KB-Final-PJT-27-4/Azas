@@ -1,6 +1,6 @@
 package com.azas.domain.allowance.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,9 +12,9 @@ public class UpdateAllowanceRequestStatus {
 
     private String action;
 
-    @JsonProperty("source_account_id")
+    @JsonIgnore
     private Long sourceAccountId;
 
-    @JsonProperty("destination_account_id")
+    @JsonIgnore
     private Long destinationAccountId;
 }

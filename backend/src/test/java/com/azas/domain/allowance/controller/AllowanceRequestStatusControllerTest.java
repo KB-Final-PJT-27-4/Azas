@@ -94,11 +94,9 @@ class AllowanceRequestStatusControllerTest {
                         )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {
-                                  "action": "APPROVE",
-                                  "source_account_id": 101,
-                                  "destination_account_id": 202
-                                }
+                                  {
+                                    "action": "APPROVE"
+                                  }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.allowance_request_id")
@@ -146,11 +144,9 @@ class AllowanceRequestStatusControllerTest {
                         )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {
-                                  "action": "APPROVE",
-                                  "source_account_id": 101,
-                                  "destination_account_id": 202
-                                }
+                                  {
+                                    "action": "APPROVE"
+                                  }
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code")
@@ -184,11 +180,9 @@ class AllowanceRequestStatusControllerTest {
                         )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {
-                                  "action": "APPROVE",
-                                  "source_account_id": 101,
-                                  "destination_account_id": 202
-                                }
+                                  {
+                                    "action": "APPROVE"
+                                  }
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code")

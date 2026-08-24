@@ -300,8 +300,7 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
         if (action == AllowanceRequestAction.APPROVE) {
             transferAllowance(
                     memberId,
-                    current,
-                    request
+                    current
             );
         }
 
@@ -403,7 +402,6 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                             .toUpperCase(Locale.ROOT)
             );
 
-            validateTransferAccounts(request, action);
             return action;
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(
@@ -432,6 +430,49 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                 || request.getDestinationAccountId() != null) {
             throw new BusinessException(
                     ErrorCode.INVALID_ALLOWANCE_ACTION
+            );
+        }
+    }
+
+    private void transferAllowance(
+            Long memberId,
+            AllowanceRequestDetailRow allowanceRequest
+    ) {
+        Long sourceAccountId =
+                allowanceRequestMapper
+                        .findPrimaryParentDemandDepositAccountId(memberId);
+        Long destinationAccountId =
+                allowanceRequestMapper
+                        .findPrimaryChildDemandDepositAccountId(
+                                allowanceRequest.getChildId()
+                        );
+
+        if (sourceAccountId == null || destinationAccountId == null) {
+            throw new BusinessException(
+                    ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND
+            );
+        }
+
+        TransferCreateResponse transferResponse = transferService.createTransfer(
+                memberId,
+                createAllowanceTransferIdempotencyKey(
+                        allowanceRequest.getAllowanceRequestId()
+                ),
+                new CreateTransferRequest(
+                        sourceAccountId,
+                        destinationAccountId,
+                        allowanceRequest.getRequestedAmount(),
+                        "ALLOWANCE_APPROVAL"
+                )
+        );
+
+        if (allowanceRequestMapper.linkAllowanceTransfer(
+                transferResponse.getFinancialTransferId(),
+                allowanceRequest.getAllowanceRequestId(),
+                memberId
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TRANSFER_PROCESSING_FAILED
             );
         }
     }

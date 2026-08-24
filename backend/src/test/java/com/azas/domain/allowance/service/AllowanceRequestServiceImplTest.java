@@ -141,9 +141,12 @@ class AllowanceRequestServiceImplTest {
         when(allowanceRequestMapper.countAllowanceRequestParentAccess(
                 MEMBER_ID, CHILD_ID
         )).thenReturn(1);
-        when(allowanceRequestMapper.countAllowanceDestinationAccount(
-                CHILD_ID, DESTINATION_ACCOUNT_ID
-        )).thenReturn(1);
+        when(allowanceRequestMapper.findPrimaryParentDemandDepositAccountId(
+                MEMBER_ID
+        )).thenReturn(SOURCE_ACCOUNT_ID);
+        when(allowanceRequestMapper.findPrimaryChildDemandDepositAccountId(
+                CHILD_ID
+        )).thenReturn(DESTINATION_ACCOUNT_ID);
         TransferCreateResponse transferResponse =
                 mock(TransferCreateResponse.class);
         when(transferResponse.getFinancialTransferId()).thenReturn(51L);
@@ -153,7 +156,9 @@ class AllowanceRequestServiceImplTest {
                 any(CreateTransferRequest.class)
         )).thenReturn(transferResponse);
         when(allowanceRequestMapper.linkAllowanceTransfer(
-                51L, 41L, MEMBER_ID
+                51L,
+                41L,
+                MEMBER_ID
         )).thenReturn(1);
         when(allowanceRequestMapper.updateAllowanceRequestStatus(
                 eq(41L), eq(AllowanceRequestStatus.APPROVED), any()

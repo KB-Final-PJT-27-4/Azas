@@ -322,4 +322,32 @@
           AND requested_by_member_id = #{memberId}
           AND status = 'SUCCEEDED'
     </update>
+
+    <select id="findPrimaryParentDemandDepositAccountId"
+            resultType="long">
+        SELECT fa.financial_account_id
+        FROM financial_account fa
+        WHERE fa.owner_type = 'PARENT'
+          AND fa.owner_member_id = #{memberId}
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.is_primary = 1
+        ORDER BY fa.financial_account_id
+        LIMIT 1
+    </select>
+
+    <select id="findPrimaryChildDemandDepositAccountId"
+            resultType="long">
+        SELECT fa.financial_account_id
+        FROM financial_account fa
+        WHERE fa.owner_type = 'CHILD'
+          AND fa.child_id = #{childId}
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.is_primary = 1
+        ORDER BY fa.financial_account_id
+        LIMIT 1
+    </select>
 </mapper>
