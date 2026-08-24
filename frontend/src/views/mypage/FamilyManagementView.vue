@@ -16,6 +16,7 @@ const isCreatingInvitation = ref(false)
 
 const childId = ref<number | null>(null)
 const childName = ref('아이')
+const inviterName = ref('보호자')
 const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; isMe: boolean; color: string }>>([])
 const createdInvitationLink = ref('')
 
@@ -29,6 +30,11 @@ const invitationDescription = computed(() =>
 )
 const invitationLink = computed(() => {
   return createdInvitationLink.value
+})
+const invitationShareText = computed(() => {
+  const invitationRole = inviteType.value === 'guardian' ? '보호자로' : '자녀로'
+
+  return `${inviterName.value}님이 당신을 ${invitationRole} 초대했어요!\n${invitationLink.value}`
 })
 
 const openInvitation = async (type: InviteType) => {
@@ -66,11 +72,13 @@ const closeInvitation = () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const [{ data }, child] = await Promise.all([
+    const [{ data }, child, { data: profile }] = await Promise.all([
       api.getFamilyMembersUsingGET(childId.value),
       getCurrentChild(),
+      api.getMyProfileUsingGET(),
     ])
     childName.value = child.name?.trim() || '아이'
+    inviterName.value = profile.name?.trim() || '보호자'
     familyMembers.value = (data.items ?? []).map((member, index) => ({
       id: member.member_id ?? index,
       name: member.name ?? '보호자',
@@ -90,9 +98,9 @@ const copyInvitationLink = async () => {
   if (isCreatingInvitation.value || !invitationLink.value) return
 
   try {
-    await navigator.clipboard.writeText(invitationLink.value)
+    await navigator.clipboard.writeText(invitationShareText.value)
     copied.value = true
-    showToast('초대 링크를 복사했습니다.', 'success')
+    showToast('초대 문구와 링크를 복사했습니다.', 'success')
   } catch {
     showToast('링크를 복사하지 못했습니다. 다시 시도해 주세요.', 'error')
   }
@@ -248,8 +256,8 @@ const copyInvitationLink = async () => {
               <div v-if="isCreatingInvitation" class="min-w-0 flex-1" aria-hidden="true">
                 <span class="block h-3 w-[88%] animate-pulse rounded-full bg-[#dfe8ec]"></span>
               </div>
-              <p v-else class="m-0 min-w-0 flex-1 truncate text-[12px] font-medium text-[#647783]">
-                {{ invitationLink }}
+              <p v-else class="m-0 min-w-0 flex-1 whitespace-pre-line break-all text-[12px] leading-5 font-medium text-[#647783]">
+                {{ invitationShareText }}
               </p>
             </div>
 
