@@ -50,23 +50,27 @@ const form = reactive({
 
 const isSubmitDisabled = computed(() =>
   isGuardianInvitation.value
-    ? !form.childName.trim()
+    ? false
     : !form.childName.trim() || !form.birthDate.trim(),
 )
 
 const submitRegistration = async () => {
   if (isSubmitDisabled.value) return
 
-  saveRegistrationDraft({ ...form, invited: isGuardianInvitation.value })
-
   try {
     if (isGuardianInvitation.value && props.inviteToken) {
-      await api.acceptFamilyInvitationUsingPOST(props.inviteToken, undefined, {
-        relation_type: form.guardianRole.toUpperCase() as 'FATHER' | 'MOTHER' | 'GUARDIAN',
+      await router.push({
+        name: 'Login',
+        query: {
+          inviteToken: props.inviteToken,
+          inviteeType: 'PARENT',
+          relationType: form.guardianRole.toUpperCase(),
+        },
       })
-      await router.push({ name: 'Home' })
       return
     }
+
+    saveRegistrationDraft({ ...form, invited: false })
     await api.createChildUsingPOST({
       name: form.childName.trim(),
       birth_date: form.birthDate,
