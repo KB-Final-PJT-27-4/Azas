@@ -39,6 +39,7 @@ const availableYears = computed(() =>
     (a, b) => b - a,
   ),
 )
+const canOpenTimeCapsule = computed(() => isCapsuleReleased.value && account.value.records.length > 0)
 const months = computed(() =>
   Array.from({ length: 12 }, (_, index) => ({ year: selectedYear.value, month: index + 1 })),
 )
@@ -115,11 +116,11 @@ onMounted(async () => {
     isCapsuleReleased.value = data.time_capsule?.d_day !== undefined
       ? data.time_capsule.d_day <= 0
       : Boolean(releaseDate && releaseDate <= today.toISOString().slice(0, 10))
-    if (import.meta.env.DEV && account.value.records.length === 0) {
-      applyLocalTimeCapsuleFallback()
-    }
-  } catch {
-    applyLocalTimeCapsuleFallback()
+  } catch (error) {
+    account.value.records = []
+    account.value.totalSavedAmount = 0
+    isCapsuleReleased.value = false
+    showToast(getApiErrorMessage(error, '타임캡슐 기록을 불러오지 못했습니다.'), 'error')
   }
 })
 
@@ -216,6 +217,11 @@ const changeYear = () => {
 }
 
 const goToTimeCapsule = () => {
+  if (!canOpenTimeCapsule.value) {
+    showToast('공개된 타임캡슐 기록이 있을 때 확인할 수 있어요.', 'error')
+    return
+  }
+
   const routePath =
     accountId.value === 'local'
       ? '/time-capsules/local/open'
@@ -273,6 +279,7 @@ const goToTimeCapsule = () => {
           캘린더
         </button>
         <button
+          v-if="canOpenTimeCapsule"
           class="relative py-3 text-sm font-bold text-[var(--color-text-secondary)]"
           type="button"
           role="tab"
