@@ -52,6 +52,7 @@ const capsuleAccounts = ref<
     savedAmount: number
     dDay?: number
     isFree?: boolean
+    isDemo?: boolean
   }>
 >([])
 const selectedFreeCapsuleId = ref<number | null>(null)
@@ -77,6 +78,18 @@ type UnlockCardRect = {
   scale: number
 }
 
+const DEMO_TIME_CAPSULE_ID = -1
+const DEMO_TIME_CAPSULE_NAME = '미리보기'
+const createDemoTimeCapsule = (): CapsuleAccount => ({
+  id: DEMO_TIME_CAPSULE_ID,
+  name: DEMO_TIME_CAPSULE_NAME,
+  createdAt: '2024.03.15',
+  savedAmount: 120000,
+  dDay: 0,
+  isFree: false,
+  isDemo: true,
+})
+
 const unlockPhase = ref<UnlockPhase>('idle')
 const unlockSelectedCapsule = ref<CapsuleAccount | null>(null)
 const unlockCardRect = ref<UnlockCardRect | null>(null)
@@ -95,7 +108,6 @@ const unlockLongPressState = {
 }
 
 const isUnlockOverlayOpen = computed(() => unlockPhase.value !== 'idle')
-const shouldShowUnlockReplayButton = computed(() => import.meta.env.DEV)
 const unlockStatusText = computed(() => '자물쇠를 눌러보세요')
 const unlockCardStyle = computed(() => {
   if (!unlockCardRect.value) return undefined
@@ -119,16 +131,7 @@ const applyLocalTimeCapsuleFallback = () => {
   childId.value = 1
   demandAccountId.value = 1
   isFreeCapsuleCreated.value = true
-  capsuleAccounts.value = [
-    {
-      id: 1,
-      name: '깨비 첫 타임캡슐',
-      createdAt: '2024.03.15',
-      savedAmount: 120000,
-      dDay: 0,
-      isFree: false,
-    },
-  ]
+  capsuleAccounts.value = [createDemoTimeCapsule()]
 }
 
 const pregnancyStages = [
@@ -318,14 +321,10 @@ const markUnlockAnimationSeen = (capsule: CapsuleAccount) => {
 }
 
 const getOpenRoute = (capsule: CapsuleAccount) =>
-  import.meta.env.DEV && capsule.id === 1 && capsule.name === '깨비 첫 타임캡슐'
-    ? '/time-capsules/local/open'
-    : `/time-capsules/${capsule.id}/open`
+  capsule.isDemo ? '/time-capsules/local/open' : `/time-capsules/${capsule.id}/open`
 
 const getListRoute = (capsule: CapsuleAccount) =>
-  import.meta.env.DEV && capsule.id === 1 && capsule.name === '깨비 첫 타임캡슐'
-    ? '/time-capsules/local'
-    : `/time-capsules/${capsule.id}`
+  capsule.isDemo ? '/time-capsules/local' : `/time-capsules/${capsule.id}`
 
 const startFreeCapsuleSheetDrag = (event: PointerEvent) => {
   if (event.button !== 0) return
@@ -460,14 +459,6 @@ const startUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
   startUnlockFlowFromElement(capsule, currentTarget)
 }
 
-const replayUnlockFlow = (capsule: CapsuleAccount, event: MouseEvent) => {
-  event.stopPropagation()
-  if (typeof window !== 'undefined') {
-    window.localStorage.removeItem(getUnlockSeenStorageKey(capsule.id))
-  }
-  startUnlockFlow(capsule, event)
-}
-
 const completeUnlockFlow = async () => {
   if (unlockPhase.value !== 'ready' || !unlockSelectedCapsule.value) return
 
@@ -498,7 +489,7 @@ const openCapsule = (capsule: CapsuleAccount, event: MouseEvent) => {
 
   if (!capsule.isFree) {
     if (isCapsuleReleased(capsule)) {
-      if (hasSeenUnlockAnimation(capsule)) {
+      if (!capsule.isDemo && hasSeenUnlockAnimation(capsule)) {
         navigateForward(getListRoute(capsule))
         return
       }
@@ -610,7 +601,7 @@ onMounted(async () => {
       }
     }
 
-    capsuleAccounts.value = capsuleItems.map((capsule) => ({
+    const apiCapsuleAccounts = capsuleItems.map((capsule) => ({
       id: capsule.time_capsule_id ?? 0,
       accountId: capsule.account_id,
       name: capsule.title ?? '타임캡슐',
@@ -619,10 +610,8 @@ onMounted(async () => {
       dDay: capsule.d_day,
       isFree: capsule.account_id != null && demandAccountIds.has(capsule.account_id),
     }))
-    isFreeCapsuleCreated.value = capsuleAccounts.value.some(({ isFree }) => isFree)
-    if (import.meta.env.DEV && capsuleAccounts.value.length === 0) {
-      applyLocalTimeCapsuleFallback()
-    }
+    capsuleAccounts.value = [createDemoTimeCapsule(), ...apiCapsuleAccounts]
+    isFreeCapsuleCreated.value = apiCapsuleAccounts.some(({ isFree }) => isFree)
   } catch (error) {
     showToast(getApiErrorMessage(error, '타임캡슐을 불러오지 못했습니다.'), 'error')
     applyLocalTimeCapsuleFallback()
@@ -867,14 +856,6 @@ onBeforeUnmount(() => {
           <p class="mt-3 text-xs font-bold text-[var(--color-selected-text)]">
             저축 금액 {{ capsule.savedAmount.toLocaleString('ko-KR') }}원
           </p>
-        </button>
-        <button
-          v-if="shouldShowUnlockReplayButton && isCapsuleReleased(capsule)"
-          class="unlock-replay-button mt-3"
-          type="button"
-          @click="replayUnlockFlow(capsule, $event)"
-        >
-          자물쇠 애니메이션 다시보기
         </button>
       </article>
       </template>
@@ -1297,30 +1278,6 @@ onBeforeUnmount(() => {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   filter: drop-shadow(0 0 4px rgb(174 218 241 / 32%));
-}
-
-.unlock-replay-button {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  min-height: 34px;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #cfe8f7;
-  border-radius: 11px;
-  background: #f6fcff;
-  color: #4d9ed7;
-  font-size: 11px;
-  font-weight: 800;
-  transition:
-    background-color 120ms ease,
-    transform 120ms ease;
-}
-
-.unlock-replay-button:active {
-  background: #e9f8ff;
-  transform: scale(0.985);
 }
 
 @keyframes silver-border-shimmer {

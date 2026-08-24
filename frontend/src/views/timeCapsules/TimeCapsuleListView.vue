@@ -73,7 +73,7 @@ const localTimeCapsuleRecords: TimeCapsuleRecord[] = [
 
 const applyLocalTimeCapsuleFallback = () => {
   account.value = {
-    name: '깨비 첫 타임캡슐',
+    name: '미리보기',
     description: '로컬 더미데이터로 열어보는 타임캡슐입니다.',
     totalSavedAmount: localTimeCapsuleRecords.reduce((sum, record) => sum + record.amount, 0),
     records: localTimeCapsuleRecords,
@@ -91,6 +91,11 @@ const getMonthCells = (year: number, month: number) => {
 }
 
 onMounted(async () => {
+  if (accountId.value === 'local') {
+    applyLocalTimeCapsuleFallback()
+    return
+  }
+
   try {
     const { data } = await api.getTimeCapsuleEntriesUsingGET(Number(accountId.value))
     account.value = {
@@ -212,7 +217,7 @@ const changeYear = () => {
 
 const goToTimeCapsule = () => {
   const routePath =
-    import.meta.env.DEV && accountId.value === 'local'
+    accountId.value === 'local'
       ? '/time-capsules/local/open'
       : `/time-capsules/${accountId.value}/open`
 
