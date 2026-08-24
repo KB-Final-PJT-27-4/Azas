@@ -49,10 +49,19 @@ const saveChild = async () => {
 
   if (!childId.value) return
   try {
+    const today = new Date()
+    const todayKey = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-')
+    const isExpected = birthDate.value > todayKey
+
     await api.updateChildUsingPATCH(childId.value, {
       name: name.value.trim(),
-      birth_date: birthDate.value,
-      birth_status: 'BORN',
+      birth_date: isExpected ? undefined : birthDate.value,
+      birth_status: isExpected ? 'EXPECTED' : 'BORN',
+      expected_birth_date: isExpected ? birthDate.value : undefined,
       gender: gender.value === '남자' ? 'MALE' : gender.value === '여자' ? 'FEMALE' : 'UNKNOWN',
     })
     showToast(`${name.value.trim()}의 정보가 저장되었습니다.`, 'success')
