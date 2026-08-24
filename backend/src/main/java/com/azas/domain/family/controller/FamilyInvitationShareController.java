@@ -6,6 +6,7 @@ import com.azas.domain.family.service.FamilyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,10 +30,10 @@ public class FamilyInvitationShareController {
 
     @GetMapping(
             value = "/family-invitations/{invite_token}/share",
-            produces = MediaType.TEXT_HTML_VALUE
+            produces = MediaType.TEXT_HTML_VALUE + ";charset=UTF-8"
     )
     @ResponseBody
-    public String getInvitationSharePreview(
+    public ResponseEntity<String> getInvitationSharePreview(
             @PathVariable("invite_token") String inviteToken
     ) {
         FamilyInvitationInfoResponse invitation =
@@ -46,7 +47,7 @@ public class FamilyInvitationShareController {
                 invitation.getInviteeType()
         );
 
-        return """
+        String html = """
                 <!doctype html>
                 <html lang="ko">
                 <head>
@@ -82,6 +83,10 @@ public class FamilyInvitationShareController {
                 toJavaScriptString(invitationUrl),
                 escape(invitationUrl)
         );
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/html;charset=UTF-8"))
+                .body(html);
     }
 
     private String buildInvitationDescription(
