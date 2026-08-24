@@ -43,6 +43,7 @@ const isNoticeOpen = ref(true)
 const monthlySavingAmount = ref(300000)
 
 const productTypeValue = ref('SAVING')
+const targetOwnerType = ref<'PARENT' | 'CHILD' | 'BOTH'>('CHILD')
 const isDemandDeposit = computed(() =>
   ['ACCOUNT', 'DEMAND_DEPOSIT', 'DEPOSIT'].includes(productTypeValue.value.toUpperCase()),
 )
@@ -163,17 +164,20 @@ const estimateMaturity = async () => {
 
 const openProduct = async () => {
   try {
+    const ownerType = targetOwnerType.value === 'PARENT' ? 'PARENT' : 'CHILD'
     if (!await hasParentDemandDepositAccount()) {
-      showToast('자녀 상품 가입 전에 부모 입출금계좌를 먼저 등록해 주세요.', 'error')
+      showToast('적금 가입 전에 부모 입출금계좌를 먼저 등록해 주세요.', 'error')
       await router.push({ name: 'Accounts', query: { next: router.currentRoute.value.fullPath } })
       return
     }
-    const childId = await resolveCurrentChildId()
+    const childId = ownerType === 'CHILD'
+      ? currentChildId.value ?? await resolveCurrentChildId()
+      : undefined
     const { data: openedAccount } = await api.openUsingPOST(undefined, {
       child_id: childId,
       financial_product_id: Number(props.productId),
       initial_deposit_amount: 0,
-      owner_type: 'CHILD',
+      owner_type: ownerType,
     })
     addOpenedSavingsToGoalSetupDraft(openedAccount.account_id)
     await router.push({ name: 'SavingsOpenComplete', query: { product: productName.value } })
@@ -201,6 +205,9 @@ onMounted(async () => {
     bankName.value = data.bank_name ?? ''
     summary.value = data.summary ?? data.curation_reason ?? ''
     productTypeValue.value = data.product_type ?? 'SAVING'
+    targetOwnerType.value = ['PARENT', 'CHILD', 'BOTH'].includes(data.target_owner_type ?? '')
+      ? data.target_owner_type as 'PARENT' | 'CHILD' | 'BOTH'
+      : 'CHILD'
     productSubtype.value = data.product_subtype ?? ''
     productBadges.value = (data.badges ?? []).flatMap(({ label }) => label ? [label] : [])
     curationReason.value = data.curation_reason ?? ''
