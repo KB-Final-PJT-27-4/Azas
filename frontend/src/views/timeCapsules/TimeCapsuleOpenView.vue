@@ -572,8 +572,8 @@ onMounted(async () => {
       </button>
 
       <div class="ending-actions">
-        <button class="list-button" type="button" @click="goToList">기록 리스트 보기</button>
         <button class="back-button" type="button" @click="goBack">돌아가기</button>
+        <button class="list-button" type="button" @click="goToList">기록 리스트 보기</button>
       </div>
     </section>
 
