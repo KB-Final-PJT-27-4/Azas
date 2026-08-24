@@ -1413,6 +1413,8 @@ onMounted(async () => {
 
 .memory-modal--text {
   width: min(350px, 100%);
+  max-height: none;
+  overflow: visible;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
