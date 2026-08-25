@@ -3,11 +3,19 @@ import { reactive, ref } from 'vue'
 import { api } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 import {
+  childcareCategories as demoCategories,
   childcareReportSummary as demoSummary,
   monthlyChildcareExpenses as demoMonthlyExpenses,
 } from '@/data/childcareReportData'
 
 export type MonthlyChildcareExpense = { month: string; amount: number; averageAmount: number }
+export type ChildcareCategory = {
+  id: string
+  label: string
+  amount: number
+  averageAmount: number
+  color: string
+}
 
 const childcareReportSummary = reactive({
   currentMonthAmount: 0,
@@ -28,6 +36,7 @@ const childcareReportSummary = reactive({
   topCategoryRate: 0,
 })
 const monthlyChildcareExpenses = reactive<MonthlyChildcareExpense[]>([])
+const childcareCategories = reactive<ChildcareCategory[]>([])
 const isUsingDemoData = ref(false)
 const loadedPeriod = ref('')
 let loading: Promise<void> | null = null
@@ -49,6 +58,7 @@ const applyDemoData = () => {
     monthlyChildcareExpenses.length,
     ...demoMonthlyExpenses.map((item) => ({ ...item })),
   )
+  childcareCategories.splice(0, childcareCategories.length, ...demoCategories.map((item) => ({ ...item })))
   isUsingDemoData.value = true
 }
 
@@ -72,6 +82,7 @@ const load = async () => {
     }
 
     isUsingDemoData.value = false
+    childcareCategories.splice(0, childcareCategories.length)
     childcareReportSummary.currentMonthAmount = data.summary?.total_expense_amount ?? 0
     childcareReportSummary.previousMonthDifference = data.summary?.previous_month_change_amount ?? 0
     childcareReportSummary.previousMonthRate = data.summary?.previous_month_change_rate ?? 0
@@ -123,6 +134,7 @@ export const formatReportManwon = (amount: number) => `${Math.round(amount / 10_
 export const useChildcareReport = () => ({
   childcareReportSummary,
   monthlyChildcareExpenses,
+  childcareCategories,
   isUsingDemoData,
   load,
 })
