@@ -3,6 +3,7 @@ package com.azas.global.config;
 import com.azas.domain.member.service.FakeSmsSender;
 import com.azas.domain.member.service.PhoneNumberProtector;
 import com.azas.domain.member.service.PhoneVerificationHasher;
+import com.azas.domain.member.service.SolapiSmsSender;
 import com.azas.domain.member.service.SmsSender;
 import com.azas.domain.notification.service.FakePushMessageSender;
 import com.azas.domain.notification.service.PushMessageSender;
@@ -77,6 +78,19 @@ class SpringContextConfigurationTest {
         ) {
             assertInstanceOf(
                     FakeSmsSender.class,
+                    rootContext.getBean(SmsSender.class)
+            );
+        }
+    }
+
+    @Test
+    void solapiProfileUsesSolapiSmsSender() {
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext("solapi")
+        ) {
+            assertInstanceOf(
+                    SolapiSmsSender.class,
                     rootContext.getBean(SmsSender.class)
             );
         }
@@ -475,6 +489,15 @@ class SpringContextConfigurationTest {
                         Map.entry(
                                 "PHONE_VERIFICATION_SECRET_BASE64",
                                 "YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODk="
+                        ),
+                        Map.entry("SOLAPI_API_KEY", "test-solapi-api-key"),
+                        Map.entry(
+                                "SOLAPI_API_SECRET",
+                                "test-solapi-api-secret"
+                        ),
+                        Map.entry(
+                                "SOLAPI_SENDER_NUMBER",
+                                "01012345678"
                         )
                 ))
         );
