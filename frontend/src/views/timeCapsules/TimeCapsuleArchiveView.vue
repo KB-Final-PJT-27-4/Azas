@@ -260,9 +260,9 @@ const closeMaturitySavingsSheet = () => {
   isMaturitySavingsSheetOpen.value = false
 }
 
-const goToSavingsRecommendation = () => {
+const goToProductRecommendation = () => {
   closeMaturitySavingsSheet()
-  navigateForward({ name: 'SavingsRecommendation' })
+  navigateForward({ name: 'Products' })
 }
 
 const clearUnlockTimers = () => {
@@ -1166,7 +1166,7 @@ onBeforeUnmount(() => {
             <button
               class="mt-6 flex h-[54px] w-full items-center justify-center rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
               type="button"
-              @click="goToSavingsRecommendation"
+              @click="goToProductRecommendation"
             >
               새 적금 알아보기
             </button>
