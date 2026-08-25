@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { CheckCircle2, ChevronDown, Gift, Heart, ShieldCheck, Sparkles } from 'lucide-vue-next'
 
 import { api, getApiErrorMessage } from '@/api'
@@ -40,7 +40,7 @@ const isRateInfoOpen = ref(true)
 const isBenefitsOpen = ref(true)
 const isMaturityOpen = ref(true)
 const isNoticeOpen = ref(true)
-const monthlySavingAmount = ref(300000)
+const monthlySavingAmount = ref(0)
 
 const productTypeValue = ref('SAVING')
 const targetOwnerType = ref<'PARENT' | 'CHILD' | 'BOTH'>('CHILD')
@@ -110,10 +110,30 @@ const benefits = computed(() => additionalBenefits.value.map((item, index) => ({
 const principalAmount = ref(0)
 const expectedInterest = ref(0)
 const expectedMaturityAmount = ref(0)
+const maturityEstimateError = ref('')
+const hasEditedMonthlyAmount = ref(false)
+
+const monthlyAmountError = computed(() => {
+  if (monthlySavingAmount.value <= 0) return '월 저축금액을 입력해 주세요.'
+  if (monthlyMin.value != null && monthlySavingAmount.value < monthlyMin.value) {
+    return `최소 ${formatWon(monthlyMin.value)}부터 입력해 주세요.`
+  }
+  if (monthlyMax.value != null && monthlySavingAmount.value > monthlyMax.value) {
+    return `최대 ${formatWon(monthlyMax.value)}까지 입력해 주세요.`
+  }
+  return ''
+})
+
+const resetMaturityEstimate = () => {
+  principalAmount.value = 0
+  expectedInterest.value = 0
+  expectedMaturityAmount.value = 0
+}
 
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
 const updateMonthlyAmount = (event: Event) => {
   const input = event.target as HTMLInputElement
+  hasEditedMonthlyAmount.value = true
   monthlySavingAmount.value = Number(input.value.replace(/\D/g, '')) || 0
 }
 
@@ -147,18 +167,27 @@ const toggleFavorite = async () => {
   }
 }
 
+let maturityEstimateRequestId = 0
 const estimateMaturity = async () => {
-  if (isDemandDeposit.value || !monthlySavingAmount.value) return
+  const requestId = ++maturityEstimateRequestId
+  maturityEstimateError.value = ''
+  if (isDemandDeposit.value || monthlyAmountError.value) {
+    resetMaturityEstimate()
+    return
+  }
   try {
     const { data } = await api.estimateMaturityUsingPOST(Number(props.productId), {
       monthly_amount: monthlySavingAmount.value,
       period_months: periodMonths.value ?? 12,
     })
+    if (requestId !== maturityEstimateRequestId) return
     principalAmount.value = data.principal_amount ?? 0
-    expectedInterest.value = data.estimated_interest_after_tax ?? data.estimated_interest_before_tax ?? 0
+    expectedInterest.value = data.estimated_interest_before_tax ?? 0
     expectedMaturityAmount.value = data.estimated_maturity_amount ?? 0
-  } catch {
-    principalAmount.value = monthlySavingAmount.value * (periodMonths.value ?? 12)
+  } catch (error) {
+    if (requestId !== maturityEstimateRequestId) return
+    resetMaturityEstimate()
+    maturityEstimateError.value = getApiErrorMessage(error, '만기금액을 계산하지 못했어요.')
   }
 }
 
@@ -190,6 +219,11 @@ let estimateTimer: number | undefined
 watch(monthlySavingAmount, () => {
   window.clearTimeout(estimateTimer)
   estimateTimer = window.setTimeout(estimateMaturity, 300)
+})
+
+onBeforeUnmount(() => {
+  window.clearTimeout(estimateTimer)
+  maturityEstimateRequestId += 1
 })
 
 onMounted(async () => {
@@ -226,7 +260,6 @@ onMounted(async () => {
     additionalBenefits.value = toDetailItems(data.additional_benefits)
     cautionItems.value = toDetailItems(data.cautions)
     isFavorite.value = data.is_bookmarked ?? false
-    if (!isDemandDeposit.value) await estimateMaturity()
   } catch (error) {
     showToast(getApiErrorMessage(error, '상품 정보를 불러오지 못했습니다.'), 'error')
   } finally {
@@ -534,12 +567,25 @@ onMounted(async () => {
           >
           <input
             id="monthly-saving-amount"
-            :value="monthlySavingAmount.toLocaleString('ko-KR')"
-            class="mt-2 h-11 w-full rounded-[11px] border border-[#dfe7ec] px-3 text-[13px] outline-none focus:border-[#2babe8]"
+            :value="monthlySavingAmount ? monthlySavingAmount.toLocaleString('ko-KR') : ''"
+            class="mt-2 h-11 w-full rounded-[11px] border border-[#dfe7ec] px-3 text-[16px] outline-none focus:border-[#2babe8]"
             type="text"
             inputmode="numeric"
+            :placeholder="monthlyMax != null ? `월 저축금액 (최대 ${formatWon(monthlyMax)})` : '월 저축금액 입력'"
             @input="updateMonthlyAmount"
           />
+          <p
+            v-if="hasEditedMonthlyAmount && monthlyAmountError"
+            class="mt-1.5 mb-0 text-[10px] text-[var(--color-danger)]"
+          >
+            {{ monthlyAmountError }}
+          </p>
+          <p
+            v-else-if="maturityEstimateError"
+            class="mt-1.5 mb-0 text-[10px] text-[var(--color-danger)]"
+          >
+            {{ maturityEstimateError }}
+          </p>
           <label class="mt-4 block text-[11px] font-bold">적용 예상금리</label>
           <div
             class="mt-2 flex h-11 items-center rounded-[11px] border border-[#dfe7ec] px-3 text-[13px]"
