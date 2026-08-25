@@ -68,7 +68,7 @@ class AssetReportMapperXmlTest {
     }
 
     @Test
-    void childAssetReportAggregatesAllChildLinkedSavingsAccounts()
+    void childAssetReportAggregatesChildOwnedAndGoalLinkedSavingsAccounts()
             throws Exception {
         String mapperXml;
 
@@ -90,9 +90,11 @@ class AssetReportMapperXmlTest {
                         "ON fa.financial_account_id = at.financial_account_id"
                 )
         );
+        assertTrue(mapperXml.contains("FROM financial_goal_account fga"));
+        assertTrue(mapperXml.contains("AND fg.child_id = #{childId}"));
         assertTrue(
                 mapperXml.contains(
-                        "AND fa.child_id = #{childId}"
+                        "fg.status IN ('ACTIVE', 'ACHIEVED')"
                 )
         );
         assertTrue(

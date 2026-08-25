@@ -189,7 +189,18 @@
                                 AND latest.latest_observed_at = abs.observed_at
                  INNER JOIN financial_account fa
                             ON fa.financial_account_id = abs.financial_account_id
-        WHERE fa.child_id = #{childId}
+        WHERE (
+                  fa.child_id = #{childId}
+                  OR EXISTS (
+                      SELECT 1
+                      FROM financial_goal_account fga
+                      INNER JOIN financial_goal fg
+                          ON fg.financial_goal_id = fga.financial_goal_id
+                      WHERE fga.financial_account_id = fa.financial_account_id
+                        AND fg.child_id = #{childId}
+                        AND fg.status IN ('ACTIVE', 'ACHIEVED')
+                  )
+              )
           AND fa.account_product_type = 'SAVINGS'
           AND fa.link_status = 'ACTIVE'
           AND fa.account_status IN ('ACTIVE', 'MATURED')
@@ -202,7 +213,18 @@
                  INNER JOIN financial_account fa
                             ON fa.financial_account_id = at.financial_account_id
         WHERE at.direction = 'CREDIT'
-          AND fa.child_id = #{childId}
+          AND (
+                  fa.child_id = #{childId}
+                  OR EXISTS (
+                      SELECT 1
+                      FROM financial_goal_account fga
+                      INNER JOIN financial_goal fg
+                          ON fg.financial_goal_id = fga.financial_goal_id
+                      WHERE fga.financial_account_id = fa.financial_account_id
+                        AND fg.child_id = #{childId}
+                        AND fg.status IN ('ACTIVE', 'ACHIEVED')
+                  )
+              )
           AND fa.account_product_type = 'SAVINGS'
           AND fa.link_status = 'ACTIVE'
           AND fa.account_status IN ('ACTIVE', 'MATURED')
