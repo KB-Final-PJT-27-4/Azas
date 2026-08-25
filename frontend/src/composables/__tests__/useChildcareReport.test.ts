@@ -77,8 +77,20 @@ describe('useChildcareReport', () => {
       annualAmount: 18_100_000,
       peerAverageAmount: 1_520_000,
       topCategoryLabel: '교육/학습',
-      topCategoryRate: 40,
+      topCategoryAmount: 600_000,
+      topCategoryRate: 32,
     })
+    expect(report.childcareCategories).toEqual([
+      expect.objectContaining({ label: '교육/학습', amount: 600_000, averageAmount: 500_000 }),
+      expect.objectContaining({ label: '돌봄/보육', amount: 340_000, averageAmount: 280_000 }),
+      expect.objectContaining({ label: '식비', amount: 270_000, averageAmount: 240_000 }),
+      expect.objectContaining({ label: '의류/생활', amount: 210_000, averageAmount: 160_000 }),
+      expect.objectContaining({ label: '의료/건강', amount: 180_000, averageAmount: 120_000 }),
+      expect.objectContaining({ label: '문화/여가·교통', amount: 260_000, averageAmount: 220_000 }),
+    ])
+    expect(report.childcareCategories.reduce((total, category) => total + category.amount, 0)).toBe(
+      1_860_000,
+    )
     expect(report.monthlyChildcareExpenses).toHaveLength(12)
     expect(report.monthlyChildcareExpenses.at(-1)).toEqual({
       month: '8월',
