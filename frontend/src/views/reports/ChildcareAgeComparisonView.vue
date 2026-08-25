@@ -2,13 +2,16 @@
 import { computed, onMounted } from 'vue'
 import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const { childcareReportSummary, load } = useChildcareReport()
+const { childcareCategories, childcareReportSummary, isUsingDemoData, load } = useChildcareReport()
 const comparisonText = computed(() => {
   const amount = childcareReportSummary.comparisonDifferenceAmount
   if (amount > 0) return `${formatReportWon(amount)} 높아요`
   if (amount < 0) return `${formatReportWon(Math.abs(amount))} 낮아요`
   return '같아요'
 })
+const categoryMaxAmount = computed(() =>
+  Math.max(...childcareCategories.map((category) => Math.max(category.amount, category.averageAmount)), 1),
+)
 onMounted(load)
 </script>
 
@@ -56,6 +59,47 @@ onMounted(load)
         >{{ comparisonText }}</strong
       >이에요.
     </div>
+
+    <section
+      v-if="isUsingDemoData && childcareCategories.length > 0"
+      class="mt-5 rounded-[22px] border border-[#e3e7ea] bg-white p-5 shadow-[0_5px_18px_rgba(64,78,86,0.04)]"
+      aria-labelledby="category-comparison-title"
+    >
+      <h2 id="category-comparison-title" class="m-0 text-[16px] font-extrabold">
+        양육비 카테고리 비교
+      </h2>
+      <p class="mt-2 mb-0 text-[12px] leading-5 text-[var(--color-text-secondary)]">
+        시연용 더미 데이터로, 이번 달 지출을 카테고리별로 비교해요.
+      </p>
+      <ul class="mt-5 grid list-none gap-4 p-0 m-0">
+        <li v-for="category in childcareCategories" :key="category.id">
+          <div class="flex items-center justify-between gap-3 text-[12px]">
+            <strong>{{ category.label }}</strong>
+            <span class="text-[var(--color-text-secondary)]">
+              우리 집 {{ formatReportWon(category.amount) }} · 비교 기준 {{ formatReportWon(category.averageAmount) }}
+            </span>
+          </div>
+          <div class="mt-2 grid gap-1.5">
+            <div class="h-2 overflow-hidden rounded-full bg-[#edf1f3]">
+              <div
+                class="h-full rounded-full"
+                :style="{ width: `${(category.amount / categoryMaxAmount) * 100}%`, backgroundColor: category.color }"
+              />
+            </div>
+            <div class="h-1.5 overflow-hidden rounded-full bg-[#f2f4f5]">
+              <div
+                class="h-full rounded-full bg-[#aeb9c2]"
+                :style="{ width: `${(category.averageAmount / categoryMaxAmount) * 100}%` }"
+              />
+            </div>
+          </div>
+        </li>
+      </ul>
+      <div class="mt-4 flex gap-4 text-[11px] text-[var(--color-text-secondary)]">
+        <span class="inline-flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-[var(--color-accent-yellow)]" />우리 집</span>
+        <span class="inline-flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-[#aeb9c2]" />비교 기준</span>
+      </div>
+    </section>
 
     <section
       class="mt-5 rounded-[22px] border border-[#e3e7ea] bg-white p-5 shadow-[0_5px_18px_rgba(64,78,86,0.04)]"
