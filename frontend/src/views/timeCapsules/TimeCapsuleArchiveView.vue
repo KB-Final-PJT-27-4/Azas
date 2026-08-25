@@ -555,7 +555,6 @@ onMounted(async () => {
         .filter(({ account_product_type }) => account_product_type === 'DEMAND_DEPOSIT')
         .map(({ account_id }) => account_id),
     )
-    const activeAccountIds = new Set(allAccounts.map(({ account_id }) => account_id))
     const eligibleAccountIds = [
       ...new Set([
         ...allAccounts
@@ -564,27 +563,7 @@ onMounted(async () => {
         ...demandAccountIds,
       ]),
     ]
-    const eligibleAccountIdSet = new Set(eligibleAccountIds)
     let capsuleItems = initialCapsules.time_capsules ?? []
-    const orphanedCapsules = capsuleItems.filter(
-      ({ account_id, time_capsule_id }) =>
-        account_id != null &&
-        time_capsule_id != null &&
-        (!activeAccountIds.has(account_id) || !eligibleAccountIdSet.has(account_id)),
-    )
-
-    if (orphanedCapsules.length > 0) {
-      const deleteResults = await Promise.allSettled(
-        orphanedCapsules.map(({ time_capsule_id }) =>
-          api.deleteTimeCapsuleUsingDELETE(time_capsule_id!),
-        ),
-      )
-      if (deleteResults.some(({ status }) => status === 'rejected')) {
-        showToast('삭제된 계좌의 일부 타임캡슐을 정리하지 못했습니다.', 'error')
-      }
-      const { data: capsulesAfterCleanup } = await api.getTimeCapsulesUsingGET(childId.value)
-      capsuleItems = capsulesAfterCleanup.time_capsules ?? []
-    }
 
     const capsuleAccountIds = new Set(
       capsuleItems
