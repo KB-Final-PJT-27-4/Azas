@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.timecapsule.mapper.TimeCapsuleMediaMapper">
+
+    <resultMap id="timeCapsuleMediaResultMap"
+               type="com.azas.domain.timecapsule.entity.TimeCapsuleMedia">
+        <id property="timeCapsuleMediaId" column="time_capsule_media_id"/>
+        <result property="timeCapsuleEntryId" column="time_capsule_entry_id"/>
+        <result property="mediaType" column="media_type"/>
+        <result property="objectKey" column="object_key"/>
+        <result property="mimeType" column="mime_type"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="slotNo" column="slot_no"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.azas.domain.timecapsule.entity.TimeCapsuleMedia"
+            useGeneratedKeys="true"
+            keyProperty="timeCapsuleMediaId"
+            keyColumn="time_capsule_media_id">
+        INSERT INTO time_capsule_media (
+            time_capsule_entry_id,
+            media_type,
+            object_key,
+            mime_type,
+            file_size,
+            slot_no,
+            status
+        ) VALUES (
+            #{timeCapsuleEntryId},
+            #{mediaType},
+            #{objectKey},
+            #{mimeType},
+            #{fileSize},
+            #{slotNo},
+            #{status}
+        )
+    </insert>
+
+    <select id="countByEntryIdAndSlotNo"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND slot_no = #{slotNo}
+    </select>
+
+    <select id="findByEntryIdAndIdForUpdate"
+            resultMap="timeCapsuleMediaResultMap">
+        SELECT
+            time_capsule_media_id,
+            time_capsule_entry_id,
+            media_type,
+            object_key,
+            mime_type,
+            file_size,
+            slot_no,
+            status,
+            created_at,
+            updated_at
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND time_capsule_media_id = #{timeCapsuleMediaId}
+        FOR UPDATE
+    </select>
+
+    <select id="findActiveByEntryId"
+            resultMap="timeCapsuleMediaResultMap">
+        SELECT
+            time_capsule_media_id,
+            time_capsule_entry_id,
+            media_type,
+            object_key,
+            mime_type,
+            file_size,
+            slot_no,
+            status,
+            created_at,
+            updated_at
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'ACTIVE'
+        ORDER BY slot_no ASC
+    </select>
+
+    <select id="findNotDeletedByEntryIdForUpdate"
+            resultMap="timeCapsuleMediaResultMap">
+        SELECT
+            time_capsule_media_id,
+            time_capsule_entry_id,
+            media_type,
+            object_key,
+            mime_type,
+            file_size,
+            slot_no,
+            status,
+            created_at,
+            updated_at
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status != 'DELETED'
+        ORDER BY slot_no ASC
+        FOR UPDATE
+    </select>
+
+    <update id="activatePendingMedia">
+        UPDATE time_capsule_media
+        SET status = 'ACTIVE'
+        WHERE status = 'PENDING_UPLOAD'
+          AND time_capsule_media_id = #{timeCapsuleMediaId}
+    </update>
+
+    <update id="setThumbnailIfAbsent">
+        UPDATE time_capsule_entry
+        SET thumbnail_object_key = #{thumbnailObjectKey}
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND thumbnail_object_key IS NULL
+    </update>
+
+    <update id="markNotDeletedMediaAsDeleted">
+        UPDATE time_capsule_media
+        SET status = 'DELETED'
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status != 'DELETED'
+    </update>
+
+    <select id="findObjectKeysByTimeCapsuleIdForUpdate"
+            resultType="string">
+        SELECT tcm.object_key
+        FROM time_capsule_media tcm
+        INNER JOIN time_capsule_entry tce
+            ON tce.time_capsule_entry_id = tcm.time_capsule_entry_id
+        WHERE tce.time_capsule_id = #{timeCapsuleId}
+          AND tcm.object_key IS NOT NULL
+          AND tcm.object_key != ''
+        FOR UPDATE
+    </select>
+
+    <delete id="deleteByTimeCapsuleId">
+        DELETE tcm
+        FROM time_capsule_media tcm
+        INNER JOIN time_capsule_entry tce
+            ON tce.time_capsule_entry_id = tcm.time_capsule_entry_id
+        WHERE tce.time_capsule_id = #{timeCapsuleId}
+    </delete>
+
+    <select id="countActiveByEntryId"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'ACTIVE'
+    </select>
+
+</mapper>

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.family.mapper.FamilyMapper">
+
+    <select id="countChildAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN child_parent cp ON c.child_id = cp.child_id
+        WHERE c.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="findFamilyMembers"
+            resultType="com.azas.domain.family.dto.FamilyGuardianResponse">
+        SELECT
+            m.member_id AS memberId,
+            m.name AS name,
+            m.email AS email,
+            m.profile_image_url AS profileImageUrl,
+            cp.relation_type AS relationType,
+            CASE
+                WHEN cp.relation_type IN ('MOTHER', 'FATHER') THEN 'PARENT'
+                WHEN cp.relation_type = 'GUARDIAN' THEN 'GUARDIAN'
+                END AS familyRole,
+            cp.created_at AS linkedAt
+        FROM child_parent cp
+                 INNER JOIN member m ON cp.member_id = m.member_id
+                 INNER JOIN child c ON cp.child_id = c.child_id
+        WHERE cp.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND cp.relation_type IN ('MOTHER', 'FATHER', 'GUARDIAN')
+        ORDER BY cp.created_at ASC
+    </select>
+
+    <select id="findChildMemberLinkByChildId"
+            resultType="com.azas.domain.family.dto.ChildMemberLinkResponse">
+        SELECT
+            c.child_id AS childId,
+            CASE
+                WHEN c.member_id IS NULL THEN 0
+                ELSE 1
+                END AS linked,
+            m.member_id AS childMemberId,
+            m.name AS childMemberName,
+            m.email AS childMemberEmail,
+            m.profile_image_url AS childMemberProfileImageUrl,
+            m.status AS childMemberStatus,
+            CASE
+                WHEN c.member_id IS NULL THEN NULL
+                ELSE c.updated_at
+                END AS linkedAt
+        FROM child c
+                 LEFT JOIN member m ON c.member_id = m.member_id
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="lockActiveChild" resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+            FOR UPDATE
+    </select>
+
+    <update id="expirePendingFamilyInvitations">
+        UPDATE family_invitation
+        SET status = 'EXPIRED',
+            updated_at = CURRENT_TIMESTAMP(6)
+        WHERE invitee_type = #{inviteeType}
+          AND (
+              (#{inviteeType} = 'PARENT'
+                  AND inviter_member_id = #{inviterMemberId})
+              OR
+              (#{inviteeType} = 'CHILD'
+                  AND child_id = #{childId})
+          )
+          AND status = 'PENDING'
+          AND expires_at &lt;= #{now}
+    </update>
+
+    <update id="expireUsableFamilyInvitations">
+        UPDATE family_invitation
+        SET status = 'EXPIRED',
+            updated_at = CURRENT_TIMESTAMP(6)
+        WHERE invitee_type = #{inviteeType}
+          AND (
+              (#{inviteeType} = 'PARENT'
+                  AND inviter_member_id = #{inviterMemberId})
+              OR
+              (#{inviteeType} = 'CHILD'
+                  AND child_id = #{childId})
+          )
+          AND status = 'PENDING'
+          AND expires_at &gt; #{now}
+    </update>
+
+    <insert id="insertFamilyInvitation"
+            parameterType="com.azas.domain.family.dto.FamilyInvitationInsertCommand"
+            useGeneratedKeys="true"
+            keyProperty="familyInvitationId"
+            keyColumn="family_invitation_id">
+        INSERT INTO family_invitation (
+            child_id,
+            inviter_member_id,
+            invitee_type,
+            invite_token_hash,
+            status,
+            expires_at,
+            created_at,
+            updated_at
+        ) VALUES (
+                     #{childId},
+                     #{inviterMemberId},
+                     #{inviteeType},
+                     #{inviteTokenHash},
+                     'PENDING',
+                     #{expiresAt},
+                     CURRENT_TIMESTAMP(6),
+                     CURRENT_TIMESTAMP(6)
+                 )
+    </insert>
+
+    <select id="findActiveChildrenManagedByMember"
+            resultType="com.azas.domain.family.dto.FamilyInvitationChildResponse">
+        SELECT DISTINCT
+            CAST(c.child_id AS SIGNED) AS childId,
+            c.name AS name
+        FROM child c
+                 INNER JOIN child_parent cp ON cp.child_id = c.child_id
+        WHERE cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+        ORDER BY c.child_id ASC
+    </select>
+
+    <insert id="insertFamilyInvitationChildren">
+        INSERT INTO family_invitation_child (
+            family_invitation_id,
+            child_id,
+            created_at
+        ) VALUES
+        <foreach collection="children" item="child" separator=",">
+            (
+                #{familyInvitationId},
+                #{child.childId},
+                CURRENT_TIMESTAMP(6)
+            )
+        </foreach>
+    </insert>
+
+    <select id="findInvitationChildren"
+            resultType="com.azas.domain.family.dto.FamilyInvitationChildResponse">
+        SELECT
+            CAST(c.child_id AS SIGNED) AS childId,
+            c.name AS name
+        FROM family_invitation_child fic
+                 INNER JOIN child c ON c.child_id = fic.child_id
+        WHERE fic.family_invitation_id = #{familyInvitationId}
+          AND c.status = 'ACTIVE'
+        ORDER BY fic.child_id ASC
+    </select>
+
+    <select id="findFamilyInvitationInfoByTokenHash"
+            resultType="com.azas.domain.family.dto.FamilyInvitationInfoProjection">
+        SELECT
+            fi.family_invitation_id AS familyInvitationId,
+            c.name AS childName,
+            inviter.name AS inviterName,
+            fi.invitee_type AS inviteeType,
+            fi.status AS status,
+            fi.expires_at AS expiresAt
+        FROM family_invitation fi
+                 INNER JOIN child c ON fi.child_id = c.child_id
+                 INNER JOIN member inviter ON fi.inviter_member_id = inviter.member_id
+        WHERE fi.invite_token_hash = #{inviteTokenHash}
+    </select>
+</mapper>

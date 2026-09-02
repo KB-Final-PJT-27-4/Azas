@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace=
+                "com.azas.domain.finance.autotransfer.mapper.AutoTransferRetryMapper">
+
+    <select id="findByIdempotencyKey"
+            resultType=
+                    "com.azas.domain.finance.autotransfer.dto.AutoTransferRetryRow">
+        SELECT financial_transfer_id AS financialTransferId,
+               origin_id AS originId,
+               retry_of_transfer_id AS retryOfTransferId,
+               status,
+               failure_code AS failureCode,
+               failure_message AS failureMessage,
+               idempotency_key AS idempotencyKey,
+               requested_at AS requestedAt,
+               completed_at AS completedAt
+        FROM financial_transfer
+        WHERE idempotency_key = #{idempotencyKey}
+    </select>
+
+    <select id="findLatestTransferForUpdate"
+            resultType=
+                    "com.azas.domain.finance.autotransfer.dto.AutoTransferRetryRow">
+        SELECT financial_transfer_id AS financialTransferId,
+               origin_id AS originId,
+               retry_of_transfer_id AS retryOfTransferId,
+               status,
+               failure_code AS failureCode,
+               failure_message AS failureMessage,
+               idempotency_key AS idempotencyKey,
+               requested_at AS requestedAt,
+               completed_at AS completedAt
+        FROM financial_transfer
+        WHERE origin_type = 'AUTO_TRANSFER_SCHEDULE'
+          AND origin_id = #{scheduleId}
+        ORDER BY financial_transfer_id DESC
+            LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <select id="findAccountForExecutionForUpdate"
+            resultType=
+                    "com.azas.domain.finance.autotransfer.dto.AutoTransferExecutionAccountRow">
+        SELECT financial_account_id AS financialAccountId,
+               owner_type AS ownerType,
+               owner_member_id AS ownerMemberId,
+               child_id AS childId,
+               account_name AS accountName,
+               account_product_type AS accountProductType,
+               account_status AS accountStatus,
+               link_status AS linkStatus,
+               balance
+        FROM financial_account
+        WHERE financial_account_id = #{accountId}
+            FOR UPDATE
+    </select>
+
+    <insert id="insertRetryTransfer"
+            useGeneratedKeys="true"
+            keyProperty="financialTransferId"
+            keyColumn="financial_transfer_id">
+        INSERT INTO financial_transfer (
+            child_id,
+            requested_by_member_id,
+            financial_goal_id,
+            source_account_id,
+            destination_account_id,
+            amount,
+            memo,
+            transfer_type,
+            status,
+            idempotency_key,
+            requested_at,
+            origin_type,
+            origin_id,
+            retry_of_transfer_id
+        ) VALUES (
+                     #{childId},
+                     #{memberId},
+                     #{financialGoalId},
+                     #{sourceAccountId},
+                     #{destinationAccountId},
+                     #{amount},
+                     '자동이체 실패 회차 재시도',
+                     'AUTO',
+                     'REQUESTED',
+                     #{idempotencyKey},
+                     #{requestedAt},
+                     'AUTO_TRANSFER_SCHEDULE',
+                     #{scheduleId},
+                     #{retryOfTransferId}
+                 )
+    </insert>
+
+    <update id="decreaseSourceBalance">
+        UPDATE financial_account
+        SET balance = balance - #{amount},
+            balance_updated_at = UTC_TIMESTAMP(6)
+        WHERE financial_account_id = #{accountId}
+          AND account_status = 'ACTIVE'
+          AND link_status = 'ACTIVE'
+          AND balance >= #{amount}
+    </update>
+
+    <update id="increaseDestinationBalance">
+        UPDATE financial_account
+        SET balance = balance + #{amount},
+            balance_updated_at = UTC_TIMESTAMP(6)
+        WHERE financial_account_id = #{accountId}
+          AND account_status = 'ACTIVE'
+          AND link_status = 'ACTIVE'
+    </update>
+
+    <insert id="insertDestinationBalanceSnapshot">
+        INSERT INTO account_balance_snapshot (
+            financial_account_id,
+            child_id,
+            balance,
+            observed_at
+        ) VALUES (
+            #{accountId},
+            #{childId},
+            #{balance},
+            #{observedAt}
+        )
+    </insert>
+
+    <insert id="insertTransaction"
+            useGeneratedKeys="true"
+            keyProperty="accountTransactionId"
+            keyColumn="account_transaction_id">
+        INSERT INTO account_transaction (
+            financial_account_id,
+            counterparty_account_id,
+            child_id,
+            transaction_fingerprint,
+            occurred_at,
+            direction,
+            amount,
+            balance_after,
+            description,
+            counterparty_name,
+            source_type,
+            recorded_at
+        ) VALUES (
+                     #{financialAccountId},
+                     #{counterpartyAccountId},
+                     #{childId},
+                     #{transactionFingerprint},
+                     #{occurredAt},
+                     #{direction},
+                     #{amount},
+                     #{balanceAfter},
+                     #{description},
+                     #{counterpartyName},
+                     'AUTO_TRANSFER',
+                     #{occurredAt}
+                 )
+    </insert>
+
+    <update id="markRetrySucceeded">
+        UPDATE financial_transfer
+        SET status = 'SUCCEEDED',
+            account_transaction_id = #{debitTransactionId},
+            credit_transaction_id = #{creditTransactionId},
+            completed_at = #{completedAt},
+            failure_code = NULL,
+            failure_message = NULL,
+            updated_at = #{completedAt}
+        WHERE financial_transfer_id = #{transferId}
+          AND status = 'REQUESTED'
+    </update>
+
+    <update id="markRetryFailed">
+        UPDATE financial_transfer
+        SET status = 'FAILED',
+            failure_code = #{failureCode},
+            failure_message = #{failureMessage},
+            completed_at = #{completedAt},
+            updated_at = #{completedAt}
+        WHERE financial_transfer_id = #{transferId}
+          AND status = 'REQUESTED'
+    </update>
+
+    <update id="updateScheduleLastResult">
+        UPDATE auto_transfer_schedule
+        SET last_transfer_status = #{status},
+            last_transferred_at = #{transferredAt},
+            updated_at = #{transferredAt}
+        WHERE auto_transfer_schedule_id = #{scheduleId}
+    </update>
+
+    <insert id="insertResultNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            #{memberId},
+            #{childId},
+            'SAVINGS',
+            CASE
+                WHEN #{status} = 'SUCCEEDED'
+                    THEN 'AUTO_TRANSFER_SUCCEEDED'
+                ELSE 'AUTO_TRANSFER_FAILED'
+                END,
+            CASE
+                WHEN #{status} = 'SUCCEEDED'
+                    THEN '자동이체가 완료되었어요'
+                ELSE '자동이체에 실패했어요'
+                END,
+            CASE
+                WHEN #{status} = 'SUCCEEDED'
+                    THEN CONCAT(
+                        FORMAT(#{amount}, 0),
+                        '원이 정상적으로 이체되었습니다.'
+                         )
+                ELSE COALESCE(
+                        #{failureMessage},
+                        '자동이체 처리에 실패했습니다.'
+                     )
+                END,
+            'AUTO_TRANSFER_SCHEDULE',
+            #{scheduleId},
+            JSON_OBJECT(
+                    'financial_transfer_id', #{transferId},
+                    'amount', #{amount},
+                    'status', #{status},
+                    'failure_code', #{failureCode}
+            ),
+            CONCAT(
+                    'AUTO_TRANSFER_RETRY:',
+                    #{transferId},
+                    ':',
+                    #{status}
+            ),
+            0,
+            #{createdAt}
+            WHERE COALESCE(
+            (
+                SELECT enabled
+                FROM notification_preference
+                WHERE member_id = #{memberId}
+                AND notification_category = 'SAVINGS'
+                ),
+            1
+            ) = 1
+    </insert>
+
+</mapper>

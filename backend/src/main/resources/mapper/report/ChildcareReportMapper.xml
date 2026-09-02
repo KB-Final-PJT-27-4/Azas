@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.report.mapper.ChildcareReportMapper">
+
+    <resultMap id="monthlyExpenseRowMap"
+               type="com.azas.domain.report.dto.ChildcareMonthlyExpenseRow">
+
+        <result property="reportMonth"
+                column="report_month"/>
+
+        <result property="expenseAmount"
+                column="expense_amount"/>
+
+    </resultMap>
+
+    <select id="findActiveChildId"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+            LIMIT 1
+    </select>
+
+    <select id="countParentAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                                AND c.status = 'ACTIVE'
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+    </select>
+
+    <select id="findMonthlyExpenses"
+            resultMap="monthlyExpenseRowMap">
+
+        SELECT
+        STR_TO_DATE(
+        DATE_FORMAT(
+        DATE_ADD(
+        tx.occurred_at,
+        INTERVAL 9 HOUR
+        ),
+        '%Y-%m-01'
+        ),
+        '%Y-%m-%d'
+        ) AS report_month,
+        COALESCE(SUM(tx.amount), 0) AS expense_amount
+        FROM account_transaction tx
+        INNER JOIN financial_account fa
+                ON fa.financial_account_id = tx.financial_account_id
+        WHERE tx.child_id = #{childId}
+        AND tx.direction = 'DEBIT'
+        AND fa.owner_type = 'PARENT'
+        AND tx.occurred_at
+        <![CDATA[>=]]> #{startOccurredAt}
+        AND tx.occurred_at
+        <![CDATA[<]]> #{endOccurredAtExclusive}
+
+        <!--
+            같은 자녀의 다른 계좌로 이동한 금액은
+            소비가 아니라 자산 이동이므로 제외합니다.
+        -->
+        AND tx.counterparty_account_id IS NULL
+
+        GROUP BY report_month
+        ORDER BY report_month ASC
+
+    </select>
+
+</mapper>

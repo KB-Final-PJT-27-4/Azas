@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.member.mapper.MemberMapper">
+
+    <resultMap id="memberResultMap"
+               type="com.azas.domain.member.entity.Member">
+        <id property="memberId" column="member_id"/>
+        <result property="email" column="email"/>
+        <result property="name" column="name"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="memberType" column="member_type"/>
+        <result property="status" column="status"/>
+        <result property="birthDate" column="birth_date"/>
+        <result property="phoneNumberCiphertext"
+                column="phone_number_ciphertext"/>
+        <result property="phoneNumberHash" column="phone_number_hash"/>
+        <result property="phoneVerifiedAt" column="phone_verified_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="memberColumns">
+        member_id,
+        email,
+        name,
+        profile_image_url,
+        member_type,
+        status,
+        birth_date,
+        phone_number_ciphertext,
+        phone_number_hash,
+        phone_verified_at,
+        created_at,
+        updated_at
+    </sql>
+
+    <select id="findById" resultMap="memberResultMap">
+        SELECT
+        <include refid="memberColumns"/>
+        FROM member
+        WHERE member_id = #{memberId}
+    </select>
+
+    <select id="findByEmail" resultMap="memberResultMap">
+        SELECT
+        <include refid="memberColumns"/>
+        FROM member
+        WHERE email = #{email}
+    </select>
+
+    <insert id="insert"
+            parameterType="com.azas.domain.member.entity.Member"
+            useGeneratedKeys="true"
+            keyProperty="memberId"
+            keyColumn="member_id">
+        INSERT INTO member (
+            email,
+            name,
+            profile_image_url,
+            member_type,
+            status
+        ) VALUES (
+                     #{email},
+                     #{name},
+                     #{profileImageUrl},
+                     #{memberType},
+                     #{status}
+                 )
+    </insert>
+
+    <update id="updateProfile"
+            parameterType="com.azas.domain.member.entity.Member">
+        UPDATE member
+        SET birth_date = #{birthDate},
+            profile_image_url = #{profileImageUrl},
+            phone_number_ciphertext =
+                #{phoneNumberCiphertext},
+            phone_number_hash = #{phoneNumberHash},
+            phone_verified_at = #{phoneVerifiedAt}
+        WHERE member_id = #{memberId}
+          AND status = 'ACTIVE'
+    </update>
+
+    <update id="anonymizeAndWithdrawIfActive">
+        UPDATE member
+        SET email = CONCAT(
+                'withdrawn-',
+                member_id,
+                '@azas.invalid'
+                    ),
+            name = '탈퇴회원',
+            profile_image_url = NULL,
+            birth_date = NULL,
+            phone_number_ciphertext = NULL,
+            phone_number_hash = NULL,
+            phone_verified_at = NULL,
+            status = 'WITHDRAWN',
+            updated_at = #{withdrawnAt}
+        WHERE member_id = #{memberId}
+          AND status = 'ACTIVE'
+    </update>
+
+</mapper>

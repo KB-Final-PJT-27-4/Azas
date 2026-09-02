@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mybatis="http://mybatis.org/schema/mybatis-spring"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd
+           http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring.xsd
+           http://www.springframework.org/schema/tx https://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <context:property-placeholder/>
+
+    <!--
+        인앱 알림 폴링처럼 짧은 조회가 반복되어도 매 요청마다 새 DB 연결을
+        만들지 않도록 애플리케이션 공용 커넥션 풀을 사용한다.
+    -->
+    <bean id="dataSource"
+          class="com.zaxxer.hikari.HikariDataSource"
+          destroy-method="close">
+        <property name="driverClassName" value="${DB_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}"/>
+        <property name="jdbcUrl" value="${DB_URL}"/>
+        <property name="username" value="${DB_USERNAME}"/>
+        <property name="password" value="${DB_PASSWORD}"/>
+        <property name="poolName" value="azas-db-pool"/>
+        <property name="maximumPoolSize" value="${DB_MAX_POOL_SIZE:10}"/>
+        <property name="minimumIdle" value="${DB_MIN_IDLE:2}"/>
+        <property name="connectionTimeout" value="${DB_CONNECTION_TIMEOUT_MILLIS:30000}"/>
+        <property name="validationTimeout" value="${DB_VALIDATION_TIMEOUT_MILLIS:5000}"/>
+        <property name="idleTimeout" value="${DB_IDLE_TIMEOUT_MILLIS:600000}"/>
+        <property name="maxLifetime" value="${DB_MAX_LIFETIME_MILLIS:1800000}"/>
+        <property name="initializationFailTimeout" value="${DB_INITIALIZATION_FAIL_TIMEOUT_MILLIS:1}"/>
+    </bean>
+
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:mybatis/mybatis-config.xml"/>
+        <property name="mapperLocations" value="classpath*:mapper/**/*.xml"/>
+    </bean>
+
+    <mybatis:scan base-package="com.azas.domain" annotation="org.apache.ibatis.annotations.Mapper"/>
+</beans>

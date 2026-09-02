@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.dashboard.mapper.ChildDashboardMapper">
+
+    <select id="findActiveChildByMemberId"
+            resultType="com.azas.domain.dashboard.dto.ChildDashboardChildRow">
+        SELECT
+            c.child_id AS childId,
+            c.name AS name,
+            c.profile_image_url AS profileImageUrl
+        FROM child c
+        INNER JOIN member m
+            ON m.member_id = c.member_id
+        WHERE c.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND m.member_type = 'CHILD'
+        LIMIT 1
+    </select>
+
+    <select id="findPreferredAccountUsage"
+            resultType="com.azas.domain.dashboard.dto.ChildDashboardAccountRow">
+        SELECT
+            fa.financial_account_id AS accountId,
+            fa.balance AS accountBalance,
+            fa.child_access_mode AS childUsageMode,
+            fa.child_available_amount AS monthlyBudgetAmount,
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN tx.direction = 'DEBIT'
+                         AND tx.occurred_at <![CDATA[>=]]> #{startOccurredAt}
+                         AND tx.occurred_at <![CDATA[<]]> #{endOccurredAtExclusive}
+                        THEN tx.amount
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS currentMonthSpentAmount
+        FROM financial_account fa
+        LEFT JOIN account_transaction tx
+            ON tx.financial_account_id = fa.financial_account_id
+        WHERE fa.child_id = #{childId}
+          AND fa.owner_type = 'CHILD'
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+        GROUP BY
+            fa.financial_account_id,
+            fa.balance,
+            fa.child_access_mode,
+            fa.child_available_amount,
+            fa.linked_at
+        ORDER BY
+            fa.is_primary DESC,
+            fa.linked_at DESC,
+            fa.financial_account_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findActivitySummary"
+            resultType="com.azas.domain.dashboard.dto.ChildDashboardActivityRow">
+        SELECT
+            (
+                SELECT COUNT(*)
+                FROM allowance_request ar
+                WHERE ar.child_id = #{childId}
+                  AND ar.status = 'PENDING'
+            ) AS pendingAllowanceRequestCount,
+            <choose>
+                <when test="accountId != null">
+                    (
+                        SELECT COUNT(*)
+                        FROM account_transaction tx
+                        WHERE tx.financial_account_id = #{accountId}
+                          AND tx.occurred_at <![CDATA[>=]]> #{startOccurredAt}
+                          AND tx.occurred_at <![CDATA[<]]> #{endOccurredAtExclusive}
+                    )
+                </when>
+                <otherwise>
+                    0
+                </otherwise>
+            </choose>
+            AS currentMonthTransactionCount
+    </select>
+
+    <select id="countActiveMissions" resultType="int">
+        SELECT COUNT(*)
+        FROM mission
+        WHERE child_id = #{childId}
+          AND status IN (
+              'ASSIGNED',
+              'SUBMITTED',
+              'REJECTED'
+          )
+    </select>
+
+    <select id="findMissionPreview"
+            resultType="com.azas.domain.dashboard.dto.ChildDashboardMissionRow">
+        SELECT
+            mission_id AS missionId,
+            title AS title,
+            description AS description,
+            reward_amount AS rewardAmount,
+            status AS status
+        FROM mission
+        WHERE child_id = #{childId}
+          AND status != 'CANCELED'
+        ORDER BY mission_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countUnreadNotifications" resultType="long">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE member_id = #{memberId}
+          AND is_read = 0
+    </select>
+
+</mapper>

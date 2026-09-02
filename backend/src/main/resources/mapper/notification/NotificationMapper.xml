@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC
+        "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace=
+                "com.azas.domain.notification.mapper.NotificationMapper">
+
+    <resultMap id="notificationListRowMap"
+               type=
+                       "com.azas.domain.notification.dto.NotificationListRow">
+
+        <id property="notificationId"
+            column="notification_id"/>
+
+        <result property="childId"
+                column="child_id"/>
+
+        <result property="notificationCategory"
+                column="notification_category"/>
+
+        <result property="notificationType"
+                column="notification_type"/>
+
+        <result property="title"
+                column="title"/>
+
+        <result property="content"
+                column="content"/>
+
+        <result property="referenceType"
+                column="reference_type"/>
+
+        <result property="referenceId"
+                column="reference_id"/>
+
+        <result property="metadataJson"
+                column="metadata_json"/>
+
+        <result property="read"
+                column="is_read"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+    </resultMap>
+
+    <select id="findNotifications"
+            parameterType=
+                    "com.azas.domain.notification.dto.NotificationListQuery"
+            resultMap="notificationListRowMap">
+
+        SELECT
+        n.notification_id,
+        n.child_id,
+        n.notification_category,
+        n.notification_type,
+        n.title,
+        n.content,
+        n.reference_type,
+        n.reference_id,
+        CAST(n.metadata_json AS CHAR) AS metadata_json,
+        n.is_read,
+        n.created_at
+        FROM notification n
+        WHERE n.member_id = #{memberId}
+
+        <if test="childId != null">
+            AND n.child_id = #{childId}
+        </if>
+
+        <if test="category != null">
+            AND n.notification_category = #{category}
+        </if>
+
+        <if test="notificationType != null">
+            AND n.notification_type = #{notificationType}
+        </if>
+
+        <if test="isRead != null">
+            AND n.is_read = #{isRead}
+        </if>
+
+        <choose>
+            <when test="afterId != null">
+                AND n.notification_id <![CDATA[>]]> #{afterId}
+                ORDER BY n.notification_id ASC
+            </when>
+
+            <otherwise>
+                <if test="cursorId != null">
+                    AND n.notification_id <![CDATA[<]]> #{cursorId}
+                </if>
+                ORDER BY n.notification_id DESC
+            </otherwise>
+        </choose>
+
+        LIMIT #{limit}
+    </select>
+
+    <select id="countUnreadNotifications"
+            resultType="long">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE member_id = #{memberId}
+          AND is_read = 0
+    </select>
+
+    <select id="findNotificationReadStatus"
+            resultType="java.lang.Boolean">
+        SELECT is_read
+        FROM notification
+        WHERE notification_id = #{notificationId}
+          AND member_id = #{memberId}
+    </select>
+
+    <update id="markNotificationAsRead">
+        UPDATE notification
+        SET is_read = 1
+        WHERE notification_id = #{notificationId}
+          AND member_id = #{memberId}
+          AND is_read = 0
+    </update>
+
+    <update id="markAllNotificationsAsRead">
+        UPDATE notification
+        SET is_read = 1
+        WHERE member_id = #{memberId}
+          AND is_read = 0
+    </update>
+</mapper>

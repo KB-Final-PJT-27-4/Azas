@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.auth.mapper.RefreshTokenMapper">
+
+    <resultMap id="refreshTokenResultMap"
+               type="com.azas.domain.auth.entity.RefreshToken">
+        <id property="refreshTokenId" column="refresh_token_id"/>
+        <result property="memberId" column="member_id"/>
+        <result property="tokenHash" column="token_hash"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="revokedAt" column="revoked_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="refreshTokenColumns">
+        refresh_token_id,
+        member_id,
+        token_hash,
+        expires_at,
+        revoked_at,
+        created_at
+    </sql>
+
+    <insert id="insert"
+            parameterType="com.azas.domain.auth.entity.RefreshToken"
+            useGeneratedKeys="true"
+            keyProperty="refreshTokenId"
+            keyColumn="refresh_token_id">
+        INSERT INTO refresh_token (
+            member_id,
+            token_hash,
+            expires_at
+        ) VALUES (
+                     #{memberId},
+                     #{tokenHash},
+                     #{expiresAt}
+                 )
+    </insert>
+
+    <select id="findByTokenHash"
+            resultMap="refreshTokenResultMap">
+        SELECT
+        <include refid="refreshTokenColumns"/>
+        FROM refresh_token
+        WHERE token_hash = #{tokenHash}
+    </select>
+
+    <update id="revokeIfActive">
+        UPDATE refresh_token
+        SET revoked_at = #{revokedAt}
+        WHERE token_hash = #{tokenHash}
+          AND revoked_at IS NULL
+          AND expires_at > #{revokedAt}
+    </update>
+
+    <update id="revokeAllActiveByMemberId">
+        UPDATE refresh_token
+        SET revoked_at = #{revokedAt}
+        WHERE member_id = #{memberId}
+          AND revoked_at IS NULL
+          AND expires_at > #{revokedAt}
+    </update>
+
+</mapper>

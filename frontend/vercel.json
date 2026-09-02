@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/((?!assets/|api/|favicon.ico$|firebase-messaging-sw.js$).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

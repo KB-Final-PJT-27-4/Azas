@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC
+        "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.allowance.mapper.AllowanceRequestMapper">
+
+    <select id="findActiveChildIdByMemberId"
+            resultType="long">
+        SELECT c.child_id
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+        WHERE c.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+          AND m.status = 'ACTIVE'
+          AND m.member_type = 'CHILD'
+    </select>
+
+    <insert id="insertAllowanceRequest"
+            parameterType=
+              "com.azas.domain.allowance.dto.AllowanceRequestInsertCommand"
+            useGeneratedKeys="true"
+            keyProperty="allowanceRequestId"
+            keyColumn="allowance_request_id">
+        INSERT INTO allowance_request (
+            child_id,
+            requested_amount,
+            message,
+            status,
+            requested_at,
+            updated_at
+        ) VALUES (
+            #{childId},
+            #{requestedAmount},
+            #{message},
+            'PENDING',
+            #{requestedAt},
+            #{requestedAt}
+        )
+    </insert>
+
+    <insert id="insertAllowanceRequestedNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            cp.member_id,
+            cp.child_id,
+            'ALLOWANCE',
+            'ALLOWANCE_REQUESTED',
+            '자녀가 용돈을 요청했어요',
+            CONCAT(
+                FORMAT(#{requestedAmount}, 0),
+                '원을 요청했어요. ',
+                #{message}
+            ),
+            'ALLOWANCE_REQUEST',
+            #{allowanceRequestId},
+            JSON_OBJECT(
+                'allowance_request_id', #{allowanceRequestId},
+                'requested_amount', #{requestedAmount}
+            ),
+            CONCAT(
+                'ALLOWANCE_REQUESTED:',
+                #{allowanceRequestId},
+                ':',
+                cp.member_id
+            ),
+            0,
+            #{createdAt}
+        FROM child_parent cp
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = cp.member_id
+                            AND np.notification_category = 'ALLOWANCE'
+                      ),
+                      1
+              ) = 1
+    </insert>
+
+    <insert id="insertAllowanceStatusNotification">
+        INSERT INTO notification (
+            member_id,
+            child_id,
+            notification_category,
+            notification_type,
+            title,
+            content,
+            reference_type,
+            reference_id,
+            metadata_json,
+            deduplication_key,
+            is_read,
+            created_at
+        )
+        SELECT
+            c.member_id,
+            c.child_id,
+            'ALLOWANCE',
+            #{notificationType},
+            #{title},
+            #{content},
+            'ALLOWANCE_REQUEST',
+            #{allowanceRequestId},
+            JSON_OBJECT(
+                'allowance_request_id', #{allowanceRequestId},
+                'status', #{notificationType}
+            ),
+            CONCAT(
+                #{notificationType},
+                ':',
+                #{allowanceRequestId},
+                ':',
+                c.member_id
+            ),
+            0,
+            #{createdAt}
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'CHILD'
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND COALESCE(
+                      (
+                          SELECT np.enabled
+                          FROM notification_preference np
+                          WHERE np.member_id = c.member_id
+                            AND np.notification_category = 'ALLOWANCE'
+                      ),
+                      1
+              ) = 1
+    </insert>
+
+    <resultMap id="allowanceRequestListRowMap"
+               type="com.azas.domain.allowance.dto.AllowanceRequestListRow">
+        <id property="allowanceRequestId"
+            column="allowance_request_id"/>
+        <result property="childId"
+                column="child_id"/>
+        <result property="requestedAmount"
+                column="requested_amount"/>
+        <result property="status"
+                column="status"/>
+        <result property="requestedAt"
+                column="requested_at"/>
+    </resultMap>
+
+    <select id="findActiveChildIdById"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="countAllowanceRequestAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+        WHERE c.child_id = #{childId}
+          AND c.status = 'ACTIVE'
+          AND (
+            c.member_id = #{memberId}
+                OR EXISTS (
+                SELECT 1
+                FROM child_parent cp
+                WHERE cp.child_id = c.child_id
+                  AND cp.member_id = #{memberId}
+            )
+            )
+    </select>
+
+    <select id="findAllowanceRequests"
+            parameterType=
+                    "com.azas.domain.allowance.dto.AllowanceRequestListQuery"
+            resultMap="allowanceRequestListRowMap">
+        SELECT
+        ar.allowance_request_id,
+        ar.child_id,
+        ar.requested_amount,
+        ar.status,
+        ar.requested_at
+        FROM allowance_request ar
+        WHERE ar.child_id = #{childId}
+
+        <if test="status != null">
+            AND ar.status = #{status}
+        </if>
+
+        <if test="cursorId != null">
+            AND ar.allowance_request_id
+            <![CDATA[<]]> #{cursorId}
+        </if>
+
+        ORDER BY ar.allowance_request_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findAllowanceRequestDetail"
+            resultMap="allowanceRequestDetailRowMap">
+        SELECT
+            ar.allowance_request_id,
+            ar.child_id,
+            ar.requested_amount,
+            ar.message,
+            ar.status,
+            ar.requested_at
+        FROM allowance_request ar
+                 INNER JOIN child c
+                            ON c.child_id = ar.child_id
+                                AND c.status = 'ACTIVE'
+        WHERE ar.allowance_request_id = #{allowanceRequestId}
+    </select>
+
+    <select id="findAllowanceRequestDetailForUpdate"
+            resultMap="allowanceRequestDetailRowMap">
+        SELECT
+            ar.allowance_request_id,
+            ar.child_id,
+            ar.requested_amount,
+            ar.message,
+            ar.status,
+            ar.requested_at
+        FROM allowance_request ar
+                 INNER JOIN child c
+                            ON c.child_id = ar.child_id
+                                AND c.status = 'ACTIVE'
+        WHERE ar.allowance_request_id = #{allowanceRequestId}
+        FOR UPDATE
+    </select>
+
+    <resultMap id="allowanceRequestDetailRowMap"
+               type="com.azas.domain.allowance.dto.AllowanceRequestDetailRow">
+        <id property="allowanceRequestId"
+            column="allowance_request_id"/>
+        <result property="childId"
+                column="child_id"/>
+        <result property="requestedAmount"
+                column="requested_amount"/>
+        <result property="message"
+                column="message"/>
+        <result property="status"
+                column="status"/>
+        <result property="requestedAt"
+                column="requested_at"/>
+    </resultMap>
+
+    <select id="countAllowanceRequestParentAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                                AND c.status = 'ACTIVE'
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.member_id = #{memberId}
+          AND cp.child_id = #{childId}
+    </select>
+
+    <select id="countAllowanceRequestChildAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child c
+                 INNER JOIN member m
+                            ON m.member_id = c.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'CHILD'
+        WHERE c.child_id = #{childId}
+          AND c.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <update id="updateAllowanceRequestStatus">
+        UPDATE allowance_request
+        SET status = #{status},
+            updated_at = #{updatedAt}
+        WHERE allowance_request_id = #{allowanceRequestId}
+          AND status = 'PENDING'
+    </update>
+
+    <select id="countAllowanceDestinationAccount"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM financial_account fa
+        WHERE fa.financial_account_id = #{accountId}
+          AND fa.child_id = #{childId}
+          AND fa.owner_type = 'CHILD'
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+    </select>
+
+    <update id="linkAllowanceTransfer">
+        UPDATE financial_transfer
+        SET origin_type = 'ALLOWANCE_REQUEST',
+            origin_id = #{allowanceRequestId}
+        WHERE financial_transfer_id = #{transferId}
+          AND requested_by_member_id = #{memberId}
+          AND status = 'SUCCEEDED'
+    </update>
+
+    <select id="findPrimaryParentDemandDepositAccountId"
+            resultType="long">
+        SELECT fa.financial_account_id
+        FROM financial_account fa
+        WHERE fa.owner_type = 'PARENT'
+          AND fa.owner_member_id = #{memberId}
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.is_primary = 1
+        ORDER BY fa.financial_account_id
+        LIMIT 1
+    </select>
+
+    <select id="findPrimaryChildDemandDepositAccountId"
+            resultType="long">
+        SELECT fa.financial_account_id
+        FROM financial_account fa
+        WHERE fa.owner_type = 'CHILD'
+          AND fa.child_id = #{childId}
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.is_primary = 1
+        ORDER BY fa.financial_account_id
+        LIMIT 1
+    </select>
+</mapper>

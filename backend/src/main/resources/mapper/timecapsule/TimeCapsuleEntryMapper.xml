@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.timecapsule.mapper.TimeCapsuleEntryMapper">
+
+    <resultMap id="timeCapsuleEntryResultMap"
+               type="com.azas.domain.timecapsule.entity.TimeCapsuleEntry">
+        <id property="timeCapsuleEntryId" column="time_capsule_entry_id"/>
+        <result property="timeCapsuleId" column="time_capsule_id"/>
+        <result property="authorMemberId" column="author_member_id"/>
+        <result property="accountTransactionId" column="account_transaction_id"/>
+        <result property="title" column="title"/>
+        <result property="message" column="message"/>
+        <result property="contributionAmount" column="contribution_amount"/>
+        <result property="contributedAt" column="contributed_at"/>
+        <result property="mediaMode" column="media_mode"/>
+        <result property="thumbnailObjectKey" column="thumbnail_object_key"/>
+        <result property="status" column="status"/>
+        <result property="sealedAt" column="sealed_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="mediaCount" column="media_count"/>
+    </resultMap>
+
+    <resultMap id="timeCapsuleEntryTransactionResultMap"
+               type="com.azas.domain.timecapsule.entity.TimeCapsuleEntryTransaction">
+        <id property="accountTransactionId" column="account_transaction_id"/>
+        <result property="direction" column="direction"/>
+        <result property="amount" column="amount"/>
+        <result property="occurredAt" column="occurred_at"/>
+    </resultMap>
+
+    <select id="findSealedEntriesByTimeCapsuleId"
+            resultMap="timeCapsuleEntryResultMap">
+        SELECT
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.status,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at,
+            COUNT(tcm.time_capsule_media_id) AS media_count
+        FROM time_capsule_entry tce
+        LEFT JOIN time_capsule_media tcm
+            ON tcm.time_capsule_entry_id = tce.time_capsule_entry_id
+           AND tcm.status = 'ACTIVE'
+        WHERE tce.time_capsule_id = #{timeCapsuleId}
+          AND tce.status = 'SEALED'
+        GROUP BY
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.status,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at
+        ORDER BY tce.contributed_at DESC, tce.time_capsule_entry_id DESC
+    </select>
+
+    <select id="findAccessibleById"
+            resultMap="timeCapsuleEntryResultMap">
+        SELECT
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.status,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at,
+            (
+                SELECT COUNT(*)
+                FROM time_capsule_media tcm
+                WHERE tcm.time_capsule_entry_id = tce.time_capsule_entry_id
+                  AND tcm.status = 'ACTIVE'
+            ) AS media_count
+        FROM time_capsule_entry tce
+        INNER JOIN time_capsule tc
+            ON tc.time_capsule_id = tce.time_capsule_id
+           AND tc.status != 'ARCHIVED'
+        INNER JOIN child c
+            ON c.child_id = tc.child_id
+           AND c.status = 'ACTIVE'
+        INNER JOIN member m
+            ON m.member_id = #{memberId}
+           AND m.status = 'ACTIVE'
+        LEFT JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        WHERE tce.time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND tce.status != 'DELETED'
+          AND (
+              c.member_id = #{memberId}
+              OR cp.child_parent_id IS NOT NULL
+          )
+    </select>
+
+    <select id="findOwnedById"
+            resultMap="timeCapsuleEntryResultMap">
+        SELECT
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.status,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at,
+            (
+                SELECT COUNT(*)
+                FROM time_capsule_media tcm
+                WHERE tcm.time_capsule_entry_id = tce.time_capsule_entry_id
+                  AND tcm.status = 'ACTIVE'
+            ) AS media_count
+        FROM time_capsule_entry tce
+        INNER JOIN time_capsule tc
+            ON tc.time_capsule_id = tce.time_capsule_id
+        INNER JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE tce.time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND tce.author_member_id = #{memberId}
+          AND tce.status != 'DELETED'
+    </select>
+
+    <select id="findOwnedByIdForUpdate"
+            resultMap="timeCapsuleEntryResultMap">
+        SELECT
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.status,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at,
+            (
+                SELECT COUNT(*)
+                FROM time_capsule_media tcm
+                WHERE tcm.time_capsule_entry_id = tce.time_capsule_entry_id
+                  AND tcm.status = 'ACTIVE'
+            ) AS media_count
+        FROM time_capsule_entry tce
+        INNER JOIN time_capsule tc
+            ON tc.time_capsule_id = tce.time_capsule_id
+        INNER JOIN child_parent cp
+            ON cp.child_id = tc.child_id
+           AND cp.member_id = #{memberId}
+        INNER JOIN member m
+            ON m.member_id = cp.member_id
+           AND m.status = 'ACTIVE'
+        WHERE tce.time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND tce.author_member_id = #{memberId}
+          AND tce.status != 'DELETED'
+        FOR UPDATE
+    </select>
+
+    <select id="findByTimeCapsuleAndTransactionId"
+            resultMap="timeCapsuleEntryResultMap">
+        SELECT
+            tce.time_capsule_entry_id,
+            tce.time_capsule_id,
+            tce.author_member_id,
+            tce.account_transaction_id,
+            tce.title,
+            tce.message,
+            tce.contribution_amount,
+            tce.contributed_at,
+            tce.media_mode,
+            tce.thumbnail_object_key,
+            tce.status,
+            tce.sealed_at,
+            tce.created_at,
+            tce.updated_at,
+            0 AS media_count
+        FROM time_capsule_entry tce
+        WHERE tce.time_capsule_id = #{timeCapsuleId}
+          AND tce.account_transaction_id = #{accountTransactionId}
+    </select>
+
+    <select id="findTransactionByFinancialAccountId"
+            resultMap="timeCapsuleEntryTransactionResultMap">
+        SELECT
+            at.account_transaction_id,
+            at.direction,
+            at.amount,
+            at.occurred_at
+        FROM account_transaction at
+        WHERE at.financial_account_id = #{financialAccountId}
+          AND at.account_transaction_id = #{accountTransactionId}
+    </select>
+
+    <insert id="insert"
+            parameterType="com.azas.domain.timecapsule.entity.TimeCapsuleEntry"
+            useGeneratedKeys="true"
+            keyProperty="timeCapsuleEntryId"
+            keyColumn="time_capsule_entry_id">
+        INSERT INTO time_capsule_entry (
+            time_capsule_id,
+            author_member_id,
+            account_transaction_id,
+            title,
+            message,
+            contribution_amount,
+            contributed_at,
+            media_mode,
+            status
+        ) VALUES (
+            #{timeCapsuleId},
+            #{authorMemberId},
+            #{accountTransactionId},
+            #{title},
+            #{message},
+            #{contributionAmount},
+            #{contributedAt},
+            #{mediaMode},
+            #{status}
+        )
+    </insert>
+
+    <update id="updateDraftMediaModeIfNone">
+        UPDATE time_capsule_entry
+        SET media_mode = #{mediaMode}
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'DRAFT'
+          AND media_mode = 'NONE'
+    </update>
+
+    <update id="sealDraftEntry">
+        UPDATE time_capsule_entry
+        SET status = 'SEALED',
+            sealed_at = CURRENT_TIMESTAMP(6)
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'DRAFT'
+    </update>
+
+    <update id="markEntryAsDeleted">
+        UPDATE time_capsule_entry
+        SET status = 'DELETED'
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status IN ('DRAFT', 'SEALED')
+    </update>
+
+    <update id="recalculateTimeCapsuleAggregates">
+        UPDATE time_capsule
+        SET entry_count = (
+                SELECT COUNT(*)
+                FROM time_capsule_entry
+                WHERE time_capsule_id = #{timeCapsuleId}
+                  AND status = 'SEALED'
+            ),
+            total_contribution_amount = COALESCE((
+                SELECT SUM(contribution_amount)
+                FROM time_capsule_entry
+                WHERE time_capsule_id = #{timeCapsuleId}
+                  AND status = 'SEALED'
+            ), 0),
+            latest_entry_at = (
+                SELECT MAX(contributed_at)
+                FROM time_capsule_entry
+                WHERE time_capsule_id = #{timeCapsuleId}
+                  AND status = 'SEALED'
+            )
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND status = 'COLLECTING'
+    </update>
+
+    <select id="lockByTimeCapsuleId"
+            resultType="long">
+        SELECT time_capsule_entry_id
+        FROM time_capsule_entry
+        WHERE time_capsule_id = #{timeCapsuleId}
+        FOR UPDATE
+    </select>
+
+    <delete id="deleteByTimeCapsuleId">
+        DELETE FROM time_capsule_entry
+        WHERE time_capsule_id = #{timeCapsuleId}
+    </delete>
+
+    <select id="countSealedByTimeCapsuleId"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM time_capsule_entry
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND status = 'SEALED'
+    </select>
+
+    <select id="countSealedUpToEntry"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM time_capsule_entry
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND status = 'SEALED'
+          AND (
+              contributed_at &lt; #{contributedAt}
+              OR (
+                  contributed_at = #{contributedAt}
+                  AND time_capsule_entry_id &lt;= #{timeCapsuleEntryId}
+              )
+          )
+    </select>
+
+    <select id="countPendingMediaByEntryId"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'PENDING_UPLOAD'
+    </select>
+
+    <select id="countActiveMediaByEntryIdAndType"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM time_capsule_media
+        WHERE time_capsule_entry_id = #{timeCapsuleEntryId}
+          AND status = 'ACTIVE'
+          AND media_type = #{mediaType}
+    </select>
+
+    <update id="increaseEntryAggregates"
+            parameterType="com.azas.domain.timecapsule.entity.TimeCapsuleEntry">
+        UPDATE time_capsule
+        SET entry_count = entry_count + 1,
+            total_contribution_amount =
+                total_contribution_amount + #{contributionAmount},
+            latest_entry_at = CASE
+                WHEN latest_entry_at IS NULL
+                  OR latest_entry_at &lt; #{contributedAt}
+                    THEN #{contributedAt}
+                ELSE latest_entry_at
+            END
+        WHERE time_capsule_id = #{timeCapsuleId}
+          AND status = 'COLLECTING'
+    </update>
+
+</mapper>

@@ -1,0 +1,477 @@
+package com.azas.global.exception;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@RequiredArgsConstructor
+public enum ErrorCode {
+
+    // Common
+    BADREQUEST(
+            HttpStatus.BAD_REQUEST,
+            "요청 값이 올바르지 않습니다."
+    ),
+    INTERNAL_SERVER_ERROR(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "서버 오류가 발생했습니다."
+    ),
+    INVALID_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "잘못된 요청입니다."
+    ),
+
+    // Auth
+    UNSUPPORTED_OAUTH_PROVIDER(
+            HttpStatus.BAD_REQUEST,
+            "지원하지 않는 소셜 로그인 제공자입니다."
+    ),
+    INVALID_AUTHORIZATION_CODE(
+            HttpStatus.UNAUTHORIZED,
+            "인가 코드가 만료되었거나 유효하지 않습니다."
+    ),
+    INVALID_REFRESH_TOKEN(
+            HttpStatus.UNAUTHORIZED,
+            "유효하지 않거나 만료된 Refresh Token입니다."
+    ),
+    WITHDRAWN_MEMBER(
+            HttpStatus.UNAUTHORIZED,
+            "탈퇴한 회원은 로그인할 수 없습니다."
+    ),
+    OAUTH_PROVIDER_ERROR(
+            HttpStatus.BAD_GATEWAY,
+            "소셜 제공자와 통신하는 중 오류가 발생했습니다."
+    ),
+    ACCESS_TOKEN_REQUIRED(
+            HttpStatus.UNAUTHORIZED,
+            "Access Token이 필요합니다."
+    ),
+    INVALID_ACCESS_TOKEN(
+            HttpStatus.UNAUTHORIZED,
+            "Access Token이 유효하지 않거나 만료되었습니다."
+    ),
+    INVALID_FAMILY_INVITATION(
+            HttpStatus.BAD_REQUEST,
+            "유효하지 않거나 사용할 수 없는 가족 초대입니다."
+    ),
+    FAMILY_MEMBER_ALREADY_LINKED(
+            HttpStatus.CONFLICT,
+            "이미 다른 회원 또는 자녀 정보와 연결되어 있습니다."
+    ),
+    MEMBER_TYPE_CONFLICT(
+            HttpStatus.CONFLICT,
+            "초대 유형과 회원 유형이 일치하지 않습니다."
+    ),
+
+    // Member
+    INVALID_PHONE_NUMBER(
+            HttpStatus.BAD_REQUEST,
+            "올바른 휴대폰번호 형식이 아닙니다."
+    ),
+    SMS_DELIVERY_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "SMS 인증번호를 발송하지 못했습니다."
+    ),
+    PHONE_VERIFICATION_NOT_AVAILABLE(
+            HttpStatus.BAD_REQUEST,
+            "휴대폰 인증 요청이 만료되었거나 사용할 수 없습니다."
+    ),
+    INVALID_PHONE_VERIFICATION_CODE(
+            HttpStatus.BAD_REQUEST,
+            "휴대폰 인증번호가 올바르지 않습니다."
+    ),
+    PHONE_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "휴대폰 인증번호 확인 가능 횟수를 초과했습니다."
+    ),
+    INVALID_PHONE_VERIFICATION_TOKEN(
+            HttpStatus.BAD_REQUEST,
+            "휴대폰 인증 토큰이 만료되었거나 사용할 수 없습니다."
+    ),
+    PHONE_NUMBER_ALREADY_IN_USE(
+            HttpStatus.CONFLICT,
+            "이미 다른 회원이 사용 중인 휴대폰번호입니다."
+    ),
+    LAST_GUARDIAN_WITHDRAWAL_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "다른 보호자를 연결한 후 탈퇴할 수 있습니다."
+    ),
+
+    // Finance
+    INVALID_CHILD_USAGE_POLICY(
+            HttpStatus.BAD_REQUEST,
+            "자녀 계좌 사용 관리 정책 값이 올바르지 않습니다."
+    ),
+    PARENT_ACCESS_REQUIRED(
+            HttpStatus.FORBIDDEN,
+            "해당 자녀의 부모 권한이 필요합니다."
+    ),
+    INVALID_ACCOUNT_DISCOVERY_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "Mock 계좌 조회 조건이 올바르지 않습니다."
+    ),
+    INVALID_ACCOUNT_LINK_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "Mock 계좌 연결 요청이 올바르지 않습니다."
+    ),
+    FINANCIAL_ACCOUNT_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "이미 연결된 금융 계좌가 포함되어 있습니다."
+    ),
+    INVALID_ACCOUNT_OPEN_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "Mock 계좌 개설 요청이 올바르지 않습니다."
+    ),
+    PARENT_DEMAND_DEPOSIT_REQUIRED(
+            HttpStatus.CONFLICT,
+            "자녀 계좌 이용 전 부모 입출금계좌 연결이 필요합니다."
+    ),
+    INELIGIBLE_CHILD_USAGE_POLICY_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "자녀 명의의 활성 입출금 계좌에만 사용 관리 정책을 설정할 수 있습니다."
+    ),
+    INELIGIBLE_PRIMARY_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "활성 입출금 계좌만 대표 계좌로 지정할 수 있습니다."
+    ),
+    CHILD_MEMBER_ACCESS_REQUIRED(
+            HttpStatus.FORBIDDEN,
+            "자녀 회원 계정으로만 조회할 수 있습니다."
+    ),
+    CHILD_USAGE_POLICY_NOT_CONFIGURED(
+            HttpStatus.CONFLICT,
+            "자녀 대표 계좌의 사용 관리 정책이 설정되지 않았습니다."
+    ),
+    CHILD_USAGE_LIMIT_VIEW_DISABLED(
+            HttpStatus.FORBIDDEN,
+            "자녀 사용 금액 한도 조회 권한이 비활성화되어 있습니다."
+    ),
+    FINANCIAL_ACCOUNT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 계좌를 찾을 수 없습니다."
+    ),
+    FINANCIAL_ACCOUNT_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 금융 계좌에 접근할 권한이 없습니다."
+    ),
+    ACCOUNT_BALANCE_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "아직 동기화된 계좌 잔액이 없습니다."
+    ),
+    INVALID_BALANCE_HISTORY_MONTHS(
+            HttpStatus.BAD_REQUEST,
+            "잔액 변화 조회 개월 수는 1개월 이상 12개월 이하여야 합니다."
+    ),
+    FINANCIAL_PRODUCT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융상품을 찾을 수 없습니다."
+    ),
+    INVALID_QUERY_PARAMETER(
+            HttpStatus.BAD_REQUEST,
+            "조회 조건이 올바르지 않습니다."
+    ),
+    INVALID_MATURITY_ESTIMATE_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "예상 만기금액 계산 조건이 올바르지 않습니다."
+    ),
+    MATURITY_ESTIMATE_NOT_AVAILABLE(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "해당 금융상품은 예상 만기금액을 계산할 수 없습니다."
+    ),
+
+
+    INVALID_FINANCIAL_GOAL_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "금융 목표 요청이 올바르지 않습니다."
+    ),
+    FINANCIAL_GOAL_TEMPLATE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 목표 템플릿을 찾을 수 없습니다."
+    ),
+    FINANCIAL_GOAL_RECOMMENDATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 목표 추천 금액을 찾을 수 없습니다."
+    ),
+    FINANCIAL_GOAL_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "금융 목표를 찾을 수 없습니다."
+    ),
+    FINANCIAL_ACCOUNT_GOAL_ALREADY_ASSIGNED(
+            HttpStatus.CONFLICT,
+            "이미 다른 금융 목표에 연결된 적금 계좌입니다."
+    ),
+    INELIGIBLE_FINANCIAL_GOAL_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "금융 목표에 연결할 수 없는 계좌입니다."
+    ),
+    FINANCIAL_GOAL_ALREADY_REACHED(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "현재 모은 금액이 이미 목표 금액 이상입니다."
+    ),
+
+    // Time Capsule
+    TIME_CAPSULE_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 타임캡슐에 접근할 권한이 없습니다."
+    ),
+    TIME_CAPSULE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "타임캡슐을 찾을 수 없습니다."
+    ),
+    ACCOUNT_TRANSACTION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "계좌 거래내역을 찾을 수 없습니다."
+    ),
+    INELIGIBLE_CHILDCARE_TRANSACTION(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "부모 계좌의 외부 출금 거래만 양육비에 포함할 수 있습니다."
+    ),
+    DUPLICATE_TIME_CAPSULE(
+            HttpStatus.CONFLICT,
+            "해당 자녀와 계좌에 이미 타임캡슐이 존재합니다."
+    ),
+    DUPLICATE_TIME_CAPSULE_ENTRY(
+            HttpStatus.CONFLICT,
+            "해당 거래는 이미 타임캡슐 기록으로 등록되어 있습니다."
+    ),
+    TIME_CAPSULE_ENTRY_CREATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "공개되었거나 보관 처리된 타임캡슐에는 기록을 생성할 수 없습니다."
+    ),
+    INELIGIBLE_TIME_CAPSULE_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "타임캡슐에 사용할 수 없는 계좌입니다."
+    ),
+    INELIGIBLE_TIME_CAPSULE_TRANSACTION(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "타임캡슐 기록에는 해당 타임캡슐 계좌의 입금 거래만 연결할 수 있습니다."
+    ),
+    TIME_CAPSULE_ENTRY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "타임캡슐 엔트리를 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_NOT_RELEASED(
+            HttpStatus.CONFLICT,
+            "아직 공개되지 않은 타임캡슐입니다."
+    ),
+    TIME_CAPSULE_RELEASE_DATE_MODIFICATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "해당 타임캡슐의 공개일은 변경할 수 없습니다."
+    ),
+    TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "현재 상태의 타임캡슐 엔트리는 변경할 수 없습니다."
+    ),
+    TIME_CAPSULE_ENTRY_MEDIA_REQUIREMENT_NOT_MET(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "엔트리 봉인에 필요한 미디어 업로드 또는 미디어 개수 조건을 충족하지 못했습니다."
+    ),
+    TIME_CAPSULE_MEDIA_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "타임캡슐 미디어를 찾을 수 없습니다."
+    ),
+    TIME_CAPSULE_MEDIA_UPLOAD_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "현재 엔트리 상태 또는 미디어 슬롯에서는 업로드할 수 없습니다."
+    ),
+    TIME_CAPSULE_MEDIA_OBJECT_INVALID(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "업로드된 미디어 객체의 MIME 타입 또는 파일 크기가 요청값과 다릅니다."
+    ),
+    TIME_CAPSULE_STORAGE_UNAVAILABLE(
+            HttpStatus.BAD_GATEWAY,
+            "타임캡슐 미디어 저장소에 연결할 수 없습니다."
+    ),
+    // Child
+    CHILD_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "자녀 정보를 찾을 수 없습니다."
+    ),
+    CHILD_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 자녀 정보에 접근할 권한이 없습니다."
+    ),
+    CHILD_HAS_FINANCIAL_HISTORY(
+            HttpStatus.CONFLICT,
+            "금융 기록이 있는 자녀는 삭제할 수 없습니다."
+    ),
+    CHILD_INVALID_NAME(
+            HttpStatus.BAD_REQUEST,
+            "자녀 이름은 필수입니다."
+    ),
+    CHILD_INVALID_BIRTH_STATUS(
+            HttpStatus.BAD_REQUEST,
+            "출생 상태는 필수입니다."
+    ),
+    CHILD_EXPECTED_BIRTH_DATE_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+            "출생 예정일은 필수입니다."
+    ),
+    CHILD_BIRTH_DATE_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+            "생년월일은 필수입니다."
+    ),
+
+    //Family
+
+    FAMILY_INVITATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "가족 초대를 찾을 수 없습니다."
+    ),
+    FAMILY_INVITATION_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "같은 유형의 사용 가능한 가족 초대가 이미 존재합니다."
+    ),
+    FAMILY_INVITATION_GONE(
+            HttpStatus.GONE,
+            "만료되었거나 이미 처리된 가족 초대입니다."
+    ),
+    FAMILY_INVITATION_RELATION_TYPE_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+            "부모 초대 수락에는 관계 유형이 필요합니다."
+    ),
+    ALLOWANCE_REQUEST_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "용돈 요청을 찾을 수 없습니다."
+    ),
+    INVALID_ALLOWANCE_ACTION(
+            HttpStatus.BAD_REQUEST,
+            "용돈 요청 처리 방식이 올바르지 않습니다."
+    ),
+    ALLOWANCE_REQUEST_DISABLED(
+            HttpStatus.FORBIDDEN,
+            "용돈 요청 권한이 비활성화되어 있습니다."
+    ),
+    ALLOWANCE_REQUEST_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "용돈 요청을 처리할 권한이 없습니다."
+    ),
+    INVALID_ALLOWANCE_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "현재 상태에서는 용돈 요청을 처리할 수 없습니다."
+    ),
+
+    // Transfer
+    TRANSFER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "이체 정보를 찾을 수 없습니다."
+    ),
+    TRANSFER_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 이체 정보에 접근할 권한이 없습니다."
+    ),
+    INVALID_TRANSFER_REQUEST(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "출금·입금 계좌 또는 이체 금액 조건이 올바르지 않습니다."
+    ),
+    INSUFFICIENT_ACCOUNT_BALANCE(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "출금 계좌의 잔액이 부족합니다."
+    ),
+    DUPLICATE_TRANSFER_REQUEST(
+            HttpStatus.CONFLICT,
+            "이미 처리되었거나 처리 중인 이체 요청입니다."
+    ),
+    TRANSFER_PROCESSING_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "이체 처리 중 오류가 발생했습니다."
+    ),
+    DUPLICATE_AUTO_TRANSFER_SCHEDULE(
+            HttpStatus.CONFLICT,
+            "동일한 자동이체 일정이 이미 존재합니다."
+    ),
+    INVALID_AUTO_TRANSFER_SCHEDULE(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "자동이체 일정의 날짜·금액·계좌 또는 목표 조건이 올바르지 않습니다."
+    ),
+    AUTO_TRANSFER_SCHEDULE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "자동이체 일정을 찾을 수 없습니다."
+    ),
+    AUTO_TRANSFER_SCHEDULE_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 자동이체 일정을 변경할 권한이 없습니다."
+    ),
+    INVALID_AUTO_TRANSFER_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+            "현재 상태에서는 요청한 자동이체 상태 변경을 수행할 수 없습니다."
+    ),
+    AUTO_TRANSFER_RETRY_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "재시도할 수 있는 실패 자동이체 회차가 없습니다."
+    ),
+
+    // Notification
+    NOTIFICATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+        "알림을 찾을 수 없습니다."
+    ),
+    INVALID_NOTIFICATION_PREFERENCES(
+            HttpStatus.BAD_REQUEST,
+            "알림 수신 설정이 올바르지 않습니다."
+    ),
+    INVALID_PUSH_DEVICE_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "푸시 기기 요청이 올바르지 않습니다."
+    ),
+    PUSH_DEVICE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "등록된 푸시 기기를 찾을 수 없습니다."
+    ),
+    PREGNANCY_STATUS_NOT_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "출산 예정 상태인 자녀만 임신 주차를 조회할 수 있습니다."
+    ),
+
+    // Mission
+    INVALID_MISSION(
+            HttpStatus.BAD_REQUEST,
+        "미션의 이름·내용 또는 보상 금액이 올바르지 않습니다."
+    ),
+    MISSION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+        "미션을 찾을 수 없습니다."
+    ),
+    MISSION_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+        "해당 미션에 접근할 권한이 없습니다."
+    ),
+    INVALID_MISSION_STATUS_TRANSITION(
+            HttpStatus.CONFLICT,
+        "현재 상태에서는 요청한 미션 처리를 수행할 수 없습니다."
+    ),
+    INVALID_MISSION_ACTION(
+            HttpStatus.BAD_REQUEST,
+        "미션 상태 변경 요청이 올바르지 않습니다."
+    ),
+
+    // Checklist
+    INVALID_CHECKLIST_STAGE(
+            HttpStatus.BAD_REQUEST,
+            "체크리스트 생애주기 단계가 올바르지 않습니다."
+    ),
+
+    CHECKLIST_STAGE_NOT_SUPPORTED(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "지원하는 체크리스트 생애주기 단계를 계산할 수 없습니다."
+    ),
+    CHECKLIST_ITEM_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "체크리스트 항목을 찾을 수 없습니다."
+    ),
+
+    CHECKLIST_ITEM_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "해당 체크리스트 항목에 접근할 권한이 없습니다."
+    ),
+
+    // Report
+    ASSET_REPORT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "해당 월의 자산 리포트를 찾을 수 없습니다."
+    );
+
+    private final HttpStatus httpStatus;
+    private final String message;
+}

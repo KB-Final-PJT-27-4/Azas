@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.report.mapper.AssetReportMapper">
+
+    <resultMap id="assetReportListRowMap"
+               type="com.azas.domain.report.dto.AssetReportListRow">
+
+        <id property="assetReportId"
+            column="asset_report_id"/>
+
+        <result property="reportMonth"
+                column="report_month"/>
+
+        <result property="totalAssetAmount"
+                column="total_asset_amount"/>
+
+        <result property="totalAssetChangeAmount"
+                column="total_asset_change_amount"/>
+
+        <result property="monthlySavedAmount"
+                column="monthly_saved_amount"/>
+
+        <result property="goalAchievementRate"
+                column="goal_achievement_rate"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+
+        <result property="updatedAt"
+                column="updated_at"/>
+
+    </resultMap>
+
+    <select id="findActiveChildId"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE child_id = #{childId}
+          AND status = 'ACTIVE'
+            LIMIT 1
+    </select>
+
+    <select id="countParentAccess"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c
+                            ON c.child_id = cp.child_id
+                                AND c.status = 'ACTIVE'
+                 INNER JOIN member m
+                            ON m.member_id = cp.member_id
+                                AND m.status = 'ACTIVE'
+                                AND m.member_type = 'PARENT'
+        WHERE cp.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+    </select>
+
+    <select id="findAssetReports"
+            parameterType="com.azas.domain.report.dto.AssetReportListQuery"
+            resultMap="assetReportListRowMap">
+
+        SELECT
+        ar.asset_report_id,
+        ar.report_month,
+        ar.total_asset_amount,
+        ar.total_asset_change_amount,
+        ar.monthly_saved_amount,
+        ar.goal_achievement_rate,
+        ar.created_at,
+        ar.updated_at
+        FROM asset_report ar
+        WHERE ar.child_id = #{childId}
+
+        <if test="yearStart != null">
+            AND ar.report_month <![CDATA[>=]]> #{yearStart}
+            AND ar.report_month <![CDATA[<]]> #{yearEndExclusive}
+        </if>
+
+        <if test="cursorReportMonth != null">
+            AND (
+            ar.report_month <![CDATA[<]]> #{cursorReportMonth}
+            OR (
+            ar.report_month = #{cursorReportMonth}
+            AND ar.asset_report_id
+            <![CDATA[<]]> #{cursorAssetReportId}
+            )
+            )
+        </if>
+
+        ORDER BY
+        ar.report_month DESC,
+        ar.asset_report_id DESC
+
+        LIMIT #{limit}
+    </select>
+
+    <resultMap id="assetReportDetailRowMap"
+               type="com.azas.domain.report.dto.AssetReportDetailRow">
+
+        <id property="assetReportId"
+            column="asset_report_id"/>
+
+        <result property="childId"
+                column="child_id"/>
+
+        <result property="reportMonth"
+                column="report_month"/>
+
+        <result property="totalAssetAmount"
+                column="total_asset_amount"/>
+
+        <result property="totalAssetChangeAmount"
+                column="total_asset_change_amount"/>
+
+        <result property="monthlySavedAmount"
+                column="monthly_saved_amount"/>
+
+        <result property="totalGoalTargetAmount"
+                column="total_goal_target_amount"/>
+
+        <result property="totalGoalSavedAmount"
+                column="total_goal_saved_amount"/>
+
+        <result property="goalAchievementRate"
+                column="goal_achievement_rate"/>
+
+        <result property="savingsGoalSummaryJson"
+                column="savings_goal_summary_json"/>
+
+        <result property="insightItemsJson"
+                column="insight_items_json"/>
+
+        <result property="createdAt"
+                column="created_at"/>
+
+        <result property="updatedAt"
+                column="updated_at"/>
+
+    </resultMap>
+
+    <select id="findAssetReportDetail"
+            resultMap="assetReportDetailRowMap">
+
+        SELECT
+            ar.asset_report_id,
+            ar.child_id,
+            ar.report_month,
+            ar.total_asset_amount,
+            ar.total_asset_change_amount,
+            ar.monthly_saved_amount,
+            ar.total_goal_target_amount,
+            ar.total_goal_saved_amount,
+            ar.goal_achievement_rate,
+            ar.savings_goal_summary_json,
+            ar.insight_items_json,
+            ar.created_at,
+            ar.updated_at
+        FROM asset_report ar
+        WHERE ar.child_id = #{childId}
+          AND ar.report_month = #{reportMonth}
+            LIMIT 1
+
+    </select>
+
+    <select id="findAllActiveChildIds"
+            resultType="long">
+        SELECT child_id
+        FROM child
+        WHERE status = 'ACTIVE'
+        ORDER BY child_id
+    </select>
+
+    <select id="findTotalAssetAmountAt"
+            resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(abs.balance), 0)
+        FROM account_balance_snapshot abs
+                 INNER JOIN (
+            SELECT
+                financial_account_id,
+                MAX(observed_at) AS latest_observed_at
+            FROM account_balance_snapshot
+            WHERE observed_at <![CDATA[<]]> #{endExclusive}
+            GROUP BY financial_account_id
+        ) latest
+                            ON latest.financial_account_id = abs.financial_account_id
+                                AND latest.latest_observed_at = abs.observed_at
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = abs.financial_account_id
+        WHERE (
+                  fa.child_id = #{childId}
+                  OR EXISTS (
+                      SELECT 1
+                      FROM financial_goal_account fga
+                      INNER JOIN financial_goal fg
+                          ON fg.financial_goal_id = fga.financial_goal_id
+                      WHERE fga.financial_account_id = fa.financial_account_id
+                        AND fg.child_id = #{childId}
+                        AND fg.status IN ('ACTIVE', 'ACHIEVED')
+                  )
+              )
+          AND fa.account_product_type = 'SAVINGS'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.account_status IN ('ACTIVE', 'MATURED')
+    </select>
+
+    <select id="findMonthlySavedAmount"
+            resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(at.amount), 0)
+        FROM account_transaction at
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = at.financial_account_id
+        WHERE at.direction = 'CREDIT'
+          AND (
+                  fa.child_id = #{childId}
+                  OR EXISTS (
+                      SELECT 1
+                      FROM financial_goal_account fga
+                      INNER JOIN financial_goal fg
+                          ON fg.financial_goal_id = fga.financial_goal_id
+                      WHERE fga.financial_account_id = fa.financial_account_id
+                        AND fg.child_id = #{childId}
+                        AND fg.status IN ('ACTIVE', 'ACHIEVED')
+                  )
+              )
+          AND fa.account_product_type = 'SAVINGS'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.account_status IN ('ACTIVE', 'MATURED')
+          AND at.occurred_at <![CDATA[>=]]> #{startAt}
+          AND at.occurred_at <![CDATA[<]]> #{endExclusive}
+    </select>
+
+    <select id="findPreviousTotalAssetAmount"
+            resultType="java.math.BigDecimal">
+        SELECT total_asset_amount
+        FROM asset_report
+        WHERE child_id = #{childId}
+          AND report_month = #{reportMonth}
+            LIMIT 1
+    </select>
+
+    <select id="findPreviousMonthlySavedAmount"
+            resultType="java.math.BigDecimal">
+        SELECT monthly_saved_amount
+        FROM asset_report
+        WHERE child_id = #{childId}
+          AND report_month = #{reportMonth}
+            LIMIT 1
+    </select>
+
+    <select id="findGoalAccountSnapshots"
+            resultType="com.azas.domain.report.dto.AssetReportGoalAccountRow">
+        SELECT
+            fg.financial_goal_id AS financialGoalId,
+            fg.title,
+            fg.target_amount AS targetAmount,
+            fg.monthly_saving_amount AS monthlySavingTargetAmount,
+            fa.financial_account_id AS accountId,
+            fa.account_name AS accountName,
+            fa.bank_name AS bankName,
+            fa.account_number_ciphertext AS accountNumberCiphertext,
+            COALESCE(
+                (
+                    SELECT abs.balance
+                    FROM account_balance_snapshot abs
+                    WHERE abs.financial_account_id =
+                          fa.financial_account_id
+                      AND abs.observed_at <![CDATA[<]]> #{endExclusive}
+                    ORDER BY abs.observed_at DESC
+                    LIMIT 1
+                ),
+                fa.balance,
+                0
+            ) AS balance,
+            COALESCE(
+                (
+                    SELECT SUM(at.amount)
+                    FROM account_transaction at
+                    WHERE at.financial_account_id =
+                          fa.financial_account_id
+                      AND at.direction = 'CREDIT'
+                      AND at.occurred_at <![CDATA[>=]]> #{startAt}
+                      AND at.occurred_at <![CDATA[<]]> #{endExclusive}
+                ),
+                0
+            ) AS monthlySavedAmount
+        FROM financial_goal fg
+        INNER JOIN financial_goal_account fga
+            ON fga.financial_goal_id = fg.financial_goal_id
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = fga.financial_account_id
+        WHERE fg.child_id = #{childId}
+          AND fg.status IN ('ACTIVE', 'ACHIEVED')
+          AND fa.link_status = 'ACTIVE'
+          AND fa.account_status IN ('ACTIVE', 'MATURED')
+        ORDER BY
+            fg.created_at ASC,
+            fg.financial_goal_id ASC,
+            fga.linked_at ASC,
+            fga.financial_goal_account_id ASC
+    </select>
+
+    <insert id="upsertAssetReport"
+            parameterType="com.azas.domain.report.dto.AssetReportUpsertCommand">
+
+        INSERT INTO asset_report (
+            child_id,
+            report_month,
+            total_asset_amount,
+            total_asset_change_amount,
+            monthly_saved_amount,
+            total_goal_target_amount,
+            total_goal_saved_amount,
+            goal_achievement_rate,
+            six_month_flow_json,
+            savings_goal_summary_json,
+            insight_items_json
+        )
+        VALUES (
+                   #{childId},
+                   #{reportMonth},
+                   #{totalAssetAmount},
+                   #{totalAssetChangeAmount},
+                   #{monthlySavedAmount},
+                   #{totalGoalTargetAmount},
+                   #{totalGoalSavedAmount},
+                   #{goalAchievementRate},
+                   #{sixMonthFlowJson},
+                   #{savingsGoalSummaryJson},
+                   #{insightItemsJson}
+               )
+            ON DUPLICATE KEY UPDATE
+                                 total_asset_amount = VALUES(total_asset_amount),
+                                 total_asset_change_amount =
+                             VALUES(total_asset_change_amount),
+                                 monthly_saved_amount = VALUES(monthly_saved_amount),
+                                 total_goal_target_amount =
+                             VALUES(total_goal_target_amount),
+                                 total_goal_saved_amount =
+                             VALUES(total_goal_saved_amount),
+                                 goal_achievement_rate =
+                             VALUES(goal_achievement_rate),
+                                 six_month_flow_json =
+                             VALUES(six_month_flow_json),
+                                 savings_goal_summary_json =
+                             VALUES(savings_goal_summary_json),
+                                 insight_items_json =
+                             VALUES(insight_items_json),
+                                 updated_at = CURRENT_TIMESTAMP(6)
+
+    </insert>
+</mapper>

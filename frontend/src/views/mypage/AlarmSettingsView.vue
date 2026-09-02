@@ -1,0 +1,172 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { api, getApiErrorMessage } from '@/api'
+import { useToast } from '@/composables/useToast'
+
+type AlarmSetting = {
+  id: string
+  title: string
+  description: string
+  enabled: boolean
+}
+
+type AlarmGroup = {
+  id: string
+  title: string
+  description: string
+  settings: AlarmSetting[]
+}
+
+const { showToast } = useToast()
+const alarmGroups = ref<AlarmGroup[]>([])
+const isLoading = ref(true)
+
+const loadSettings = async () => {
+  try {
+    const { data } = await api.getNotificationPreferencesUsingGET()
+    const settings = (data.items ?? []).map((item) => ({
+      id: item.notification_category ?? '',
+      title: item.label ?? item.notification_category ?? '알림',
+      description: item.description ?? '',
+      enabled: item.enabled ?? false,
+    }))
+    alarmGroups.value = [
+      {
+        id: 'finance',
+        title: '금융·기록 알림',
+        description: '저축 일정과 가족의 금융 기록을 알려드려요.',
+        settings: settings.filter(({ id }) => ['SAVINGS', 'TIME_CAPSULE'].includes(id)),
+      },
+      {
+        id: 'child',
+        title: '아이 성장·활동 알림',
+        description: '아이의 성장 과정과 서비스 활동을 챙겨드려요.',
+        settings: settings.filter(({ id }) => !['SAVINGS', 'TIME_CAPSULE'].includes(id)),
+      },
+    ]
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '알림 설정을 불러오지 못했어요.'), 'error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const saveSettings = async () => {
+  try {
+    await api.updateNotificationPreferencesUsingPUT({
+      items: alarmGroups.value.flatMap((group) => group.settings).map((setting) => ({
+        notification_category: setting.id,
+        enabled: setting.enabled,
+      })),
+    } as never)
+    showToast('알림 설정이 저장되었습니다.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '알림 설정을 저장하지 못했어요.'), 'error')
+  }
+}
+
+onMounted(loadSettings)
+</script>
+
+<template>
+  <main
+    class="min-h-[calc(100dvh-var(--app-header-height)-var(--app-bottom-nav-height)-env(safe-area-inset-bottom))] px-5 pb-5"
+  >
+    <form class="mt-4" @submit.prevent="saveSettings">
+      <template v-if="isLoading">
+        <section
+          v-for="groupIndex in 2"
+          :key="`alarm-skeleton-${groupIndex}`"
+          :class="groupIndex > 1 ? 'mt-6' : ''"
+          aria-hidden="true"
+        >
+          <div class="px-1">
+            <span class="block h-[22px] w-36 animate-pulse rounded-md bg-[#e4ecef]"></span>
+          </div>
+          <div class="mt-3 overflow-hidden rounded-[20px] border border-[#e0e9ee] bg-white px-4">
+            <div
+              v-for="itemIndex in 2"
+              :key="itemIndex"
+              class="flex min-h-[74px] items-center gap-4 py-3.5"
+              :class="itemIndex > 1 ? 'border-t border-[#edf1f3]' : ''"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="block h-4 w-28 animate-pulse rounded-md bg-[#e5ecef]"></span>
+                <span class="mt-2 block h-3 w-48 max-w-full animate-pulse rounded-full bg-[#edf2f4]"></span>
+              </span>
+              <span class="h-7 w-[52px] shrink-0 animate-pulse rounded-full bg-[#e3eaee]"></span>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <template v-else>
+        <section
+          v-for="(group, groupIndex) in alarmGroups"
+          :key="group.id"
+          :class="groupIndex ? 'mt-6' : ''"
+          :aria-labelledby="`alarm-group-${group.id}`"
+        >
+        <div class="px-1">
+          <h2
+            :id="`alarm-group-${group.id}`"
+            class="text-[18px] font-extrabold tracking-[-0.02em] text-[var(--color-text-primary)]"
+          >
+            {{ group.title }}
+          </h2>
+
+        </div>
+
+        <ul class="mt-3 overflow-hidden rounded-[20px] border border-[#e0e9ee] bg-white px-4">
+          <li
+            v-for="(setting, settingIndex) in group.settings"
+            :key="setting.id"
+            class="flex min-h-[74px] items-center gap-4 py-3.5"
+            :class="settingIndex ? 'border-t border-[#edf1f3]' : ''"
+          >
+            <label
+              class="min-w-0 flex-1 cursor-pointer"
+              :for="`alarm-${setting.id}`"
+            >
+              <span class="block min-w-0">
+                <strong class="block text-[15px] font-bold tracking-[-0.01em] text-[var(--color-text-primary)]">
+                  {{ setting.title }}
+                </strong>
+                <span class="mt-1 block text-[11px] leading-[1.55] text-[var(--color-text-secondary)]">
+                  {{ setting.description }}
+                </span>
+              </span>
+            </label>
+
+            <label class="relative h-7 w-[52px] shrink-0 cursor-pointer">
+              <input
+                :id="`alarm-${setting.id}`"
+                v-model="setting.enabled"
+                class="peer sr-only"
+                type="checkbox"
+                role="switch"
+                :aria-label="`${setting.title} ${setting.enabled ? '끄기' : '켜기'}`"
+              />
+              <span class="absolute inset-0 rounded-full bg-[#dfe8ed] transition-colors duration-200 peer-checked:bg-[var(--color-brand-primary)] peer-focus-visible:ring-2 peer-focus-visible:ring-[#bcecff] peer-focus-visible:ring-offset-2"></span>
+              <span class="absolute top-1 left-1 size-5 rounded-full bg-white shadow-[0_1px_4px_rgba(42,70,84,0.22)] transition-transform duration-200 peer-checked:translate-x-6"></span>
+            </label>
+          </li>
+        </ul>
+        </section>
+      </template>
+
+      <button
+        class="mt-6 min-h-14 w-full rounded-2xl text-base font-bold transition-colors"
+        :class="
+          isLoading
+            ? 'animate-pulse bg-[#dce8ed] text-transparent'
+            : 'bg-[var(--color-brand-primary)] text-white active:bg-[var(--color-brand-primary-pressed)]'
+        "
+        type="submit"
+        :disabled="isLoading"
+      >
+        알림 설정 저장
+      </button>
+    </form>
+  </main>
+</template>

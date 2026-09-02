@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.notification.mapper.ProactiveNotificationMapper">
+
+    <select id="findUsageLimitTargets"
+            resultType="com.azas.domain.notification.dto.UsageLimitNotificationTarget">
+        SELECT fa.child_id AS childId,
+               fa.financial_account_id AS accountId,
+               fa.child_available_amount AS budgetAmount,
+               COALESCE(SUM(CASE
+                   WHEN tx.direction = 'DEBIT'
+                    AND tx.occurred_at <![CDATA[>=]]> #{startOccurredAt}
+                    AND tx.occurred_at <![CDATA[<]]> #{endOccurredAtExclusive}
+                   THEN tx.amount ELSE 0 END), 0) AS spentAmount
+        FROM financial_account fa
+        LEFT JOIN account_transaction tx
+          ON tx.financial_account_id = fa.financial_account_id
+        WHERE fa.owner_type = 'CHILD'
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.child_access_mode = 'CO_MANAGED'
+          AND fa.child_available_amount IS NOT NULL
+          AND fa.child_available_amount > 0
+        GROUP BY fa.child_id, fa.financial_account_id, fa.child_available_amount
+        HAVING spentAmount >= fa.child_available_amount
+    </select>
+
+    <select id="findDueTimeCapsules"
+            resultType="com.azas.domain.notification.dto.TimeCapsuleReleaseNotificationTarget">
+        SELECT time_capsule_id AS timeCapsuleId,
+               child_id AS childId,
+               title
+        FROM time_capsule
+        WHERE status = 'COLLECTING'
+          AND expected_release_at IS NOT NULL
+          AND expected_release_at <![CDATA[<=]]> #{now}
+    </select>
+
+    <select id="findEnabledParentRecipientIds" resultType="long">
+        SELECT cp.member_id
+        FROM child_parent cp
+        INNER JOIN member m ON m.member_id = cp.member_id
+        WHERE cp.child_id = #{childId}
+          AND m.status = 'ACTIVE'
+          AND m.member_type = 'PARENT'
+          AND COALESCE((
+              SELECT np.enabled
+              FROM notification_preference np
+              WHERE np.member_id = cp.member_id
+                AND np.notification_category = #{category}
+          ), 1) = 1
+    </select>
+
+    <insert id="insertNotification">
+        INSERT IGNORE INTO notification (
+            member_id, child_id, notification_category, notification_type,
+            title, content, reference_type, reference_id, metadata_json,
+            deduplication_key, is_read, created_at
+        ) VALUES (
+            #{memberId}, #{childId}, #{category}, #{type}, #{title},
+            #{content}, #{referenceType}, #{referenceId},
+            JSON_OBJECT('reference_id', #{referenceId}), #{deduplicationKey}, 0, #{createdAt}
+        )
+    </insert>
+</mapper>

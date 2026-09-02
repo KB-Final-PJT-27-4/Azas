@@ -1,0 +1,69 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-gutter: stable;
+  font-family:
+    'Pretendard',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  color: var(--color-text-primary);
+  background: var(--color-app-background);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/*
+ * Mobile Safari zooms the viewport when a focused form control renders below
+ * 16px. Keep every editable control at a safe size on touch devices and stop
+ * double-tap zoom on interactive elements without disabling pinch zoom.
+ */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+
+  button,
+  input,
+  textarea,
+  select,
+  a {
+    touch-action: manipulation;
+  }
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#app {
+  min-height: 100dvh;
+}

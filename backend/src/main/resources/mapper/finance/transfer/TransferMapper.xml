@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.azas.domain.finance.transfer.mapper.TransferMapper">
+
+    <select id="countChildAccess" resultType="int">
+        SELECT COUNT(*)
+        FROM child_parent cp
+                 INNER JOIN child c ON c.child_id = cp.child_id
+        WHERE cp.child_id = #{childId}
+          AND cp.member_id = #{memberId}
+          AND c.status = 'ACTIVE'
+    </select>
+
+    <select id="findTransferIdByIdempotencyKey" resultType="long">
+        SELECT financial_transfer_id
+        FROM financial_transfer
+        WHERE idempotency_key = #{idempotencyKey}
+    </select>
+
+    <select id="findSourceAccountForUpdate"
+            resultType="com.azas.domain.finance.transfer.entity.TransferAccount">
+        SELECT fa.financial_account_id AS financialAccountId,
+               fa.owner_type AS ownerType,
+               fa.owner_member_id AS ownerMemberId,
+               fa.bank_name AS bankName,
+               fa.account_number_ciphertext AS accountNumberCiphertext,
+               fa.account_name AS accountName,
+               fa.account_product_type AS accountProductType,
+               fa.account_status AS accountStatus,
+               fa.link_status AS linkStatus,
+               fa.balance AS balance
+        FROM financial_account fa
+        WHERE fa.financial_account_id = #{accountId}
+          AND fa.owner_member_id = #{memberId}
+          AND fa.owner_type = 'PARENT'
+          AND fa.account_product_type = 'DEMAND_DEPOSIT'
+          AND fa.account_status = 'ACTIVE'
+          AND fa.link_status = 'ACTIVE'
+            FOR UPDATE
+    </select>
+    <select id="findDestinationAccountForUpdate"
+            resultType="com.azas.domain.finance.transfer.entity.TransferAccount">
+        SELECT fa.financial_account_id AS financialAccountId,
+               fa.child_id AS childId,
+               fa.owner_type AS ownerType,
+               fa.owner_member_id AS ownerMemberId,
+               fa.bank_name AS bankName,
+               fa.account_number_ciphertext AS accountNumberCiphertext,
+               fa.account_name AS accountName,
+               fa.account_product_type AS accountProductType,
+               fa.account_status AS accountStatus,
+               fa.link_status AS linkStatus,
+               fa.balance AS balance,
+               fga.financial_goal_id AS financialGoalId
+        FROM financial_account fa
+        LEFT JOIN financial_goal_account fga
+               ON fga.financial_account_id = fa.financial_account_id
+        WHERE fa.financial_account_id = #{accountId}
+            FOR UPDATE
+    </select>
+
+    <insert id="insertTransfer" useGeneratedKeys="true"
+            keyProperty="financialTransferId" keyColumn="financial_transfer_id">
+        INSERT INTO financial_transfer (
+            child_id,
+            requested_by_member_id,
+            source_account_id,
+            destination_account_id,
+            amount,
+            memo,
+            transfer_type,
+            status,
+            idempotency_key,
+            requested_at
+        ) VALUES (
+                     #{childId},
+                     #{requestedByMemberId},
+                     #{sourceAccountId},
+                     #{destinationAccountId},
+                     #{amount},
+                     #{memo},
+                     'MANUAL',
+                     'REQUESTED',
+                     #{idempotencyKey},
+                     #{requestedAt}
+                 )
+    </insert>
+
+    <update id="decreaseSourceBalance">
+        UPDATE financial_account
+        SET balance = balance - #{amount},
+            balance_updated_at = UTC_TIMESTAMP(6)
+        WHERE financial_account_id = #{accountId}
+          AND balance >= #{amount}
+    </update>
+
+    <update id="increaseDestinationBalance">
+        UPDATE financial_account
+        SET balance = balance + #{amount},
+            balance_updated_at = UTC_TIMESTAMP(6)
+        WHERE financial_account_id = #{accountId}
+    </update>
+
+    <insert id="insertDestinationBalanceSnapshot">
+        INSERT INTO account_balance_snapshot (
+            financial_account_id,
+            child_id,
+            balance,
+            observed_at
+        ) VALUES (
+            #{accountId},
+            #{childId},
+            #{balance},
+            #{observedAt}
+        )
+    </insert>
+
+    <insert id="insertTransaction"
+            useGeneratedKeys="true"
+            keyProperty="accountTransactionId"
+            keyColumn="account_transaction_id">
+        INSERT INTO account_transaction (
+            financial_account_id,
+            counterparty_account_id,
+            child_id,
+            transaction_fingerprint,
+            occurred_at,
+            direction,
+            amount,
+            balance_after,
+            description,
+            counterparty_name,
+            source_type,
+            recorded_at
+        ) VALUES (
+                     #{financialAccountId},
+                     #{counterpartyAccountId},
+                     #{childId},
+                     #{transactionFingerprint},
+                     #{occurredAt},
+                     #{direction},
+                     #{amount},
+                     #{balanceAfter},
+                     #{description},
+                     #{counterpartyName},
+                     'TRANSFER',
+                     #{occurredAt}
+                 )
+    </insert>
+
+    <update id="markTransferSucceeded">
+        UPDATE financial_transfer
+        SET status = 'SUCCEEDED',
+            account_transaction_id = #{debitTransactionId},
+            completed_at = #{completedAt}
+        WHERE financial_transfer_id = #{transferId}
+          AND status = 'REQUESTED'
+    </update>
+
+    <select id="findTransferDetail"
+            resultType="com.azas.domain.finance.transfer.dto.TransferDetailResponse">
+        SELECT ft.financial_transfer_id AS financialTransferId,
+               fga.financial_goal_id AS financialGoalId,
+               ft.requested_by_member_id AS requestedByMemberId,
+               ft.source_account_id AS sourceAccountId,
+               ft.destination_account_id AS destinationAccountId,
+               ft.amount,
+               ft.memo,
+               ft.transfer_type AS transferType,
+               ft.status,
+               ft.failure_code AS failureCode,
+               ft.failure_message AS failureMessage,
+               ft.account_transaction_id AS matchedTransactionId,
+               ft.requested_at AS requestedAt,
+               ft.completed_at AS completedAt
+        FROM financial_transfer ft
+                 INNER JOIN financial_account dst
+                            ON dst.financial_account_id = ft.destination_account_id
+                 LEFT JOIN financial_goal_account fga
+                            ON fga.financial_account_id = dst.financial_account_id
+        WHERE ft.financial_transfer_id = #{transferId}
+          AND (
+            ft.requested_by_member_id = #{memberId}
+                OR EXISTS (
+                SELECT 1
+                FROM child_parent cp
+                WHERE cp.child_id = ft.child_id
+                  AND cp.member_id = #{memberId}
+            )
+            )
+    </select>
+
+    <resultMap id="memberTransferItemMap"
+               type="com.azas.domain.finance.transfer.dto.MemberTransferListItemResponse">
+        <id property="financialTransferId" column="financial_transfer_id"/>
+        <result property="childId" column="child_id"/>
+        <result property="requestedByMemberId" column="requested_by_member_id"/>
+        <result property="transferType" column="transfer_type"/>
+        <result property="amount" column="amount"/>
+        <result property="memo" column="memo"/>
+        <result property="status" column="status"/>
+        <result property="failureCode" column="failure_code"/>
+        <result property="failureMessage" column="failure_message"/>
+        <result property="requestedAt" column="requested_at"/>
+        <result property="completedAt" column="completed_at"/>
+        <association property="sourceAccount"
+                     javaType="com.azas.domain.finance.transfer.dto.TransferAccountResponse">
+            <id property="financialAccountId" column="source_account_id"/>
+            <result property="bankName" column="source_bank_name"/>
+            <result property="accountName" column="source_account_name"/>
+            <result property="accountNumber" column="source_account_number"/>
+        </association>
+        <association property="destinationAccount"
+                     javaType="com.azas.domain.finance.transfer.dto.TransferAccountResponse">
+            <id property="financialAccountId" column="destination_account_id"/>
+            <result property="bankName" column="destination_bank_name"/>
+            <result property="accountName" column="destination_account_name"/>
+            <result property="accountNumber" column="destination_account_number"/>
+        </association>
+    </resultMap>
+
+    <select id="findChildTransfers"
+            resultType="com.azas.domain.finance.transfer.dto.ChildTransferListItemResponse">
+        SELECT ft.financial_transfer_id AS financialTransferId,
+        fg.financial_goal_id AS financialGoalId,
+        fg.title AS goalTitle,
+        ft.amount,
+        ft.transfer_type AS transferType,
+        ft.status,
+        ft.requested_at AS requestedAt,
+        ft.completed_at AS completedAt
+        FROM financial_transfer ft
+        INNER JOIN financial_account dst
+        ON dst.financial_account_id = ft.destination_account_id
+        LEFT JOIN financial_goal_account fga
+        ON fga.financial_account_id = dst.financial_account_id
+        LEFT JOIN financial_goal fg
+        ON fg.financial_goal_id = fga.financial_goal_id
+        WHERE ft.child_id = #{childId}
+        <if test="financialGoalId != null">
+            AND fg.financial_goal_id = #{financialGoalId}
+        </if>
+        <if test="status != null">
+            AND ft.status = #{status}
+        </if>
+        <if test="startDate != null">
+            AND ft.requested_at <![CDATA[>=]]> #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND ft.requested_at <![CDATA[<]]> DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+        </if>
+        <if test="cursorId != null">
+            AND ft.financial_transfer_id <![CDATA[<]]> #{cursorId}
+        </if>
+        ORDER BY ft.financial_transfer_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findMemberTransfers"
+            resultType="com.azas.domain.finance.transfer.dto.MemberTransferListRow">
+        SELECT
+        ft.financial_transfer_id AS financialTransferId,
+        ft.child_id AS childId,
+        ft.requested_by_member_id AS requestedByMemberId,
+        ft.transfer_type AS transferType,
+        ft.amount,
+        ft.memo,
+        ft.status,
+        ft.failure_code AS failureCode,
+        ft.failure_message AS failureMessage,
+        ft.requested_at AS requestedAt,
+        ft.completed_at AS completedAt,
+
+        src.financial_account_id AS sourceAccountId,
+        src.bank_name AS sourceBankName,
+        src.account_name AS sourceAccountName,
+        src.account_number_ciphertext AS sourceAccountNumberCiphertext,
+
+        dst.financial_account_id AS destinationAccountId,
+        dst.bank_name AS destinationBankName,
+        dst.account_name AS destinationAccountName,
+        dst.account_number_ciphertext AS destinationAccountNumberCiphertext
+        FROM financial_transfer ft
+        INNER JOIN financial_account src
+        ON src.financial_account_id = ft.source_account_id
+        INNER JOIN financial_account dst
+        ON dst.financial_account_id = ft.destination_account_id
+        WHERE ft.requested_by_member_id = #{memberId}
+        <if test="childId != null">
+            AND ft.child_id = #{childId}
+        </if>
+        <if test="status != null">
+            AND ft.status = #{status}
+        </if>
+        <if test="transferType != null">
+            AND ft.transfer_type = #{transferType}
+        </if>
+        <if test="startDate != null">
+            AND ft.requested_at <![CDATA[>=]]> #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND ft.requested_at <![CDATA[<]]> DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+        </if>
+        <if test="cursorId != null">
+            AND ft.financial_transfer_id <![CDATA[<]]> #{cursorId}
+        </if>
+        ORDER BY ft.financial_transfer_id DESC
+        LIMIT #{limit}
+    </select>
+</mapper>
