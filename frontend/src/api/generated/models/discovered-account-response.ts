@@ -23,6 +23,10 @@ export interface DiscoveredAccountResponse {
      */
     'account_id': number;
     /**
+     * 계좌 상품명
+     */
+    'account_name': string;
+    /**
      * 전체 계좌번호
      */
     'account_number': string;

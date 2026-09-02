@@ -1,9 +1,9 @@
 import { api } from '@/api'
 import { getAuthMember } from '@/api/auth'
-import { getAuthorizationHeader } from '@/api/http'
-import type { ChildSummaryResponse } from '@/api/generated'
+import { CURRENT_CHILD_STORAGE_KEY, getAuthorizationHeader } from '@/api/http'
+import type { ChildResponse, ChildSummaryResponse } from '@/api/generated'
 
-const CURRENT_CHILD_STORAGE_KEY = 'azas_current_child_id'
+export type CurrentChild = Pick<ChildResponse, 'name'>
 
 export const setCurrentChildId = (childId: number) => {
   sessionStorage.setItem(CURRENT_CHILD_STORAGE_KEY, String(childId))
@@ -43,6 +43,18 @@ export const resolveCurrentChildId = async () => {
   if (!childId) throw new Error('등록된 자녀가 없어요.')
   setCurrentChildId(childId)
   return childId
+}
+
+export const getCurrentChild = async (): Promise<CurrentChild> => {
+  if (getAuthMember()?.member_type === 'CHILD') {
+    const { data } = await api.getDashboardUsingGET()
+
+    return { name: data.child?.name?.trim() || '아이' }
+  }
+
+  const childId = await resolveCurrentChildId()
+  const { data } = await api.getChildUsingGET(childId)
+  return data
 }
 
 export const requireAuthorizationHeader = () => {

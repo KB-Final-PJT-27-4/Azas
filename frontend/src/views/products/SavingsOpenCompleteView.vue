@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Landmark } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import CompletionPigAnimation from '@/components/feedback/CompletionPigAnimation.vue'
+import { getCurrentChild } from '@/api/context'
 
 const router = useRouter()
 const route = useRoute()
@@ -14,6 +15,16 @@ const availableProductNames = [
 const selectedProductName = computed(() => {
   const productName = String(route.query.product ?? '')
   return availableProductNames.find((name) => name === productName) ?? 'KB아이사랑적금'
+})
+const childName = ref('아이')
+
+onMounted(async () => {
+  try {
+    const child = await getCurrentChild()
+    childName.value = child.name?.trim() || '아이'
+  } catch {
+    // 완료 화면은 계좌 개설 결과를 우선 보여주므로 자녀명 조회 실패 시 일반 문구를 사용합니다.
+  }
 })
 </script>
 
@@ -27,7 +38,7 @@ const selectedProductName = computed(() => {
           자녀 적금이 개설되었어요!
         </h1>
         <p class="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
-          이제 깨비의 첫 적금을<br />서비스에 연결해볼까요?
+          이제 {{ childName }}의 첫 적금을<br />서비스에 연결해볼까요?
         </p>
 
         <div class="mt-6 overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-white text-left">
@@ -44,8 +55,8 @@ const selectedProductName = computed(() => {
         </div>
       </div>
 
-      <button class="min-h-14 w-full rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]" type="button" @click="router.push('/mypage/goals')">
-        목표 관리하기
+      <button class="min-h-14 w-full rounded-xl bg-[var(--color-brand-primary)] text-base font-bold text-white transition-colors active:bg-[var(--color-brand-primary-pressed)]" type="button" @click="router.push({ name: 'Goals', query: route.query.resumeGoal === 'true' ? { resumeGoal: 'true' } : {} })">
+        목표 이어서 설정하기
       </button>
     </section>
   </main>

@@ -29,10 +29,20 @@ import type { MonthlyFlowItem } from './monthly-flow-item';
 export interface ChildcareReportDetailResponse {
     'calculated_at'?: string;
     'child_id'?: number;
+    'comparison_benchmark'?: {
+        'age_group'?: string;
+        'calculation_basis'?: string;
+        'label'?: string;
+        'monthly_average_amount'?: number;
+        'source_name'?: string;
+        'source_url'?: string;
+        'source_year'?: number;
+    };
+    'created_at'?: string;
     'monthly_flow'?: Array<MonthlyFlowItem>;
     'period'?: ChildcareReportPeriodResponse;
     'report_month'?: number;
     'report_year'?: number;
     'summary'?: ChildcareReportSummaryResponse;
+    'updated_at'?: string;
 }
-

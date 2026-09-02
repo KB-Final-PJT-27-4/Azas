@@ -16,9 +16,11 @@
 
 export interface ChildcareReportSummaryResponse {
     'annual_expense_amount'?: number;
+    'same_age_difference_amount'?: number;
+    'same_age_difference_rate'?: number;
+    'same_age_monthly_average_amount'?: number;
     'previous_month_change_amount'?: number;
     'previous_month_change_rate'?: number;
     'previous_month_expense_amount'?: number;
     'total_expense_amount'?: number;
 }
-

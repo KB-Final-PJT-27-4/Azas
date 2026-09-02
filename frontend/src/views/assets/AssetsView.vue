@@ -20,7 +20,7 @@ import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
-type AccountType = '적금' | '입출금'
+type AccountType = '적금' | '입출금' | '청약'
 type AssetsTab = 'accounts' | 'autoTransfers'
 
 type LinkedAccount = {
@@ -77,13 +77,36 @@ const accountOptions = computed(() => accountGroups.value.flatMap((group) =>
   })),
 ))
 const sourceAccountOptions = computed(() =>
+  accountOptions.value.filter(
+    ({ tag, type }) => tag === '부모' && (type === '입출금' || type === '적금'),
+  ),
+)
+const autoTransferSourceAccountOptions = computed(() =>
   accountOptions.value.filter(({ tag, type }) => tag === '부모' && type === '입출금'),
 )
+const autoTransferTargetAccountOptions = computed(() =>
+  accountOptions.value.filter(
+    ({ tag, type }) => tag === '자녀' && (type === '입출금' || type === '적금'),
+  ),
+)
+const allowanceRequestId = computed(() => Number(route.query.allowanceRequest) || null)
+const requestedTargetAccountId = computed(() => String(route.query.targetAccountId ?? ''))
+const allowanceTargetAccountOptions = computed(() =>
+  accountOptions.value.filter(({ id, tag, type }) =>
+    tag === '자녀' &&
+    type === '입출금' &&
+    (!requestedTargetAccountId.value || id === requestedTargetAccountId.value),
+  ),
+)
+const transferTargetAccountOptions = computed(() =>
+  allowanceRequestId.value ? allowanceTargetAccountOptions.value : accountOptions.value,
+)
 const defaultSourceAccount = computed(() =>
-  accountOptions.value.find(({ type }) => type === '입출금') ?? accountOptions.value[0],
+  autoTransferSourceAccountOptions.value[0],
 )
 const defaultTargetAccount = computed(() =>
-  accountOptions.value.find(({ type }) => type === '적금') ?? accountOptions.value[0],
+  autoTransferTargetAccountOptions.value.find(({ type }) => type === '적금')
+  ?? autoTransferTargetAccountOptions.value[0],
 )
 
 const autoTransfers = ref<AutoTransfer[]>([])
@@ -110,6 +133,7 @@ const autoTransferSheetInitialData = computed(() => ({
 
 const isTransferSheetOpen = ref(Boolean(route.query.allowanceRequest))
 const transferResult = ref<'success' | 'failure' | null>(null)
+const completedTransferTargetAccountId = ref<number | null>(null)
 const isAnyTransferSheetOpen = computed(
   () =>
     isTransferSheetOpen.value ||
@@ -268,6 +292,12 @@ const completeTransfer = async ({
       memo,
       source_account_id: Number(sourceAccountId),
     })
+    if (allowanceRequestId.value) {
+      await api.updateAllowanceRequestStatusUsingPATCH(allowanceRequestId.value, {
+        action: 'APPROVE',
+      })
+    }
+    completedTransferTargetAccountId.value = Number(targetAccountId)
     isTransferSheetOpen.value = false
     transferResult.value = 'success'
     await loadAssets()
@@ -283,7 +313,7 @@ const retryTransfer = () => {
 }
 
 const mapAccountType = (value: string): AccountType =>
-  value === 'SAVINGS' || value === 'SUBSCRIPTION' ? '적금' : '입출금'
+  value === 'SAVINGS' ? '적금' : value === 'SUBSCRIPTION' ? '청약' : '입출금'
 
 const loadAssets = async () => {
   try {
@@ -318,16 +348,16 @@ const loadAssets = async () => {
       },
     ]
 
-    const details = await Promise.all(
+    const details = await Promise.allSettled(
       (scheduleResponse.data.items ?? []).map((item) =>
         item.auto_transfer_schedule_id
           ? api.getScheduleDetailUsingGET(item.auto_transfer_schedule_id)
-          : null,
+          : Promise.resolve(null),
       ),
     )
-    autoTransfers.value = details.flatMap((response) => {
-      if (!response) return []
-      const schedule = response.data
+    autoTransfers.value = details.flatMap((result) => {
+      if (result.status !== 'fulfilled' || !result.value) return []
+      const schedule = result.value.data
       return [{
         id: String(schedule.auto_transfer_schedule_id ?? ''),
         title: schedule.goal_title ?? '자동이체',
@@ -767,14 +797,15 @@ onMounted(loadAssets)
       :initial-amount="requestedTransferAmount"
       :initial-memo="requestedTransferMemo"
       :source-accounts="sourceAccountOptions"
-      :target-accounts="accountOptions"
+      :target-accounts="transferTargetAccountOptions"
       @close="isTransferSheetOpen = false"
       @transfer="completeTransfer"
     />
     <AutoTransferSheet
       :open="isAutoTransferSheetOpen"
       :mode="autoTransferSheetMode"
-      :account-options="accountOptions"
+      :source-account-options="autoTransferSourceAccountOptions"
+      :target-account-options="autoTransferTargetAccountOptions"
       :initial-data="autoTransferSheetInitialData"
       @close="closeAutoTransferForm"
       @save="saveAutoTransfer"
@@ -782,6 +813,7 @@ onMounted(loadAssets)
     <AssetTransferResultSheet
       :open="transferResult !== null"
       :status="transferResult ?? 'success'"
+      :time-capsule-account-id="completedTransferTargetAccountId"
       @close="transferResult = null"
       @retry="retryTransfer"
     />

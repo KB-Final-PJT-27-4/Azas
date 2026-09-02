@@ -1,23 +1,29 @@
 <script setup lang="ts">
-import { CalendarDays, ChevronRight, CircleAlert, Sparkles, TrendingUp, X } from 'lucide-vue-next'
+import { CalendarDays, ChevronRight, CircleAlert, TrendingUp, X } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
-
-const highestCategory = computed(() => childcareCategories[0] ?? { id: '', label: '분류 없음', amount: 0, averageAmount: 0, color: '#ddd' })
+const { childcareReportSummary, isUsingDemoData, load } = useChildcareReport()
 const isAverageInfoOpen = ref(false)
 const displayedCurrentMonthAmount = ref(0)
 let currentMonthAmountAnimationFrame: number | null = null
-const differenceAmount = computed(() => childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount)
-const differenceRate = computed(() => childcareReportSummary.peerAverageAmount
-  ? Math.round((differenceAmount.value / childcareReportSummary.peerAverageAmount) * 100)
-  : 0)
-const comparisonMaxAmount = computed(() => Math.max(childcareReportSummary.currentMonthAmount, childcareReportSummary.peerAverageAmount, 1))
+const differenceAmount = computed(() => childcareReportSummary.comparisonDifferenceAmount)
+const differenceRate = computed(() => childcareReportSummary.comparisonDifferenceRate)
+const differenceText = computed(() =>
+  differenceAmount.value > 0 ? '더 높아요' : differenceAmount.value < 0 ? '더 낮아요' : '같아요',
+)
+const comparisonMaxAmount = computed(() =>
+  Math.max(childcareReportSummary.currentMonthAmount, childcareReportSummary.peerAverageAmount, 1),
+)
 const comparisonBarWidth = (amount: number) =>
   `${Math.max((amount / comparisonMaxAmount.value) * 100, 8)}%`
-
+const hasPeerAverage = computed(() => childcareReportSummary.peerAverageAmount > 0)
+const previousMonthDirection = computed(() => {
+  if (childcareReportSummary.previousMonthDifference > 0) return '늘었어요'
+  if (childcareReportSummary.previousMonthDifference < 0) return '줄었어요'
+  return '같아요'
+})
 const animateCurrentMonthAmount = () => {
   if (currentMonthAmountAnimationFrame !== null) {
     cancelAnimationFrame(currentMonthAmountAnimationFrame)
@@ -83,9 +89,9 @@ onBeforeUnmount(() => {
           <p class="mt-3 mb-0 text-[12px] text-[var(--color-text-secondary)]">
             지난달 대비
             <strong class="text-[var(--color-accent-yellow-text)]">
-              {{ formatReportWon(childcareReportSummary.previousMonthDifference) }}
+              {{ formatReportWon(Math.abs(childcareReportSummary.previousMonthDifference)) }}
             </strong>
-            늘었어요
+            {{ previousMonthDirection }}
           </p>
         </div>
         <span
@@ -101,9 +107,11 @@ onBeforeUnmount(() => {
     >
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h2 class="m-0 text-[16px] font-extrabold">동일 연령 평균과 비교</h2>
+          <h2 class="m-0 text-[16px] font-extrabold">
+            {{ childcareReportSummary.comparisonLabel }}과 비교
+          </h2>
           <p class="mt-1.5 mb-0 text-[12px] leading-5 text-[var(--color-text-secondary)]">
-            같은 연령대 가정의 월평균 양육비와 비교했어요.
+            {{ childcareReportSummary.comparisonLabel }}와 비교했어요.
           </p>
         </div>
         <button
@@ -117,7 +125,11 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="mt-6 grid gap-5">
-        <div class="grid gap-5" aria-label="우리 집과 동일 연령 평균 양육비 막대 그래프">
+        <div
+          v-if="hasPeerAverage"
+          class="grid gap-5"
+          aria-label="우리 집과 동일 연령 평균 양육비 막대 그래프"
+        >
           <div class="min-w-0">
             <div class="flex items-center justify-between gap-3 text-[12px]">
               <strong>우리 집</strong>
@@ -137,7 +149,9 @@ onBeforeUnmount(() => {
 
           <div class="min-w-0">
             <div class="flex items-center justify-between gap-3 text-[12px]">
-              <strong class="text-[var(--color-text-secondary)]">동일 연령 평균</strong>
+              <strong class="text-[var(--color-text-secondary)]">{{
+                childcareReportSummary.comparisonLabel
+              }}</strong>
               <strong class="shrink-0 tabular-nums text-[var(--color-text-secondary)]">
                 {{ formatReportWon(childcareReportSummary.peerAverageAmount) }}
               </strong>
@@ -153,13 +167,21 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
+        <div v-else class="rounded-[16px] bg-[var(--color-surface-muted)] px-4 py-5 text-center">
+          <strong class="text-sm">동일 연령 평균을 준비하고 있어요</strong>
+          <p class="mt-1.5 mb-0 text-xs leading-5 text-[var(--color-text-secondary)]">
+            비교 데이터가 제공되면 우리 집 지출과 함께 보여드릴게요.
+          </p>
+        </div>
+
         <div
+          v-if="hasPeerAverage"
           class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-[#edf0f2] pt-4 text-[11px]"
         >
-          <span class="text-[var(--color-text-secondary)]">동일 연령 평균보다</span>
+          <span class="text-[var(--color-text-secondary)]">비교 기준보다</span>
           <strong class="text-right">
             <span class="text-[var(--color-accent-yellow-text)]">
-              {{ formatReportWon(differenceAmount) }} 더 높아요
+              {{ formatReportWon(Math.abs(differenceAmount)) }} {{ differenceText }}
             </span>
             <span class="ml-1 text-[var(--color-text-secondary)]">({{ differenceRate }}%)</span>
           </strong>
@@ -180,28 +202,20 @@ onBeforeUnmount(() => {
       </h2>
       <div class="mt-4 grid gap-3">
         <article class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4">
-          <Sparkles
-            class="shrink-0 text-[var(--color-accent-yellow-pressed)]"
-            :size="27"
-            :stroke-width="2.2"
-          />
-          <div>
-            <strong class="text-sm">{{ highestCategory.label }} 비중이 가장 높아요.</strong>
-            <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-              전체 양육비의 약 40%를 차지하고 있어요.
-            </p>
-          </div>
-        </article>
-        <article class="flex items-center gap-4 rounded-[18px] bg-[var(--color-surface-muted)] p-4">
           <TrendingUp
             class="shrink-0 text-[var(--color-accent-yellow-pressed)]"
             :size="27"
             :stroke-width="2.2"
           />
           <div>
-            <strong class="text-sm">지난달보다 지출이 6.9% 늘었어요.</strong>
+            <strong class="text-sm"
+              >지난달보다 지출이 {{ Math.abs(childcareReportSummary.previousMonthRate) }}%
+              {{
+                childcareReportSummary.previousMonthDifference >= 0 ? '늘었어요' : '줄었어요'
+              }}.</strong
+            >
             <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-              교육·의류 항목에서 증가 폭이 컸어요.
+              지난달과 비교한 실제 지출 흐름이에요.
             </p>
           </div>
         </article>
@@ -212,9 +226,19 @@ onBeforeUnmount(() => {
             :stroke-width="2.2"
           />
           <div>
-            <strong class="text-sm">다음 달 교육비를 미리 계획해보세요.</strong>
+            <strong class="text-sm">
+              {{
+                isUsingDemoData
+                  ? `${childcareReportSummary.topCategoryLabel} 지출이 ${formatReportWon(childcareReportSummary.topCategoryAmount)}으로 가장 높아요.`
+                  : '다음 달 교육비를 미리 계획해보세요.'
+              }}
+            </strong>
             <p class="mt-1 mb-0 text-xs text-[var(--color-text-secondary)]">
-              정기 지출을 먼저 나누면 예산 관리가 쉬워져요.
+              {{
+                isUsingDemoData
+                  ? `이번 달 양육비의 ${childcareReportSummary.topCategoryRate}%를 차지하고 있어요.`
+                  : '정기 지출을 먼저 나누면 예산 관리가 쉬워져요.'
+              }}
             </p>
           </div>
         </article>
@@ -260,41 +284,16 @@ onBeforeUnmount(() => {
             </header>
 
             <div class="min-h-0 flex-1 overflow-y-auto">
-              <div
-                class="grid grid-cols-[minmax(0,1fr)_auto] bg-[#fafbfb] px-5 py-3 text-[10px] font-bold text-[var(--color-text-secondary)]"
-              >
-                <span>항목</span>
-                <span>월 평균 금액</span>
-              </div>
-
-              <dl class="m-0">
-                <div
-                  v-for="category in childcareCategories"
-                  :key="category.id"
-                  class="grid min-h-13 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-[#edf0f2] px-5 py-3"
-                >
-                  <dt class="flex min-w-0 items-center gap-2.5 text-[12px] font-bold">
-                    <span
-                      class="size-2.5 shrink-0 rounded-full"
-                      :style="{ backgroundColor: category.color }"
-                    ></span>
-                    {{ category.label }}
-                  </dt>
-                  <dd
-                    class="m-0 text-right text-[12px] font-semibold text-[var(--color-text-secondary)]"
-                  >
-                    {{ formatReportWon(category.averageAmount) }}
-                  </dd>
-                </div>
-              </dl>
-
-              <div
-                class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-[#e2e7ea] bg-[var(--color-accent-yellow-surface)] px-5 py-4"
-              >
-                <strong class="text-[13px]">합계</strong>
-                <strong class="text-[18px] tracking-[-0.02em]">
-                  {{ formatReportWon(childcareReportSummary.peerAverageAmount) }}
-                </strong>
+              <div class="px-5 py-4">
+                <p class="m-0 text-[12px] font-bold">
+                  {{ childcareReportSummary.comparisonLabel }}
+                </p>
+                <strong class="mt-2 block text-[22px]">{{
+                  formatReportWon(childcareReportSummary.peerAverageAmount)
+                }}</strong>
+                <p class="mt-4 mb-0 text-[11px] leading-5 text-[var(--color-text-secondary)]">
+                  {{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}
+                </p>
               </div>
 
               <p class="m-0 px-5 py-4 text-[10px] leading-4 text-[var(--color-text-secondary)]">

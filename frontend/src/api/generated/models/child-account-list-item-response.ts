@@ -38,6 +38,10 @@ export interface ChildAccountListItemResponse {
      * 현재 잔액
      */
     'balance': number;
+    /**
+     * 대표 계좌 여부
+     */
+    'is_primary': boolean;
 }
 
 export const ChildAccountListItemResponseAccountProductTypeEnum = {
@@ -47,5 +51,4 @@ export const ChildAccountListItemResponseAccountProductTypeEnum = {
 } as const;
 
 export type ChildAccountListItemResponseAccountProductTypeEnum = typeof ChildAccountListItemResponseAccountProductTypeEnum[keyof typeof ChildAccountListItemResponseAccountProductTypeEnum];
-
 

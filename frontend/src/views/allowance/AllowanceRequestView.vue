@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useToast } from '@/composables/useToast'
@@ -13,6 +13,7 @@ const request = ref<null | {
   id: number
   amount: number
   childName: string
+  targetAccountId: number | null
   targetAccountName: string
   targetAccountNumber: string
   requestedAt: string
@@ -20,6 +21,19 @@ const request = ref<null | {
   status: string
 }>(null)
 const formatWon = (amount: number) => `${amount.toLocaleString('ko-KR')}원`
+const isPending = computed(() => request.value?.status === 'PENDING')
+const statusLabel = computed(() => {
+  switch (request.value?.status) {
+    case 'APPROVED':
+      return '승인 완료'
+    case 'REJECTED':
+      return '거절됨'
+    case 'CANCELED':
+      return '취소됨'
+    default:
+      return '확인 대기 중'
+  }
+})
 
 onMounted(async () => {
   try {
@@ -30,12 +44,19 @@ onMounted(async () => {
       api.getChildUsingGET(childId),
       api.getChildAccountsUsingGET(childId),
     ])
-    const targetAccount = accountResult.data.accounts?.[0]
+    const demandDepositAccounts =
+      accountResult.data.accounts?.filter(
+        ({ account_product_type: productType }) => productType === 'DEMAND_DEPOSIT',
+      ) ?? []
+    const targetAccount =
+      demandDepositAccounts.find(({ is_primary: isPrimary }) => isPrimary) ??
+      demandDepositAccounts[0]
     request.value = {
       id: data.allowance_request_id ?? requestId,
       amount: data.requested_amount ?? 0,
       childName: childResult.data.name ?? '아이',
-      targetAccountName: targetAccount?.account_name ?? '자녀 계좌',
+      targetAccountId: targetAccount?.account_id ?? null,
+      targetAccountName: targetAccount?.account_name ?? '등록된 입출금 계좌 없음',
       targetAccountNumber: targetAccount?.account_number ?? '',
       requestedAt: data.requested_at ? new Date(data.requested_at).toLocaleString('ko-KR') : '',
       reason: data.message ?? '',
@@ -47,7 +68,7 @@ onMounted(async () => {
 })
 
 const rejectRequest = async () => {
-  if (!request.value) return
+  if (!request.value || !isPending.value) return
   try {
     await api.updateAllowanceRequestStatusUsingPATCH(request.value.id, { action: 'REJECT' })
     request.value.status = 'REJECTED'
@@ -59,22 +80,13 @@ const rejectRequest = async () => {
 }
 
 const approveRequest = async () => {
-  if (!request.value) return
+  if (!request.value || !isPending.value) return
   try {
     await api.updateAllowanceRequestStatusUsingPATCH(request.value.id, { action: 'APPROVE' })
     request.value.status = 'APPROVED'
-    await router.push({
-      name: 'Assets',
-      query: {
-        allowanceRequest: request.value.id,
-        amount: String(request.value.amount),
-        memo: `${request.value.childName} 용돈`,
-        targetName: request.value.targetAccountName,
-        targetNumber: request.value.targetAccountNumber,
-      },
-    })
+    showToast('용돈 요청을 확인하고 이체했어요.', 'success')
   } catch (error) {
-    showToast(getApiErrorMessage(error, '용돈 요청을 승인하지 못했습니다.'), 'error')
+    showToast(getApiErrorMessage(error, '용돈 요청 승인과 이체를 완료하지 못했어요.'), 'error')
   }
 }
 </script>
@@ -151,12 +163,12 @@ const approveRequest = async () => {
           <span
             class="inline-flex rounded-lg border-[3px] border-[#8fd5f4] px-5 py-2 text-[13px] font-extrabold tracking-[0.08em] text-[var(--color-selected-text)]"
           >
-            확인 대기 중
+            {{ statusLabel }}
           </span>
         </div>
       </section>
 
-      <div class="mt-auto pt-8">
+      <div v-if="isPending" class="mt-auto pt-8">
         <div class="grid grid-cols-2 gap-3">
           <button
             class="h-[52px] rounded-[14px] border border-[var(--color-border)] bg-white text-[15px] font-bold text-[var(--color-unselected-text)] transition-colors hover:bg-[#f7f9fa] active:bg-[#edf1f3]"
@@ -170,7 +182,7 @@ const approveRequest = async () => {
             type="button"
             @click="approveRequest"
           >
-            승인하기
+            승인하고 이체하기
           </button>
         </div>
       </div>

@@ -74,7 +74,7 @@ onMounted(async () => {
     const { data } = await api.getDashboardUsingGET()
     const spending = data.spending_summary
     childAccountSummary.childName = data.child?.name ?? '아이'
-    childAccountSummary.balance = spending?.display_available_amount ?? 0
+    childAccountSummary.balance = spending?.account_balance ?? 0
     childAccountSummary.monthlySpent = spending?.current_month_spent_amount ?? 0
     childAccountSummary.monthlyLimit = spending?.monthly_budget_amount ?? 0
     childAccountSummary.usageProgress = spending?.usage_rate ?? 0
@@ -103,7 +103,7 @@ const formatCurrency = (amount: number) => `${formatNumber(amount)}원`
     <section class="relative overflow-visible pt-5" aria-label="아이 자산 요약">
       <div class="relative z-[2] max-w-[58%] px-2">
         <p class="m-0 text-[13px] font-semibold text-[#628096]">
-          {{ childAccountSummary.childName }}의 사용 가능 금액
+          {{ childAccountSummary.childName }}의 잔액
         </p>
         <div class="mt-2 flex items-end gap-1">
           <strong

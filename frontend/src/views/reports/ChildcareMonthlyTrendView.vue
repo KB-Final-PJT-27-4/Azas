@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
-import ChildcareCategoryAnalysisContent from '@/components/reports/ChildcareCategoryAnalysisContent.vue'
 import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
 const { childcareReportSummary, monthlyChildcareExpenses, load } = useChildcareReport()
@@ -17,7 +16,7 @@ const visibleExpenses = computed(() => {
 })
 const chartMax = computed(
   () =>
-    Math.ceil(Math.max(...visibleExpenses.value.map(({ amount }) => amount), 2_000_000) / 500_000) *
+    Math.ceil(Math.max(...visibleExpenses.value.flatMap(({ amount, averageAmount }) => [amount, averageAmount]), 2_000_000) / 500_000) *
     500_000,
 )
 const pointsFor = (key: 'amount' | 'averageAmount'): ChartPoint[] =>
@@ -110,7 +109,7 @@ onMounted(load)
             ><i class="h-2.5 w-4 rounded-full bg-[var(--color-accent-yellow)]"></i>지출 금액</span
           >
           <span class="inline-flex items-center gap-1.5"
-            ><i class="h-2.5 w-4 rounded-full bg-[#c9cfd4]"></i>평균 금액</span
+            ><i class="h-2.5 w-4 rounded-full bg-[#c9cfd4]"></i>{{ childcareReportSummary.comparisonLabel }}</span
           >
         </div>
       </div>

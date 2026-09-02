@@ -72,8 +72,17 @@ const login = (provider: OAuthProvider) => {
   try {
     const inviteToken = typeof route.query.inviteToken === 'string' ? route.query.inviteToken : ''
     const inviteeType = route.query.inviteeType
+    const relationType = route.query.relationType
     startOAuthLogin(provider, inviteToken && (inviteeType === 'PARENT' || inviteeType === 'CHILD')
-      ? { inviteToken, inviteeType }
+      ? {
+          inviteToken,
+          inviteeType,
+          relationType:
+            inviteeType === 'PARENT' &&
+            (relationType === 'FATHER' || relationType === 'MOTHER' || relationType === 'GUARDIAN')
+              ? relationType
+              : undefined,
+        }
       : undefined)
   }
   catch (error) { errorMessage.value = getOAuthErrorMessage(error) }

@@ -17,13 +17,13 @@ const previewInvitations: Record<string, FamilyInvitationInfoResponse> = {
   'preview-parent': {
     invitee_type: 'PARENT',
     inviter_name: '김하나',
-    child_name: '김깨비',
+    child_name: '아이',
     status: 'PENDING',
   },
   'preview-child': {
     invitee_type: 'CHILD',
     inviter_name: '김하나',
-    child_name: '김깨비',
+    child_name: '아이',
     status: 'PENDING',
   },
 }

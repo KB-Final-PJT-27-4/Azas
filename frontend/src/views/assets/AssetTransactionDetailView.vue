@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
-import { Pencil } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { Pencil, X } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import { api, getApiErrorMessage } from '@/api'
+import { updateChildcareTransactionTag } from '@/api/childcareTransactions'
+import { getChildren } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
@@ -18,12 +20,22 @@ const transaction = ref({
   withdrawalAccountNumber: '',
   transactedAt: '',
   balanceAfterTransaction: 0,
+  direction: '',
+  isParentAccount: false,
 })
 
 const memo = ref('')
 const memoDraft = ref(memo.value)
 const isEditingMemo = ref(false)
 const memoInput = ref<HTMLTextAreaElement | null>(null)
+const children = ref<Array<{ childId: number; name: string }>>([])
+const selectedChildId = ref<number | null>(null)
+const childcareIncluded = ref(route.query.childcareIncluded === 'true')
+const isChildcareSheetOpen = ref(false)
+const isUpdatingChildcare = ref(false)
+const canManageChildcare = computed(() =>
+  transaction.value.direction === 'DEBIT' && transaction.value.isParentAccount,
+)
 
 const startMemoEdit = async () => {
   memoDraft.value = memo.value
@@ -67,11 +79,41 @@ const loadTransaction = async () => {
       withdrawalAccountNumber: detail.withdrawal_account.account_number ?? '',
       transactedAt: new Date(detail.occurred_at).toLocaleString('ko-KR'),
       balanceAfterTransaction: detail.balance_after ?? 0,
+      direction: detail.direction,
+      isParentAccount: accountResponse.data.owner_type === 'PARENT',
     }
     memo.value = detail.memo ?? ''
     memoDraft.value = memo.value
   } catch (error) {
     showToast(getApiErrorMessage(error, '거래 상세를 불러오지 못했어요.'), 'error')
+  }
+}
+
+const openChildcareSheet = async () => {
+  if (!canManageChildcare.value) return
+  try {
+    const result = await getChildren()
+    children.value = result.flatMap((child) =>
+      child.child_id && child.name ? [{ childId: child.child_id, name: child.name }] : [],
+    )
+    selectedChildId.value = children.value[0]?.childId ?? null
+    isChildcareSheetOpen.value = true
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '자녀 목록을 불러오지 못했어요.'), 'error')
+  }
+}
+
+const updateChildcare = async (childId: number | null) => {
+  isUpdatingChildcare.value = true
+  try {
+    const { data } = await updateChildcareTransactionTag(Number(route.params.transactionId), childId)
+    childcareIncluded.value = data.childcare_included
+    isChildcareSheetOpen.value = false
+    showToast(data.childcare_included ? '양육비에 포함했어요.' : '양육비 포함을 해제했어요.', 'success')
+  } catch (error) {
+    showToast(getApiErrorMessage(error, '부모 계좌의 외부 출금만 양육비에 포함할 수 있어요.'), 'error')
+  } finally {
+    isUpdatingChildcare.value = false
   }
 }
 
@@ -169,6 +211,18 @@ onMounted(loadTransaction)
           <dd class="m-0 text-right text-[15px] font-medium">
             {{ formatWon(transaction.balanceAfterTransaction) }}
           </dd>
+
+          <template v-if="canManageChildcare">
+            <dt class="text-[15px] font-semibold text-[var(--color-text-secondary)]">양육비</dt>
+            <dd class="m-0 text-right">
+              <button
+                class="rounded-full px-3 py-1.5 text-[12px] font-bold"
+                :class="childcareIncluded ? 'bg-[#fff4cd] text-[#a87500]' : 'bg-[#edf2f5] text-[var(--color-text-secondary)]'"
+                type="button"
+                @click="childcareIncluded ? updateChildcare(null) : openChildcareSheet()"
+              >{{ childcareIncluded ? '양육비 포함됨' : '양육비에 포함하기' }}</button>
+            </dd>
+          </template>
         </dl>
       </div>
 
@@ -180,5 +234,17 @@ onMounted(loadTransaction)
         확인
       </button>
     </article>
+
+    <Teleport to="body">
+      <div v-if="isChildcareSheetOpen" class="fixed inset-0 z-[var(--z-index-overlay)] flex items-end bg-black/40" @click.self="isChildcareSheetOpen = false">
+        <section class="w-full rounded-t-[24px] bg-white px-5 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))]" role="dialog" aria-modal="true" aria-labelledby="childcare-sheet-title">
+          <div class="flex items-center justify-between"><h2 id="childcare-sheet-title" class="m-0 text-[18px] font-extrabold">양육비에 포함할까요?</h2><button class="grid size-9 place-items-center rounded-full text-[var(--color-text-secondary)]" type="button" aria-label="닫기" @click="isChildcareSheetOpen = false"><X :size="20" /></button></div>
+          <p class="mt-2 mb-0 text-[12px] leading-5 text-[var(--color-text-secondary)]">선택한 자녀의 양육비 리포트에 이 거래가 반영돼요.</p>
+          <label class="mt-5 block text-[12px] font-bold" for="childcare-child">자녀 선택</label>
+          <select id="childcare-child" v-model="selectedChildId" class="mt-2 h-12 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 text-[14px]" :disabled="isUpdatingChildcare"><option v-for="child in children" :key="child.childId" :value="child.childId">{{ child.name }}</option></select>
+          <button class="mt-5 h-13 w-full rounded-[14px] bg-[var(--color-brand-primary)] text-[15px] font-extrabold text-white disabled:opacity-50" type="button" :disabled="selectedChildId === null || isUpdatingChildcare" @click="updateChildcare(selectedChildId)">포함하기</button>
+        </section>
+      </div>
+    </Teleport>
   </main>
 </template>

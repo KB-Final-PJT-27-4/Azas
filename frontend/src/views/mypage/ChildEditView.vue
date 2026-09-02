@@ -49,10 +49,19 @@ const saveChild = async () => {
 
   if (!childId.value) return
   try {
+    const today = new Date()
+    const todayKey = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-')
+    const isExpected = birthDate.value > todayKey
+
     await api.updateChildUsingPATCH(childId.value, {
       name: name.value.trim(),
-      birth_date: birthDate.value,
-      birth_status: 'BORN',
+      birth_date: isExpected ? undefined : birthDate.value,
+      birth_status: isExpected ? 'EXPECTED' : 'BORN',
+      expected_birth_date: isExpected ? birthDate.value : undefined,
       gender: gender.value === '남자' ? 'MALE' : gender.value === '여자' ? 'FEMALE' : 'UNKNOWN',
     })
     showToast(`${name.value.trim()}의 정보가 저장되었습니다.`, 'success')
@@ -129,7 +138,7 @@ onMounted(async () => {
     <form v-else class="mt-3 flex flex-1 flex-col" @submit.prevent="saveChild">
       <section class="flex items-center gap-4 rounded-[24px] border border-[#cfe8f3] bg-[#eaf8fe] p-4" aria-label="자녀 프로필">
         <span class="size-[70px] shrink-0 overflow-hidden rounded-full bg-white">
-          <img :src="childProfileUrl" alt="깨비 프로필" class="size-full object-cover" />
+          <img :src="childProfileUrl" :alt="`${name || '아이'} 프로필`" class="size-full object-cover" />
         </span>
         <div class="min-w-0 flex-1">
           <span class="text-xs font-semibold text-[var(--color-selected-text)]">함께 관리 중인 아이</span>

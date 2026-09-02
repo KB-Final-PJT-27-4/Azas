@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
+import { formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
 
-import { formatReportManwon, formatReportWon, useChildcareReport } from '@/composables/useChildcareReport'
-
-const { childcareCategories, childcareReportSummary, load } = useChildcareReport()
-
-const maxAmount = computed(() => Math.max(...childcareCategories.flatMap(({ amount, averageAmount }) => [amount, averageAmount]), 1))
-const difference = computed(() => childcareReportSummary.currentMonthAmount - childcareReportSummary.peerAverageAmount)
-const selectedCategoryId = ref(childcareCategories[0]?.id ?? '')
-const barHeight = (amount: number) => `${Math.max((amount / maxAmount.value) * 74, 5)}%`
+const { childcareCategories, childcareReportSummary, isUsingDemoData, load } = useChildcareReport()
+const comparisonText = computed(() => {
+  const amount = childcareReportSummary.comparisonDifferenceAmount
+  if (amount > 0) return `${formatReportWon(amount)} 높아요`
+  if (amount < 0) return `${formatReportWon(Math.abs(amount))} 낮아요`
+  return '같아요'
+})
+const categoryMaxAmount = computed(() =>
+  Math.max(...childcareCategories.map((category) => Math.max(category.amount, category.averageAmount)), 1),
+)
 onMounted(load)
 </script>
 
@@ -21,7 +24,7 @@ onMounted(load)
         class="inline-flex rounded-full bg-[var(--color-accent-yellow-surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--color-accent-yellow-text)]"
         >이번 달 비교</span
       >
-      <h1 class="mt-3 mb-0 text-[19px] font-extrabold">동일 연령 평균과 함께 살펴보세요</h1>
+      <h1 class="mt-3 mb-0 text-[19px] font-extrabold">{{ childcareReportSummary.comparisonLabel }}와 함께 살펴보세요</h1>
       <p class="mt-2 mb-0 text-[12px] leading-5 text-[var(--color-text-secondary)]">
         평균은 참고용 정보예요. 우리 집의 소비 흐름을 이해하는 데 활용해보세요.
       </p>
@@ -40,7 +43,7 @@ onMounted(load)
       </div>
       <div class="rounded-[18px] border border-[#e4e8eb] bg-[#fafbfb] p-4">
         <span class="text-[11px] font-bold text-[var(--color-text-secondary)]"
-          >동일 연령 월평균</span
+          >{{ childcareReportSummary.comparisonLabel }}</span
         >
         <strong class="mt-2 block text-[19px]">{{
           formatReportWon(childcareReportSummary.peerAverageAmount)
@@ -51,84 +54,62 @@ onMounted(load)
     <div
       class="mt-4 rounded-[16px] bg-[var(--color-accent-yellow-surface)] px-4 py-3.5 text-[12px] leading-5 text-[var(--color-text-secondary)]"
     >
-      이번 달 우리 집 지출은 동일 연령 평균보다
+      이번 달 우리 집 지출은 비교 기준보다
       <strong class="text-[var(--color-accent-yellow-text)]"
-        >약 {{ formatReportManwon(difference) }} 높은 편</strong
-      >이에요. 특정 항목의 지출이 일시적으로 늘었는지 함께 확인해보세요.
+        >{{ comparisonText }}</strong
+      >이에요.
     </div>
 
     <section
+      v-if="isUsingDemoData && childcareCategories.length > 0"
       class="mt-5 rounded-[22px] border border-[#e3e7ea] bg-white p-5 shadow-[0_5px_18px_rgba(64,78,86,0.04)]"
       aria-labelledby="category-comparison-title"
     >
       <h2 id="category-comparison-title" class="m-0 text-[16px] font-extrabold">
-        항목별 지출 흐름
+        양육비 카테고리 비교
       </h2>
-
-      <div
-        class="mt-4 flex items-center gap-5 text-[11px] font-bold text-[var(--color-text-secondary)]"
-      >
-        <span class="inline-flex items-center gap-1.5"
-          ><i class="h-2.5 w-4 rounded-full bg-[var(--color-accent-yellow)]"></i>우리 집</span
-        >
-        <span class="inline-flex items-center gap-1.5"
-          ><i class="h-2.5 w-4 rounded-full bg-[#d8dde1]"></i>동일 연령 평균</span
-        >
-      </div>
-
-      <div
-        class="mt-5 grid h-[240px] grid-cols-6 gap-2 border-b border-[#dfe4e7] bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_59px,#edf0f2_60px)] px-1"
-        role="group"
-        aria-label="항목별 우리 집 지출과 동일 연령 평균 막대그래프"
-      >
-        <button
-          v-for="category in childcareCategories"
-          :key="category.id"
-          class="relative flex min-w-0 flex-col justify-end border-0 bg-transparent p-0 text-inherit outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-[var(--color-accent-yellow-border)]"
-          type="button"
-          :aria-label="`${category.label}, 우리 집 ${formatReportWon(category.amount)}, 동일 연령 평균 ${formatReportWon(category.averageAmount)}`"
-          :aria-pressed="selectedCategoryId === category.id"
-          @click="selectedCategoryId = category.id"
-        >
-          <div class="relative flex h-[205px] items-end justify-center gap-1">
-            <div
-              v-if="selectedCategoryId === category.id"
-              class="absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap"
-              :style="{
-                bottom: `calc(${barHeight(Math.max(category.amount, category.averageAmount))} + 8px)`,
-              }"
-            >
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-accent-yellow-border)] bg-white px-2.5 py-1 text-[8px] font-extrabold shadow-[0_3px_8px_rgba(126,99,0,0.12)]"
-              >
-                <b class="text-[var(--color-accent-yellow-text)]">{{
-                  formatReportManwon(category.amount)
-                }}</b>
-                <i class="not-italic text-[#c8ced3]" aria-hidden="true">|</i>
-                <b class="text-[#596873]">{{ formatReportManwon(category.averageAmount) }}</b>
-              </span>
-            </div>
-            <span
-              class="w-[11px] rounded-t-[5px] transition-[height,background-color] duration-200"
-              :class="
-                selectedCategoryId === category.id
-                  ? 'bg-[var(--color-accent-yellow)]'
-                  : 'bg-[#ffe990]'
-              "
-              :style="{ height: barHeight(category.amount) }"
-            ></span>
-            <span
-              class="w-[11px] rounded-t-[5px] transition-[height,background-color] duration-200"
-              :class="selectedCategoryId === category.id ? 'bg-[#c8ced3]' : 'bg-[#d8dde1]'"
-              :style="{ height: barHeight(category.averageAmount) }"
-            ></span>
+      <p class="mt-2 mb-0 text-[12px] leading-5 text-[var(--color-text-secondary)]">
+        시연용 더미 데이터로, 이번 달 지출을 카테고리별로 비교해요.
+      </p>
+      <ul class="mt-5 grid list-none gap-4 p-0 m-0">
+        <li v-for="category in childcareCategories" :key="category.id">
+          <div class="flex items-center justify-between gap-3 text-[12px]">
+            <strong>{{ category.label }}</strong>
+            <span class="text-[var(--color-text-secondary)]">
+              우리 집 {{ formatReportWon(category.amount) }} · 비교 기준 {{ formatReportWon(category.averageAmount) }}
+            </span>
           </div>
-          <span
-            class="mt-2 h-7 break-keep text-center text-[9px] leading-3 font-semibold text-[var(--color-text-secondary)]"
-            >{{ category.label.replace('/', '/\u200b') }}</span
-          >
-        </button>
+          <div class="mt-2 grid gap-1.5">
+            <div class="h-2 overflow-hidden rounded-full bg-[#edf1f3]">
+              <div
+                class="h-full rounded-full"
+                :style="{ width: `${(category.amount / categoryMaxAmount) * 100}%`, backgroundColor: category.color }"
+              />
+            </div>
+            <div class="h-1.5 overflow-hidden rounded-full bg-[#f2f4f5]">
+              <div
+                class="h-full rounded-full bg-[#aeb9c2]"
+                :style="{ width: `${(category.averageAmount / categoryMaxAmount) * 100}%` }"
+              />
+            </div>
+          </div>
+        </li>
+      </ul>
+      <div class="mt-4 flex gap-4 text-[11px] text-[var(--color-text-secondary)]">
+        <span class="inline-flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-[var(--color-accent-yellow)]" />우리 집</span>
+        <span class="inline-flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-[#aeb9c2]" />비교 기준</span>
       </div>
+    </section>
+
+    <section
+      class="mt-5 rounded-[22px] border border-[#e3e7ea] bg-white p-5 shadow-[0_5px_18px_rgba(64,78,86,0.04)]"
+      aria-labelledby="benchmark-title"
+    >
+      <h2 id="benchmark-title" class="m-0 text-[16px] font-extrabold">비교 기준</h2>
+      <dl class="mt-4 grid gap-3 text-[12px]">
+        <div class="flex justify-between gap-3"><dt class="text-[var(--color-text-secondary)]">기준 금액</dt><dd class="m-0 font-bold">{{ formatReportWon(childcareReportSummary.peerAverageAmount) }}</dd></div>
+        <div><dt class="text-[var(--color-text-secondary)]">산정 방식</dt><dd class="mt-1 m-0 leading-5">{{ childcareReportSummary.benchmarkCalculationBasis || '공공 통계 기준' }}</dd></div>
+      </dl>
     </section>
   </main>
 </template>

@@ -7,9 +7,10 @@ import failPigImage from '@/assets/images/assets/fail-pig.png'
 import successPigImage from '@/assets/images/assets/transfer-capsule-pig.png'
 import AppBottomNavigation from '@/components/layout/AppBottomNavigation.vue'
 
-defineProps<{
+const props = defineProps<{
   open: boolean
   status: 'success' | 'failure'
+  timeCapsuleAccountId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -58,7 +59,16 @@ const endSheetDrag = (event: PointerEvent) => {
   if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId)
 }
 
-const createTimeCapsule = () => router.push({ name: 'TimeCapsuleCreate' })
+const createTimeCapsule = () =>
+  router.push({
+    name: 'TimeCapsuleCreate',
+    query: {
+      ...(props.timeCapsuleAccountId
+        ? { account_id: String(props.timeCapsuleAccountId) }
+        : {}),
+      transfer: 'latest',
+    },
+  })
 </script>
 
 <template>

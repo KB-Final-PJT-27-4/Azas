@@ -4,7 +4,7 @@ import { Baby, Check, ChevronRight, Copy, Link2, UserRound, X } from 'lucide-vue
 
 import { useToast } from '@/composables/useToast'
 import { api, getApiErrorMessage } from '@/api'
-import { resolveCurrentChildId } from '@/api/context'
+import { getCurrentChild, resolveCurrentChildId } from '@/api/context'
 
 type InviteType = 'guardian' | 'child'
 
@@ -15,6 +15,7 @@ const isLoading = ref(true)
 const isCreatingInvitation = ref(false)
 
 const childId = ref<number | null>(null)
+const childName = ref('아이')
 const familyMembers = ref<Array<{ id: number; name: string; relation: string; initials: string; isMe: boolean; color: string }>>([])
 const createdInvitationLink = ref('')
 
@@ -29,6 +30,7 @@ const invitationDescription = computed(() =>
 const invitationLink = computed(() => {
   return createdInvitationLink.value
 })
+const invitationShareText = computed(() => invitationLink.value)
 
 const openInvitation = async (type: InviteType) => {
   inviteType.value = type
@@ -38,14 +40,15 @@ const openInvitation = async (type: InviteType) => {
   isCreatingInvitation.value = true
   try {
     const invitationRequest = {
-      invitee_type: type === 'guardian' ? 'PARENT' : 'CHILD',
       expires_in_hours: 24,
     }
-    const { data } = await api.createChildFamilyInvitationUsingPOST(
-      childId.value,
-      undefined,
-      invitationRequest,
-    )
+    const { data } = type === 'guardian'
+      ? await api.createParentFamilyInvitationUsingPOST(undefined, invitationRequest)
+      : await api.createChildFamilyInvitationUsingPOST(
+        childId.value,
+        undefined,
+        invitationRequest,
+      )
     createdInvitationLink.value = data.invite_url
       ?? `${window.location.origin}/family-invitations/${data.invite_token ?? ''}`
   } catch (error) {
@@ -64,7 +67,11 @@ const closeInvitation = () => {
 onMounted(async () => {
   try {
     childId.value = await resolveCurrentChildId()
-    const { data } = await api.getFamilyMembersUsingGET(childId.value)
+    const [{ data }, child] = await Promise.all([
+      api.getFamilyMembersUsingGET(childId.value),
+      getCurrentChild(),
+    ])
+    childName.value = child.name?.trim() || '아이'
     familyMembers.value = (data.items ?? []).map((member, index) => ({
       id: member.member_id ?? index,
       name: member.name ?? '보호자',
@@ -84,9 +91,9 @@ const copyInvitationLink = async () => {
   if (isCreatingInvitation.value || !invitationLink.value) return
 
   try {
-    await navigator.clipboard.writeText(invitationLink.value)
+    await navigator.clipboard.writeText(invitationShareText.value)
     copied.value = true
-    showToast('초대 링크를 복사했습니다.', 'success')
+    showToast('초대 문구와 링크를 복사했습니다.', 'success')
   } catch {
     showToast('링크를 복사하지 못했습니다. 다시 시도해 주세요.', 'error')
   }
@@ -100,7 +107,7 @@ const copyInvitationLink = async () => {
     <header class="px-0.5">
       <h1 class="m-0 text-[26px] leading-tight font-extrabold tracking-[-0.04em]">우리 가족</h1>
       <p class="mt-2 mb-0 text-sm leading-6 text-[var(--color-text-secondary)]">
-        깨비와 함께 자산을 관리하는 가족을 확인해요.
+        {{ childName }}의 자산을 함께 관리하는 가족을 확인해요.
       </p>
     </header>
 
@@ -242,8 +249,8 @@ const copyInvitationLink = async () => {
               <div v-if="isCreatingInvitation" class="min-w-0 flex-1" aria-hidden="true">
                 <span class="block h-3 w-[88%] animate-pulse rounded-full bg-[#dfe8ec]"></span>
               </div>
-              <p v-else class="m-0 min-w-0 flex-1 truncate text-[12px] font-medium text-[#647783]">
-                {{ invitationLink }}
+              <p v-else class="m-0 min-w-0 flex-1 whitespace-pre-line break-all text-[12px] leading-5 font-medium text-[#647783]">
+                {{ invitationShareText }}
               </p>
             </div>
 

@@ -9,8 +9,25 @@ import { api, getApiErrorMessage } from '@/api'
 import { requireAuthorizationHeader, resolveCurrentChildId } from '@/api/context'
 import { useToast } from '@/composables/useToast'
 
-type ChecklistInfoItem = { title: string; description: string; actionLabel: string; externalUrl?: string; detail?: string }
-type ChecklistItem = { id: string; stageId: string; category: 'service'; title: string; description: string; completed: boolean; actionType: 'info' | 'route'; route?: string; externalUrl?: string; infoTitle?: string; infoDescription?: string; infoItems?: ChecklistInfoItem[]; infoNotice?: string }
+type ChecklistInfoItem = {
+  title: string
+  description: string
+  actionLabel?: string
+  externalUrl?: string
+  detail?: string
+}
+type ChecklistItem = {
+  id: string
+  stageId: string
+  title: string
+  description: string
+  completed: boolean
+  actionType?: string
+  route?: string
+  infoTitle?: string
+  infoItems: ChecklistInfoItem[]
+  infoNotice?: string
+}
 const lifecycleStages = [
   { id: 'PREGNANCY', ageRange: '임신 중~출산 전', title: '미래 준비', description: '출산 전 금융 준비를 시작해보세요.' },
   { id: 'AGE_0_TO_1', ageRange: '출생~1세', title: '첫 금융 시작', description: '아이의 금융생활을 준비해요.' },
@@ -22,8 +39,22 @@ const lifecycleStages = [
   { id: 'AGE_17_TO_19', ageRange: '17~19세', title: '미래 자산 완성', description: '독립 전 자산 준비를 마무리해요.' },
 ]
 
-const resolveLifecycleStage = (birthStatus?: string, age = 0) => {
-  if (birthStatus === 'EXPECTED') return 'PREGNANCY'
+const resolveLifecycleStage = (
+  birthStatus?: string,
+  age = 0,
+  expectedBirthDate?: string,
+  birthDate?: string,
+) => {
+  const normalizedBirthStatus = birthStatus?.toUpperCase()
+  if (normalizedBirthStatus === 'EXPECTED') return 'PREGNANCY'
+
+  const pregnancyDate = normalizedBirthStatus === 'BORN' ? birthDate : expectedBirthDate ?? birthDate
+  if (pregnancyDate) {
+    const dueDate = new Date(`${pregnancyDate}T00:00:00`)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (!Number.isNaN(dueDate.getTime()) && dueDate >= today) return 'PREGNANCY'
+  }
   if (age <= 1) return 'AGE_0_TO_1'
   if (age <= 4) return 'AGE_2_TO_4'
   if (age <= 7) return 'AGE_5_TO_7'
@@ -92,17 +123,41 @@ const loadChecklist = async (stage?: string) => {
   if (!childId.value) return
   try {
     const { data } = await api.getChecklistItemsUsingGET(authorization.value, childId.value, stage)
-    const rawItems = (data.items ?? []) as unknown as Array<{ checklist_item_id?: number; status?: string; title?: string; description?: string }>
+    const rawItems = (data.items ?? []) as Array<{
+      checklist_item_id?: number
+      status?: string
+      title?: string
+      description?: string
+      action_type?: string
+      url?: string
+      info_title?: string
+      info_notice?: string
+      info_items?: Array<{
+        title?: string
+        description?: string
+        action_label?: string
+        url?: string
+        content?: string
+      }>
+    }>
     if (data.lifecycle_stage) selectedStageId.value = data.lifecycle_stage
     checklistItems.value = rawItems.map((item) => ({
       id: String(item.checklist_item_id ?? ''),
       stageId: data.lifecycle_stage ?? selectedStageId.value,
-      category: 'service',
       title: item.title ?? '체크리스트',
       description: item.description ?? '준비 상태를 확인해보세요.',
       completed: item.status === 'COMPLETED',
-      actionType: 'info',
-      infoItems: [],
+      actionType: item.action_type,
+      route: item.url,
+      infoTitle: item.info_title,
+      infoNotice: item.info_notice,
+      infoItems: (item.info_items ?? []).map((info) => ({
+        title: info.title ?? '안내 항목',
+        description: info.description ?? '',
+        actionLabel: info.action_label,
+        externalUrl: info.url,
+        detail: info.content,
+      })),
     }))
     checkedItemIds.value = new Set(checklistItems.value.filter(({ completed }) => completed).map(({ id }) => id))
   } catch (error) {
@@ -116,7 +171,12 @@ onMounted(async () => {
   let stage = selectedStageId.value
   try {
     const { data: child } = await api.getChildUsingGET(childId.value)
-    stage = resolveLifecycleStage(child.birth_status, child.age)
+    stage = resolveLifecycleStage(
+      child.birth_status,
+      child.age,
+      child.expected_birth_date,
+      child.birth_date,
+    )
   } catch (error) {
     showToast(getApiErrorMessage(error, '자녀 생애주기 정보를 불러오지 못했습니다.'), 'error')
   }
@@ -139,24 +199,23 @@ const progressPercent = computed(() =>
 const progressStyle = computed(() => ({ width: `${progressPercent.value}%` }))
 
 const hasChecklistAction = (item: ChecklistItem) =>
-  item.actionType === 'info' || Boolean(item.route) || Boolean(item.externalUrl)
+  item.actionType === 'INFO'
+  || (item.actionType === 'ROUTE' && Boolean(item.route))
+
+const hasInfoItemAction = (info: ChecklistInfoItem) =>
+  Boolean(info.externalUrl) || Boolean(info.detail)
 
 const openExternalUrl = (url: string) => {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 const openChecklistAction = (item: ChecklistItem) => {
-  if (item.externalUrl) {
-    openExternalUrl(item.externalUrl)
-    return
-  }
-
-  if (item.actionType === 'info') {
+  if (item.actionType === 'INFO') {
     selectedInfoItem.value = item
     return
   }
 
-  if (item.route) {
+  if (item.actionType === 'ROUTE' && item.route) {
     pendingRouteItem.value = item
   }
 }
@@ -179,7 +238,7 @@ const openInfoItem = (info: ChecklistInfoItem) => {
     return
   }
 
-  selectedDetailInfo.value = info
+  if (info.detail) selectedDetailInfo.value = info
 }
 
 const closeDetailInfo = () => {
@@ -449,17 +508,25 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                 :id="`${selectedInfoItem.id}-title`"
                 class="m-0 text-[25px] leading-[1.22] font-bold text-[var(--color-text-primary)]"
               >
-                {{ selectedInfoItem.infoTitle }}
+                {{ selectedInfoItem.infoTitle ?? selectedInfoItem.title }}
               </h2>
             </div>
 
-            <div class="mt-6">
+            <p
+              v-if="selectedInfoItem.infoNotice"
+              class="mt-3 mb-0 text-[14px] leading-[1.55] text-[var(--color-text-secondary)]"
+            >
+              {{ selectedInfoItem.infoNotice }}
+            </p>
+
+            <div v-if="selectedInfoItem.infoItems.length > 0" class="mt-6">
               <strong class="text-[16px] font-bold text-[var(--color-text-primary)]">
                 지금 확인해볼 지원
               </strong>
               <ul class="mt-3 m-0 list-none space-y-3 p-0">
                 <li v-for="info in selectedInfoItem.infoItems" :key="info.title">
                   <button
+                    v-if="hasInfoItemAction(info)"
                     class="grid min-h-[76px] w-full grid-cols-[44px_1fr_auto] items-center gap-3 rounded-[16px] border border-[var(--color-border)] bg-white px-4 text-left"
                     type="button"
                     @click="openInfoItem(info)"
@@ -482,6 +549,27 @@ const startSheetDrag = (event: PointerEvent, sheet: 'info' | 'complete') => {
                     </span>
                     <ChevronRight :size="18" class="text-[#9cadba]" />
                   </button>
+                  <div
+                    v-else
+                    class="grid min-h-[76px] w-full grid-cols-[44px_1fr] items-center gap-3 rounded-[16px] border border-[var(--color-border)] bg-white px-4 text-left"
+                  >
+                    <span
+                      class="grid size-10 place-items-center rounded-full bg-[var(--color-selected-background)] text-[var(--color-selected-text)]"
+                      aria-hidden="true"
+                    >
+                      <FileText :size="20" />
+                    </span>
+                    <span class="min-w-0">
+                      <strong class="block text-[15px] font-bold text-[var(--color-text-primary)]">
+                        {{ info.title }}
+                      </strong>
+                      <span
+                        class="mt-1 block text-[12px] leading-[1.35] text-[var(--color-text-secondary)]"
+                      >
+                        {{ info.description }}
+                      </span>
+                    </span>
+                  </div>
                 </li>
               </ul>
             </div>

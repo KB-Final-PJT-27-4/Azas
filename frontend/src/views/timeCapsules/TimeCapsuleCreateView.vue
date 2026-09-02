@@ -6,6 +6,7 @@ import { Check, ChevronDown, ImagePlus, Landmark, X } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import { api, getApiErrorMessage } from '@/api'
 import { resolveCurrentChildId } from '@/api/context'
+import { saveStoredTimeCapsuleEntry } from '@/utils/timeCapsuleTextEntries'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,13 +20,16 @@ const isTransferMenuOpen = ref(false)
 const accounts = ref<Array<{ id: number; accountId: number; bank: string; name: string; number: string }>>([])
 const transfers = ref<Array<{ id: number; date: string; name: string; amount: number }>>([])
 
-const requestedAccountId = Number(route.query.account)
-const selectedAccountId = ref(requestedAccountId || 0)
+const requestedTimeCapsuleId = Number(route.query.account)
+const requestedFinancialAccountId = Number(route.query.account_id)
+const shouldSelectLatestTransfer = route.query.transfer === 'latest'
+const selectedAccountId = ref(requestedTimeCapsuleId || 0)
 const selectedTransferId = ref(0)
 const selectedAccount = computed(() => accounts.value.find(({ id }) => id === selectedAccountId.value) ?? { id: 0, accountId: 0, bank: '', name: '계좌를 선택해주세요', number: '' })
 const selectedTransfer = computed(() => transfers.value.find(({ id }) => id === selectedTransferId.value) ?? { id: 0, date: '', name: '거래를 선택해주세요', amount: 0 })
 const title = ref('')
 const letter = ref('')
+const childName = ref('아이')
 type MediaItem = {
   file: File
   url: string
@@ -35,11 +39,11 @@ type MediaItem = {
 
 const mediaItems = ref<MediaItem[]>([])
 const hasCreated = ref(false)
+const isSubmitting = ref(false)
 
 const canPreview = computed(() =>
   selectedAccountId.value > 0
     && selectedTransferId.value > 0
-    && mediaItems.value.length === 1
     && Boolean(title.value.trim())
     && Boolean(letter.value.trim()),
 )
@@ -127,11 +131,14 @@ const showForm = () => {
 }
 
 const createTimeCapsule = async () => {
-  if (isPageLeaving.value) return
+  if (isPageLeaving.value || isSubmitting.value) return
   if (!canPreview.value) {
-    showToast('계좌·입금 거래·사진 1장과 필수 내용을 모두 입력해 주세요.', 'error')
+    showToast('계좌·입금 거래와 필수 내용을 모두 입력해 주세요.', 'error')
     return
   }
+
+  let createdEntryId: number | undefined
+  isSubmitting.value = true
 
   try {
     const { data } = await api.createTimeCapsuleEntryUsingPOST(selectedAccountId.value, {
@@ -140,18 +147,32 @@ const createTimeCapsule = async () => {
       message: letter.value.trim(),
     })
     const entryId = data.time_capsule_entry_id
+    createdEntryId = entryId
     const media = mediaItems.value[0]
-    if (!entryId || !media) throw new Error('타임캡슐 기록 또는 사진 정보가 없습니다.')
-    const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
-      file_size: media.file.size,
-      mime_type: media.file.type,
-    })
-    if (!upload.upload_url || !upload.time_capsule_media_id) {
-      throw new Error('사진 업로드 정보를 받지 못했습니다.')
+    if (!entryId) throw new Error('타임캡슐 기록 정보를 받지 못했습니다.')
+
+    if (media) {
+      const { data: upload } = await api.createMediaUploadUrlUsingPOST(entryId, {
+        file_size: media.file.size,
+        mime_type: media.file.type,
+      })
+      if (!upload.upload_url || !upload.time_capsule_media_id) {
+        throw new Error('사진 업로드 정보를 받지 못했습니다.')
+      }
+      await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
+      await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
     }
-    await axios.put(upload.upload_url, media.file, { headers: upload.required_headers })
-    await api.completeMediaUploadUsingPOST(entryId, { time_capsule_media_id: upload.time_capsule_media_id })
     await api.sealTimeCapsuleEntryUsingPATCH(entryId)
+    saveStoredTimeCapsuleEntry({
+      id: entryId,
+      timeCapsuleId: selectedAccountId.value,
+      title: title.value.trim(),
+      message: letter.value.trim(),
+      contributedAt: data.contributed_at ?? new Date().toISOString(),
+      contributionAmount: data.contribution_amount ?? selectedTransfer.value.amount,
+      hasPhoto: Boolean(media),
+    })
+
     hasCreated.value = true
     isPageLeaving.value = true
     await router.push({
@@ -162,7 +183,16 @@ const createTimeCapsule = async () => {
   } catch (error) {
     hasCreated.value = false
     isPageLeaving.value = false
+    if (createdEntryId) {
+      try {
+        await api.deleteTimeCapsuleEntryUsingDELETE(createdEntryId)
+      } catch {
+        // Keep the original error visible. Cleanup failure can be retried from the list/backend.
+      }
+    }
     showToast(getApiErrorMessage(error, '캡슐 저장에 실패했습니다.'), 'error')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -178,7 +208,9 @@ const loadTransfers = async () => {
     name: transaction.counterparty_name ?? '계좌 거래',
     amount: transaction.amount,
     }))
-  selectedTransferId.value = transfers.value[0]?.id ?? 0
+  if (shouldSelectLatestTransfer || !transfers.value.some(({ id }) => id === selectedTransferId.value)) {
+    selectedTransferId.value = transfers.value[0]?.id ?? 0
+  }
 }
 
 watch(selectedAccountId, () => void loadTransfers())
@@ -186,13 +218,33 @@ watch(selectedAccountId, () => void loadTransfers())
 onMounted(async () => {
   try {
     const childId = await resolveCurrentChildId()
-    const [{ data: capsules }, { data: childAccounts }, { data: parentAccounts }] = await Promise.all([
+    const [{ data: capsules }, { data: childAccounts }, { data: parentAccounts }, { data: child }] = await Promise.all([
       api.getTimeCapsulesUsingGET(childId),
       api.getChildAccountsUsingGET(childId),
       api.getMyAccountsUsingGET(),
+      api.getChildUsingGET(childId),
     ])
+    childName.value = child.name?.trim() || '아이'
     const linkedAccounts = [...childAccounts.accounts, ...parentAccounts.accounts]
-    accounts.value = (capsules.time_capsules ?? []).map((capsule) => {
+    let capsuleItems = capsules.time_capsules ?? []
+
+    if (
+      requestedFinancialAccountId > 0
+      && linkedAccounts.some(({ account_id }) => account_id === requestedFinancialAccountId)
+      && !capsuleItems.some(({ account_id }) => account_id === requestedFinancialAccountId)
+    ) {
+      try {
+        await api.createTimeCapsuleUsingPOST(childId, {
+          financial_account_id: requestedFinancialAccountId,
+        })
+      } catch {
+        // A capsule may already have been created by another screen. Refresh before deciding.
+      }
+      const { data: refreshedCapsules } = await api.getTimeCapsulesUsingGET(childId)
+      capsuleItems = refreshedCapsules.time_capsules ?? []
+    }
+
+    accounts.value = capsuleItems.map((capsule) => {
       const linked = linkedAccounts.find(({ account_id }) => account_id === capsule.account_id)
       return {
         id: capsule.time_capsule_id ?? 0,
@@ -202,6 +254,9 @@ onMounted(async () => {
         number: linked?.account_number ?? '',
       }
     })
+    if (requestedFinancialAccountId > 0) {
+      selectedAccountId.value = accounts.value.find(({ accountId }) => accountId === requestedFinancialAccountId)?.id ?? 0
+    }
     if (!accounts.value.some(({ id }) => id === selectedAccountId.value)) selectedAccountId.value = accounts.value[0]?.id ?? 0
     await loadTransfers()
   } catch (error) {
@@ -323,7 +378,7 @@ onBeforeUnmount(() => {
           <span class="mb-3 block text-sm font-bold">제목 <em class="not-italic text-red-500">*</em></span>
           <input
             v-model="title"
-            class="h-14 w-full rounded-2xl border border-[#d6e3e9] bg-white px-4 text-sm outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
+            class="h-14 w-full rounded-2xl border border-[#d6e3e9] bg-white px-4 text-[16px] outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
             maxlength="30"
             placeholder="제목을 입력해주세요"
             required
@@ -388,16 +443,16 @@ onBeforeUnmount(() => {
           <span class="mb-3 block text-sm font-bold">부모의 편지 <em class="not-italic text-red-500">*</em></span>
           <textarea
             v-model="letter"
-            class="min-h-[120px] w-full resize-none rounded-2xl border border-[#d6e3e9] bg-white px-4 py-3.5 text-sm leading-relaxed outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
+            class="min-h-[120px] w-full resize-none rounded-2xl border border-[#d6e3e9] bg-white px-4 py-3.5 text-[16px] leading-relaxed outline-none transition focus:border-[#91d5f1] focus:ring-2 focus:ring-[#edf9fe] placeholder:text-[#a1a9b4]"
             maxlength="300"
-            placeholder="오늘 깨비가 처음 걸었어요.&#10;앞으로도 건강하게 자라길 바래"
+            :placeholder="`${childName}의 첫걸음을 기록해요.\n앞으로도 건강하게 자라길 바라`"
             required
           ></textarea>
         </label>
 
         <div>
           <div class="mb-3 flex items-center justify-between">
-            <span class="text-sm font-bold">대표 사진</span>
+            <span class="text-sm font-bold">대표 사진 <em class="text-xs font-semibold not-italic text-[var(--color-text-secondary)]">(선택)</em></span>
           </div>
           <div v-if="mediaItems[0]" class="relative overflow-hidden rounded-[20px] border border-[#d6e3e9] bg-[#f5f8fa]">
             <img :src="mediaItems[0].url" alt="선택한 대표 사진" class="aspect-[16/10] w-full bg-[#f4f7f9] object-contain" />
@@ -421,7 +476,7 @@ onBeforeUnmount(() => {
             class="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-[20px] border border-dashed border-[#cbdde6] bg-[#f5fbfe] text-[var(--color-text-secondary)] transition-colors active:bg-[#ebf8fd]"
           >
             <ImagePlus :size="30" class="text-[var(--color-brand-primary)]" />
-            <span class="mt-3 text-xs font-semibold">대표 사진 한 장을 추가해주세요</span>
+            <span class="mt-3 text-xs font-semibold">대표 사진을 추가할 수 있어요</span>
             <span class="mt-1 text-[10px] text-[#98a5ad]">사진은 나중에 다시 변경할 수 있어요.</span>
             <input class="sr-only" type="file" accept="image/*" @change="selectMedia" />
           </label>
@@ -514,10 +569,10 @@ onBeforeUnmount(() => {
           <button
             class="h-14 rounded-2xl bg-[var(--color-brand-primary)] text-sm font-bold text-white active:bg-[var(--color-brand-primary-pressed)]"
             type="button"
-            :disabled="isPageLeaving"
+            :disabled="isSubmitting || isPageLeaving"
             @click="createTimeCapsule"
           >
-            생성하기
+            {{ isSubmitting ? '생성 중...' : '생성하기' }}
           </button>
         </div>
       </div>

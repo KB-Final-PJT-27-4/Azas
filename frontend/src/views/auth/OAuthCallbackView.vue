@@ -4,8 +4,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { LoaderCircle } from 'lucide-vue-next'
 
 import { api } from '@/api'
+import type { ChildInviteOAuthResponse } from '@/api/generated'
 import { getOAuthErrorMessage, loginWithOAuthCode } from '@/api/auth'
 import logoPigUrl from '@/assets/images/login/logo-pig.png'
+import { setCurrentChildId } from '@/api/context'
 import { consumeOAuthInvitation, consumeOAuthState, getOAuthRedirectUri, isOAuthProvider } from '@/utils/oauth'
 
 const route = useRoute()
@@ -37,15 +39,35 @@ onMounted(async () => {
   }
 
   try {
-    const invitation = consumeOAuthInvitation(provider)
+    const invitation = consumeOAuthInvitation(provider, state)
     const response = await loginWithOAuthCode(provider, code, getOAuthRedirectUri(provider), invitation)
     const isChildInvitation = invitation?.inviteeType === 'CHILD'
-    if (isChildInvitation) await api.acceptFamilyInvitationUsingPOST(invitation.inviteToken)
+    if (invitation) {
+      if (invitation.inviteeType === 'PARENT' && !invitation.relationType) {
+        throw new Error('보호자 관계를 다시 선택해주세요.')
+      }
+
+      await api.acceptFamilyInvitationUsingPOST(
+        invitation.inviteToken,
+        undefined,
+        invitation.inviteeType === 'PARENT'
+          ? { relation_type: invitation.relationType }
+          : undefined,
+      )
+
+      if (isChildInvitation) {
+        const childId = (response as ChildInviteOAuthResponse).child?.child_id
+        if (childId) setCurrentChildId(childId)
+      }
+
+      await router.replace({ name: isChildInvitation ? 'ChildHome' : 'Accounts' })
+      return
+    }
 
     const isChildMember = response.member?.member_type === 'CHILD'
     const nextRouteName = response.is_new_member && !invitation
       ? 'Register'
-      : isChildInvitation || isChildMember
+      : isChildMember
         ? 'ChildHome'
         : 'Home'
 
