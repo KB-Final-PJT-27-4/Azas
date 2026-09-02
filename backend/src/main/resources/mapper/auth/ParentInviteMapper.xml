@@ -77,4 +77,23 @@
 
     </insert>
 
+    <insert id="insertChildParentRelations">
+        INSERT INTO child_parent (
+            child_id,
+            member_id,
+            relation_type,
+            created_at,
+            updated_at
+        ) VALUES
+        <foreach collection="childIds" item="childId" separator=",">
+            (
+                #{childId},
+                #{memberId},
+                #{relationType},
+                CURRENT_TIMESTAMP(6),
+                CURRENT_TIMESTAMP(6)
+            )
+        </foreach>
+    </insert>
+
 </mapper>

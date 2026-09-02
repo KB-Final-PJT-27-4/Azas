@@ -78,7 +78,7 @@ public class ChildDashboardService {
         MonthRange monthRange = currentMonthRange();
 
         ChildDashboardAccountRow account = childDashboardMapper
-                .findPrimaryAccountUsage(
+                .findPreferredAccountUsage(
                         child.getChildId(),
                         monthRange.startOccurredAt,
                         monthRange.endOccurredAtExclusive
@@ -162,14 +162,14 @@ public class ChildDashboardService {
                 requireNonNegative(
                         account.getCurrentMonthSpentAmount()
                 );
+        BigDecimal accountBalance =
+                requireNonNegative(account.getAccountBalance());
 
         if (usageMode == ChildUsageMode.UNRESTRICTED) {
-            BigDecimal accountBalance =
-                    requireNonNegative(account.getAccountBalance());
-
             return new ChildDashboardResponse.SpendingSummary(
                     account.getAccountId(),
                     usageMode,
+                    accountBalance,
                     accountBalance,
                     false,
                     null,
@@ -195,6 +195,7 @@ public class ChildDashboardService {
                 account.getAccountId(),
                 usageMode,
                 remainingAmount,
+                accountBalance,
                 true,
                 budgetAmount,
                 spentAmount,

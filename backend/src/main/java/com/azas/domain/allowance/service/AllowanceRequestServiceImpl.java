@@ -4,16 +4,23 @@ import com.azas.domain.allowance.dto.*;
 import com.azas.domain.allowance.entity.AllowanceRequestAction;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
+import com.azas.domain.child.service.ChildFeaturePermissionService;
+import com.azas.domain.finance.transfer.dto.CreateTransferRequest;
+import com.azas.domain.finance.transfer.dto.TransferCreateResponse;
+import com.azas.domain.finance.transfer.service.TransferService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,8 +28,12 @@ import java.util.stream.Collectors;
 public class AllowanceRequestServiceImpl implements AllowanceRequestService {
 
     private final AllowanceRequestMapper allowanceRequestMapper;
+    private final ChildFeaturePermissionService childFeaturePermissionService;
+    private final TransferService transferService;
     private static final int DEFAULT_LIST_SIZE = 20;
     private static final int MAX_LIST_SIZE = 100;
+    private static final String ALLOWANCE_APPROVAL_TRANSFER_MEMO =
+            "용돈 요청 승인 이체";
 
     @Override
     @Transactional
@@ -38,6 +49,9 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                     ErrorCode.CHILD_MEMBER_ACCESS_REQUIRED
             );
         }
+
+        childFeaturePermissionService
+                .validateAllowanceRequestEnabled(childId);
 
         LocalDateTime requestedAt = LocalDateTime.now();
 
@@ -59,6 +73,14 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                     ErrorCode.INTERNAL_SERVER_ERROR
             );
         }
+
+        allowanceRequestMapper.insertAllowanceRequestedNotification(
+                command.getAllowanceRequestId(),
+                childId,
+                command.getRequestedAmount(),
+                command.getMessage(),
+                requestedAt
+        );
 
         return new AllowanceRequestResponse(
                 command.getAllowanceRequestId(),
@@ -254,7 +276,7 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                 parseAllowanceRequestAction(request);
 
         AllowanceRequestDetailRow current =
-                allowanceRequestMapper.findAllowanceRequestDetail(
+                allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                         allowanceRequestId
                 );
 
@@ -277,14 +299,22 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
             );
         }
 
+        if (action == AllowanceRequestAction.APPROVE) {
+            transferAllowance(
+                    memberId,
+                    current
+            );
+        }
+
         AllowanceRequestStatus nextStatus =
                 getNextStatus(action);
 
+        LocalDateTime updatedAt = LocalDateTime.now();
         int updatedCount =
                 allowanceRequestMapper.updateAllowanceRequestStatus(
                         allowanceRequestId,
                         nextStatus,
-                        LocalDateTime.now()
+                        updatedAt
                 );
 
         if (updatedCount != 1) {
@@ -292,6 +322,14 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
                     ErrorCode.INVALID_ALLOWANCE_STATUS_TRANSITION
             );
         }
+
+        insertStatusNotification(
+                allowanceRequestId,
+                current.getChildId(),
+                current.getRequestedAmount(),
+                nextStatus,
+                updatedAt
+        );
 
         AllowanceRequestDetailRow updated =
                 allowanceRequestMapper.findAllowanceRequestDetail(
@@ -307,6 +345,47 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
         return AllowanceRequestDetailResponse.from(updated);
     }
 
+    private void insertStatusNotification(
+            Long allowanceRequestId,
+            Long childId,
+            BigDecimal requestedAmount,
+            AllowanceRequestStatus status,
+            LocalDateTime createdAt
+    ) {
+        if (status != AllowanceRequestStatus.APPROVED
+                && status != AllowanceRequestStatus.REJECTED) {
+            return;
+        }
+
+        boolean approved = status == AllowanceRequestStatus.APPROVED;
+        String title = approved
+                ? "용돈 요청이 승인되었어요"
+                : "용돈 요청이 거절되었어요";
+        String content = approved
+                ? String.format(
+                        Locale.KOREA,
+                        "%,.0f원 요청이 승인되었어요.",
+                        requestedAmount
+                )
+                : String.format(
+                        Locale.KOREA,
+                        "%,.0f원 요청이 거절되었어요.",
+                        requestedAmount
+                );
+        String notificationType = approved
+                ? "ALLOWANCE_APPROVED"
+                : "ALLOWANCE_REJECTED";
+
+        allowanceRequestMapper.insertAllowanceStatusNotification(
+                allowanceRequestId,
+                childId,
+                notificationType,
+                title,
+                content,
+                createdAt
+        );
+    }
+
     private AllowanceRequestAction parseAllowanceRequestAction(
             UpdateAllowanceRequestStatus request
     ) {
@@ -319,16 +398,136 @@ public class AllowanceRequestServiceImpl implements AllowanceRequestService {
         }
 
         try {
-            return AllowanceRequestAction.valueOf(
+            AllowanceRequestAction action = AllowanceRequestAction.valueOf(
                     request.getAction()
                             .trim()
                             .toUpperCase(Locale.ROOT)
             );
+
+            return action;
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(
                     ErrorCode.INVALID_ALLOWANCE_ACTION
             );
         }
+    }
+
+    private void validateTransferAccounts(
+            UpdateAllowanceRequestStatus request,
+            AllowanceRequestAction action
+    ) {
+        if (action == AllowanceRequestAction.APPROVE) {
+            if (request.getSourceAccountId() == null
+                    || request.getSourceAccountId() <= 0
+                    || request.getDestinationAccountId() == null
+                    || request.getDestinationAccountId() <= 0) {
+                throw new BusinessException(
+                        ErrorCode.INVALID_ALLOWANCE_ACTION
+                );
+            }
+            return;
+        }
+
+        if (request.getSourceAccountId() != null
+                || request.getDestinationAccountId() != null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_ALLOWANCE_ACTION
+            );
+        }
+    }
+
+    private void transferAllowance(
+            Long memberId,
+            AllowanceRequestDetailRow allowanceRequest
+    ) {
+        Long sourceAccountId =
+                allowanceRequestMapper
+                        .findPrimaryParentDemandDepositAccountId(memberId);
+        Long destinationAccountId =
+                allowanceRequestMapper
+                        .findPrimaryChildDemandDepositAccountId(
+                                allowanceRequest.getChildId()
+                        );
+
+        if (sourceAccountId == null || destinationAccountId == null) {
+            throw new BusinessException(
+                    ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND
+            );
+        }
+
+        TransferCreateResponse transferResponse = transferService.createTransfer(
+                memberId,
+                createAllowanceTransferIdempotencyKey(
+                        allowanceRequest.getAllowanceRequestId()
+                ),
+                new CreateTransferRequest(
+                        sourceAccountId,
+                        destinationAccountId,
+                        allowanceRequest.getRequestedAmount(),
+                        ALLOWANCE_APPROVAL_TRANSFER_MEMO
+                )
+        );
+
+        if (allowanceRequestMapper.linkAllowanceTransfer(
+                transferResponse.getFinancialTransferId(),
+                allowanceRequest.getAllowanceRequestId(),
+                memberId
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TRANSFER_PROCESSING_FAILED
+            );
+        }
+    }
+
+    private void transferAllowance(
+            Long memberId,
+            AllowanceRequestDetailRow allowanceRequest,
+            UpdateAllowanceRequestStatus request
+    ) {
+        if (allowanceRequestMapper.countAllowanceDestinationAccount(
+                allowanceRequest.getChildId(),
+                request.getDestinationAccountId()
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_TRANSFER_REQUEST
+            );
+        }
+
+        CreateTransferRequest transferRequest =
+                new CreateTransferRequest(
+                        request.getSourceAccountId(),
+                        request.getDestinationAccountId(),
+                        allowanceRequest.getRequestedAmount(),
+                        ALLOWANCE_APPROVAL_TRANSFER_MEMO
+                );
+
+        TransferCreateResponse transferResponse =
+                transferService.createTransfer(
+                        memberId,
+                        createAllowanceTransferIdempotencyKey(
+                                allowanceRequest.getAllowanceRequestId()
+                        ),
+                        transferRequest
+                );
+
+        if (allowanceRequestMapper.linkAllowanceTransfer(
+                transferResponse.getFinancialTransferId(),
+                allowanceRequest.getAllowanceRequestId(),
+                memberId
+        ) != 1) {
+            throw new BusinessException(
+                    ErrorCode.TRANSFER_PROCESSING_FAILED
+            );
+        }
+    }
+
+    private String createAllowanceTransferIdempotencyKey(
+            Long allowanceRequestId
+    ) {
+        return UUID.nameUUIDFromBytes(
+                ("ALLOWANCE_REQUEST:" + allowanceRequestId)
+                        .getBytes(StandardCharsets.UTF_8)
+        ).toString();
     }
 
     private void validateStatusChangeAccess(

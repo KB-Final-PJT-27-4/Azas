@@ -94,9 +94,9 @@ class AllowanceRequestStatusControllerTest {
                         )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {
-                                  "action": "APPROVE"
-                                }
+                                  {
+                                    "action": "APPROVE"
+                                  }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.allowance_request_id")
@@ -144,9 +144,9 @@ class AllowanceRequestStatusControllerTest {
                         )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {
-                                  "action": "APPROVE"
-                                }
+                                  {
+                                    "action": "APPROVE"
+                                  }
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code")
@@ -180,9 +180,9 @@ class AllowanceRequestStatusControllerTest {
                         )
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {
-                                  "action": "APPROVE"
-                                }
+                                  {
+                                    "action": "APPROVE"
+                                  }
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code")

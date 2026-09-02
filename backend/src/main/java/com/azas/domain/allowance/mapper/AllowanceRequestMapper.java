@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import com.azas.domain.allowance.dto.AllowanceRequestDetailRow;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import java.util.List;
@@ -21,6 +22,23 @@ public interface AllowanceRequestMapper {
 
     int insertAllowanceRequest(
             AllowanceRequestInsertCommand command
+    );
+
+    int insertAllowanceRequestedNotification(
+            @Param("allowanceRequestId") Long allowanceRequestId,
+            @Param("childId") Long childId,
+            @Param("requestedAmount") BigDecimal requestedAmount,
+            @Param("message") String message,
+            @Param("createdAt") LocalDateTime createdAt
+    );
+
+    int insertAllowanceStatusNotification(
+            @Param("allowanceRequestId") Long allowanceRequestId,
+            @Param("childId") Long childId,
+            @Param("notificationType") String notificationType,
+            @Param("title") String title,
+            @Param("content") String content,
+            @Param("createdAt") LocalDateTime createdAt
     );
 
     Long findActiveChildIdById(
@@ -40,6 +58,10 @@ public interface AllowanceRequestMapper {
             @Param("allowanceRequestId") Long allowanceRequestId
     );
 
+    AllowanceRequestDetailRow findAllowanceRequestDetailForUpdate(
+            @Param("allowanceRequestId") Long allowanceRequestId
+    );
+
     int countAllowanceRequestParentAccess(
             @Param("memberId") Long memberId,
             @Param("childId") Long childId
@@ -54,5 +76,24 @@ public interface AllowanceRequestMapper {
             @Param("allowanceRequestId") Long allowanceRequestId,
             @Param("status") AllowanceRequestStatus status,
             @Param("updatedAt") LocalDateTime updatedAt
+    );
+
+    int countAllowanceDestinationAccount(
+            @Param("childId") Long childId,
+            @Param("accountId") Long accountId
+    );
+
+    int linkAllowanceTransfer(
+            @Param("transferId") Long transferId,
+            @Param("allowanceRequestId") Long allowanceRequestId,
+            @Param("memberId") Long memberId
+    );
+
+    Long findPrimaryParentDemandDepositAccountId(
+            @Param("memberId") Long memberId
+    );
+
+    Long findPrimaryChildDemandDepositAccountId(
+            @Param("childId") Long childId
     );
 }

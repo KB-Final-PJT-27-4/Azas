@@ -59,4 +59,13 @@
                     value="${NCP_SENS_SENDER_NUMBER}"/>
         </bean>
     </beans>
+
+    <beans profile="solapi">
+        <bean id="smsSender"
+              class="com.azas.domain.member.service.SolapiSmsSender">
+            <constructor-arg index="0" value="${SOLAPI_API_KEY}"/>
+            <constructor-arg index="1" value="${SOLAPI_API_SECRET}"/>
+            <constructor-arg index="2" value="${SOLAPI_SENDER_NUMBER}"/>
+        </bean>
+    </beans>
 </beans>

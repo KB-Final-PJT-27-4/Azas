@@ -600,6 +600,10 @@ public class TimeCapsuleEntryService {
             );
         }
 
+        if (entry.getMediaMode() == TimeCapsuleEntryMediaMode.NONE) {
+            return;
+        }
+
         int activeImageCount =
                 timeCapsuleEntryMapper.countActiveMediaByEntryIdAndType(
                         entry.getTimeCapsuleEntryId(),

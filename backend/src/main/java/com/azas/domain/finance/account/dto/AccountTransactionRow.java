@@ -17,6 +17,7 @@ public class AccountTransactionRow {
     private BigDecimal balanceAfter;
     private String description;
     private String counterpartyName;
+    private Long childcareChildId;
     private Long counterpartyAccountId;
     private String counterpartyBankName;
     private String counterpartyAccountName;

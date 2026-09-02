@@ -60,6 +60,11 @@ public interface FinancialAccountMapper {
             long accountTransactionId
     );
 
+    int updateChildcareChildIdForExternalDebit(
+            @Param("accountTransactionId") long accountTransactionId,
+            @Param("childId") Long childId
+    );
+
     List<ParentAccountListRow> findActiveParentAccounts(
             @Param("memberId")
             long memberId
@@ -73,6 +78,10 @@ public interface FinancialAccountMapper {
 
     int countActiveParentDemandDeposit(
             @Param("memberId") long memberId
+    );
+
+    int countActiveChildDemandDeposit(
+            @Param("childId") long childId
     );
 
     List<AccountLinkTargetRow> findAccountLinkTargetsForUpdate(

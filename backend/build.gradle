@@ -24,6 +24,8 @@ def lombokVersion = '1.18.46'
 def awsSdkVersion = '2.47.3'
 def firebaseAdminVersion = '9.10.0'
 def googleHttpClientVersion = '2.1.0'
+def hikariCpVersion = '5.1.0'
+def solapiSdkVersion = '1.1.0'
 
 dependencies {
     // Spring Legacy 웹 MVC 및 데이터 접근
@@ -40,6 +42,7 @@ dependencies {
     // MyBatis 및 MySQL 연결
     implementation 'org.mybatis:mybatis:3.4.6'
     implementation 'org.mybatis:mybatis-spring:1.3.2'
+    implementation "com.zaxxer:HikariCP:${hikariCpVersion}"
     runtimeOnly 'com.mysql:mysql-connector-j:8.4.0'
 
     // REST API JSON 직렬화·역직렬화
@@ -72,6 +75,12 @@ dependencies {
     // Firebase 프로필 활성화 시 사용하는 JacksonFactory를 외부 Tomcat이
     // 아니라 배포 WAR의 WEB-INF/lib에서 제공한다.
     runtimeOnly "com.google.http-client:google-http-client-jackson2:${googleHttpClientVersion}"
+
+    // 휴대폰 인증번호 등 서버 발신 문자 전송
+    implementation "com.solapi:sdk:${solapiSdkVersion}"
+
+    // Tomcat 배포 WAR에서 SLF4J 로그를 실제로 기록하는 provider
+    runtimeOnly 'ch.qos.logback:logback-classic:1.5.18'
 
     // 타임캡슐 이미지·영상은 비공개 S3 객체로 저장하고 Presigned URL로만 접근
     implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")

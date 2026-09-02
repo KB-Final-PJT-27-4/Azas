@@ -68,6 +68,7 @@ class ChildAccountListServiceTest {
         assertEquals(2, result.getAccounts().size());
         assertEquals("952-17362605-43",
                 result.getAccounts().get(0).getAccountNumber());
+        assertEquals(true, result.getAccounts().get(0).isPrimary());
         assertEquals(new BigDecimal("14600000.00"),
                 result.getTotalBalance());
     }
@@ -201,6 +202,7 @@ class ChildAccountListServiceTest {
         ReflectionTestUtils.setField(
                 row, "balance", new BigDecimal(balance)
         );
+        ReflectionTestUtils.setField(row, "isPrimary", true);
         return row;
     }
 }

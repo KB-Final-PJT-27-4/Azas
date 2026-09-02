@@ -89,6 +89,10 @@ class ChildDashboardServiceTest {
                 response.getSpendingSummary()
                         .getDisplayAvailableAmount()
         );
+        assertEquals(
+                new BigDecimal("96000.00"),
+                response.getSpendingSummary().getAccountBalance()
+        );
         assertTrue(
                 response.getSpendingSummary()
                         .isAccountBalanceHidden()
@@ -125,7 +129,7 @@ class ChildDashboardServiceTest {
                 response.getNotificationSummary().getUnreadCount()
         );
 
-        verify(childDashboardMapper).findPrimaryAccountUsage(
+        verify(childDashboardMapper).findPreferredAccountUsage(
                 CHILD_ID,
                 MONTH_START_UTC,
                 NEXT_MONTH_START_UTC
@@ -171,6 +175,10 @@ class ChildDashboardServiceTest {
                 new BigDecimal("96000.00"),
                 response.getSpendingSummary()
                         .getDisplayAvailableAmount()
+        );
+        assertEquals(
+                new BigDecimal("96000.00"),
+                response.getSpendingSummary().getAccountBalance()
         );
         assertFalse(
                 response.getSpendingSummary()
@@ -248,7 +256,7 @@ class ChildDashboardServiceTest {
                 exception.getErrorCode()
         );
         verify(childDashboardMapper, never())
-                .findPrimaryAccountUsage(
+                .findPreferredAccountUsage(
                         any(Long.class),
                         any(LocalDateTime.class),
                         any(LocalDateTime.class)
@@ -284,7 +292,7 @@ class ChildDashboardServiceTest {
         when(childDashboardMapper.findActiveChildByMemberId(
                 MEMBER_ID
         )).thenReturn(child());
-        when(childDashboardMapper.findPrimaryAccountUsage(
+        when(childDashboardMapper.findPreferredAccountUsage(
                 CHILD_ID,
                 MONTH_START_UTC,
                 NEXT_MONTH_START_UTC

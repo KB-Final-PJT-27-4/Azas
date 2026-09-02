@@ -97,7 +97,7 @@ class AssetReportControllerTest {
                 6L,
                 2026,
                 null,
-                12
+                24
         )).thenReturn(
                 new AssetReportListResponse(
                         List.of(item),
@@ -115,7 +115,7 @@ class AssetReportControllerTest {
                                         "Bearer parent-access-token"
                                 )
                                 .param("year", "2026")
-                                .param("size", "12")
+                                .param("size", "24")
                 )
                 .andExpect(status().isOk())
                 .andExpect(
@@ -153,7 +153,7 @@ class AssetReportControllerTest {
                 6L,
                 2026,
                 null,
-                12
+                24
         );
     }
 
@@ -195,7 +195,7 @@ class AssetReportControllerTest {
                 6L,
                 2026,
                 null,
-                13
+                25
         )).thenThrow(
                 new BusinessException(
                         ErrorCode.INVALID_QUERY_PARAMETER
@@ -211,7 +211,7 @@ class AssetReportControllerTest {
                                         "Bearer parent-access-token"
                                 )
                                 .param("year", "2026")
-                                .param("size", "13")
+                                .param("size", "25")
                 )
                 .andExpect(status().isBadRequest())
                 .andExpect(

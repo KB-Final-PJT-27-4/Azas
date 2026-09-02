@@ -15,4 +15,6 @@ public final class AccountTransactionItemResult {
     private final String counterpartyName;
     private final String direction;
     private final BigDecimal amount;
+    private final boolean childcareIncluded;
+    private final Long childcareChildId;
 }

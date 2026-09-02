@@ -17,7 +17,7 @@ public interface ChildDashboardMapper {
             @Param("memberId") long memberId
     );
 
-    ChildDashboardAccountRow findPrimaryAccountUsage(
+    ChildDashboardAccountRow findPreferredAccountUsage(
             @Param("childId") long childId,
             @Param("startOccurredAt") LocalDateTime startOccurredAt,
             @Param("endOccurredAtExclusive")

@@ -69,10 +69,6 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "올바른 휴대폰번호 형식이 아닙니다."
     ),
-    PHONE_VERIFICATION_RESEND_NOT_ALLOWED(
-            HttpStatus.TOO_MANY_REQUESTS,
-            "인증번호 재발송 대기 시간이 지나지 않았습니다."
-    ),
     SMS_DELIVERY_FAILED(
             HttpStatus.BAD_GATEWAY,
             "SMS 인증번호를 발송하지 못했습니다."
@@ -135,6 +131,10 @@ public enum ErrorCode {
             HttpStatus.UNPROCESSABLE_ENTITY,
             "자녀 명의의 활성 입출금 계좌에만 사용 관리 정책을 설정할 수 있습니다."
     ),
+    INELIGIBLE_PRIMARY_ACCOUNT(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "활성 입출금 계좌만 대표 계좌로 지정할 수 있습니다."
+    ),
     CHILD_MEMBER_ACCESS_REQUIRED(
             HttpStatus.FORBIDDEN,
             "자녀 회원 계정으로만 조회할 수 있습니다."
@@ -142,6 +142,10 @@ public enum ErrorCode {
     CHILD_USAGE_POLICY_NOT_CONFIGURED(
             HttpStatus.CONFLICT,
             "자녀 대표 계좌의 사용 관리 정책이 설정되지 않았습니다."
+    ),
+    CHILD_USAGE_LIMIT_VIEW_DISABLED(
+            HttpStatus.FORBIDDEN,
+            "자녀 사용 금액 한도 조회 권한이 비활성화되어 있습니다."
     ),
     FINANCIAL_ACCOUNT_NOT_FOUND(
             HttpStatus.NOT_FOUND,
@@ -219,6 +223,10 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "계좌 거래내역을 찾을 수 없습니다."
     ),
+    INELIGIBLE_CHILDCARE_TRANSACTION(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "부모 계좌의 외부 출금 거래만 양육비에 포함할 수 있습니다."
+    ),
     DUPLICATE_TIME_CAPSULE(
             HttpStatus.CONFLICT,
             "해당 자녀와 계좌에 이미 타임캡슐이 존재합니다."
@@ -246,6 +254,10 @@ public enum ErrorCode {
     TIME_CAPSULE_NOT_RELEASED(
             HttpStatus.CONFLICT,
             "아직 공개되지 않은 타임캡슐입니다."
+    ),
+    TIME_CAPSULE_RELEASE_DATE_MODIFICATION_NOT_ALLOWED(
+            HttpStatus.CONFLICT,
+            "해당 타임캡슐의 공개일은 변경할 수 없습니다."
     ),
     TIME_CAPSULE_ENTRY_MODIFICATION_NOT_ALLOWED(
             HttpStatus.CONFLICT,
@@ -326,6 +338,10 @@ public enum ErrorCode {
     INVALID_ALLOWANCE_ACTION(
             HttpStatus.BAD_REQUEST,
             "용돈 요청 처리 방식이 올바르지 않습니다."
+    ),
+    ALLOWANCE_REQUEST_DISABLED(
+            HttpStatus.FORBIDDEN,
+            "용돈 요청 권한이 비활성화되어 있습니다."
     ),
     ALLOWANCE_REQUEST_ACCESS_DENIED(
             HttpStatus.FORBIDDEN,

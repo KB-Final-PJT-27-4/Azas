@@ -189,8 +189,19 @@
                                 AND latest.latest_observed_at = abs.observed_at
                  INNER JOIN financial_account fa
                             ON fa.financial_account_id = abs.financial_account_id
-        WHERE fa.child_id = #{childId}
-          AND fa.owner_type = 'CHILD'
+        WHERE (
+                  fa.child_id = #{childId}
+                  OR EXISTS (
+                      SELECT 1
+                      FROM financial_goal_account fga
+                      INNER JOIN financial_goal fg
+                          ON fg.financial_goal_id = fga.financial_goal_id
+                      WHERE fga.financial_account_id = fa.financial_account_id
+                        AND fg.child_id = #{childId}
+                        AND fg.status IN ('ACTIVE', 'ACHIEVED')
+                  )
+              )
+          AND fa.account_product_type = 'SAVINGS'
           AND fa.link_status = 'ACTIVE'
           AND fa.account_status IN ('ACTIVE', 'MATURED')
     </select>
@@ -199,12 +210,24 @@
             resultType="java.math.BigDecimal">
         SELECT COALESCE(SUM(at.amount), 0)
         FROM account_transaction at
-    INNER JOIN financial_goal_account fga
-        ON fga.financial_account_id = at.financial_account_id
-            INNER JOIN financial_goal fg
-            ON fg.financial_goal_id = fga.financial_goal_id
-            AND fg.child_id = #{childId}
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = at.financial_account_id
         WHERE at.direction = 'CREDIT'
+          AND (
+                  fa.child_id = #{childId}
+                  OR EXISTS (
+                      SELECT 1
+                      FROM financial_goal_account fga
+                      INNER JOIN financial_goal fg
+                          ON fg.financial_goal_id = fga.financial_goal_id
+                      WHERE fga.financial_account_id = fa.financial_account_id
+                        AND fg.child_id = #{childId}
+                        AND fg.status IN ('ACTIVE', 'ACHIEVED')
+                  )
+              )
+          AND fa.account_product_type = 'SAVINGS'
+          AND fa.link_status = 'ACTIVE'
+          AND fa.account_status IN ('ACTIVE', 'MATURED')
           AND at.occurred_at <![CDATA[>=]]> #{startAt}
           AND at.occurred_at <![CDATA[<]]> #{endExclusive}
     </select>
@@ -216,6 +239,67 @@
         WHERE child_id = #{childId}
           AND report_month = #{reportMonth}
             LIMIT 1
+    </select>
+
+    <select id="findPreviousMonthlySavedAmount"
+            resultType="java.math.BigDecimal">
+        SELECT monthly_saved_amount
+        FROM asset_report
+        WHERE child_id = #{childId}
+          AND report_month = #{reportMonth}
+            LIMIT 1
+    </select>
+
+    <select id="findGoalAccountSnapshots"
+            resultType="com.azas.domain.report.dto.AssetReportGoalAccountRow">
+        SELECT
+            fg.financial_goal_id AS financialGoalId,
+            fg.title,
+            fg.target_amount AS targetAmount,
+            fg.monthly_saving_amount AS monthlySavingTargetAmount,
+            fa.financial_account_id AS accountId,
+            fa.account_name AS accountName,
+            fa.bank_name AS bankName,
+            fa.account_number_ciphertext AS accountNumberCiphertext,
+            COALESCE(
+                (
+                    SELECT abs.balance
+                    FROM account_balance_snapshot abs
+                    WHERE abs.financial_account_id =
+                          fa.financial_account_id
+                      AND abs.observed_at <![CDATA[<]]> #{endExclusive}
+                    ORDER BY abs.observed_at DESC
+                    LIMIT 1
+                ),
+                fa.balance,
+                0
+            ) AS balance,
+            COALESCE(
+                (
+                    SELECT SUM(at.amount)
+                    FROM account_transaction at
+                    WHERE at.financial_account_id =
+                          fa.financial_account_id
+                      AND at.direction = 'CREDIT'
+                      AND at.occurred_at <![CDATA[>=]]> #{startAt}
+                      AND at.occurred_at <![CDATA[<]]> #{endExclusive}
+                ),
+                0
+            ) AS monthlySavedAmount
+        FROM financial_goal fg
+        INNER JOIN financial_goal_account fga
+            ON fga.financial_goal_id = fg.financial_goal_id
+        INNER JOIN financial_account fa
+            ON fa.financial_account_id = fga.financial_account_id
+        WHERE fg.child_id = #{childId}
+          AND fg.status IN ('ACTIVE', 'ACHIEVED')
+          AND fa.link_status = 'ACTIVE'
+          AND fa.account_status IN ('ACTIVE', 'MATURED')
+        ORDER BY
+            fg.created_at ASC,
+            fg.financial_goal_id ASC,
+            fga.linked_at ASC,
+            fga.financial_goal_account_id ASC
     </select>
 
     <insert id="upsertAssetReport"

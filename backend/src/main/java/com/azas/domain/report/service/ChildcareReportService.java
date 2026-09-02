@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -27,6 +28,32 @@ import java.util.Map;
 public class ChildcareReportService {
 
     private static final int FLOW_MONTH_COUNT = 12;
+
+    /**
+     * 부모 연령을 수집하지 않는 현재 서비스 정책에 따라,
+     * 30대 부모 가구 양육비 평균을 모든 비교에 고정 적용합니다.
+     * KICCE 소비실태조사 2024의 2023년 영유아 가구 통계에서
+     * 모·부 30~39세 양육비용을 단순 평균한 값입니다.
+     */
+    private static final BigDecimal SAME_AGE_MONTHLY_AVERAGE_AMOUNT =
+            new BigDecimal("1407000");
+
+    private static final String COMPARISON_LABEL =
+            "30대 부모 가구 월평균 양육비";
+
+    private static final String COMPARISON_SOURCE_NAME =
+            "육아정책연구소(KICCE) 소비실태조사 2024";
+
+    private static final String COMPARISON_SOURCE_URL =
+            "https://repo.kicce.re.kr/bitstream/2019.oak/5822/2/GR2404.pdf";
+
+    private static final int COMPARISON_SOURCE_YEAR = 2023;
+
+    private static final String COMPARISON_CALCULATION_BASIS =
+            "KICCE 소비실태조사 2024의 2023년 영유아 가구 통계에서 "
+                    + "모 30~39세 양육비 1,443,000원과 "
+                    + "부 30~39세 양육비 1,370,000원을 단순 평균한 "
+                    + "1,406,500원을 1,407,000원으로 반올림한 고정 기준입니다.";
 
     private static final int MIN_YEAR = 1900;
 
@@ -148,6 +175,17 @@ public class ChildcareReportService {
                                 BigDecimal::add
                         );
 
+        BigDecimal sameAgeDifferenceAmount =
+                currentMonthAmount.subtract(
+                        SAME_AGE_MONTHLY_AVERAGE_AMOUNT
+                );
+
+        BigDecimal sameAgeDifferenceRate =
+                calculateComparisonRate(
+                        currentMonthAmount,
+                        SAME_AGE_MONTHLY_AVERAGE_AMOUNT
+                );
+
         List<ChildcareReportDetailResponse.MonthlyFlowItem>
                 monthlyFlow = amountByMonth
                 .entrySet()
@@ -157,7 +195,8 @@ public class ChildcareReportService {
                                 .MonthlyFlowItem(
                                 entry.getKey().getYear(),
                                 entry.getKey().getMonthValue(),
-                                entry.getValue()
+                                entry.getValue(),
+                                SAME_AGE_MONTHLY_AVERAGE_AMOUNT
                         )
                 )
                 .toList();
@@ -167,6 +206,8 @@ public class ChildcareReportService {
 
         LocalDate periodEnd =
                 reportPeriod.atEndOfMonth();
+
+        Instant calculatedAt = clock.instant();
 
         return new ChildcareReportDetailResponse(
                 childId,
@@ -181,10 +222,24 @@ public class ChildcareReportService {
                         previousMonthAmount,
                         changeAmount,
                         changeRate,
-                        annualExpenseAmount
+                        annualExpenseAmount,
+                        SAME_AGE_MONTHLY_AVERAGE_AMOUNT,
+                        sameAgeDifferenceAmount,
+                        sameAgeDifferenceRate
                 ),
                 monthlyFlow,
-                clock.instant()
+                new ChildcareReportDetailResponse.ComparisonBenchmark(
+                        COMPARISON_LABEL,
+                        "30대",
+                        SAME_AGE_MONTHLY_AVERAGE_AMOUNT,
+                        COMPARISON_SOURCE_NAME,
+                        COMPARISON_SOURCE_URL,
+                        COMPARISON_SOURCE_YEAR,
+                        COMPARISON_CALCULATION_BASIS
+                ),
+                calculatedAt,
+                calculatedAt,
+                calculatedAt
         );
     }
 
@@ -297,6 +352,19 @@ public class ChildcareReportService {
                 .multiply(BigDecimal.valueOf(100))
                 .divide(
                         previousAmount,
+                        1,
+                        RoundingMode.HALF_UP
+                );
+    }
+
+    private BigDecimal calculateComparisonRate(
+            BigDecimal expenseAmount,
+            BigDecimal benchmarkAmount
+    ) {
+        return expenseAmount.subtract(benchmarkAmount)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(
+                        benchmarkAmount,
                         1,
                         RoundingMode.HALF_UP
                 );

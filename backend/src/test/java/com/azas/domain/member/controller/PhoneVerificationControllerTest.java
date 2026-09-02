@@ -105,7 +105,7 @@ class PhoneVerificationControllerTest {
                                 2026, 8, 6, 3, 3
                         ),
                         LocalDateTime.of(
-                                2026, 8, 6, 3, 1
+                                2026, 8, 6, 3, 0
                         )
                 )
         );
@@ -142,7 +142,7 @@ class PhoneVerificationControllerTest {
                 .andExpect(
                         jsonPath("$.resend_available_at")
                                 .value(
-                                        "2026-08-06T03:01:00Z"
+                                        "2026-08-06T03:00:00Z"
                                 )
                 );
 

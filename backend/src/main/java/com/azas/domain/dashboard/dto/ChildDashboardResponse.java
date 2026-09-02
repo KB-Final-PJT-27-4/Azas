@@ -53,6 +53,11 @@ public class ChildDashboardResponse {
         )
         private final BigDecimal displayAvailableAmount;
         @ApiModelProperty(
+                value = "자녀 대표 입출금계좌의 실제 잔액",
+                example = "96000"
+        )
+        private final BigDecimal accountBalance;
+        @ApiModelProperty(
                 value = "자녀 화면에서 실제 계좌 잔액을 숨기는지 여부",
                 example = "true"
         )

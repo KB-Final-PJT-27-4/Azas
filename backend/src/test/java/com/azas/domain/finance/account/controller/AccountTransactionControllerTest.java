@@ -215,7 +215,9 @@ class AccountTransactionControllerTest {
                         LocalDateTime.of(2026, 7, 21, 2, 1),
                         "KB국민 5678",
                         "CREDIT",
-                        new BigDecimal("100000.00")
+                        new BigDecimal("100000.00"),
+                        false,
+                        null
                 )),
                 "opaque-cursor",
                 true

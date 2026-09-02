@@ -85,12 +85,21 @@
             tx.balance_after,
             tx.description,
             tx.counterparty_name,
+            CASE
+                WHEN tx.direction = 'DEBIT'
+                     AND tx.counterparty_account_id IS NULL
+                     AND fa.owner_type = 'PARENT'
+                THEN tx.child_id
+                ELSE NULL
+            END AS childcare_child_id,
             cfa.financial_account_id AS counterparty_account_id,
             cfa.bank_name AS counterparty_bank_name,
             cfa.account_name AS counterparty_account_name,
             cfa.account_number_ciphertext
                 AS counterparty_account_number_ciphertext
         FROM account_transaction tx
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = tx.financial_account_id
                  LEFT JOIN financial_account cfa
                            ON cfa.financial_account_id =
                               tx.counterparty_account_id
@@ -121,17 +130,33 @@
             tx.balance_after,
             tx.description,
             tx.counterparty_name,
+            tx.child_id AS childcare_child_id,
+            tx.counterparty_account_id,
+            fa.owner_type,
             cfa.bank_name AS counterparty_bank_name,
             cfa.account_name AS counterparty_account_name,
             cfa.account_number_ciphertext
                 AS counterparty_account_number_ciphertext
         FROM account_transaction tx
+                 INNER JOIN financial_account fa
+                            ON fa.financial_account_id = tx.financial_account_id
                  LEFT JOIN financial_account cfa
                            ON cfa.financial_account_id =
                               tx.counterparty_account_id
         WHERE tx.account_transaction_id = #{accountTransactionId}
         LIMIT 1
     </select>
+
+    <update id="updateChildcareChildIdForExternalDebit">
+        UPDATE account_transaction tx
+        INNER JOIN financial_account fa
+                ON fa.financial_account_id = tx.financial_account_id
+        SET tx.child_id = #{childId}
+        WHERE tx.account_transaction_id = #{accountTransactionId}
+          AND tx.direction = 'DEBIT'
+          AND tx.counterparty_account_id IS NULL
+          AND fa.owner_type = 'PARENT'
+    </update>
 
     <select id="findActiveParentAccounts"
             resultType="com.azas.domain.finance.account.dto.ParentAccountListRow">
@@ -158,7 +183,8 @@
             fa.account_name,
             fa.account_number_ciphertext,
             fa.account_product_type,
-            fa.balance
+            fa.balance,
+            fa.is_primary
         FROM financial_account fa
         WHERE fa.owner_type = 'CHILD'
           AND fa.child_id = #{childId}
@@ -174,6 +200,7 @@
         SELECT
             financial_account_id AS account_id,
             bank_name,
+            account_name,
             account_number_ciphertext,
             account_product_type,
             balance
@@ -201,6 +228,17 @@
         WHERE owner_type = 'PARENT'
           AND owner_member_id = #{memberId}
           AND child_id IS NULL
+          AND account_product_type = 'DEMAND_DEPOSIT'
+          AND account_status = 'ACTIVE'
+          AND link_status = 'ACTIVE'
+    </select>
+
+    <select id="countActiveChildDemandDeposit"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM financial_account
+        WHERE owner_type = 'CHILD'
+          AND child_id = #{childId}
           AND account_product_type = 'DEMAND_DEPOSIT'
           AND account_status = 'ACTIVE'
           AND link_status = 'ACTIVE'
@@ -332,7 +370,7 @@
         LIMIT 1
     </select>
 
-    <select id="findActiveChildMemberIdByChildId" resultType="long">
+    <select id="findActiveChildMemberIdByChildId" resultType="java.lang.Long">
         SELECT member_id FROM child
         WHERE child_id = #{childId} AND status = 'ACTIVE'
     </select>
@@ -434,7 +472,9 @@
             resultType="com.azas.domain.finance.account.dto.AccountUnlinkTargetRow">
         SELECT
             fa.financial_account_id AS account_id,
+            fa.owner_type,
             fa.owner_member_id,
+            fa.child_id,
             fa.link_status,
             fa.unlinked_at
         FROM financial_account fa
@@ -460,6 +500,7 @@
             fa.owner_type,
             fa.owner_member_id,
             fa.child_id,
+            fa.account_product_type,
             fa.account_status,
             fa.link_status,
             fa.is_primary AS primary_account

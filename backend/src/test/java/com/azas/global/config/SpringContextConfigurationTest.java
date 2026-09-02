@@ -3,9 +3,11 @@ package com.azas.global.config;
 import com.azas.domain.member.service.FakeSmsSender;
 import com.azas.domain.member.service.PhoneNumberProtector;
 import com.azas.domain.member.service.PhoneVerificationHasher;
+import com.azas.domain.member.service.SolapiSmsSender;
 import com.azas.domain.member.service.SmsSender;
 import com.azas.domain.notification.service.FakePushMessageSender;
 import com.azas.domain.notification.service.PushMessageSender;
+import com.zaxxer.hikari.HikariDataSource;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.env.MapPropertySource;
@@ -39,7 +41,12 @@ class SpringContextConfigurationTest {
     @Test
     void rootContextLoads() {
         try (ClassPathXmlApplicationContext rootContext = createRootContext()) {
-            assertNotNull(rootContext.getBean(DataSource.class));
+            DataSource dataSource = rootContext.getBean(DataSource.class);
+            assertInstanceOf(HikariDataSource.class, dataSource);
+            assertEquals(
+                    4,
+                    ((HikariDataSource) dataSource).getMaximumPoolSize()
+            );
             assertNotNull(rootContext.getBean(SqlSessionFactory.class));
             assertNotNull(
                     rootContext.getBean(
@@ -71,6 +78,19 @@ class SpringContextConfigurationTest {
         ) {
             assertInstanceOf(
                     FakeSmsSender.class,
+                    rootContext.getBean(SmsSender.class)
+            );
+        }
+    }
+
+    @Test
+    void solapiProfileUsesSolapiSmsSender() {
+        try (
+                ClassPathXmlApplicationContext rootContext =
+                        createRootContext("solapi")
+        ) {
+            assertInstanceOf(
+                    SolapiSmsSender.class,
                     rootContext.getBean(SmsSender.class)
             );
         }
@@ -444,21 +464,41 @@ class SpringContextConfigurationTest {
         rootContext.getEnvironment()
                 .setActiveProfiles(activeProfiles);
         rootContext.getEnvironment().getPropertySources().addFirst(
-                new MapPropertySource("testProperties", Map.of(
-                        "DB_URL", "jdbc:mysql://localhost:3306/azas",
-                        "DB_USERNAME", "test_user",
-                        "DB_PASSWORD", "test_password",
-                        "KAKAO_CLIENT_ID", "test-kakao-client-id",
-                        "GOOGLE_CLIENT_ID", "test-google-client-id",
-                        "GOOGLE_CLIENT_SECRET", "test-google-client-secret",
-                        "JWT_SECRET_BASE64",
-                        "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
-                        "ACCOUNT_NUMBER_ENCRYPTION_KEY_BASE64",
-                        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
-                        "PHONE_NUMBER_ENCRYPTION_KEY_BASE64",
-                        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
-                        "PHONE_VERIFICATION_SECRET_BASE64",
-                        "YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODk="
+                new MapPropertySource("testProperties", Map.ofEntries(
+                        Map.entry("DB_URL", "jdbc:mysql://localhost:3306/azas"),
+                        Map.entry("DB_USERNAME", "test_user"),
+                        Map.entry("DB_PASSWORD", "test_password"),
+                        Map.entry("DB_MAX_POOL_SIZE", "4"),
+                        Map.entry("DB_MIN_IDLE", "0"),
+                        Map.entry("DB_INITIALIZATION_FAIL_TIMEOUT_MILLIS", "-1"),
+                        Map.entry("KAKAO_CLIENT_ID", "test-kakao-client-id"),
+                        Map.entry("GOOGLE_CLIENT_ID", "test-google-client-id"),
+                        Map.entry("GOOGLE_CLIENT_SECRET", "test-google-client-secret"),
+                        Map.entry(
+                                "JWT_SECRET_BASE64",
+                                "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
+                        ),
+                        Map.entry(
+                                "ACCOUNT_NUMBER_ENCRYPTION_KEY_BASE64",
+                                "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+                        ),
+                        Map.entry(
+                                "PHONE_NUMBER_ENCRYPTION_KEY_BASE64",
+                                "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+                        ),
+                        Map.entry(
+                                "PHONE_VERIFICATION_SECRET_BASE64",
+                                "YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODk="
+                        ),
+                        Map.entry("SOLAPI_API_KEY", "test-solapi-api-key"),
+                        Map.entry(
+                                "SOLAPI_API_SECRET",
+                                "test-solapi-api-secret"
+                        ),
+                        Map.entry(
+                                "SOLAPI_SENDER_NUMBER",
+                                "01012345678"
+                        )
                 ))
         );
         rootContext.setConfigLocation("spring/root-context.xml");

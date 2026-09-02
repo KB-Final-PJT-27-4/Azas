@@ -15,7 +15,6 @@ import org.springframework.util.StringUtils;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,9 +22,6 @@ public class PhoneVerificationSendService {
 
     private static final Duration CODE_EXPIRATION =
             Duration.ofMinutes(3);
-
-    private static final Duration RESEND_COOLDOWN =
-            Duration.ofSeconds(60);
 
     private final PhoneVerificationStore
             phoneVerificationStore;
@@ -62,16 +58,6 @@ public class PhoneVerificationSendService {
                         .hashPhoneNumber(
                                 normalizedPhoneNumber
                         );
-
-        validateMemberResendCooldown(
-                memberId,
-                now
-        );
-
-        validatePhoneNumberResendCooldown(
-                phoneNumberHash,
-                now
-        );
 
         String verificationCode =
                 resolveVerificationCode(
@@ -123,7 +109,7 @@ public class PhoneVerificationSendService {
                 phoneVerification
                         .getPhoneVerificationId(),
                 expiresAt,
-                now.plus(RESEND_COOLDOWN)
+                now
         );
     }
 
@@ -136,55 +122,6 @@ public class PhoneVerificationSendService {
             throw new BusinessException(
                     ErrorCode.INVALID_PHONE_NUMBER,
                     exception
-            );
-        }
-    }
-
-    private void validateMemberResendCooldown(
-            long memberId,
-            LocalDateTime now
-    ) {
-        validateResendCooldown(
-                phoneVerificationStore
-                        .findLatestByMemberId(memberId),
-                now
-        );
-    }
-
-    private void validatePhoneNumberResendCooldown(
-            String phoneNumberHash,
-            LocalDateTime now
-    ) {
-        validateResendCooldown(
-                phoneVerificationStore
-                        .findLatestByPhoneNumberHash(
-                                phoneNumberHash
-                        ),
-                now
-        );
-    }
-
-    private void validateResendCooldown(
-            Optional<PhoneVerification>
-                    latestVerification,
-            LocalDateTime now
-    ) {
-        boolean resendAllowed =
-                latestVerification
-                        .map(
-                                verification ->
-                                        verification
-                                                .isResendAvailableAt(
-                                                        now,
-                                                        RESEND_COOLDOWN
-                                                )
-                        )
-                        .orElse(true);
-
-        if (!resendAllowed) {
-            throw new BusinessException(
-                    ErrorCode
-                            .PHONE_VERIFICATION_RESEND_NOT_ALLOWED
             );
         }
     }

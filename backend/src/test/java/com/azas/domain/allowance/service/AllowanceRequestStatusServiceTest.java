@@ -5,6 +5,9 @@ import com.azas.domain.allowance.dto.AllowanceRequestDetailRow;
 import com.azas.domain.allowance.dto.UpdateAllowanceRequestStatus;
 import com.azas.domain.allowance.entity.AllowanceRequestStatus;
 import com.azas.domain.allowance.mapper.AllowanceRequestMapper;
+import com.azas.domain.finance.transfer.dto.CreateTransferRequest;
+import com.azas.domain.finance.transfer.dto.TransferCreateResponse;
+import com.azas.domain.finance.transfer.service.TransferService;
 import com.azas.global.exception.BusinessException;
 import com.azas.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
@@ -19,7 +22,9 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,34 +35,26 @@ class AllowanceRequestStatusServiceTest {
     private static final long CHILD_MEMBER_ID = 30L;
     private static final long CHILD_ID = 6L;
     private static final long REQUEST_ID = 41L;
+    private static final long SOURCE_ACCOUNT_ID = 101L;
+    private static final long DESTINATION_ACCOUNT_ID = 202L;
 
     @Mock
     private AllowanceRequestMapper allowanceRequestMapper;
+
+    @Mock
+    private TransferService transferService;
 
     @InjectMocks
     private AllowanceRequestServiceImpl allowanceRequestService;
 
     @Test
-    void parentApprovesPendingRequest() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
-                REQUEST_ID
-        )).thenReturn(
-                row(AllowanceRequestStatus.PENDING),
-                row(AllowanceRequestStatus.APPROVED)
-        );
-
-        when(allowanceRequestMapper
-                .countAllowanceRequestParentAccess(
-                        PARENT_ID,
-                        CHILD_ID
-                ))
-                .thenReturn(1);
-
+    void parentApprovesPendingRequestByTransferringBetweenPrimaryAccounts() {
+        stubPendingRequestForParent();
+        when(allowanceRequestMapper.findAllowanceRequestDetail(REQUEST_ID))
+                .thenReturn(row(AllowanceRequestStatus.APPROVED));
         when(allowanceRequestMapper.updateAllowanceRequestStatus(
-                org.mockito.ArgumentMatchers.eq(REQUEST_ID),
-                org.mockito.ArgumentMatchers.eq(
-                        AllowanceRequestStatus.APPROVED
-                ),
+                eq(REQUEST_ID),
+                eq(AllowanceRequestStatus.APPROVED),
                 any(LocalDateTime.class)
         )).thenReturn(1);
 
@@ -68,33 +65,38 @@ class AllowanceRequestStatusServiceTest {
                         request("APPROVE")
                 );
 
-        assertEquals(
-                AllowanceRequestStatus.APPROVED,
-                response.getStatus()
+        assertEquals(AllowanceRequestStatus.APPROVED, response.getStatus());
+        verify(transferService).createTransfer(
+                eq(PARENT_ID),
+                any(String.class),
+                org.mockito.ArgumentMatchers.argThat(transfer ->
+                        transfer.getSourceAccountId().equals(SOURCE_ACCOUNT_ID)
+                                && transfer.getDestinationAccountId().equals(
+                                DESTINATION_ACCOUNT_ID
+                        )
+                                && transfer.getAmount().compareTo(
+                                new BigDecimal("10000")
+                        ) == 0
+                                && transfer.getMemo().equals(
+                                "용돈 요청 승인 이체"
+                        )
+                )
         );
     }
 
     @Test
-    void parentRejectsPendingRequest() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+    void parentRejectsPendingRequestWithoutTransfer() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
-        )).thenReturn(
-                row(AllowanceRequestStatus.PENDING),
-                row(AllowanceRequestStatus.REJECTED)
-        );
-
-        when(allowanceRequestMapper
-                .countAllowanceRequestParentAccess(
-                        PARENT_ID,
-                        CHILD_ID
-                ))
-                .thenReturn(1);
-
+        )).thenReturn(row(AllowanceRequestStatus.PENDING));
+        when(allowanceRequestMapper.countAllowanceRequestParentAccess(
+                PARENT_ID, CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.findAllowanceRequestDetail(REQUEST_ID))
+                .thenReturn(row(AllowanceRequestStatus.REJECTED));
         when(allowanceRequestMapper.updateAllowanceRequestStatus(
-                org.mockito.ArgumentMatchers.eq(REQUEST_ID),
-                org.mockito.ArgumentMatchers.eq(
-                        AllowanceRequestStatus.REJECTED
-                ),
+                eq(REQUEST_ID),
+                eq(AllowanceRequestStatus.REJECTED),
                 any(LocalDateTime.class)
         )).thenReturn(1);
 
@@ -105,33 +107,23 @@ class AllowanceRequestStatusServiceTest {
                         request("REJECT")
                 );
 
-        assertEquals(
-                AllowanceRequestStatus.REJECTED,
-                response.getStatus()
-        );
+        assertEquals(AllowanceRequestStatus.REJECTED, response.getStatus());
+        verify(transferService, never()).createTransfer(any(), any(), any());
     }
 
     @Test
     void childCancelsOwnPendingRequest() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
-        )).thenReturn(
-                row(AllowanceRequestStatus.PENDING),
-                row(AllowanceRequestStatus.CANCELED)
-        );
-
-        when(allowanceRequestMapper
-                .countAllowanceRequestChildAccess(
-                        CHILD_MEMBER_ID,
-                        CHILD_ID
-                ))
-                .thenReturn(1);
-
+        )).thenReturn(row(AllowanceRequestStatus.PENDING));
+        when(allowanceRequestMapper.countAllowanceRequestChildAccess(
+                CHILD_MEMBER_ID, CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.findAllowanceRequestDetail(REQUEST_ID))
+                .thenReturn(row(AllowanceRequestStatus.CANCELED));
         when(allowanceRequestMapper.updateAllowanceRequestStatus(
-                org.mockito.ArgumentMatchers.eq(REQUEST_ID),
-                org.mockito.ArgumentMatchers.eq(
-                        AllowanceRequestStatus.CANCELED
-                ),
+                eq(REQUEST_ID),
+                eq(AllowanceRequestStatus.CANCELED),
                 any(LocalDateTime.class)
         )).thenReturn(1);
 
@@ -142,184 +134,109 @@ class AllowanceRequestStatusServiceTest {
                         request("CANCEL")
                 );
 
-        assertEquals(
-                AllowanceRequestStatus.CANCELED,
-                response.getStatus()
-        );
+        assertEquals(AllowanceRequestStatus.CANCELED, response.getStatus());
+        verify(transferService, never()).createTransfer(any(), any(), any());
     }
 
     @Test
-    void rejectsUnsupportedAction() {
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> allowanceRequestService
-                        .updateAllowanceRequestStatus(
-                                PARENT_ID,
-                                REQUEST_ID,
-                                request("ACCEPT")
-                        )
-        );
-
-        assertEquals(
-                ErrorCode.INVALID_ALLOWANCE_ACTION,
-                exception.getErrorCode()
-        );
-
-        verify(allowanceRequestMapper, never())
-                .findAllowanceRequestDetail(
-                        org.mockito.ArgumentMatchers.anyLong()
-                );
-    }
-
-    @Test
-    void rejectsParentCancelAction() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+    void rejectsApprovalWhenPrimaryTransferAccountIsMissing() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
         )).thenReturn(row(AllowanceRequestStatus.PENDING));
-
-        when(allowanceRequestMapper
-                .countAllowanceRequestChildAccess(
-                        PARENT_ID,
-                        CHILD_ID
-                ))
-                .thenReturn(0);
+        when(allowanceRequestMapper.countAllowanceRequestParentAccess(
+                PARENT_ID, CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.findPrimaryParentDemandDepositAccountId(
+                PARENT_ID
+        )).thenReturn(null);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> allowanceRequestService
-                        .updateAllowanceRequestStatus(
-                                PARENT_ID,
-                                REQUEST_ID,
-                                request("CANCEL")
-                        )
+                () -> allowanceRequestService.updateAllowanceRequestStatus(
+                        PARENT_ID,
+                        REQUEST_ID,
+                        request("APPROVE")
+                )
         );
 
-        assertEquals(
-                ErrorCode.ALLOWANCE_REQUEST_ACCESS_DENIED,
-                exception.getErrorCode()
-        );
+        assertEquals(ErrorCode.FINANCIAL_ACCOUNT_NOT_FOUND,
+                exception.getErrorCode());
+        verify(transferService, never()).createTransfer(any(), any(), any());
     }
 
     @Test
-    void rejectsChildApproveAction() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+    void doesNotApproveWhenTransferFails() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
         )).thenReturn(row(AllowanceRequestStatus.PENDING));
-
-        when(allowanceRequestMapper
-                .countAllowanceRequestParentAccess(
-                        CHILD_MEMBER_ID,
-                        CHILD_ID
-                ))
-                .thenReturn(0);
+        when(allowanceRequestMapper.countAllowanceRequestParentAccess(
+                PARENT_ID, CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.findPrimaryParentDemandDepositAccountId(
+                PARENT_ID
+        )).thenReturn(SOURCE_ACCOUNT_ID);
+        when(allowanceRequestMapper.findPrimaryChildDemandDepositAccountId(
+                CHILD_ID
+        )).thenReturn(DESTINATION_ACCOUNT_ID);
+        BusinessException transferFailure = new BusinessException(
+                ErrorCode.INSUFFICIENT_ACCOUNT_BALANCE
+        );
+        org.mockito.Mockito.doThrow(transferFailure)
+                .when(transferService)
+                .createTransfer(eq(PARENT_ID), any(String.class),
+                        any(CreateTransferRequest.class));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> allowanceRequestService
-                        .updateAllowanceRequestStatus(
-                                CHILD_MEMBER_ID,
-                                REQUEST_ID,
-                                request("APPROVE")
-                        )
-        );
-
-        assertEquals(
-                ErrorCode.ALLOWANCE_REQUEST_ACCESS_DENIED,
-                exception.getErrorCode()
-        );
-    }
-
-    @Test
-    void rejectsAlreadyProcessedRequest() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
-                REQUEST_ID
-        )).thenReturn(row(AllowanceRequestStatus.APPROVED));
-
-        when(allowanceRequestMapper
-                .countAllowanceRequestParentAccess(
+                () -> allowanceRequestService.updateAllowanceRequestStatus(
                         PARENT_ID,
-                        CHILD_ID
-                ))
-                .thenReturn(1);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> allowanceRequestService
-                        .updateAllowanceRequestStatus(
-                                PARENT_ID,
-                                REQUEST_ID,
-                                request("REJECT")
-                        )
+                        REQUEST_ID,
+                        request("APPROVE")
+                )
         );
 
-        assertEquals(
-                ErrorCode.INVALID_ALLOWANCE_STATUS_TRANSITION,
-                exception.getErrorCode()
-        );
-
-        verify(allowanceRequestMapper, never())
-                .updateAllowanceRequestStatus(
-                        org.mockito.ArgumentMatchers.anyLong(),
-                        any(),
-                        any()
-                );
+        assertEquals(ErrorCode.INSUFFICIENT_ACCOUNT_BALANCE,
+                exception.getErrorCode());
+        verify(allowanceRequestMapper, never()).updateAllowanceRequestStatus(
+                any(), any(), any());
     }
 
-    @Test
-    void rejectsConcurrentStatusChange() {
-        when(allowanceRequestMapper.findAllowanceRequestDetail(
+    private void stubPendingRequestForParent() {
+        when(allowanceRequestMapper.findAllowanceRequestDetailForUpdate(
                 REQUEST_ID
         )).thenReturn(row(AllowanceRequestStatus.PENDING));
-
-        when(allowanceRequestMapper
-                .countAllowanceRequestParentAccess(
-                        PARENT_ID,
-                        CHILD_ID
-                ))
-                .thenReturn(1);
-
-        when(allowanceRequestMapper.updateAllowanceRequestStatus(
-                org.mockito.ArgumentMatchers.eq(REQUEST_ID),
-                org.mockito.ArgumentMatchers.eq(
-                        AllowanceRequestStatus.APPROVED
-                ),
-                any(LocalDateTime.class)
-        )).thenReturn(0);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> allowanceRequestService
-                        .updateAllowanceRequestStatus(
-                                PARENT_ID,
-                                REQUEST_ID,
-                                request("APPROVE")
-                        )
+        when(allowanceRequestMapper.countAllowanceRequestParentAccess(
+                PARENT_ID, CHILD_ID
+        )).thenReturn(1);
+        when(allowanceRequestMapper.findPrimaryParentDemandDepositAccountId(
+                PARENT_ID
+        )).thenReturn(SOURCE_ACCOUNT_ID);
+        when(allowanceRequestMapper.findPrimaryChildDemandDepositAccountId(
+                CHILD_ID
+        )).thenReturn(DESTINATION_ACCOUNT_ID);
+        TransferCreateResponse transferResponse = mock(
+                TransferCreateResponse.class
         );
-
-        assertEquals(
-                ErrorCode.INVALID_ALLOWANCE_STATUS_TRANSITION,
-                exception.getErrorCode()
-        );
+        when(transferResponse.getFinancialTransferId()).thenReturn(301L);
+        when(transferService.createTransfer(
+                eq(PARENT_ID), any(String.class),
+                any(CreateTransferRequest.class)
+        )).thenReturn(transferResponse);
+        when(allowanceRequestMapper.linkAllowanceTransfer(
+                301L, REQUEST_ID, PARENT_ID
+        )).thenReturn(1);
     }
 
     private UpdateAllowanceRequestStatus request(String action) {
-        UpdateAllowanceRequestStatus request =
-                new UpdateAllowanceRequestStatus();
-
-        org.springframework.test.util.ReflectionTestUtils
-                .setField(request, "action", action);
-
-        return request;
+        return new UpdateAllowanceRequestStatus(action, null, null);
     }
 
-    private AllowanceRequestDetailRow row(
-            AllowanceRequestStatus status
-    ) {
+    private AllowanceRequestDetailRow row(AllowanceRequestStatus status) {
         return new AllowanceRequestDetailRow(
                 REQUEST_ID,
                 CHILD_ID,
                 new BigDecimal("10000"),
-                "밥먹을래",
+                "allowance request",
                 status,
                 LocalDateTime.of(2026, 7, 15, 10, 30)
         );

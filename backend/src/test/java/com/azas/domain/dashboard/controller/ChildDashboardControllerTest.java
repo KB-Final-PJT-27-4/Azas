@@ -86,6 +86,11 @@ class ChildDashboardControllerTest {
                 )
                 .andExpect(
                         jsonPath(
+                                "$.spending_summary.account_balance"
+                        ).value(96000)
+                )
+                .andExpect(
+                        jsonPath(
                                 "$.spending_summary"
                                         + ".account_balance_hidden"
                         ).value(true)
@@ -227,6 +232,7 @@ class ChildDashboardControllerTest {
                         40002L,
                         ChildUsageMode.CO_MANAGED,
                         new BigDecimal("6000.00"),
+                        new BigDecimal("96000.00"),
                         true,
                         new BigDecimal("20000.00"),
                         new BigDecimal("14000.00"),

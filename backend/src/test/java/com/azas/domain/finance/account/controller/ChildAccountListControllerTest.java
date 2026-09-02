@@ -79,7 +79,7 @@ class ChildAccountListControllerTest {
                 .andExpect(jsonPath("$.accounts[0].account_product_type")
                         .value("SAVINGS"))
                 .andExpect(jsonPath("$.accounts[0].is_primary")
-                        .doesNotExist());
+                        .value(true));
 
         verify(childAccountListService).getChildAccounts(
                 MEMBER_ID,
@@ -172,7 +172,8 @@ class ChildAccountListControllerTest {
                 "아이사랑적금1",
                 "952-17362605-43",
                 "SAVINGS",
-                new BigDecimal("14600000.00")
+                new BigDecimal("14600000.00"),
+                true
         );
     }
 }

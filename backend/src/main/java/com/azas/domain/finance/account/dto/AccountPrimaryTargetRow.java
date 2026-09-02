@@ -11,6 +11,7 @@ public class AccountPrimaryTargetRow {
     private String ownerType;
     private Long ownerMemberId;
     private Long childId;
+    private String accountProductType;
     private String accountStatus;
     private String linkStatus;
     private Boolean primaryAccount;

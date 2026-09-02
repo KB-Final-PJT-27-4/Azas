@@ -5,6 +5,8 @@ import com.azas.domain.child.entity.RelationType;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 @Mapper
 public interface ParentInviteMapper {
 
@@ -19,6 +21,12 @@ public interface ParentInviteMapper {
 
     int insertChildParentRelation(
             @Param("childId") Long childId,
+            @Param("memberId") Long memberId,
+            @Param("relationType") RelationType relationType
+    );
+
+    int insertChildParentRelations(
+            @Param("childIds") List<Long> childIds,
             @Param("memberId") Long memberId,
             @Param("relationType") RelationType relationType
     );

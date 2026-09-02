@@ -94,7 +94,9 @@ public class AccountTransactionService {
                 row.getOccurredAt(),
                 resolveCounterpartyName(row),
                 row.getDirection(),
-                row.getAmount()
+                row.getAmount(),
+                row.getChildcareChildId() != null,
+                row.getChildcareChildId()
         );
     }
 
